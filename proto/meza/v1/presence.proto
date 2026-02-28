@@ -1,0 +1,68 @@
+syntax = "proto3";
+package meza.v1;
+
+service PresenceService {
+  rpc UpdatePresence(UpdatePresenceRequest) returns (UpdatePresenceResponse);
+  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse);
+  rpc GetBulkPresence(GetBulkPresenceRequest) returns (GetBulkPresenceResponse);
+  rpc SetStatusOverride(SetStatusOverrideRequest) returns (SetStatusOverrideResponse);
+  rpc ClearStatusOverride(ClearStatusOverrideRequest) returns (ClearStatusOverrideResponse);
+  rpc GetMyPresence(GetMyPresenceRequest) returns (GetMyPresenceResponse);
+}
+
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_IDLE = 2;
+  PRESENCE_STATUS_DND = 3;
+  PRESENCE_STATUS_OFFLINE = 4;
+  PRESENCE_STATUS_INVISIBLE = 5;
+}
+
+message UpdatePresenceRequest {
+  PresenceStatus status = 1;
+  optional string status_text = 2;
+}
+
+message UpdatePresenceResponse {}
+
+message GetPresenceRequest {
+  string user_id = 1;
+}
+
+message GetPresenceResponse {
+  string user_id = 1;
+  PresenceStatus status = 2;
+  string status_text = 3;
+}
+
+message GetBulkPresenceRequest {
+  repeated string user_ids = 1;
+}
+
+message GetBulkPresenceResponse {
+  repeated GetPresenceResponse presences = 1;
+}
+
+message SetStatusOverrideRequest {
+  PresenceStatus status = 1;
+  int64 duration_seconds = 2;
+}
+
+message SetStatusOverrideResponse {
+  PresenceStatus status = 1;
+  int64 expires_at = 2;
+}
+
+message ClearStatusOverrideRequest {}
+
+message ClearStatusOverrideResponse {}
+
+message GetMyPresenceRequest {}
+
+message GetMyPresenceResponse {
+  PresenceStatus status = 1;
+  string status_text = 2;
+  PresenceStatus override_status = 3;
+  int64 override_expires_at = 4;
+}

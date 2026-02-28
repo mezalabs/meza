@@ -1,0 +1,23 @@
+{
+  "name": "@meza/desktop",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:win": "electron-vite build && electron-builder --win",
+    "package:linux": "electron-vite build && electron-builder --linux"
+  },
+  "dependencies": {
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0"
+  }
+}

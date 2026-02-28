@@ -1,0 +1,11 @@
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 7882
+  port_range_end: 7892
+  use_external_ip: false
+turn:
+  enabled: true
+  domain: localhost
+  udp_port: 3478
+  tls_port: 0

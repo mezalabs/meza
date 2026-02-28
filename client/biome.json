@@ -1,0 +1,40 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/dist",
+      "!gen",
+      "!vendor",
+      "!e2e/.auth",
+      "!e2e/playwright-report"
+    ]
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noImportantStyles": "warn"
+      }
+    }
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "css": {
+    "parser": {
+      "cssModules": true,
+      "tailwindDirectives": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "all"
+    }
+  }
+}

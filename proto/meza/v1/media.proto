@@ -1,0 +1,57 @@
+syntax = "proto3";
+package meza.v1;
+
+service MediaService {
+  rpc CreateUpload(CreateUploadRequest) returns (CreateUploadResponse);
+  rpc CompleteUpload(CompleteUploadRequest) returns (CompleteUploadResponse);
+  rpc GetDownloadURL(GetDownloadURLRequest) returns (GetDownloadURLResponse);
+}
+
+enum UploadPurpose {
+  UPLOAD_PURPOSE_UNSPECIFIED = 0;
+  UPLOAD_PURPOSE_CHAT_ATTACHMENT = 1;
+  UPLOAD_PURPOSE_PROFILE_AVATAR = 2;
+  UPLOAD_PURPOSE_PROFILE_BANNER = 3;
+  UPLOAD_PURPOSE_SERVER_ICON = 4;
+  UPLOAD_PURPOSE_SERVER_EMOJI = 5;
+  UPLOAD_PURPOSE_SOUNDBOARD = 6;
+}
+
+message CreateUploadRequest {
+  string filename = 1;
+  string content_type = 2;
+  int64 size_bytes = 3;
+  UploadPurpose purpose = 4;
+  string original_content_type = 5; // Real MIME type for encrypted uploads (e.g., "image/jpeg")
+}
+
+message CreateUploadResponse {
+  string upload_id = 1;
+  string upload_url = 2;
+  string thumbnail_upload_url = 3;  // Presigned URL for encrypted thumbnail (chat attachments only)
+}
+
+message CompleteUploadRequest {
+  string upload_id = 1;
+  int32 width = 2;                  // Client-provided dimensions (encrypted uploads)
+  int32 height = 3;
+  bytes encrypted_key = 4;          // Per-file AES key wrapped with channel key (60 bytes)
+}
+
+message CompleteUploadResponse {
+  string attachment_id = 1;
+  string url = 2;
+  bool has_thumbnail = 3;
+  int32 width = 4;
+  int32 height = 5;
+  bytes micro_thumbnail = 6;
+}
+
+message GetDownloadURLRequest {
+  string attachment_id = 1;
+  bool thumbnail = 2;
+}
+
+message GetDownloadURLResponse {
+  string url = 1;
+}

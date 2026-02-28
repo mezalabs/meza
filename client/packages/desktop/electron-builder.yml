@@ -1,0 +1,87 @@
+appId: com.meza.desktop
+productName: Meza
+asar: true
+compression: normal
+
+directories:
+  output: release/${version}
+  buildResources: build
+
+files:
+  - out/**/*
+
+# macOS
+mac:
+  category: public.app-category.social-networking
+  darkModeSupport: true
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  sign: false
+
+# Windows
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Meza
+
+# Linux
+linux:
+  category: Network
+  desktop:
+    Name: Meza
+    Comment: Real-time encrypted chat
+    MimeType: x-scheme-handler/meza
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+
+# Deep link protocol
+protocols:
+  - name: Meza
+    schemes:
+      - meza
+
+# Auto-update
+publish:
+  provider: github
+  releaseType: draft
+  vPrefixedTagName: true

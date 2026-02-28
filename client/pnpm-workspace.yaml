@@ -1,0 +1,8 @@
+packages:
+  - packages/*
+  - gen
+  - e2e
+
+onlyBuiltDependencies:
+  - electron
+  - esbuild

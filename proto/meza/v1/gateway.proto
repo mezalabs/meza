@@ -1,0 +1,23 @@
+syntax = "proto3";
+package meza.v1;
+
+// WebSocket gateway protocol - not a ConnectRPC service.
+// Used for real-time bidirectional communication.
+
+message GatewayEnvelope {
+  GatewayOpCode op = 1;
+  bytes payload = 2;
+  int64 sequence = 3;
+}
+
+enum GatewayOpCode {
+  GATEWAY_OP_UNSPECIFIED = 0;
+  GATEWAY_OP_EVENT = 1;
+  GATEWAY_OP_HEARTBEAT = 2;
+  GATEWAY_OP_HEARTBEAT_ACK = 3;
+  GATEWAY_OP_IDENTIFY = 4;
+  GATEWAY_OP_RESUME = 5;
+  GATEWAY_OP_READY = 6;
+  GATEWAY_OP_SEND_MESSAGE = 7;
+  GATEWAY_OP_TYPING_START = 8;
+}

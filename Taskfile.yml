@@ -1,0 +1,519 @@
+version: "3"
+
+dotenv: ['.env']
+
+vars:
+  COMPOSE_FILE: deploy/docker/docker-compose.yml
+  INFRA_SERVICES: postgres redis nats scylla minio livekit meilisearch
+  WORKTREE_ID:
+    sh: |
+      root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: Not inside a git repository" >&2; exit 1; }
+      id=$(basename "$root" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+      if [ "$id" = "meza" ]; then id="main"; fi
+      echo "$id"
+  COMPOSE_PROJECT: "meza-{{.WORKTREE_ID}}"
+  PID_DIR:
+    sh: echo "${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}/meza-$(id -u)}/meza-{{.WORKTREE_ID}}"
+
+tasks:
+  up:
+    desc: Start infrastructure services (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit, Meilisearch)
+    cmds:
+      - |
+        current_project="{{.COMPOSE_PROJECT}}"
+        compose="docker compose -p $current_project -f {{.COMPOSE_FILE}}"
+
+        # Fast-path: skip if containers already running for this worktree
+        if $compose ps --status running -q 2>/dev/null | grep -q .; then
+          echo "Docker infrastructure already running for $current_project"
+          exit 0
+        fi
+
+        # Stop previous worktree's containers if needed
+        RUNTIME_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}/meza-$(id -u)}"
+        active_compose="$RUNTIME_DIR/active-compose-project.txt"
+        if [ -f "$active_compose" ]; then
+          prev_project=$(cat "$active_compose")
+          if [ "$prev_project" != "$current_project" ]; then
+            echo "Stopping previous worktree's Docker ($prev_project)..."
+            docker compose -p "$prev_project" -f "{{.COMPOSE_FILE}}" down
+          fi
+        fi
+
+        $compose up -d {{.INFRA_SERVICES}}
+
+        # Record active compose project (shared across worktrees for cross-worktree Docker cleanup)
+        mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
+        echo "$current_project" > "$active_compose"
+
+        # Wait for Postgres
+        echo "Waiting for Postgres..."
+        for i in $(seq 1 30); do
+          $compose exec -T postgres pg_isready -U meza -q 2>/dev/null && break
+          sleep 1
+        done
+        $compose exec -T postgres pg_isready -U meza -q || { echo "Postgres failed to start"; exit 1; }
+
+        # Wait for Redis
+        echo "Waiting for Redis..."
+        for i in $(seq 1 15); do
+          $compose exec -T redis redis-cli ping >/dev/null 2>&1 && break
+          sleep 1
+        done
+        $compose exec -T redis redis-cli ping >/dev/null 2>&1 || { echo "Redis failed to start"; exit 1; }
+
+        # Wait for ScyllaDB
+        # ScyllaDB listens on the container IP (not localhost), so we must
+        # resolve the address the same way the entrypoint and healthcheck do.
+        echo "Waiting for ScyllaDB..."
+        scylla_cqlsh='cqlsh $(grep -m1 $(hostname) /etc/hosts | awk '"'"'{print $1}'"'"')'
+        for i in $(seq 1 60); do
+          $compose exec -T scylla bash -c "$scylla_cqlsh -e 'DESCRIBE KEYSPACES'" >/dev/null 2>&1 && break
+          sleep 2
+        done
+        $compose exec -T scylla bash -c "$scylla_cqlsh -e 'DESCRIBE KEYSPACES'" >/dev/null 2>&1 || { echo "ScyllaDB failed to start"; exit 1; }
+        echo "ScyllaDB is ready"
+      - |
+        echo ""
+        echo "Infrastructure ready ({{.COMPOSE_PROJECT}}):"
+        echo "  PostgreSQL    localhost:5432"
+        echo "  ScyllaDB      localhost:9042"
+        echo "  Redis         localhost:6379"
+        echo "  NATS          localhost:4222 (monitoring: localhost:8222)"
+        echo "  MinIO         localhost:9000 (console: localhost:9001)"
+        echo "  LiveKit       localhost:7880"
+        echo "  Meilisearch   localhost:7700"
+
+  migrate:
+    desc: Run all database migrations (PostgreSQL + ScyllaDB)
+    deps: [up]
+    dir: server
+    cmds:
+      - go run ./cmd/migrate
+
+  migrate:create:
+    desc: Create a new timestamped migration file pair
+    dir: server
+    cmds:
+      - |
+        name="{{.CLI_ARGS}}"
+        if [ -z "$name" ]; then
+          echo "Usage: task migrate:create -- <name>"
+          echo "  Example: task migrate:create -- add_user_profiles"
+          exit 1
+        fi
+        if ! echo "$name" | grep -qE '^[a-z][a-z0-9_]*$'; then
+          echo "Error: migration name must be lowercase snake_case (matching ^[a-z][a-z0-9_]*$)"
+          echo "  Got: $name"
+          exit 1
+        fi
+        timestamp=$(date +%s)
+        up="migrations/${timestamp}_${name}.up.sql"
+        down="migrations/${timestamp}_${name}.down.sql"
+        printf 'BEGIN;\n\n-- Migration: %s\n-- All statements must be idempotent (use IF NOT EXISTS, IF EXISTS, ON CONFLICT, etc.)\n\nCOMMIT;\n' "$name" > "$up"
+        printf 'BEGIN;\n\n-- Rollback: %s\n\nCOMMIT;\n' "$name" > "$down"
+        echo "Created:"
+        echo "  $up"
+        echo "  $down"
+
+  migrate:create:scylla:
+    desc: Create a new timestamped ScyllaDB migration file
+    dir: server
+    cmds:
+      - |
+        name="{{.CLI_ARGS}}"
+        if [ -z "$name" ]; then
+          echo "Usage: task migrate:create:scylla -- <name>"
+          echo "  Example: task migrate:create:scylla -- add_message_column"
+          exit 1
+        fi
+        if ! echo "$name" | grep -qE '^[a-z][a-z0-9_]*$'; then
+          echo "Error: migration name must be lowercase snake_case (matching ^[a-z][a-z0-9_]*$)"
+          echo "  Got: $name"
+          exit 1
+        fi
+        timestamp=$(date +%s)
+        file="migrations/scylla/${timestamp}_${name}.cql"
+        printf '-- Migration: %s\n-- All statements must be idempotent.\n' "$name" > "$file"
+        echo "Created: $file"
+
+  migrate:status:
+    desc: Show migration status (applied vs pending)
+    deps: [up]
+    dir: server
+    cmds:
+      - go run ./cmd/migrate -status
+
+  cleanup:
+    desc: Stop any running Meza services from previous runs
+    internal: true
+    cmds:
+      # Must use bash (not go-task's built-in mvdan/sh) for process group kill
+      - bash scripts/cleanup.sh
+    env:
+      PID_DIR: "{{.PID_DIR}}"
+
+  seed:
+    desc: "Seed dev database with test data (default: full preset)"
+    cmds:
+      - cd scripts/seed && pnpm install --frozen-lockfile --silent && npx tsx src/index.ts {{.CLI_ARGS | default "full"}}
+
+  seed:reset:
+    desc: "Wipe seed data and reseed from scratch"
+    cmds:
+      - cd scripts/seed && pnpm install --frozen-lockfile --silent && npx tsx src/index.ts --reset {{.CLI_ARGS | default "full"}}
+
+  start:
+    desc: Start infrastructure and run all services (Ctrl+C to stop)
+    cmds:
+      - task: cleanup
+      - task: migrate
+      # Must use bash (not go-task's built-in mvdan/sh) for background jobs,
+      # $!, kill, set -m, and trap — mvdan/sh uses goroutines instead of fork
+      # so $! returns "g1" instead of real PIDs.
+      - bash scripts/start.sh
+    env:
+      PID_DIR: "{{.PID_DIR}}"
+      WORKTREE_ID: "{{.WORKTREE_ID}}"
+      COMPOSE_PROJECT: "{{.COMPOSE_PROJECT}}"
+
+  teardown:
+    desc: Stop all services and tear down infrastructure
+    cmds:
+      - echo "Stopping Meza services (worktree{{":"}} {{.WORKTREE_ID}})..."
+      - task: cleanup
+      - rm -f "${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}/meza-$(id -u)}/active-compose-project.txt"
+      - docker compose -p "{{.COMPOSE_PROJECT}}" -f "{{.COMPOSE_FILE}}" down
+      - echo "All services stopped."
+
+  status:
+    desc: Show running Meza services and stale resources
+    cmds:
+      - |
+        PID_DIR="{{.PID_DIR}}"
+
+        echo "Meza Status"
+        echo "=============="
+        echo "Worktree:  {{.WORKTREE_ID}}"
+        echo "Project:   {{.COMPOSE_PROJECT}}"
+        echo "PID Dir:   $PID_DIR"
+        echo ""
+
+        # Check running services from PID files
+        echo "Services:"
+        if [ -d "$PID_DIR" ]; then
+          active_worktree=""
+          if [ -f "$PID_DIR/worktree.txt" ]; then
+            active_worktree=$(cat "$PID_DIR/worktree.txt")
+          fi
+          if [ -n "$active_worktree" ]; then
+            echo "  Active worktree: $active_worktree"
+          fi
+          for name in gateway auth chat presence media voice keys vite; do
+            pidfile="$PID_DIR/${name}.pid"
+            if [ -f "$pidfile" ] && [ ! -L "$pidfile" ]; then
+              pid=$(cat "$pidfile")
+              if echo "$pid" | grep -qE '^[0-9]+$' && [ "$pid" -gt 1 ] && kill -0 "$pid" 2>/dev/null; then
+                echo "  $name: running (PID $pid)"
+              else
+                echo "  $name: stale PID file (process dead)"
+              fi
+            else
+              echo "  $name: not running"
+            fi
+          done
+        else
+          echo "  No PID directory found"
+        fi
+
+        echo ""
+
+        # Port usage
+        echo "Port Usage:"
+        for entry in gateway:8080 auth:8081 chat:8082 presence:8083 media:8084 voice:8085 keys:8088 vite:4080; do
+          name="${entry%%:*}"
+          port="${entry##*:}"
+          pid=$(lsof -ti ":$port" 2>/dev/null)
+          if [ -n "$pid" ]; then
+            echo "  :$port ($name): in use (PID $pid)"
+          else
+            echo "  :$port ($name): free"
+          fi
+        done
+
+        echo ""
+
+        # Docker containers
+        echo "Docker Containers ({{.COMPOSE_PROJECT}}):"
+        docker compose -p "{{.COMPOSE_PROJECT}}" -f "{{.COMPOSE_FILE}}" ps --format "table {{`{{.Name}}`}}\t{{`{{.Status}}`}}" 2>/dev/null || echo "  None running"
+
+        echo ""
+
+        # Stale volume detection
+        echo "Stale Volume Detection:"
+        active_projects=$(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | while read -r _ path; do
+          id=$(basename "$path" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+          [ "$id" = "meza" ] && id="main"
+          echo "meza-$id"
+        done | sort -u)
+
+        docker_projects=$(docker volume ls --format '{{`{{.Name}}`}}' 2>/dev/null | grep '^meza-' | sed 's/_.*$//' | sort -u)
+
+        stale=""
+        for project in $docker_projects; do
+          if ! echo "$active_projects" | grep -qx "$project"; then
+            count=$(docker volume ls --format '{{`{{.Name}}`}}' 2>/dev/null | grep "^${project}_" | wc -l)
+            echo "  $project: $count volumes (no matching worktree)"
+            stale="yes"
+          fi
+        done
+        if [ -z "$stale" ]; then
+          echo "  No stale volumes detected."
+        else
+          echo "  Run 'task teardown-all' to clean up."
+        fi
+
+  test:
+    desc: Run all tests (server + client)
+    cmds:
+      - task: test:server
+      - task: test:client
+
+  test:server:
+    desc: Run all Go tests (unit + service)
+    dir: server
+    cmds:
+      - go test ./...
+
+  test:client:
+    desc: Run client tests
+    dir: client
+    cmds:
+      - pnpm test
+
+  test:e2e:
+    desc: Run all E2E workflow journeys (nukes test data first)
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec tsx helpers/nuke.ts
+      - pnpm exec playwright test --project=setup --project=chromium --project=teardown
+
+  test:e2e:reset:
+    desc: Wipe all E2E test data from all data stores
+    dir: client/e2e
+    cmds:
+      - pnpm exec tsx helpers/nuke.ts
+
+  test:e2e:run:
+    desc: "Run E2E with custom args (e.g. task test:e2e:run -- journeys/01-setup.spec.ts)"
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec playwright test --project=setup --project=chromium --project=teardown {{.CLI_ARGS}}
+
+  test:e2e:smoke:
+    desc: Run setup journey as a quick smoke test
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec tsx helpers/nuke.ts
+      - pnpm exec playwright test --project=setup --project=chromium --project=teardown journeys/01-setup.spec.ts
+
+  test:e2e:headed:
+    desc: Run E2E tests with browser visible
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec playwright test --project=setup --project=chromium --project=teardown --headed {{.CLI_ARGS}}
+
+  test:e2e:ui:
+    desc: Run E2E tests with Playwright UI mode
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec playwright test --ui
+
+  test:e2e:debug:
+    desc: Run E2E tests with Playwright inspector
+    dir: client/e2e
+    env:
+      BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
+    cmds:
+      - pnpm exec playwright test --project=setup --project=chromium --project=teardown --debug {{.CLI_ARGS}}
+
+  test:quick:
+    desc: Run only fast unit tests (internal packages, no service tests)
+    dir: server
+    cmds:
+      - go test ./internal/...
+
+  test:auth:
+    desc: Run auth service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/auth/...
+
+  test:chat:
+    desc: Run chat service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/chat/...
+
+  test:gateway:
+    desc: Run gateway tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/gateway/...
+
+  test:presence:
+    desc: Run presence service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/presence/...
+
+  test:media:
+    desc: Run media service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/media/...
+
+  test:voice:
+    desc: Run voice service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/voice/...
+
+  test:keys:
+    desc: Run key distribution service tests
+    dir: server
+    cmds:
+      - go test -v ./cmd/keys/...
+
+  teardown-all:
+    desc: Remove all Meza Docker resources across all worktrees
+    cmds:
+      - |
+        echo "Meza Teardown All"
+        echo "===================="
+        echo ""
+
+        # Enumerate all meza-* Docker resources
+        containers=$(docker ps -a --format '{{`{{.Names}}`}}' 2>/dev/null | grep '^meza-' || true)
+        volumes=$(docker volume ls --format '{{`{{.Name}}`}}' 2>/dev/null | grep '^meza-' || true)
+        networks=$(docker network ls --format '{{`{{.Name}}`}}' 2>/dev/null | grep '^meza-' || true)
+
+        if [ -z "$containers" ] && [ -z "$volumes" ] && [ -z "$networks" ]; then
+          echo "No Meza Docker resources found."
+          exit 0
+        fi
+
+        echo "Resources to remove:"
+        echo ""
+
+        if [ -n "$containers" ]; then
+          echo "  Containers:"
+          echo "$containers" | sed 's/^/    /'
+          echo ""
+        fi
+
+        if [ -n "$volumes" ]; then
+          echo "  Volumes:"
+          echo "$volumes" | sed 's/^/    /'
+          echo ""
+        fi
+
+        if [ -n "$networks" ]; then
+          echo "  Networks:"
+          echo "$networks" | sed 's/^/    /'
+          echo ""
+        fi
+
+        printf "Type 'yes' to destroy all listed resources: "
+        read -r confirm
+        if [ "$confirm" != "yes" ]; then
+          echo "Aborted."
+          exit 0
+        fi
+
+        echo ""
+
+        if [ -n "$containers" ]; then
+          echo "Stopping and removing containers..."
+          echo "$containers" | xargs docker rm -f 2>/dev/null || true
+        fi
+
+        if [ -n "$volumes" ]; then
+          echo "Removing volumes..."
+          echo "$volumes" | xargs docker volume rm 2>/dev/null || true
+        fi
+
+        if [ -n "$networks" ]; then
+          echo "Removing networks..."
+          echo "$networks" | xargs docker network rm 2>/dev/null || true
+        fi
+
+        # Clean up all per-worktree PID directories
+        RUNTIME_DIR="${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}/meza-$(id -u)}"
+        for pid_dir in "$RUNTIME_DIR"/meza-*/; do
+          [ -d "$pid_dir" ] || continue
+          rm -rf "$pid_dir"
+        done
+        rm -f "$RUNTIME_DIR/active-compose-project.txt"
+
+        echo ""
+        echo "All Meza Docker resources removed."
+
+  dev:desktop:
+    desc: Start Electron desktop app in development mode
+    dir: client
+    cmds:
+      - pnpm --filter @meza/desktop dev
+
+  build:prod:
+    desc: Build all production Docker images (9 services + client)
+    vars:
+      REGISTRY: '{{.REGISTRY | default "ghcr.io/meza-chat/meza"}}'
+      IMAGE_TAG:
+        sh: echo "{{.CLI_ARGS}}" | grep -q . && echo "{{.CLI_ARGS}}" || git rev-parse --short HEAD
+    env:
+      BUILD_REGISTRY: '{{.REGISTRY}}'
+      BUILD_TAG: '{{.IMAGE_TAG}}'
+    cmds:
+      - bash scripts/build-prod.sh
+
+  build:prod:push:
+    desc: Build and push all production images to registry
+    vars:
+      REGISTRY: '{{.REGISTRY | default "ghcr.io/meza-chat/meza"}}'
+      IMAGE_TAG:
+        sh: echo "{{.CLI_ARGS}}" | grep -q . && echo "{{.CLI_ARGS}}" || git rev-parse --short HEAD
+    deps: [build:prod]
+    cmds:
+      - |
+        set -euo pipefail
+        REGISTRY="{{.REGISTRY}}"
+        TAG="{{.IMAGE_TAG}}"
+
+        echo "==> Pushing images to $REGISTRY..."
+        for name in gateway auth chat presence voice notification keys migrate media client; do
+          docker push "$REGISTRY/$name:$TAG"
+          docker push "$REGISTRY/$name:latest"
+          echo "  ✓ $name"
+        done
+        echo ""
+        echo "✓ All images pushed"
+
+  build:desktop:
+    desc: Build Electron desktop app (web + main/preload + packaging)
+    dir: client
+    cmds:
+      - pnpm --filter @meza/web build
+      - mkdir -p packages/desktop/out/renderer
+      - cp -r packages/web/dist/* packages/desktop/out/renderer/
+      - pnpm --filter @meza/desktop build

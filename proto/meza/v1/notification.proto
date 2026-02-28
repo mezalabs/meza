@@ -1,0 +1,37 @@
+syntax = "proto3";
+package meza.v1;
+
+service NotificationService {
+  // Get user's notification preferences.
+  rpc GetNotificationPreferences(GetNotificationPreferencesRequest) returns (GetNotificationPreferencesResponse);
+  // Update notification preference for a scope.
+  rpc UpdateNotificationPreference(UpdateNotificationPreferenceRequest) returns (UpdateNotificationPreferenceResponse);
+  // Get VAPID public key for Web Push subscription.
+  rpc GetVAPIDPublicKey(GetVAPIDPublicKeyRequest) returns (GetVAPIDPublicKeyResponse);
+}
+
+message GetNotificationPreferencesRequest {}
+
+message GetNotificationPreferencesResponse {
+  repeated NotificationPreference preferences = 1;
+}
+
+message NotificationPreference {
+  string scope_type = 1;  // "global", "server", "channel"
+  string scope_id = 2;
+  string level = 3;       // "all", "mentions_only", "nothing"
+}
+
+message UpdateNotificationPreferenceRequest {
+  string scope_type = 1;
+  string scope_id = 2;
+  string level = 3;
+}
+
+message UpdateNotificationPreferenceResponse {}
+
+message GetVAPIDPublicKeyRequest {}
+
+message GetVAPIDPublicKeyResponse {
+  string public_key = 1;
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@meza/gen",
+  "version": "0.0.1",
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0"
+  }
+}
