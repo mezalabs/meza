@@ -1,0 +1,105 @@
+syntax = "proto3";
+package meza.v1;
+
+// KeyService manages E2EE public keys and channel key envelopes.
+// Replaces MLSService with a simpler static channel key model (Keybase PTK pattern).
+service KeyService {
+  // RegisterPublicKey uploads a user's Ed25519 signing public key (called at registration/login).
+  rpc RegisterPublicKey(RegisterPublicKeyRequest) returns (RegisterPublicKeyResponse);
+
+  // GetPublicKeys retrieves signing public keys for a batch of users.
+  rpc GetPublicKeys(GetPublicKeysRequest) returns (GetPublicKeysResponse);
+
+  // StoreKeyEnvelopes uploads ECIES-wrapped channel key envelopes for one or more members.
+  rpc StoreKeyEnvelopes(StoreKeyEnvelopesRequest) returns (StoreKeyEnvelopesResponse);
+
+  // GetKeyEnvelopes retrieves all channel key envelopes for the calling user.
+  rpc GetKeyEnvelopes(GetKeyEnvelopesRequest) returns (GetKeyEnvelopesResponse);
+
+  // RotateChannelKey atomically increments the key version and stores new envelopes.
+  // Uses optimistic concurrency: fails if expected_version doesn't match current.
+  rpc RotateChannelKey(RotateChannelKeyRequest) returns (RotateChannelKeyResponse);
+
+  // ListMembersWithViewChannel returns user IDs and public keys for server members
+  // who have ViewChannel permission on the given channel. Paginated for large servers.
+  rpc ListMembersWithViewChannel(ListMembersWithViewChannelRequest) returns (ListMembersWithViewChannelResponse);
+}
+
+// RegisterPublicKey
+
+message RegisterPublicKeyRequest {
+  bytes signing_public_key = 1; // 32-byte Ed25519 verify key
+}
+
+message RegisterPublicKeyResponse {}
+
+// GetPublicKeys
+
+message GetPublicKeysRequest {
+  repeated string user_ids = 1;
+}
+
+message GetPublicKeysResponse {
+  // Map of user_id -> signing_public_key. Missing entries = user has no key registered.
+  map<string, bytes> public_keys = 1;
+}
+
+// StoreKeyEnvelopes
+
+message KeyEnvelope {
+  string user_id = 1;
+  bytes envelope = 2; // 92 bytes: ephemeral_pub(32) || nonce(12) || wrapped_key(48)
+}
+
+message StoreKeyEnvelopesRequest {
+  string channel_id = 1;
+  uint32 key_version = 2;
+  repeated KeyEnvelope envelopes = 3;
+}
+
+message StoreKeyEnvelopesResponse {}
+
+// GetKeyEnvelopes
+
+message GetKeyEnvelopesRequest {
+  string channel_id = 1;
+}
+
+message GetKeyEnvelopesResponse {
+  repeated VersionedKeyEnvelope envelopes = 1;
+}
+
+message VersionedKeyEnvelope {
+  uint32 key_version = 1;
+  bytes envelope = 2; // 92 bytes
+}
+
+// RotateChannelKey
+
+message RotateChannelKeyRequest {
+  string channel_id = 1;
+  uint32 expected_version = 2; // Optimistic concurrency: must match current version
+  repeated KeyEnvelope envelopes = 3; // New envelopes for remaining members
+}
+
+message RotateChannelKeyResponse {
+  uint32 new_version = 1;
+}
+
+// ListMembersWithViewChannel
+
+message UserPublicKey {
+  string user_id = 1;
+  bytes signing_public_key = 2; // 32-byte Ed25519 verify key (empty if not registered)
+}
+
+message ListMembersWithViewChannelRequest {
+  string channel_id = 1;
+  string cursor = 2;     // Opaque cursor for pagination (user_id of last result)
+  int32 limit = 3;       // Max results per page (default/max: 1000)
+}
+
+message ListMembersWithViewChannelResponse {
+  repeated UserPublicKey members = 1;
+  string next_cursor = 2; // Empty if no more pages
+}

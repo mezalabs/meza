@@ -1,0 +1,21 @@
+{
+  "name": "meza-seed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-node": "^2.0.0",
+    "hash-wasm": "^4.12.0",
+    "openmls-wasm": "file:../../client/vendor/openmls-wasm",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

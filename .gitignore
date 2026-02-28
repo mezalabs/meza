@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+client/vendor/*
+!client/vendor/openmls-wasm/
+
+# Build output
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dev keys (Ed25519 keypairs for local development)
+.keys/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Rust
+target/
+
+# Go
+*.test
+*.out
+__debug_bin*
+coverage.txt
+
+# TypeScript
+*.tsbuildinfo
+.turbo/
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+*.log
+
+# pnpm
+.pnpm-store/
+
+# Vitest
+coverage/
+
+# Docs (design docs tracked separately)
+tmp/
+
+# Binaries
+server/auth
+server/chat
+server/gateway
+server/media
+server/presence
+server/migrate
+server/voice
+server/notification
+server/mls
+
+# Playwright E2E
+client/e2e/.auth/
+client/e2e/test-results/
+client/e2e/playwright-report/
+client/e2e/blob-report/
+
+# Internal development documentation
+docs/brainstorms/
+docs/plans/
+docs/solutions/
+todos/
+
+# Internal tooling
+compound-engineering.local.md
+CLAUDE.md
+
+# Agents
+.agents/
+.claude/
+.task/

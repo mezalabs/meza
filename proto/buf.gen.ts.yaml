@@ -1,0 +1,11 @@
+version: v2
+plugins:
+  # TypeScript client code only
+  - remote: buf.build/bufbuild/es
+    out: ../client/gen
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es
+    out: ../client/gen
+    opt:
+      - target=ts

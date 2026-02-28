@@ -1,0 +1,19 @@
+{
+  "name": "@meza/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:ci": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@types/pg": "^8.16.0",
+    "hash-wasm": "^4.12.0",
+    "pg": "^8.13.1",
+    "tsx": "^4.21.0"
+  }
+}

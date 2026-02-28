@@ -1,0 +1,40 @@
+syntax = "proto3";
+package meza.v1;
+
+service VoiceService {
+  rpc JoinVoiceChannel(JoinVoiceChannelRequest) returns (JoinVoiceChannelResponse);
+  rpc LeaveVoiceChannel(LeaveVoiceChannelRequest) returns (LeaveVoiceChannelResponse);
+  rpc GetVoiceChannelState(GetVoiceChannelStateRequest) returns (GetVoiceChannelStateResponse);
+}
+
+message JoinVoiceChannelRequest {
+  string channel_id = 1;
+}
+
+message JoinVoiceChannelResponse {
+  string livekit_url = 1;
+  string livekit_token = 2;
+  string room_name = 3;
+  bool can_screen_share = 4;
+}
+
+message LeaveVoiceChannelRequest {
+  string channel_id = 1;
+}
+
+message LeaveVoiceChannelResponse {}
+
+message GetVoiceChannelStateRequest {
+  string channel_id = 1;
+}
+
+message GetVoiceChannelStateResponse {
+  repeated VoiceParticipant participants = 1;
+}
+
+message VoiceParticipant {
+  string user_id = 1;
+  bool is_muted = 2;
+  bool is_deafened = 3;
+  bool is_streaming_video = 4;
+}

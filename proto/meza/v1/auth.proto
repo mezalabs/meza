@@ -1,0 +1,184 @@
+syntax = "proto3";
+package meza.v1;
+
+import "meza/v1/models.proto";
+import "google/protobuf/timestamp.proto";
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc GetSalt(GetSaltRequest) returns (GetSaltResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
+  rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc GetKeyBundle(GetKeyBundleRequest) returns (GetKeyBundleResponse);
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  // Account recovery via BIP39 recovery phrase
+  rpc GetRecoveryBundle(GetRecoveryBundleRequest) returns (GetRecoveryBundleResponse);
+  rpc RecoverAccount(RecoverAccountRequest) returns (RecoverAccountResponse);
+}
+
+message RegisterRequest {
+  string email = 1;
+  bytes auth_key = 2;
+  bytes salt = 3;
+  bytes encrypted_key_bundle = 4;
+  bytes key_bundle_iv = 5;
+  string username = 6;
+  // Field 7 reserved (was initial_key_packages)
+  reserved 7;
+  // Recovery bundle: key bundle encrypted with recovery key derived from BIP39 phrase
+  bytes recovery_encrypted_key_bundle = 8;
+  bytes recovery_key_bundle_iv = 9;
+}
+
+message RegisterResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}
+
+message LoginRequest {
+  string email = 1;
+  bytes auth_key = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+  bytes encrypted_key_bundle = 4;
+  bytes key_bundle_iv = 5;
+  bytes salt = 6;
+}
+
+message GetSaltRequest {
+  string email = 1;
+}
+
+message GetSaltResponse {
+  bytes salt = 1;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RefreshTokenResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message RegisterDeviceRequest {
+  bytes device_public_key = 1;
+  bytes device_signature = 2;
+  string device_name = 3;
+  // Push notification fields
+  string platform = 4;               // "web", "android", "ios", "electron"
+  optional string push_endpoint = 5;  // Web Push subscription endpoint URL
+  optional string push_p256dh = 6;    // Web Push ECDH public key
+  optional string push_auth = 7;      // Web Push auth secret
+  optional string push_token = 8;     // FCM/APNs device token
+}
+
+message RegisterDeviceResponse {
+  string device_id = 1;
+}
+
+message RevokeDeviceRequest {
+  string device_id = 1;
+}
+
+message RevokeDeviceResponse {}
+
+message ListDevicesRequest {}
+
+message ListDevicesResponse {
+  repeated Device devices = 1;
+}
+
+message Device {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp last_seen_at = 4;
+  bool is_current = 5;
+  string platform = 6;
+  bool push_enabled = 7;
+}
+
+message UpdateProfileRequest {
+  optional string display_name = 1;
+  optional string avatar_url = 2;
+  optional float emoji_scale = 3;
+  optional string bio = 4;
+  optional string pronouns = 5;
+  optional string banner_url = 6;
+  optional string theme_color_primary = 7;
+  optional string theme_color_secondary = 8;
+  optional bool simple_mode = 9;
+  optional AudioPreferences audio_preferences = 10;
+  optional string dm_privacy = 11;  // "anyone", "message_requests", "mutual_servers", "nobody"
+}
+
+message UpdateProfileResponse {
+  User user = 1;
+}
+
+message ChangePasswordRequest {
+  bytes old_auth_key = 1;
+  bytes new_auth_key = 2;
+  bytes new_salt = 3;
+  bytes new_encrypted_key_bundle = 4;
+  bytes new_key_bundle_iv = 5;
+  bytes new_recovery_encrypted_key_bundle = 6;
+  bytes new_recovery_key_bundle_iv = 7;
+}
+
+message ChangePasswordResponse {}
+
+message GetKeyBundleRequest {}
+
+message GetKeyBundleResponse {
+  bytes encrypted_key_bundle = 1;
+  bytes key_bundle_iv = 2;
+}
+
+message GetProfileRequest {
+  string user_id = 1;
+}
+
+message GetProfileResponse {
+  User user = 1;
+}
+
+// Account Recovery
+
+message GetRecoveryBundleRequest {
+  string email = 1;
+}
+
+message GetRecoveryBundleResponse {
+  bytes recovery_encrypted_key_bundle = 1;
+  bytes recovery_key_bundle_iv = 2;
+  bytes salt = 3;
+}
+
+message RecoverAccountRequest {
+  string email = 1;
+  bytes new_auth_key = 2;
+  bytes new_salt = 3;
+  bytes new_encrypted_key_bundle = 4;
+  bytes new_key_bundle_iv = 5;
+  bytes new_recovery_encrypted_key_bundle = 6;
+  bytes new_recovery_key_bundle_iv = 7;
+}
+
+message RecoverAccountResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}

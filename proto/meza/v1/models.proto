@@ -1,0 +1,251 @@
+syntax = "proto3";
+package meza.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Core Entities
+
+message User {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+  google.protobuf.Timestamp created_at = 5;
+  reserved 6; // was is_anonymous
+  float emoji_scale = 7;
+  // Profile fields
+  string bio = 8;
+  string pronouns = 9;
+  string banner_url = 10;
+  string theme_color_primary = 11;
+  string theme_color_secondary = 12;
+  bool simple_mode = 13;
+  optional AudioPreferences audio_preferences = 14;
+  string dm_privacy = 15;  // "anyone", "message_requests", "mutual_servers", "nobody"
+  bytes signing_public_key = 16;  // 32-byte Ed25519 verify key for E2EE signature verification
+}
+
+message Server {
+  string id = 1;
+  string name = 2;
+  string icon_url = 3;
+  string owner_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  string welcome_message = 6;
+  string rules = 7;
+  bool onboarding_enabled = 8;
+  bool rules_required = 9;
+  bool default_channel_privacy = 10;
+}
+
+message Channel {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  ChannelType type = 4;
+  int32 position = 5;
+  string topic = 6;
+  google.protobuf.Timestamp created_at = 7;
+  bool is_private = 8;
+  optional int32 slow_mode_seconds = 9; // NULL=off, 0=read-only, >0=interval
+  bool is_default = 10;
+  optional string channel_group_id = 11;
+  optional string dm_status = 12;         // "active", "pending", "declined" (DM channels only)
+  optional string dm_initiator_id = 13;   // user who initiated the DM request
+}
+
+message ChannelGroup {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  int32 position = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message PermissionOverride {
+  string id = 1;
+  string target_id = 2;      // channel_group_id or channel_id
+  string role_id = 3;         // set for role overrides (mutually exclusive with user_id)
+  int64 allow = 4;
+  int64 deny = 5;
+  string user_id = 6;         // set for user overrides (mutually exclusive with role_id)
+}
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_TEXT = 1;
+  CHANNEL_TYPE_VOICE = 2;
+  CHANNEL_TYPE_DM = 3;
+  CHANNEL_TYPE_GROUP_DM = 4;
+}
+
+message DMChannel {
+  Channel channel = 1;
+  repeated User participants = 2;
+}
+
+message Message {
+  string id = 1;
+  string channel_id = 2;
+  string author_id = 3;
+  bytes encrypted_content = 4;
+  reserved 5;                // was ratchet_header, removed 2026-02-23
+  reserved "ratchet_header";
+  repeated Attachment attachments = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp edited_at = 8;
+  optional string reply_to_id = 9;
+  repeated LinkEmbed embeds = 10;
+  repeated string mentioned_user_ids = 11;
+  bool mention_everyone = 12;
+  repeated string mentioned_role_ids = 13;
+  uint32 key_version = 14;  // Static channel key version used for encryption
+}
+
+message LinkEmbed {
+  string url = 1;
+  string title = 2;
+  string description = 3;
+  string site_name = 4;
+  string image_url = 5;       // Proxied: /media/<attachment_id>
+  int32 image_width = 6;
+  int32 image_height = 7;
+  string favicon_url = 8;
+  string og_type = 9;         // "website", "article", "video", etc.
+  string domain = 10;         // Extracted from URL for display
+}
+
+message Attachment {
+  string id = 1;
+  string filename = 2;
+  string content_type = 3;
+  int64 size_bytes = 4;
+  string url = 5;
+  bytes encrypted_key = 6;
+  int32 width = 7;
+  int32 height = 8;
+  bool has_thumbnail = 9;
+  bytes micro_thumbnail = 10;
+}
+
+message Member {
+  string user_id = 1;
+  string server_id = 2;
+  repeated string role_ids = 3;
+  string nickname = 4;
+  google.protobuf.Timestamp joined_at = 5;
+  optional google.protobuf.Timestamp timed_out_until = 6;
+  optional google.protobuf.Timestamp onboarding_completed_at = 7;
+  optional google.protobuf.Timestamp rules_acknowledged_at = 8;
+  // Federation: home server user ID for federated users (empty for local users).
+  // Enables client-side correlation of shadow users to home identities.
+  string home_user_id = 9;
+  // Inviter user ID, populated only on MEMBER_JOIN events for key distribution election.
+  string inviter_user_id = 10;
+}
+
+message Role {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  int64 permissions = 4;
+  int32 color = 5;
+  int32 position = 6;
+  bool is_self_assignable = 7;
+}
+
+message Ban {
+  string server_id = 1;
+  string user_id = 2;
+  string reason = 3;
+  string banned_by = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// Invites
+
+message Invite {
+  string code = 1;
+  string server_id = 2;
+  string creator_id = 3;
+  int32 max_uses = 4;
+  int32 use_count = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  bool revoked = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// Pins
+
+message PinnedMessage {
+  Message message = 1;
+  string pinned_by = 2;   // may be empty if pinner's account was deleted
+  google.protobuf.Timestamp pinned_at = 3;
+}
+
+message CustomEmoji {
+  string id = 1;
+  string server_id = 2;
+  string name = 3;
+  string image_url = 4;
+  bool animated = 5;
+  string creator_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  string user_id = 8;  // owner — populated for personal emojis
+}
+
+message SoundboardSound {
+  string id = 1;
+  string user_id = 2;        // owner/creator
+  string server_id = 3;      // empty for personal sounds
+  string name = 4;
+  string audio_url = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// Audit Log
+
+message AuditLogEntry {
+  string id = 1;
+  string server_id = 2;
+  string action = 3;
+  string actor_id = 4;
+  string target_id = 5;
+  string target_type = 6;
+  string metadata = 7; // JSON string
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// Reactions
+
+message Reaction {
+  string channel_id = 1;
+  string message_id = 2;
+  string user_id = 3;
+  string emoji = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message ReactionGroup {
+  string emoji = 1;
+  bool me = 2;
+  repeated string user_ids = 3;
+}
+
+// Read State
+
+message ReadState {
+  string channel_id = 1;
+  string last_read_message_id = 2;
+  int32 unread_count = 3;
+}
+
+// Audio Preferences
+
+message AudioPreferences {
+  bool noise_suppression = 1;
+  bool echo_cancellation = 2;
+  bool auto_gain_control = 3;
+}
+
+// E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.

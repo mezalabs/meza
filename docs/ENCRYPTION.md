@@ -1,0 +1,303 @@
+# End-to-End Encryption
+
+Meza uses **universal E2EE** with a static channel key model. **All channels** — public, private, and DMs — are encrypted with versioned AES-256-GCM symmetric keys. Keys are distributed using ECIES (ephemeral X25519 DH + HKDF-SHA256 + AES-256-GCM) and messages are signed with Ed25519 for authenticity.
+
+There is no plaintext mode. The `is_private` flag is a UI convenience for default visibility (auto-denies `ViewChannel` on `@everyone`), not an encryption toggle. The server never sees message content for any channel type.
+
+## Design Goal
+
+Users sign up with email and password. They chat. Messages are end-to-end encrypted. They never see the word "key", "recovery phrase", or "verify device" unless they explicitly access recovery settings. The server never sees plaintext message content.
+
+---
+
+## Cryptographic Primitives
+
+| Purpose | Algorithm | Library |
+|---------|-----------|---------|
+| Password → keys | Argon2id → HKDF-SHA256 | hash-wasm (client), golang.org/x/crypto (server) |
+| Identity keypair | Ed25519 (signing) + X25519 (key agreement, derived) | @noble/curves |
+| Key bundle encryption | AES-256-GCM | Web Crypto API |
+| Channel key wrapping | ECIES: ephemeral X25519 DH + HKDF-SHA256 + AES-256-GCM | @noble/curves + Web Crypto API |
+| Message encryption | AES-256-GCM (with channel key) | Web Crypto API |
+| Message signing | Ed25519 | @noble/curves |
+| Recovery key | PBKDF2-SHA256 (600k iterations) from BIP39 mnemonic | Web Crypto API + @scure/bip39 |
+| Random bytes | CSPRNG | crypto.getRandomValues() |
+
+---
+
+## Key Hierarchy
+
+```
+User Password
+    │
+    ▼
+Argon2id(password, salt) → 64 bytes
+    │
+    ▼
+HKDF-SHA256 with different info strings
+    │
+    ├── Master Key (256-bit)                      Auth Key (256-bit)
+    │   never leaves client                       sent to server for authentication
+    │                                             (server stores Argon2id hash of this)
+    ▼
+┌───────────────────────────┐
+│  Encrypted Identity       │  ← AES-256-GCM(Master Key)
+│  (stored in IndexedDB)    │
+│                           │
+│  Contains:                │
+│  ├── Ed25519 secret key (32B)
+│  └── Ed25519 public key (32B)
+└───────────────────────────┘
+    │
+    ▼ (decrypted client-side)
+Identity Keypair (Ed25519)
+    │
+    ├── Signs messages (Ed25519)
+    ├── Wraps/unwraps channel keys (via X25519 derivation)
+    │
+    ▼
+Channel Keys (AES-256-GCM, versioned per channel)
+    │
+    └── Encrypt message content (all channels)
+```
+
+---
+
+## Key Derivation from Password
+
+1. **Argon2id** stretches the password + salt → 64 bytes (client: `p=4, t=2, m=64MB`; server re-hashes auth key with `p=4, t=3, m=64MB`)
+2. **HKDF-SHA256** splits the output into two independent 256-bit keys using different info strings (`meza-master-key`, `meza-auth-key`)
+
+The master key never leaves the client. The auth key is sent to the server, which stores an Argon2id hash of it (not the raw key).
+
+---
+
+## Identity Keypair
+
+Each user has a single Ed25519 identity keypair:
+
+- **Ed25519 secret key** (32 bytes) — signs messages, derives X25519 secret for ECIES
+- **Ed25519 public key** (32 bytes) — verifies signatures, derives X25519 public for ECIES
+
+The keypair is generated at registration, encrypted with the master key via AES-256-GCM, and stored in IndexedDB. The public key is also uploaded to the server via `KeyService.RegisterPublicKey` so other users can verify signatures and wrap channel keys.
+
+---
+
+## Channel Key Model
+
+Every channel has a **versioned AES-256-GCM symmetric key**. All users with `ViewChannel` permission share the same key for a given version.
+
+### Key Lifecycle
+
+1. **Channel created** → creator generates a random 256-bit channel key (version 1) and distributes to all members with `ViewChannel`
+2. **Key distributed** → key is ECIES-wrapped to each recipient's X25519 public key and uploaded as envelopes
+3. **Member joins server** → online member (elected by inviter assignment) distributes keys for all visible channels
+4. **Permission change grants `ViewChannel`** → the admin who made the change distributes keys to newly-visible channels
+5. **Key cached** → keys are cached in memory and persisted to IndexedDB (blob-encrypted with master key)
+
+Member removal does **not** trigger key rotation. This is intentional — the passive-adversary threat model (DB access only) does not require forward secrecy at member-removal boundaries. Removed members lose gateway access and cannot receive new messages.
+
+### Key Distribution Model
+
+Every key distribution event has an online initiator who already has the key:
+
+| Action | Who wraps | Scale |
+|--------|-----------|-------|
+| Channel creation (public) | Creator | O(server members with `ViewChannel`) |
+| Channel creation (private) | Creator | O(1) — just the creator initially |
+| DM creation | Initiator | O(participants) |
+| Invite acceptance | Elected online member (inviter) | O(channels the joiner can view) |
+| Private channel member add | The adder | O(1) |
+| Role change grants `ViewChannel` | The admin | O(affected channels) |
+
+**Fallback:** If a user gains channel access without receiving the key (race condition, missed distribution), they create a new key version via `RotateChannelKey(expectedVersion=currentVersion)` for atomic creation. Other members eventually receive the new version. `MAX_VERSIONS_PER_CHANNEL = 3` bounds local cache growth.
+
+### Lazy Initialization (Existing Public Channels)
+
+Existing public channels created before universal E2EE have no channel keys. The first user to open such a channel creates version 1 via `RotateChannelKey(expectedVersion=0)` for atomic creation. Optimistic concurrency ensures only one creator succeeds; others re-fetch the winner's key. Existing plaintext messages (`key_version = 0`) remain readable alongside new encrypted messages.
+
+### ECIES Key Wrapping
+
+Channel keys are distributed by wrapping them with each recipient's public key using ECIES:
+
+```
+Wrap (sender → recipient):
+  1. Generate ephemeral X25519 keypair
+  2. DH: shared = X25519(ephemeral_secret, recipient_x25519_pub)
+     (recipient X25519 pub is derived from their Ed25519 pub)
+  3. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||recipient_pub, info="meza-key-wrap-v1")
+  4. wrapped = AES-256-GCM(wrapping_key, channel_key)
+  5. envelope = ephemeral_pub(32) || nonce(12) || wrapped(48)  = 92 bytes
+
+Unwrap (recipient):
+  1. Parse envelope: ephemeral_pub, nonce, wrapped
+  2. Convert own Ed25519 secret → X25519 secret
+  3. DH: shared = X25519(own_x25519_secret, ephemeral_pub)
+  4. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||own_x25519_pub, info="meza-key-wrap-v1")
+  5. channel_key = AES-256-GCM-decrypt(wrapping_key, wrapped)
+```
+
+Envelopes are stored server-side via the Key Service. The server only sees opaque 92-byte blobs — it cannot derive the wrapping key without the recipient's private key.
+
+### Key Versioning
+
+Channel keys are versioned for availability, not for forward secrecy. Versioning exists solely to handle the fallback mechanism — when a user creates a new key version because they didn't receive the original via distribution.
+
+`RotateChannelKey` uses optimistic concurrency (expected version check) and retries once on version conflict. Up to 3 key versions are retained per channel in the local cache.
+
+---
+
+## Message Encryption
+
+Messages use a **sign-then-encrypt** scheme. This is stateless — no ratchet state, no ordering dependencies.
+
+### Encrypt (sender)
+
+```
+1. Get channel key + version for this channel
+2. Sign content with Ed25519 identity key → signature (64 bytes)
+3. Build payload: signature(64) || content
+4. Encrypt payload with AES-256-GCM using channel key
+5. Send: { key_version, encrypted_content: nonce(12) || ciphertext }
+```
+
+### Decrypt (recipient)
+
+```
+1. Get channel key by version from cache (or fetch from server)
+2. Decrypt AES-256-GCM → payload
+3. Split: signature(64) || content
+4. Verify Ed25519 signature against sender's public key
+5. Return content (or throw on verification failure)
+```
+
+### Wire Format
+
+```
+Cleartext fields (visible to server):
+  - sender_id, channel_id, timestamp, key_version
+
+Encrypted content (opaque to server):
+  nonce(12) || AES-256-GCM(channel_key, signature(64) || plaintext_content || auth_tag(16))
+```
+
+---
+
+## Key Service (Proto)
+
+The Key Service (`proto/meza/v1/keys.proto`) manages public keys and channel key envelopes:
+
+| RPC | Purpose |
+|-----|---------|
+| `RegisterPublicKey` | Upload Ed25519 signing public key (at registration/login) |
+| `GetPublicKeys` | Batch-fetch signing public keys for a set of users |
+| `StoreKeyEnvelopes` | Upload ECIES-wrapped channel key envelopes for members |
+| `GetKeyEnvelopes` | Retrieve all channel key envelopes for the calling user |
+| `RotateChannelKey` | Atomically increment key version + store new envelopes (optimistic concurrency) |
+| `ListMembersWithViewChannel` | Paginated list of user IDs + public keys for members with `ViewChannel` on a channel |
+
+The Key Service runs on port 8088. Authorization uses `ViewChannel` permission (not `channel_members` membership) for all envelope operations.
+
+---
+
+## Session Lifecycle
+
+### Bootstrap (login / page reload)
+
+```
+1. Derive masterKey from password (or load from sessionStorage on reload)
+2. Decrypt identity keypair from IndexedDB using masterKey
+3. Initialize channel key module with identity + masterKey
+4. Load cached channel keys from IndexedDB (blob-encrypted with masterKey)
+5. Session is ready — messages can be encrypted/decrypted
+```
+
+The master key is cached in `sessionStorage` (survives page reload, cleared on tab close) so users don't need to re-enter their password on refresh.
+
+### Teardown (logout)
+
+```
+1. Flush pending channel key persistence to IndexedDB
+2. Clear channel key cache (memory)
+3. Clear master key from sessionStorage
+4. Clear identity reference
+```
+
+---
+
+## Recovery (BIP39)
+
+Users can generate a 12-word BIP39 recovery phrase as a backup for their identity keypair:
+
+1. **Generate**: 128-bit entropy → 12-word English mnemonic
+2. **Derive recovery key**: PBKDF2-SHA256(mnemonic, salt="meza-recovery", 600,000 iterations) → 256-bit key
+3. **Encrypt**: AES-256-GCM(recovery_key, serialized_identity) → recovery bundle
+4. **Upload**: Server stores `recovery_encrypted_key_bundle` + `recovery_key_bundle_iv` alongside the password-encrypted bundle
+
+To recover:
+1. User enters 12-word phrase + new password
+2. Derive recovery key from phrase
+3. Fetch and decrypt recovery bundle from server
+4. Re-encrypt identity with new password-derived master key
+5. Upload new bundles
+
+---
+
+## Persistence (IndexedDB)
+
+Crypto state is stored in IndexedDB (`meza-crypto`, version 4):
+
+| Store | Contents |
+|-------|----------|
+| `key-bundle` | Encrypted Ed25519 identity keypair (AES-256-GCM with master key) |
+| `channel-keys` | Encrypted channel key cache blob (AES-256-GCM with master key) |
+
+MLS-era stores (`provider-state`, `mls-groups`) are automatically deleted on upgrade to v4.
+
+---
+
+## What the Server Stores
+
+| Data | Encrypted? | Server Can Read? |
+|------|-----------|------------------|
+| User email | No | Yes |
+| Auth key hash (Argon2id) | Hashed | No (one-way) |
+| Salt | No | Yes (needed for client key derivation) |
+| Encrypted identity bundle | Yes (AES-256-GCM) | No |
+| Recovery bundle | Yes (AES-256-GCM) | No |
+| Ed25519 signing public key | No | Yes (needed for key wrapping + verification) |
+| Channel key envelopes | ECIES-wrapped | No (needs recipient's private key) |
+| Message content | Yes (AES-256-GCM) | No |
+| Message metadata | No | Yes (sender, channel, timestamp, key_version) |
+
+---
+
+## Security Properties
+
+### Confidentiality
+- Messages are encrypted with AES-256-GCM using a shared channel key
+- Channel keys are ECIES-wrapped per-member — only the intended recipient can unwrap
+- The server sees only opaque ciphertext and 92-byte ECIES envelopes
+
+### Authenticity
+- Every message is Ed25519-signed by the sender before encryption
+- Recipients verify the signature against the sender's registered public key
+- Strict RFC 8032 / FIPS 186-5 verification mode (`zip215: false`) for non-repudiation
+
+### Forward Secrecy
+
+Meza does **not** provide forward secrecy. All messages within a channel version use the same static key. This is intentional — the threat model assumes a passive adversary (database access only). A removed member retains old keys but cannot receive new messages (gateway routing enforces `ViewChannel`).
+
+### Key Compromise Scenarios
+- **Password compromised**: Attacker can decrypt identity bundle → change password to re-encrypt with new master key
+- **Server compromised**: Attacker gets encrypted bundles + ECIES envelopes. Cannot decrypt without private keys. This applies to ALL channels including public channels — the server never sees plaintext.
+- **Channel key leaked**: All messages under that key version are compromised. Manual key rotation via `RotateChannelKey` can be used to limit exposure.
+
+### Memory Hygiene
+- JavaScript's garbage collector manages memory; explicit zeroing via `Uint8Array.fill(0)` is best-effort and does not guarantee the runtime won't retain copies (the GC may have already copied the buffer during compaction). We do not claim cryptographic memory erasure.
+- Master key stored in `sessionStorage` (not `localStorage`) — cleared on tab close
+- Non-extractable `CryptoKey` objects used where possible
+
+
+
+Client-side crypto code lives in `client/packages/core/src/crypto/`. Server-side auth hashing in `server/internal/auth/`. Key service proto in `proto/meza/v1/keys.proto`.

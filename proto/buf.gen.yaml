@@ -1,0 +1,26 @@
+version: v2
+plugins:
+  # Go server code
+  - local: protoc-gen-go
+    out: ../server/gen
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-connect-go
+    out: ../server/gen
+    opt:
+      - paths=source_relative
+
+  # TypeScript client code
+  - remote: buf.build/bufbuild/es
+    out: ../client/gen
+    opt:
+      - target=ts
+  - remote: buf.build/connectrpc/es
+    out: ../client/gen
+    opt:
+      - target=ts
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/meza-chat/meza/gen

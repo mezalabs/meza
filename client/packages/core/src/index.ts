@@ -1,0 +1,358 @@
+export const MEZA_VERSION = '0.0.1';
+
+export type { Device } from '@meza/gen/meza/v1/auth_pb.ts';
+export type {
+  FriendRequestEntry,
+  ReplyEntry,
+} from '@meza/gen/meza/v1/chat_pb.ts';
+export { UploadPurpose } from '@meza/gen/meza/v1/media_pb.ts';
+export type {
+  Attachment,
+  Channel,
+  ChannelGroup,
+  CustomEmoji,
+  DMChannel,
+  Invite,
+  LinkEmbed,
+  PermissionOverride,
+  Role,
+  Server,
+  User,
+} from '@meza/gen/meza/v1/models_pb.ts';
+// Re-export protobuf enums used by UI
+export { ChannelType } from '@meza/gen/meza/v1/models_pb.ts';
+export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
+// API — auth
+export {
+  changePassword,
+  finalizeRegistration,
+  getProfile,
+  getRecoveryBundle,
+  getSalt,
+  listDevices,
+  login,
+  logout,
+  recoverAccount,
+  refreshAccessToken,
+  register,
+  revokeDevice,
+  toStoredUser,
+  updateProfile,
+} from './api/auth.ts';
+// API — chat
+export {
+  acceptFriendRequest,
+  acceptMessageRequest,
+  ackMessage,
+  acknowledgeRules,
+  addChannelMember,
+  addReaction,
+  banMember,
+  blockUser,
+  cancelFriendRequest,
+  completeOnboarding,
+  createChannel,
+  createChannelGroup,
+  createEmoji,
+  createGroupDMChannel,
+  createInvite,
+  createOrGetDMChannel,
+  createRole,
+  createServer,
+  createServerFromTemplate,
+  createSound,
+  declineFriendRequest,
+  declineMessageRequest,
+  deleteChannel,
+  deleteChannelGroup,
+  deleteEmoji,
+  deleteMessage,
+  deletePermissionOverride,
+  deleteRole,
+  deleteSound,
+  editMessage,
+  getEffectivePermissions,
+  getMessages,
+  getMessagesByIDs,
+  getPinnedMessages,
+  getReactions,
+  getReplies,
+  getServer,
+  joinServer,
+  kickMember,
+  listBans,
+  listBlocks,
+  listChannelGroups,
+  listChannelMembers,
+  listChannels,
+  listDMChannels,
+  listEmojis,
+  listFriendRequests,
+  listFriends,
+  listMembers,
+  listMessageRequests,
+  listPermissionOverrides,
+  listRoles,
+  listServerSounds,
+  listServers,
+  listUserEmojis,
+  listUserSounds,
+  pinMessage,
+  removeChannelMember,
+  removeFriend,
+  removeReaction,
+  removeTimeout,
+  reorderRoles,
+  resolveInvite,
+  reverseDecline,
+  type SearchMessagesParams,
+  type SearchMessagesResult,
+  searchMessages,
+  sendFriendRequest,
+  sendMessage,
+  setMemberRoles,
+  setPermissionOverride,
+  timeoutMember,
+  type UploadedFile,
+  unbanMember,
+  unblockUser,
+  unpinMessage,
+  updateChannel,
+  updateChannelGroup,
+  updateEmoji,
+  updateMember,
+  updateRole,
+  updateServer,
+  updateSound,
+} from './api/chat.ts';
+// API — key distribution
+export { getPublicKeys } from './api/keys.ts';
+// API — media
+export {
+  completeUpload,
+  createUpload,
+  type EncryptedUploadResult,
+  fetchEncryptedMedia,
+  getDownloadURL,
+  getMediaURL,
+  uploadEncryptedFile,
+  uploadFile,
+} from './api/media.ts';
+// API — presence
+export {
+  clearStatusOverride,
+  getBulkPresence,
+  getMyPresence,
+  getPresence,
+  setStatusOverride,
+  updatePresence,
+} from './api/presence.ts';
+// API — voice
+export {
+  getVoiceChannelState,
+  joinVoiceChannel,
+  leaveVoiceChannel,
+  mapVoiceError,
+} from './api/voice.ts';
+// Constants
+export { LOBBY_SERVER_ID } from './constants.ts';
+// Crypto — E2EE static channel key operations
+export {
+  aesGcmDecrypt,
+  aesGcmEncrypt,
+  bootstrapSession,
+  clearChannelKeyCache,
+  clearCryptoStorage,
+  createChannelKey,
+  createIdentity,
+  type DerivedKeys,
+  decryptMessage,
+  decryptPayload,
+  decryptRecoveryBundle,
+  deriveKeys,
+  deriveRecoveryKey,
+  deserializeIdentity,
+  distributeKeyToMember,
+  type EncryptedMessage,
+  redistributeChannelKeys,
+  edToX25519Public,
+  edToX25519Secret,
+  encryptMessage,
+  encryptPayload,
+  encryptRecoveryBundle,
+  fetchAndCacheChannelKeys,
+  flushChannelKeys,
+  generateChannelKey,
+  generateIdentityKeypair,
+  generateRecoveryPhrase,
+  getCachedChannelIds,
+  getChannelKey,
+  getIdentity,
+  getLatestKeyVersion,
+  hasChannelKey,
+  type IdentityKeypair,
+  initChannelKeys,
+  isSessionReady,
+  lazyInitChannelKey,
+  loadCachedChannelKeys,
+  loadKeyBundle,
+  onSessionReady,
+  persistIdentity,
+  provisionChannelKeyBatched,
+  registerPublicKey,
+  restoreIdentity,
+  rotateChannelKey,
+  serializeIdentity,
+  signMessage,
+  storeKeyBundle,
+  teardownSession,
+  unwrapChannelKey,
+  validateRecoveryPhrase,
+  verifySignature,
+  wrapChannelKey,
+  wrapKeyForMembers,
+  // File encryption
+  acquireBlobURL,
+  type AttachmentMeta,
+  base64ToUint8,
+  buildMessageContent,
+  decryptFile,
+  encryptFile,
+  generateFileKey,
+  generateImageThumbnail,
+  generateVideoThumbnail,
+  parseMessageContent,
+  type ParsedMessageContent,
+  releaseAllBlobURLs,
+  releaseBlobURL,
+  unwrapFileKey,
+  wrapFileKey,
+} from './crypto/index.ts';
+// Gateway
+export {
+  connect as gatewayConnect,
+  disconnect as gatewayDisconnect,
+  sendTyping as gatewaySendTyping,
+} from './gateway/gateway.ts';
+// Onboarding templates
+export {
+  SERVER_TEMPLATES,
+  type ServerTemplate,
+  type TemplateChannel,
+  type TemplateRole,
+  VOICE_CHANNELS,
+} from './onboarding/templates.ts';
+// Search
+export * from './search/index.ts';
+// Sound
+export type { SoundType } from './sound/SoundManager.ts';
+export { soundManager } from './sound/SoundManager.ts';
+// Stores
+export type {
+  AudioSettingsActions,
+  AudioSettingsState,
+} from './store/audioSettings.ts';
+export { useAudioSettingsStore } from './store/audioSettings.ts';
+export type { AuthActions, AuthState, StoredUser } from './store/auth.ts';
+export { useAuthStore } from './store/auth.ts';
+export type { BlockActions, BlockState } from './store/blocks.ts';
+export { useBlockStore } from './store/blocks.ts';
+export type {
+  ChannelGroupActions,
+  ChannelGroupState,
+} from './store/channel-groups.ts';
+export { useChannelGroupStore } from './store/channel-groups.ts';
+export type { ChannelActions, ChannelState } from './store/channels.ts';
+export { useChannelStore } from './store/channels.ts';
+export type { DMActions, DMState } from './store/dms.ts';
+export { useDMStore } from './store/dms.ts';
+export type { EmojiActions, EmojiState } from './store/emojis.ts';
+export { useEmojiStore } from './store/emojis.ts';
+export type { FriendActions, FriendState } from './store/friends.ts';
+export { useFriendStore } from './store/friends.ts';
+export type {
+  GatewayActions,
+  GatewayState,
+  GatewayStatus,
+} from './store/gateway.ts';
+export { useGatewayStore } from './store/gateway.ts';
+export type { InviteState } from './store/invite.ts';
+export { useInviteStore } from './store/invite.ts';
+export type { MemberActions, MemberState } from './store/members.ts';
+export { useMemberStore } from './store/members.ts';
+export type { MessageActions, MessageState } from './store/messages.ts';
+export { useMessageStore } from './store/messages.ts';
+export type {
+  NotificationSettingsActions,
+  NotificationSettingsState,
+} from './store/notificationSettings.ts';
+export { useNotificationSettingsStore } from './store/notificationSettings.ts';
+export type {
+  PermissionOverrideActions,
+  PermissionOverrideState,
+} from './store/permission-overrides.ts';
+export { usePermissionOverrideStore } from './store/permission-overrides.ts';
+export type {
+  PermCategory,
+  PermissionKey,
+} from './store/permissions.ts';
+export {
+  ALL_PERMISSIONS,
+  CATEGORY_META,
+  CHANNEL_SCOPED_PERMISSIONS,
+  CHANNEL_TYPE_CATEGORIES,
+  hasPermission,
+  PERMISSION_INFO,
+  PERMISSIONS_BY_CATEGORY,
+  Permissions,
+  validateChannelScoped,
+  validatePermissions,
+} from './store/permissions.ts';
+export type { PinActions, PinState } from './store/pins.ts';
+export { usePinStore } from './store/pins.ts';
+export type {
+  PresenceActions,
+  PresenceState,
+  StatusOverride,
+} from './store/presence.ts';
+export { usePresenceStore } from './store/presence.ts';
+export type { ReactionActions, ReactionState } from './store/reactions.ts';
+export { useReactionStore } from './store/reactions.ts';
+export type { ReadStateActions, ReadStateState } from './store/read-state.ts';
+export { useReadStateStore } from './store/read-state.ts';
+export type { RoleActions, RoleState } from './store/roles.ts';
+export { useRoleStore } from './store/roles.ts';
+export type { ServerActions, ServerState } from './store/servers.ts';
+export { useServerStore } from './store/servers.ts';
+export type { SoundActions, SoundState } from './store/sounds.ts';
+export { useSoundStore } from './store/sounds.ts';
+export type {
+  ContentHint,
+  ScreenSharePresetKey,
+  StreamSettingsActions,
+  StreamSettingsState,
+  ViewerQuality,
+} from './store/streamSettings.ts';
+export { useStreamSettingsStore } from './store/streamSettings.ts';
+export type { TypingActions, TypingState } from './store/typing.ts';
+export { useTypingStore } from './store/typing.ts';
+export type { UsersActions, UsersState } from './store/users.ts';
+export { useUsersStore } from './store/users.ts';
+// Stores — voice
+export type { VoiceActions, VoiceState } from './store/voice.ts';
+export { useVoiceStore } from './store/voice.ts';
+// Stores — voice participants
+export type {
+  VoiceChannelParticipant,
+  VoiceParticipantsActions,
+  VoiceParticipantsState,
+} from './store/voiceParticipants.ts';
+export { useVoiceParticipantsStore } from './store/voiceParticipants.ts';
+export * from './keybinds/index.ts';
+export * from './tiling/index.ts';
+// Types — Electron API
+export type { ElectronAPI } from './types/electron.d.ts';
+export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
+export { getBaseUrl, isElectron } from './utils/platform.ts';
+// Utils
+export { formatRelativeTime, toISO } from './utils/time.ts';

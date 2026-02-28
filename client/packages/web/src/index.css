@@ -1,0 +1,344 @@
+@import "tailwindcss";
+
+/* Scan the shared UI package for utility classes */
+@source "../../ui/src";
+
+/* Custom Radix state variants */
+@custom-variant radix-open (&[data-state="open"]);
+@custom-variant radix-closed (&[data-state="closed"]);
+@custom-variant radix-checked (&[data-state="checked"]);
+@custom-variant radix-active (&[data-state="active"]);
+@custom-variant radix-disabled (&[data-disabled]);
+
+@theme {
+  /* ── Reset defaults, build from scratch ── */
+  --color-*: initial;
+  --font-*: initial;
+
+  /* ── Background layers (neutral dark, ascending lightness) ── */
+  --color-bg-base: oklch(0.18 0 0); /* Must match inline bg in index.html */
+  --color-bg-surface: oklch(0.22 0 0);
+  --color-bg-elevated: oklch(0.26 0 0);
+  --color-bg-overlay: oklch(0.17 0 0);
+
+  /* ── Amber accent scale ── */
+  --color-accent: oklch(0.75 0.16 65);
+  --color-accent-hover: oklch(0.8 0.17 65);
+  --color-accent-muted: oklch(0.55 0.1 65);
+  --color-accent-subtle: oklch(0.3 0.04 65);
+
+  /* ── Text ── */
+  --color-text: oklch(0.93 0 0);
+  --color-text-muted: oklch(0.65 0 0);
+  --color-text-subtle: oklch(0.45 0 0);
+
+  /* ── Borders ── */
+  --color-border: oklch(0.3 0 0);
+  --color-border-hover: oklch(0.4 0 0);
+
+  /* ── Focus ring ── */
+  --color-focus: oklch(0.75 0.16 65);
+
+  /* ── Semantic ── */
+  --color-success: oklch(0.7 0.15 145);
+  --color-warning: oklch(0.75 0.15 85);
+  --color-error: oklch(0.65 0.2 25);
+  --color-info: oklch(0.7 0.12 230);
+
+  /* ── Essentials ── */
+  --color-white: #fff;
+  --color-black: #000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* ── Typography ── */
+  --font-sans: "Geist Variable", "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
+
+  /* ── Text scale (compact: 14px base) ── */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  /* ── Border radius (mixed: rounded interactive, subtle containers) ── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* ── Shadows (subtle) ── */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-md: 0 2px 8px oklch(0 0 0 / 0.4);
+  --shadow-lg: 0 4px 16px oklch(0 0 0 / 0.5);
+
+  /* ── Easing ── */
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Animations (for Radix transitions) ── */
+  --animate-fade-in: fade-in 150ms var(--ease-smooth);
+  --animate-fade-out: fade-out 150ms var(--ease-smooth);
+  --animate-scale-in: scale-in 150ms var(--ease-snappy);
+  --animate-scale-out: scale-out 100ms var(--ease-smooth);
+  --animate-slide-down: slide-down 150ms var(--ease-snappy);
+  --animate-slide-up: slide-up 150ms var(--ease-snappy);
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  @keyframes scale-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  @keyframes slide-down {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ── Base layer ── */
+html {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  background-color: var(--color-bg-base);
+  color: var(--color-text);
+  color-scheme: dark;
+}
+
+*:focus-visible:not(input):not(textarea):not(select) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── Form element base styles ── */
+/* @layer base so Tailwind utilities (rounded-none etc.) can override via cascade layers */
+@layer base {
+  button,
+  [role="button"],
+  a,
+  summary,
+  select,
+  label[for] {
+    cursor: pointer;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    padding: 1rem 1.25rem; /* py-4 px-5 */
+    font-size: var(--text-lg);
+    border-radius: var(--radius-lg);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: oklch(0.38 0 0);
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Jump-to-message highlight animation */
+@keyframes message-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  30% {
+    background-color: oklch(0.75 0.16 65 / 0.15);
+  }
+}
+
+.highlight-flash {
+  animation: message-flash 2s ease-out;
+}
+
+/* ── Markdown body styles ── */
+.markdown-body {
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-body > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+}
+
+.markdown-body em {
+  font-style: italic;
+}
+
+.markdown-body del {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.markdown-body .spoiler {
+  all: unset;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 2px;
+  background-color: var(--color-bg-elevated);
+  color: transparent;
+  transition:
+    background-color 0.15s var(--ease-smooth),
+    color 0.15s var(--ease-smooth);
+  user-select: none;
+}
+
+.markdown-body .spoiler-revealed {
+  background-color: oklch(from var(--color-bg-elevated) l c h / 0.4);
+  color: inherit;
+  user-select: text;
+}
+
+.markdown-body input[type="checkbox"] {
+  margin-right: 4px;
+  accent-color: var(--color-accent);
+}
+
+/* ── Syntax highlighting (highlight.js tokens) ── */
+.hljs {
+  color: var(--color-text);
+  background: transparent;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag {
+  color: oklch(0.72 0.14 25); /* warm red */
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type {
+  color: oklch(0.72 0.12 145); /* green */
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion,
+.hljs-meta {
+  color: var(--color-text-subtle);
+}
+
+.hljs-number,
+.hljs-regexp,
+.hljs-literal,
+.hljs-link {
+  color: oklch(0.75 0.16 65); /* accent amber */
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: oklch(0.7 0.12 230); /* info blue */
+}
+
+.hljs-variable,
+.hljs-params {
+  color: oklch(0.78 0.1 60); /* light amber */
+}
+
+.hljs-title.function_ {
+  color: oklch(0.7 0.12 230); /* info blue */
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
+
+/* emoji-mart theme overrides */
+em-emoji-picker {
+  /* emoji-mart requires comma-separated RGB integers (used in rgba() internally) */
+  --em-rgb-background: 46, 46, 46; /* sRGB of bg-elevated oklch(0.26 0 0) */
+  --em-rgb-input: 36, 36, 36; /* sRGB of bg-base oklch(0.18 0 0) */
+  --em-rgb-color: 229, 229, 229; /* sRGB of text oklch(0.93 0 0) */
+  --em-rgb-accent: 204, 163, 82;
+  --em-color-border: var(--color-border);
+  --em-color-border-over: var(--color-border-hover);
+  --font-family: var(--font-sans);
+  --em-font-size: 0.875rem;
+}

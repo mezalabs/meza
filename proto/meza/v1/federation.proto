@@ -1,0 +1,98 @@
+syntax = "proto3";
+package meza.v1;
+
+import "meza/v1/models.proto";
+import "google/protobuf/timestamp.proto";
+
+service FederationService {
+  // Home server only: create a scoped assertion for a target instance
+  rpc CreateFederationAssertion(CreateFederationAssertionRequest) returns (CreateFederationAssertionResponse);
+  // Remote instances: join a guild with a federation assertion
+  rpc FederationJoin(FederationJoinRequest) returns (FederationJoinResponse);
+  // Remote instances: refresh local token (requires fresh assertion)
+  rpc FederationRefresh(FederationRefreshRequest) returns (FederationRefreshResponse);
+  // Remote instances: leave a guild
+  rpc FederationLeave(FederationLeaveRequest) returns (FederationLeaveResponse);
+  // Resolve an invite URL to instance_url + invite_code
+  rpc ResolveRemoteInvite(ResolveRemoteInviteRequest) returns (ResolveRemoteInviteResponse);
+  // List all remote instance memberships for the authenticated user
+  rpc ListFederatedMemberships(ListFederatedMembershipsRequest) returns (ListFederatedMembershipsResponse);
+}
+
+// CreateFederationAssertion - the home server issues a scoped, short-lived assertion
+// for a specific target instance. The assertion includes identity claims but
+// cannot be used for any home server API calls.
+
+message CreateFederationAssertionRequest {
+  string target_instance_url = 1; // e.g. "https://coolgroup.org"
+}
+
+message CreateFederationAssertionResponse {
+  string assertion_token = 1; // Short-lived JWT (30-60s), aud = target_instance_url
+}
+
+// FederationJoin - Remote instance verifies assertion, creates shadow user + member,
+// and issues local tokens.
+
+message FederationJoinRequest {
+  string assertion_token = 1; // Federation assertion from the home server
+  string invite_code = 2;     // Invite code on this instance
+}
+
+message FederationJoinResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  Server server = 3;
+  repeated Channel channels = 4;
+  repeated Member members = 5;
+  string user_id = 6; // Shadow user ID on this instance
+}
+
+// FederationRefresh - Refresh local federation tokens. Requires a fresh
+// assertion from the home server to ensure revocation propagation.
+
+message FederationRefreshRequest {
+  string refresh_token = 1;    // Local refresh token from this instance
+  string assertion_token = 2;  // Fresh federation assertion from the home server
+}
+
+message FederationRefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+// FederationLeave - Leave a guild on a remote instance.
+// Shadow user row is preserved for message attribution.
+
+message FederationLeaveRequest {
+  string server_id = 1;
+}
+
+message FederationLeaveResponse {}
+
+// ResolveRemoteInvite - Parse an invite URL server-side for agent parity.
+
+message ResolveRemoteInviteRequest {
+  string invite_url = 1; // e.g. "https://coolgroup.org/invite/ABCD1234"
+}
+
+message ResolveRemoteInviteResponse {
+  string instance_url = 1; // e.g. "https://coolgroup.org"
+  string invite_code = 2;  // e.g. "ABCD1234"
+}
+
+// ListFederatedMemberships - List all remote instances the user is a member of.
+
+message ListFederatedMembershipsRequest {}
+
+message ListFederatedMembershipsResponse {
+  repeated FederatedMembership memberships = 1;
+}
+
+message FederatedMembership {
+  string instance_url = 1;
+  string server_id = 2;
+  string server_name = 3;
+  string server_icon_url = 4;
+  google.protobuf.Timestamp joined_at = 5;
+}

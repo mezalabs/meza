@@ -1,0 +1,1205 @@
+syntax = "proto3";
+package meza.v1;
+
+import "meza/v1/models.proto";
+import "meza/v1/presence.proto";
+import "google/protobuf/timestamp.proto";
+
+service ChatService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc EditMessage(EditMessageRequest) returns (EditMessageResponse);
+  rpc DeleteMessage(DeleteMessageRequest) returns (DeleteMessageResponse);
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+  rpc CreateChannel(CreateChannelRequest) returns (CreateChannelResponse);
+  rpc UpdateChannel(UpdateChannelRequest) returns (UpdateChannelResponse);
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  rpc GetChannel(GetChannelRequest) returns (GetChannelResponse);
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc CreateServer(CreateServerRequest) returns (CreateServerResponse);
+  rpc UpdateServer(UpdateServerRequest) returns (UpdateServerResponse);
+  rpc DeleteServer(DeleteServerRequest) returns (DeleteServerResponse);
+  rpc GetServer(GetServerRequest) returns (GetServerResponse);
+  rpc ListServers(ListServersRequest) returns (ListServersResponse);
+  rpc JoinServer(JoinServerRequest) returns (JoinServerResponse);
+  rpc LeaveServer(LeaveServerRequest) returns (LeaveServerResponse);
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse);
+  rpc UpdateMember(UpdateMemberRequest) returns (UpdateMemberResponse);
+  rpc SetMemberRoles(SetMemberRolesRequest) returns (SetMemberRolesResponse);
+  rpc KickMember(KickMemberRequest) returns (KickMemberResponse);
+  rpc BanMember(BanMemberRequest) returns (BanMemberResponse);
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  rpc UnbanMember(UnbanMemberRequest) returns (UnbanMemberResponse);
+  rpc ListBans(ListBansRequest) returns (ListBansResponse);
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  rpc ReorderRoles(ReorderRolesRequest) returns (ReorderRolesResponse);
+  rpc CreateEmoji(CreateEmojiRequest) returns (CreateEmojiResponse);
+  rpc DeleteEmoji(DeleteEmojiRequest) returns (DeleteEmojiResponse);
+  rpc UpdateEmoji(UpdateEmojiRequest) returns (UpdateEmojiResponse);
+  rpc ListEmojis(ListEmojisRequest) returns (ListEmojisResponse);
+  rpc ListUserEmojis(ListUserEmojisRequest) returns (ListUserEmojisResponse);
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse);
+  rpc ResolveInvite(ResolveInviteRequest) returns (ResolveInviteResponse);
+  rpc RevokeInvite(RevokeInviteRequest) returns (RevokeInviteResponse);
+  rpc ListInvites(ListInvitesRequest) returns (ListInvitesResponse);
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
+  rpc UnpinMessage(UnpinMessageRequest) returns (UnpinMessageResponse);
+  rpc GetPinnedMessages(GetPinnedMessagesRequest) returns (GetPinnedMessagesResponse);
+  rpc AddChannelMember(AddChannelMemberRequest) returns (AddChannelMemberResponse);
+  rpc RemoveChannelMember(RemoveChannelMemberRequest) returns (RemoveChannelMemberResponse);
+  rpc ListChannelMembers(ListChannelMembersRequest) returns (ListChannelMembersResponse);
+  rpc CreateSound(CreateSoundRequest) returns (CreateSoundResponse);
+  rpc DeleteSound(DeleteSoundRequest) returns (DeleteSoundResponse);
+  rpc UpdateSound(UpdateSoundRequest) returns (UpdateSoundResponse);
+  rpc ListUserSounds(ListUserSoundsRequest) returns (ListUserSoundsResponse);
+  rpc ListServerSounds(ListServerSoundsRequest) returns (ListServerSoundsResponse);
+  rpc BulkDeleteMessages(BulkDeleteMessagesRequest) returns (BulkDeleteMessagesResponse);
+  rpc TimeoutMember(TimeoutMemberRequest) returns (TimeoutMemberResponse);
+  rpc RemoveTimeout(RemoveTimeoutRequest) returns (RemoveTimeoutResponse);
+  rpc ListAuditLog(ListAuditLogRequest) returns (ListAuditLogResponse);
+  rpc AddReaction(AddReactionRequest) returns (AddReactionResponse);
+  rpc RemoveReaction(RemoveReactionRequest) returns (RemoveReactionResponse);
+  rpc GetReactions(GetReactionsRequest) returns (GetReactionsResponse);
+  rpc AckMessage(AckMessageRequest) returns (AckMessageResponse);
+  rpc CreateOrGetDMChannel(CreateOrGetDMChannelRequest) returns (CreateOrGetDMChannelResponse);
+  rpc ListDMChannels(ListDMChannelsRequest) returns (ListDMChannelsResponse);
+  rpc CreateGroupDMChannel(CreateGroupDMChannelRequest) returns (CreateGroupDMChannelResponse);
+  rpc GetReplies(GetRepliesRequest) returns (GetRepliesResponse);
+  rpc GetMessagesByIDs(GetMessagesByIDsRequest) returns (GetMessagesByIDsResponse);
+  rpc AcknowledgeRules(AcknowledgeRulesRequest) returns (AcknowledgeRulesResponse);
+  rpc CompleteOnboarding(CompleteOnboardingRequest) returns (CompleteOnboardingResponse);
+  rpc CreateChannelGroup(CreateChannelGroupRequest) returns (CreateChannelGroupResponse);
+  rpc UpdateChannelGroup(UpdateChannelGroupRequest) returns (UpdateChannelGroupResponse);
+  rpc DeleteChannelGroup(DeleteChannelGroupRequest) returns (DeleteChannelGroupResponse);
+  rpc ListChannelGroups(ListChannelGroupsRequest) returns (ListChannelGroupsResponse);
+  rpc SetPermissionOverride(SetPermissionOverrideRequest) returns (SetPermissionOverrideResponse);
+  rpc DeletePermissionOverride(DeletePermissionOverrideRequest) returns (DeletePermissionOverrideResponse);
+  rpc ListPermissionOverrides(ListPermissionOverridesRequest) returns (ListPermissionOverridesResponse);
+  rpc GetEffectivePermissions(GetEffectivePermissionsRequest) returns (GetEffectivePermissionsResponse);
+  rpc AcceptMessageRequest(AcceptMessageRequestReq) returns (AcceptMessageRequestRes);
+  rpc DeclineMessageRequest(DeclineMessageRequestReq) returns (DeclineMessageRequestRes);
+  rpc ReverseDecline(ReverseDeclineRequest) returns (ReverseDeclineResponse);
+  rpc ListMessageRequests(ListMessageRequestsRequest) returns (ListMessageRequestsResponse);
+  rpc BlockUser(BlockUserRequest) returns (BlockUserResponse);
+  rpc UnblockUser(UnblockUserRequest) returns (UnblockUserResponse);
+  rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse);
+  rpc SendFriendRequest(SendFriendRequestRequest) returns (SendFriendRequestResponse);
+  rpc AcceptFriendRequest(AcceptFriendRequestRequest) returns (AcceptFriendRequestResponse);
+  rpc DeclineFriendRequest(DeclineFriendRequestRequest) returns (DeclineFriendRequestResponse);
+  rpc CancelFriendRequest(CancelFriendRequestRequest) returns (CancelFriendRequestResponse);
+  rpc RemoveFriend(RemoveFriendRequest) returns (RemoveFriendResponse);
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse);
+  rpc ListFriendRequests(ListFriendRequestsRequest) returns (ListFriendRequestsResponse);
+  rpc CreateServerFromTemplate(CreateServerFromTemplateRequest) returns (CreateServerFromTemplateResponse);
+  rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
+  rpc StreamEvents(StreamEventsRequest) returns (stream Event);
+}
+
+// Messages
+
+message SendMessageRequest {
+  string channel_id = 1;
+  bytes encrypted_content = 2;
+  reserved 3;                // was ratchet_header, removed 2026-02-23
+  reserved "ratchet_header";
+  string nonce = 4;
+  repeated string attachment_ids = 5;
+  optional string reply_to_id = 6;
+  repeated string mentioned_user_ids = 7;  // Client-supplied for E2EE channels
+  bool mention_everyone = 8;
+  repeated string mentioned_role_ids = 9;
+  uint32 key_version = 10;  // Static channel key version used for encryption
+}
+
+message SendMessageResponse {
+  string message_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+}
+
+message EditMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  bytes encrypted_content = 3;
+  reserved 4;                // was ratchet_header, removed 2026-02-23
+  reserved "ratchet_header";
+  repeated string mentioned_user_ids = 5;
+  bool mention_everyone = 6;
+  repeated string mentioned_role_ids = 7;
+  uint32 key_version = 8;  // Static channel key version used for encryption
+}
+
+message EditMessageResponse {
+  google.protobuf.Timestamp edited_at = 1;
+}
+
+message DeleteMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message DeleteMessageResponse {}
+
+message GetMessagesRequest {
+  string channel_id = 1;
+  string before = 2;
+  string after = 3;
+  int32 limit = 4;
+  string around = 5;  // Fetch messages centered around this message ID
+}
+
+message GetMessagesResponse {
+  repeated Message messages = 1;
+  bool has_more = 2;  // True if more messages exist beyond the returned set
+}
+
+// Channels
+
+message CreateChannelRequest {
+  string server_id = 1;
+  string name = 2;
+  ChannelType type = 3;
+  bool is_private = 4;
+  optional string channel_group_id = 5;
+}
+
+message CreateChannelResponse {
+  Channel channel = 1;
+}
+
+message UpdateChannelRequest {
+  string channel_id = 1;
+  optional string name = 2;
+  optional string topic = 3;
+  optional int32 position = 4;
+  optional bool is_private = 5;
+  optional int32 slow_mode_seconds = 6; // NULL=off, 0=read-only, >0=interval
+  optional bool is_default = 7;
+  optional string channel_group_id = 8;
+}
+
+message UpdateChannelResponse {
+  Channel channel = 1;
+}
+
+message DeleteChannelRequest {
+  string channel_id = 1;
+}
+
+message DeleteChannelResponse {}
+
+message GetChannelRequest {
+  string channel_id = 1;
+}
+
+message GetChannelResponse {
+  Channel channel = 1;
+}
+
+message ListChannelsRequest {
+  string server_id = 1;
+}
+
+message ListChannelsResponse {
+  repeated Channel channels = 1;
+}
+
+// Servers
+
+message CreateServerRequest {
+  string name = 1;
+  optional string icon_url = 2;
+  bool default_channel_privacy = 3;
+}
+
+message CreateServerResponse {
+  Server server = 1;
+}
+
+message UpdateServerRequest {
+  string server_id = 1;
+  optional string name = 2;
+  optional string icon_url = 3;
+  optional string welcome_message = 4;
+  optional string rules = 5;
+  optional bool onboarding_enabled = 6;
+  optional bool rules_required = 7;
+  optional bool default_channel_privacy = 8;
+}
+
+message UpdateServerResponse {
+  Server server = 1;
+}
+
+message DeleteServerRequest {
+  string server_id = 1;
+}
+
+message DeleteServerResponse {}
+
+message GetServerRequest {
+  string server_id = 1;
+}
+
+message GetServerResponse {
+  Server server = 1;
+}
+
+message ListServersRequest {}
+
+message ListServersResponse {
+  repeated Server servers = 1;
+}
+
+message JoinServerRequest {
+  string invite_code = 1;
+}
+
+message JoinServerResponse {
+  Server server = 1;
+}
+
+message LeaveServerRequest {
+  string server_id = 1;
+}
+
+message LeaveServerResponse {}
+
+// Members
+
+message ListMembersRequest {
+  string server_id = 1;
+  string after = 2;
+  int32 limit = 3;
+}
+
+message ListMembersResponse {
+  repeated Member members = 1;
+}
+
+message UpdateMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  optional string nickname = 3;
+}
+
+message UpdateMemberResponse {
+  Member member = 1;
+}
+
+message SetMemberRolesRequest {
+  string server_id = 1;
+  string user_id = 2;
+  repeated string role_ids = 3;
+}
+
+message SetMemberRolesResponse {
+  Member member = 1;
+}
+
+message KickMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+}
+
+message KickMemberResponse {}
+
+message BanMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  optional string reason = 3;
+}
+
+message BanMemberResponse {}
+
+// Roles
+
+message CreateRoleRequest {
+  string server_id = 1;
+  string name = 2;
+  int64 permissions = 3;
+  int32 color = 4;
+  bool is_self_assignable = 5;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message UpdateRoleRequest {
+  string role_id = 1;
+  optional string name = 2;
+  optional int64 permissions = 3;
+  optional int32 color = 4;
+  reserved 5;                    // was position — use ReorderRoles instead
+  reserved "position";
+  optional bool is_self_assignable = 6;
+}
+
+message UpdateRoleResponse {
+  Role role = 1;
+}
+
+message DeleteRoleRequest {
+  string role_id = 1;
+}
+
+message DeleteRoleResponse {}
+
+message ReorderRolesRequest {
+  string server_id = 1;
+  repeated string role_ids = 2; // ordered list of roles BELOW caller's position
+                                 // index 0 = lowest position (just above @everyone)
+}
+
+message ReorderRolesResponse {}
+
+// Invites
+
+message CreateInviteRequest {
+  string server_id = 1;
+  int32 max_uses = 2;
+  int32 max_age_seconds = 3;
+}
+
+message CreateInviteResponse {
+  Invite invite = 1;
+}
+
+message ResolveInviteRequest {
+  string code = 1;
+}
+
+message ResolveInviteResponse {
+  Server server = 1;
+  int32 member_count = 2;
+  Invite invite = 3;
+}
+
+message RevokeInviteRequest {
+  string code = 1;
+}
+
+message RevokeInviteResponse {}
+
+message ListInvitesRequest {
+  string server_id = 1;
+}
+
+message ListInvitesResponse {
+  repeated Invite invites = 1;
+}
+
+// Channel Members
+
+message AddChannelMemberRequest {
+  string channel_id = 1;
+  string user_id = 2;
+}
+message AddChannelMemberResponse {}
+
+message RemoveChannelMemberRequest {
+  string channel_id = 1;
+  string user_id = 2;
+}
+message RemoveChannelMemberResponse {}
+
+message ListChannelMembersRequest {
+  string channel_id = 1;
+}
+message ListChannelMembersResponse {
+  repeated Member members = 1;
+}
+
+// Event streaming
+
+message StreamEventsRequest {
+  string last_event_id = 1;
+}
+
+message Event {
+  string id = 1;
+  EventType type = 2;
+  google.protobuf.Timestamp timestamp = 3;
+
+  oneof payload {
+    Message message_create = 10;
+    Message message_update = 11;
+    MessageDeleteEvent message_delete = 12;
+    Channel channel_create = 13;
+    Channel channel_update = 14;
+    ChannelDeleteEvent channel_delete = 15;
+    Member member_join = 16;
+    Member member_update = 17;
+    MemberRemoveEvent member_remove = 18;
+    TypingEvent typing_start = 19;
+    Role role_create = 20;
+    Role role_update = 21;
+    RoleDeleteEvent role_delete = 22;
+    CustomEmoji emoji_create = 23;
+    CustomEmoji emoji_update = 24;
+    EmojiDeleteEvent emoji_delete = 25;
+    ChannelMemberEvent channel_member_add = 26;
+    ChannelMemberEvent channel_member_remove = 27;
+    PinnedMessage pin_add = 28;
+    PinRemoveEvent pin_remove = 29;
+    MessageBulkDeleteEvent message_bulk_delete = 30;
+    SoundboardSound sound_create = 31;
+    SoundboardSound sound_update = 32;
+    SoundDeleteEvent sound_delete = 33;
+    Reaction reaction_add = 34;
+    Reaction reaction_remove = 35;
+    ReadState read_state_update = 36;
+    EmbedsUpdateEvent embeds_update = 37;
+    ChannelGroup channel_group_create = 38;
+    ChannelGroup channel_group_update = 39;
+    ChannelGroupDeleteEvent channel_group_delete = 40;
+    FederationRemovedEvent federation_removed = 41;
+    PermissionOverrideUpdateEvent permission_override_update = 42;
+    PermissionOverrideDeleteEvent permission_override_delete = 43;
+    PermissionsUpdatedEvent permissions_updated = 44;
+    DMChannel dm_request_received = 45;
+    DMChannel dm_request_accepted = 46;
+    DMRequestDeclinedEvent dm_request_declined = 47;
+    UserBlockEvent user_blocked = 48;
+    UserBlockEvent user_unblocked = 49;
+    // Fields 50, 56 reserved (was MLS events)
+    FriendEvent friend_request_received = 51;
+    FriendEvent friend_request_accepted = 52;
+    FriendEvent friend_request_declined = 53;
+    FriendEvent friend_removed = 54;
+    FriendEvent friend_request_cancelled = 55;
+    GetPresenceResponse presence_update = 57;
+    RolesReorderedEvent roles_reordered = 58;
+  }
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_MESSAGE_CREATE = 1;
+  EVENT_TYPE_MESSAGE_UPDATE = 2;
+  EVENT_TYPE_MESSAGE_DELETE = 3;
+  EVENT_TYPE_CHANNEL_CREATE = 4;
+  EVENT_TYPE_CHANNEL_UPDATE = 5;
+  EVENT_TYPE_CHANNEL_DELETE = 6;
+  EVENT_TYPE_MEMBER_JOIN = 7;
+  EVENT_TYPE_MEMBER_UPDATE = 8;
+  EVENT_TYPE_MEMBER_REMOVE = 9;
+  EVENT_TYPE_TYPING_START = 10;
+  EVENT_TYPE_PRESENCE_UPDATE = 11;
+  EVENT_TYPE_ROLE_CREATE = 12;
+  EVENT_TYPE_ROLE_UPDATE = 13;
+  EVENT_TYPE_ROLE_DELETE = 14;
+  EVENT_TYPE_EMOJI_CREATE = 15;
+  EVENT_TYPE_EMOJI_UPDATE = 16;
+  EVENT_TYPE_EMOJI_DELETE = 17;
+  EVENT_TYPE_CHANNEL_MEMBER_ADD = 18;
+  EVENT_TYPE_CHANNEL_MEMBER_REMOVE = 19;
+  EVENT_TYPE_PIN_ADD = 20;
+  EVENT_TYPE_PIN_REMOVE = 21;
+  EVENT_TYPE_MESSAGE_BULK_DELETE = 22;
+  EVENT_TYPE_SOUND_CREATE = 23;
+  EVENT_TYPE_SOUND_UPDATE = 24;
+  EVENT_TYPE_SOUND_DELETE = 25;
+  EVENT_TYPE_REACTION_ADD = 26;
+  EVENT_TYPE_REACTION_REMOVE = 27;
+  EVENT_TYPE_READ_STATE_UPDATE = 28;
+  EVENT_TYPE_EMBEDS_UPDATE = 29;
+  EVENT_TYPE_CHANNEL_GROUP_CREATE = 30;
+  EVENT_TYPE_CHANNEL_GROUP_UPDATE = 31;
+  EVENT_TYPE_CHANNEL_GROUP_DELETE = 32;
+  EVENT_TYPE_FEDERATION_REMOVED = 33;
+  EVENT_TYPE_PERMISSION_OVERRIDE_UPDATE = 34;
+  EVENT_TYPE_PERMISSION_OVERRIDE_DELETE = 35;
+  EVENT_TYPE_PERMISSIONS_UPDATED = 36;
+  EVENT_TYPE_DM_REQUEST_RECEIVED = 37;
+  EVENT_TYPE_DM_REQUEST_ACCEPTED = 38;
+  EVENT_TYPE_DM_REQUEST_DECLINED = 39;
+  EVENT_TYPE_USER_BLOCKED = 40;
+  EVENT_TYPE_USER_UNBLOCKED = 41;
+  // 42 reserved (was EVENT_TYPE_MLS_WELCOME)
+  EVENT_TYPE_FRIEND_REQUEST_RECEIVED = 43;
+  EVENT_TYPE_FRIEND_REQUEST_ACCEPTED = 44;
+  EVENT_TYPE_FRIEND_REQUEST_DECLINED = 45;
+  EVENT_TYPE_FRIEND_REMOVED = 46;
+  EVENT_TYPE_FRIEND_REQUEST_CANCELLED = 47;
+  // 48 reserved (was EVENT_TYPE_MLS_GROUP_MESSAGE)
+  EVENT_TYPE_ROLES_REORDERED = 49;
+}
+
+message MessageDeleteEvent {
+  string channel_id = 1;
+  string message_id = 2;
+  optional string deleted_by = 3; // set when a moderator deletes (not set for self-delete)
+}
+
+message ChannelDeleteEvent {
+  string channel_id = 1;
+  string server_id = 2;
+}
+
+message ChannelGroupDeleteEvent {
+  string server_id = 1;
+  string channel_group_id = 2;
+}
+
+message MemberRemoveEvent {
+  string server_id = 1;
+  string user_id = 2;
+}
+
+message TypingEvent {
+  string channel_id = 1;
+  string user_id = 2;
+}
+
+message RoleDeleteEvent {
+  string server_id = 1;
+  string role_id = 2;
+}
+
+message RolesReorderedEvent {
+  string server_id = 1;
+  repeated Role roles = 2; // full role list with updated positions
+}
+
+message ChannelMemberEvent {
+  string channel_id = 1;
+  string user_id = 2;
+  string server_id = 3;
+  string actor_id = 4; // User who performed the add/remove action
+}
+
+// Unbans
+
+message UnbanMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+}
+message UnbanMemberResponse {}
+
+// Bans
+
+message ListBansRequest {
+  string server_id = 1;
+}
+message ListBansResponse {
+  repeated Ban bans = 1;
+}
+
+// Role listing
+
+message ListRolesRequest {
+  string server_id = 1;
+}
+message ListRolesResponse {
+  repeated Role roles = 1;
+}
+
+// Pins
+
+message PinMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message PinMessageResponse {
+  PinnedMessage pinned_message = 1;
+}
+
+message UnpinMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message UnpinMessageResponse {}
+
+message GetPinnedMessagesRequest {
+  string channel_id = 1;
+  string before = 2;    // cursor: RFC3339Nano timestamp for pagination (optional, omit for first page)
+  int32 limit = 3;      // max pins to return (default 50, max 100)
+}
+
+message GetPinnedMessagesResponse {
+  repeated PinnedMessage pinned_messages = 1;
+  bool has_more = 2;
+}
+
+message PinRemoveEvent {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+// Emojis
+
+message CreateEmojiRequest {
+  string server_id = 1;
+  string name = 2;
+  string attachment_id = 3;
+}
+
+message CreateEmojiResponse {
+  CustomEmoji emoji = 1;
+}
+
+message DeleteEmojiRequest {
+  string emoji_id = 1;
+}
+
+message DeleteEmojiResponse {}
+
+message UpdateEmojiRequest {
+  string emoji_id = 1;
+  optional string name = 2;
+}
+
+message UpdateEmojiResponse {
+  CustomEmoji emoji = 1;
+}
+
+message ListEmojisRequest {
+  string server_id = 1;
+}
+
+message ListEmojisResponse {
+  repeated CustomEmoji emojis = 1;
+}
+
+message ListUserEmojisRequest {}
+
+message ListUserEmojisResponse {
+  repeated CustomEmoji emojis = 1;
+}
+
+message EmojiDeleteEvent {
+  string server_id = 1;
+  string emoji_id = 2;
+}
+
+// Bulk message deletion
+
+message BulkDeleteMessagesRequest {
+  string channel_id = 1;
+  string target_user_id = 2;
+  int32 limit = 3; // max 100, defaults to 100
+}
+
+message BulkDeleteMessagesResponse {
+  repeated string deleted_message_ids = 1;
+}
+
+message MessageBulkDeleteEvent {
+  string channel_id = 1;
+  repeated string message_ids = 2;
+  string target_user_id = 3;
+}
+
+// Timeouts
+
+message TimeoutMemberRequest {
+  string server_id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp timed_out_until = 3;
+}
+
+message TimeoutMemberResponse {
+  Member member = 1;
+}
+
+message RemoveTimeoutRequest {
+  string server_id = 1;
+  string user_id = 2;
+}
+
+message RemoveTimeoutResponse {
+  Member member = 1;
+}
+
+// Audit Log
+
+message ListAuditLogRequest {
+  string server_id = 1;
+  string cursor = 2; // pagination cursor (audit log entry ID)
+  int32 limit = 3;   // max 100, defaults to 50
+}
+
+message ListAuditLogResponse {
+  repeated AuditLogEntry entries = 1;
+  bool has_more = 2;
+}
+
+// Soundboard
+
+message CreateSoundRequest {
+  string name = 1;
+  string attachment_id = 2;
+  string server_id = 3;     // empty for personal sounds
+}
+
+message CreateSoundResponse {
+  SoundboardSound sound = 1;
+}
+
+message DeleteSoundRequest {
+  string sound_id = 1;
+}
+
+message DeleteSoundResponse {}
+
+message UpdateSoundRequest {
+  string sound_id = 1;
+  optional string name = 2;
+}
+
+message UpdateSoundResponse {
+  SoundboardSound sound = 1;
+}
+
+message ListUserSoundsRequest {}
+
+message ListUserSoundsResponse {
+  repeated SoundboardSound sounds = 1;
+}
+
+message ListServerSoundsRequest {
+  string server_id = 1;
+}
+
+message ListServerSoundsResponse {
+  repeated SoundboardSound sounds = 1;
+}
+
+message SoundDeleteEvent {
+  string sound_id = 1;
+  string server_id = 2;
+}
+
+// Reactions
+
+message AddReactionRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  string emoji = 3;
+}
+message AddReactionResponse {}
+
+message RemoveReactionRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  string emoji = 3;
+}
+message RemoveReactionResponse {}
+
+message GetReactionsRequest {
+  string channel_id = 1;
+  repeated string message_ids = 2;
+}
+message GetReactionsResponse {
+  map<string, ReactionGroupList> reactions = 1;
+}
+message ReactionGroupList {
+  repeated ReactionGroup groups = 1;
+}
+
+// Read State
+
+message AckMessageRequest {
+  string channel_id = 1;
+  string message_id = 2;
+}
+
+message AckMessageResponse {
+  ReadState read_state = 1;
+}
+
+// Direct Messages
+
+message CreateOrGetDMChannelRequest {
+  string recipient_id = 1;
+}
+
+message CreateOrGetDMChannelResponse {
+  DMChannel dm_channel = 1;
+  bool created = 2;
+}
+
+// CreateGroupDMChannel — creates a group DM with multiple participants.
+
+message CreateGroupDMChannelRequest {
+  repeated string participant_ids = 1; // Other users to add (2-9, excluding self)
+  optional string name = 2;            // Optional custom name for the group DM
+}
+
+message CreateGroupDMChannelResponse {
+  DMChannel dm_channel = 1;
+  bool created = 2;
+}
+
+message ListDMChannelsRequest {}
+
+message ListDMChannelsResponse {
+  repeated DMChannel dm_channels = 1;
+}
+
+// Replies
+
+message GetRepliesRequest {
+  string channel_id = 1;
+  string message_id = 2;
+  optional int32 limit = 3;
+}
+
+message ReplyEntry {
+  string message_id = 1;
+  string author_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message GetRepliesResponse {
+  repeated ReplyEntry replies = 1;
+  int32 total_count = 2;
+}
+
+message GetMessagesByIDsRequest {
+  string channel_id = 1;
+  repeated string message_ids = 2;
+}
+
+message GetMessagesByIDsResponse {
+  repeated Message messages = 1;
+}
+
+// Onboarding
+
+message AcknowledgeRulesRequest {
+  string server_id = 1;
+}
+
+message AcknowledgeRulesResponse {
+  google.protobuf.Timestamp acknowledged_at = 1;
+}
+
+message CompleteOnboardingRequest {
+  string server_id = 1;
+  repeated string channel_ids = 2;
+  repeated string role_ids = 3;
+}
+
+message CompleteOnboardingResponse {
+  google.protobuf.Timestamp completed_at = 1;
+  repeated string skipped_channel_ids = 2;
+  repeated string skipped_role_ids = 3;
+}
+
+// Link Embeds
+
+message EmbedsUpdateEvent {
+  string channel_id = 1;
+  string message_id = 2;
+  repeated LinkEmbed embeds = 3;
+}
+
+// Channel Groups
+
+message CreateChannelGroupRequest {
+  string server_id = 1;
+  string name = 2;
+}
+
+message CreateChannelGroupResponse {
+  ChannelGroup channel_group = 1;
+}
+
+message UpdateChannelGroupRequest {
+  string channel_group_id = 1;
+  optional string name = 2;
+  optional int32 position = 3;
+}
+
+message UpdateChannelGroupResponse {
+  ChannelGroup channel_group = 1;
+}
+
+message DeleteChannelGroupRequest {
+  string channel_group_id = 1;
+}
+
+message DeleteChannelGroupResponse {}
+
+message ListChannelGroupsRequest {
+  string server_id = 1;
+}
+
+message ListChannelGroupsResponse {
+  repeated ChannelGroup channel_groups = 1;
+}
+
+// Permission Overrides
+
+message SetPermissionOverrideRequest {
+  string target_id = 1;  // channel_group_id or channel_id
+  string role_id = 2;    // set for role overrides (mutually exclusive with user_id)
+  int64 allow = 3;
+  int64 deny = 4;
+  string user_id = 5;    // set for user overrides (mutually exclusive with role_id)
+}
+
+message SetPermissionOverrideResponse {
+  PermissionOverride permission_override = 1;
+}
+
+message DeletePermissionOverrideRequest {
+  string target_id = 1;  // channel_group_id or channel_id
+  string role_id = 2;    // set for role overrides (mutually exclusive with user_id)
+  string user_id = 3;    // set for user overrides (mutually exclusive with role_id)
+}
+
+message DeletePermissionOverrideResponse {}
+
+message ListPermissionOverridesRequest {
+  string target_id = 1;  // channel_group_id or channel_id
+}
+
+message ListPermissionOverridesResponse {
+  repeated PermissionOverride permission_overrides = 1;
+}
+
+// Effective Permissions
+
+message GetEffectivePermissionsRequest {
+  string server_id = 1;
+  string channel_id = 2; // optional — omit for server-level
+  string user_id = 3;    // optional — defaults to caller
+  bool include_sources = 4; // when true, populate sources in response
+}
+
+message GetEffectivePermissionsResponse {
+  int64 permissions = 1;
+  repeated PermissionSource sources = 2; // populated when include_sources=true
+}
+
+enum PermissionSourceType {
+  PERMISSION_SOURCE_TYPE_UNSPECIFIED = 0;
+  PERMISSION_SOURCE_TYPE_BASE_ROLE = 1;
+  PERMISSION_SOURCE_TYPE_ROLE_OVERRIDE = 2;
+  PERMISSION_SOURCE_TYPE_CATEGORY_OVERRIDE = 3;
+  PERMISSION_SOURCE_TYPE_CHANNEL_OVERRIDE = 4;
+  PERMISSION_SOURCE_TYPE_USER_OVERRIDE = 5;
+  PERMISSION_SOURCE_TYPE_ADMINISTRATOR = 6;
+  PERMISSION_SOURCE_TYPE_OWNER = 7;
+}
+
+message PermissionSource {
+  int64 permission = 1;
+  bool granted = 2;
+  PermissionSourceType source_type = 3;
+  string source_name = 4; // e.g. role name, "Category: General"
+}
+
+// Permission Events
+
+message PermissionOverrideUpdateEvent {
+  PermissionOverride override = 1;
+  string server_id = 2;
+}
+
+message PermissionOverrideDeleteEvent {
+  string override_id = 1;
+  string target_id = 2;  // channel_id or channel_group_id
+  string server_id = 3;
+}
+
+message PermissionsUpdatedEvent {
+  string server_id = 1;
+  string channel_id = 2; // optional — empty means server-level change
+}
+
+// Server Creation from Template
+
+message ChannelSpec {
+  string name = 1;
+  ChannelType type = 2;
+  bool is_default = 3;
+  bool is_private = 4;
+  repeated string role_names = 5; // roles that get access to this private channel (matched by name against RoleSpec)
+}
+
+message RoleSpec {
+  string name = 1;
+  int64 permissions = 2;
+  int32 color = 3;
+  bool is_self_assignable = 4;
+}
+
+message CreateServerFromTemplateRequest {
+  string name = 1;
+  optional string icon_url = 2;
+  repeated ChannelSpec channels = 3;
+  repeated RoleSpec roles = 4;
+  optional string welcome_message = 5;
+  optional string rules = 6;
+  bool onboarding_enabled = 7;
+  bool rules_required = 8;
+}
+
+message CreateServerFromTemplateResponse {
+  Server server = 1;
+  repeated Channel channels = 2;
+  repeated Role roles = 3;
+  Invite invite = 4;
+}
+
+// Federation
+
+message FederationRemovedEvent {
+  string server_id = 1;
+  string instance_url = 2;
+  string reason = 3;
+}
+
+// Message Requests
+
+message AcceptMessageRequestReq {
+  string channel_id = 1;
+}
+
+message AcceptMessageRequestRes {
+  DMChannel dm_channel = 1;
+}
+
+message DeclineMessageRequestReq {
+  string channel_id = 1;
+}
+
+message DeclineMessageRequestRes {}
+
+message ReverseDeclineRequest {
+  string channel_id = 1;
+}
+
+message ReverseDeclineResponse {
+  DMChannel dm_channel = 1;
+}
+
+message ListMessageRequestsRequest {}
+
+message ListMessageRequestsResponse {
+  repeated DMChannel dm_channels = 1;
+}
+
+message DMRequestDeclinedEvent {
+  string channel_id = 1;
+}
+
+// User Blocking
+
+message BlockUserRequest {
+  string user_id = 1;
+}
+
+message BlockUserResponse {}
+
+message UnblockUserRequest {
+  string user_id = 1;
+}
+
+message UnblockUserResponse {}
+
+message ListBlocksRequest {}
+
+message ListBlocksResponse {
+  repeated User blocked_users = 1;
+}
+
+message UserBlockEvent {
+  string user_id = 1;       // the other user in the block relationship
+  string channel_id = 2;    // the DM channel between the two users (if any)
+}
+
+// Friend system messages.
+
+message FriendEvent {
+  User user = 1;  // the other user in the relationship
+}
+
+message FriendRequestEntry {
+  User user = 1;           // the other user
+  string direction = 2;    // "incoming" or "outgoing"
+  string created_at = 3;
+}
+
+message SendFriendRequestRequest {
+  string user_id = 1;
+}
+
+message SendFriendRequestResponse {
+  bool auto_accepted = 1;
+}
+
+message AcceptFriendRequestRequest {
+  string user_id = 1;
+}
+
+message AcceptFriendRequestResponse {}
+
+message DeclineFriendRequestRequest {
+  string user_id = 1;
+}
+
+message DeclineFriendRequestResponse {}
+
+message CancelFriendRequestRequest {
+  string user_id = 1;
+}
+
+message CancelFriendRequestResponse {}
+
+message RemoveFriendRequest {
+  string user_id = 1;
+}
+
+message RemoveFriendResponse {}
+
+message ListFriendsRequest {}
+
+message ListFriendsResponse {
+  repeated User friends = 1;
+}
+
+message ListFriendRequestsRequest {}
+
+message ListFriendRequestsResponse {
+  repeated FriendRequestEntry incoming = 1;
+  repeated FriendRequestEntry outgoing = 2;
+}
+
+// Search
+
+message SearchMessagesRequest {
+  string query = 1;
+  // At least one of server_id or channel_id is required.
+  optional string server_id = 2;
+  // At least one of server_id or channel_id is required.
+  optional string channel_id = 3;
+  optional string author_id = 4;
+  optional bool has_attachment = 5;
+  int32 limit = 6;
+  optional string before_id = 7;
+}
+
+message SearchMessagesResponse {
+  repeated SearchResult results = 1;
+  int32 total_hits = 2;
+}
+
+message SearchResult {
+  Message message = 1;
+  string highlight = 2;
+}
+
+// Internal NATS job message for embed URL fetching.
+message EmbedFetchJob {
+  string channel_id = 1;
+  string message_id = 2;
+  repeated string urls = 3;
+}

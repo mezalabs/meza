@@ -1,0 +1,30 @@
+-- Drop all tables in reverse FK dependency order.
+
+DROP TABLE IF EXISTS friendships;
+DROP TABLE IF EXISTS user_blocks;
+DROP TABLE IF EXISTS permission_overrides;
+DROP TABLE IF EXISTS channel_key_versions;
+DROP TABLE IF EXISTS channel_key_envelopes;
+DROP TABLE IF EXISTS devices;
+DROP TABLE IF EXISTS notification_preferences;
+DROP TABLE IF EXISTS message_link_previews;
+DROP TABLE IF EXISTS link_previews;
+DROP TABLE IF EXISTS channel_read_states;
+DROP TABLE IF EXISTS message_reactions;
+DROP TABLE IF EXISTS soundboard_sounds;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS pinned_messages;
+DROP TABLE IF EXISTS server_emojis;
+DROP TABLE IF EXISTS bans;
+DROP TABLE IF EXISTS member_roles;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS attachments;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS channel_members;
+DROP TABLE IF EXISTS channels;
+DROP TABLE IF EXISTS channel_groups;
+DROP TABLE IF EXISTS members;
+DROP TABLE IF EXISTS servers;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS user_auth;
+DROP TABLE IF EXISTS users;
