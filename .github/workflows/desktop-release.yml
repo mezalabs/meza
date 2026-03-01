@@ -109,7 +109,12 @@ jobs:
 
       - name: Package desktop app
         working-directory: client/packages/desktop
-        run: pnpm exec electron-builder --${{ matrix.platform }} --publish always
+        shell: bash
+        run: |
+          # Unset empty signing vars so electron-builder doesn't treat "" as a file path
+          [ -z "$CSC_LINK" ] && unset CSC_LINK CSC_KEY_PASSWORD && export CSC_IDENTITY_AUTO_DISCOVERY=false
+          [ -z "$WIN_CSC_LINK" ] && unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+          pnpm exec electron-builder --${{ matrix.platform }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # macOS code signing
