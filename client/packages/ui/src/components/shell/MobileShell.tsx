@@ -111,7 +111,7 @@ export function MobileShell() {
             {/* Base layer: sidebar (server rail + channel list) */}
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex min-h-0 flex-1">
-                <Sidebar />
+                <Sidebar style={{ width: '100%' }} />
               </div>
               <MobileVoiceBar />
             </div>
@@ -314,6 +314,7 @@ function renderMobileContent(
   opts: { showPins?: boolean; onTogglePins?: () => void },
 ): React.ReactNode {
   const serverId = resolveServerId(content);
+  const paneId = useTilingStore.getState().focusedPaneId;
 
   switch (content.type) {
     case 'channel':
@@ -332,7 +333,7 @@ function renderMobileContent(
     case 'screenShare':
       return (
         <ScreenSharePane
-          paneId="mobile"
+          paneId={paneId}
           participantIdentity={content.participantIdentity}
           channelId={content.channelId}
         />
@@ -353,9 +354,9 @@ function renderMobileContent(
     case 'serverOnboarding':
       return <ServerOnboardingView serverId={content.serverId} />;
     case 'getStarted':
-      return <GetStartedView paneId="mobile" />;
+      return <GetStartedView paneId={paneId} />;
     case 'createServer':
-      return <CreateServerWizard paneId="mobile" />;
+      return <CreateServerWizard paneId={paneId} />;
     case 'messageRequests':
       return <MessageRequestsPane />;
     case 'friends':
