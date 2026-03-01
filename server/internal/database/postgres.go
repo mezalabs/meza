@@ -30,8 +30,23 @@ func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, err
 		if err == nil {
 			if pingErr := pool.Ping(ctx); pingErr == nil {
 				return pool, nil
+			} else {
+				slog.Warn("postgres not ready, retrying", "err", pingErr, "backoff", backoff)
+				pool.Close()
+
+				if time.Now().After(deadline) {
+					return nil, fmt.Errorf("postgres connection failed after 2m: %w", pingErr)
+				}
+
+				select {
+				case <-ctx.Done():
+					return nil, fmt.Errorf("postgres connection cancelled: %w", ctx.Err())
+				case <-time.After(backoff):
+				}
+
+				backoff = min(backoff*2, 30*time.Second)
+				continue
 			}
-			pool.Close()
 		}
 
 		if time.Now().After(deadline) {
