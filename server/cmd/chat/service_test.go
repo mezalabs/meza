@@ -4445,4 +4445,3 @@ func TestSearchMessagesEmptyResults(t *testing.T) {
 		t.Error("has_more should be false for empty results")
 	}
 }
-
