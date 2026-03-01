@@ -517,8 +517,9 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           // Distribute keys asynchronously — best-effort, fallback exists
           (async () => {
             try {
-              const pk = await getOrFetchPublicKey(newUserId);
-              if (!pk) return;
+              const maybePk = await getOrFetchPublicKey(newUserId);
+              if (!maybePk) return;
+              const pk: Uint8Array = maybePk;
               // Get all channels in this server that we have keys for,
               // but skip private channels — the new member won't have
               // ViewChannel on them (@everyone deny). They'll lazy-init
