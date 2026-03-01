@@ -514,7 +514,7 @@ function ScreenShareThumbnail({
   trackRef,
   onPopOut,
 }: {
-  trackRef: ReturnType<typeof useTracks>[number];
+  trackRef: TrackReference;
   onPopOut: () => void;
 }) {
   const userId = trackRef.participant.identity;
