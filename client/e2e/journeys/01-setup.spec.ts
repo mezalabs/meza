@@ -110,7 +110,9 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
     expect(aliceRecoveryPhrase.split(' ').length).toBe(12);
 
     // Verify alice is in the app shell
-    await expect(alicePage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
+    await expect(
+      alicePage.getByRole('button', { name: 'Settings', exact: true }),
+    ).toBeVisible({
       timeout: 15_000,
     });
 
@@ -245,7 +247,9 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.bob.username,
       TEST_USERS.bob.password,
     );
-    await expect(bobPage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
+    await expect(
+      bobPage.getByRole('button', { name: 'Settings', exact: true }),
+    ).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(bobCtx, 'bob');
@@ -292,7 +296,9 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.charlie.username,
       TEST_USERS.charlie.password,
     );
-    await expect(charliePage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
+    await expect(
+      charliePage.getByRole('button', { name: 'Settings', exact: true }),
+    ).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(charlieCtx, 'charlie');
