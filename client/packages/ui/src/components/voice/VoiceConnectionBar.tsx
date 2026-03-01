@@ -1,6 +1,16 @@
-import { useChannelStore, useServerStore, useStreamSettingsStore, useVoiceStore } from '@meza/core';
 import { useLocalParticipant } from '@livekit/components-react';
-import { MonitorArrowUpIcon, MonitorIcon, PhoneSlashIcon, UserSoundIcon } from '@phosphor-icons/react';
+import {
+  useChannelStore,
+  useServerStore,
+  useStreamSettingsStore,
+  useVoiceStore,
+} from '@meza/core';
+import {
+  MonitorArrowUpIcon,
+  MonitorIcon,
+  PhoneSlashIcon,
+  UserSoundIcon,
+} from '@phosphor-icons/react';
 import { useRef } from 'react';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
@@ -17,8 +27,12 @@ export function VoiceConnectionBar() {
   const status = useVoiceStore((s) => s.status);
   const channelName = useVoiceStore((s) => s.channelName);
   const channelId = useVoiceStore((s) => s.channelId);
-  const serverId = useChannelStore((s) => channelId ? s.channelToServer[channelId] : undefined);
-  const serverName = useServerStore((s) => serverId ? s.servers[serverId]?.name : undefined);
+  const serverId = useChannelStore((s) =>
+    channelId ? s.channelToServer[channelId] : undefined,
+  );
+  const serverName = useServerStore((s) =>
+    serverId ? s.servers[serverId]?.name : undefined,
+  );
 
   if (status !== 'connected' && status !== 'reconnecting') return null;
 
@@ -28,7 +42,9 @@ export function VoiceConnectionBar() {
         {/* Status icon in squircle */}
         <div
           className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${
-            status === 'connected' ? 'bg-success/8 text-success' : 'bg-warning/8 text-warning animate-pulse'
+            status === 'connected'
+              ? 'bg-success/8 text-success'
+              : 'bg-warning/8 text-warning animate-pulse'
           }`}
         >
           <UserSoundIcon size={20} aria-hidden="true" />
@@ -45,8 +61,18 @@ export function VoiceConnectionBar() {
             setPaneContent(focusedPaneId, { type: 'voice', channelId });
           }}
         >
-          <span className="text-[10px] font-mono uppercase tracking-wide text-success">Voice Connected</span>
-          <span className="truncate text-sm font-medium text-text">{channelName ?? 'Voice Channel'}{serverName ? <span className="text-text-muted font-normal"> / {serverName}</span> : null}</span>
+          <span className="text-[10px] font-mono uppercase tracking-wide text-success">
+            Voice Connected
+          </span>
+          <span className="truncate text-sm font-medium text-text">
+            {channelName ?? 'Voice Channel'}
+            {serverName ? (
+              <span className="text-text-muted font-normal">
+                {' '}
+                / {serverName}
+              </span>
+            ) : null}
+          </span>
         </button>
 
         {/* Controls rendered inside LiveKit context */}
@@ -87,7 +113,9 @@ function VoiceBarConnectedControls({
   const isScreenSharing = localParticipant.isScreenShareEnabled;
   const canScreenShare = useVoiceStore((s) => s.canScreenShare);
   const toggling = useRef(false);
-  const showScreenShare = canScreenShare && typeof navigator.mediaDevices?.getDisplayMedia === 'function';
+  const showScreenShare =
+    canScreenShare &&
+    typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 
   return (
     <div className="flex items-center gap-2">
@@ -123,7 +151,11 @@ function VoiceBarConnectedControls({
           aria-label={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
           title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
         >
-          {isScreenSharing ? <MonitorIcon size={22} aria-hidden="true" /> : <MonitorArrowUpIcon size={22} aria-hidden="true" />}
+          {isScreenSharing ? (
+            <MonitorIcon size={22} aria-hidden="true" />
+          ) : (
+            <MonitorArrowUpIcon size={22} aria-hidden="true" />
+          )}
         </button>
       )}
 

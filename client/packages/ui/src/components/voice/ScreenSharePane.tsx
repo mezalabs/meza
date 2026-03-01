@@ -1,12 +1,16 @@
-import type { PaneId, ViewerQuality } from '@meza/core';
-import { useChannelStore, useStreamSettingsStore } from '@meza/core';
 import {
   useRemoteParticipants,
   useTracks,
   VideoTrack,
 } from '@livekit/components-react';
+import type { PaneId, ViewerQuality } from '@meza/core';
+import { useChannelStore, useStreamSettingsStore } from '@meza/core';
+import {
+  MonitorIcon,
+  SpeakerHighIcon,
+  SpeakerSlashIcon,
+} from '@phosphor-icons/react';
 import { type RemoteParticipant, Track, VideoQuality } from 'livekit-client';
-import { MonitorIcon, SpeakerHighIcon, SpeakerSlashIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
@@ -44,7 +48,11 @@ export function ScreenSharePane({
   if (!track) {
     return (
       <div className="flex flex-1 min-h-0 min-w-0 flex-col items-center justify-center gap-3 bg-bg-base">
-        <MonitorIcon size={24} className="text-text-subtle" aria-hidden="true" />
+        <MonitorIcon
+          size={24}
+          className="text-text-subtle"
+          aria-hidden="true"
+        />
         <p className="text-sm text-text-muted">Stream ended</p>
         <button
           type="button"
@@ -99,7 +107,11 @@ function StreamAudioToggle({
       }`}
       title={isMuted ? 'Unmute stream audio' : 'Mute stream audio'}
     >
-      {isMuted ? <SpeakerSlashIcon size={16} aria-hidden="true" /> : <SpeakerHighIcon size={16} aria-hidden="true" />}
+      {isMuted ? (
+        <SpeakerSlashIcon size={16} aria-hidden="true" />
+      ) : (
+        <SpeakerHighIcon size={16} aria-hidden="true" />
+      )}
       <span>{isMuted ? 'Unmute' : 'Mute'}</span>
     </button>
   );

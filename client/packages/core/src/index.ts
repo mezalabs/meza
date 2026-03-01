@@ -158,14 +158,20 @@ export {
 export { LOBBY_SERVER_ID } from './constants.ts';
 // Crypto — E2EE static channel key operations
 export {
+  type AttachmentMeta,
+  // File encryption
+  acquireBlobURL,
   aesGcmDecrypt,
   aesGcmEncrypt,
+  base64ToUint8,
   bootstrapSession,
+  buildMessageContent,
   clearChannelKeyCache,
   clearCryptoStorage,
   createChannelKey,
   createIdentity,
   type DerivedKeys,
+  decryptFile,
   decryptMessage,
   decryptPayload,
   decryptRecoveryBundle,
@@ -174,17 +180,20 @@ export {
   deserializeIdentity,
   distributeKeyToMember,
   type EncryptedMessage,
-  redistributeChannelKeys,
   edToX25519Public,
   edToX25519Secret,
+  encryptFile,
   encryptMessage,
   encryptPayload,
   encryptRecoveryBundle,
   fetchAndCacheChannelKeys,
   flushChannelKeys,
   generateChannelKey,
+  generateFileKey,
   generateIdentityKeypair,
+  generateImageThumbnail,
   generateRecoveryPhrase,
+  generateVideoThumbnail,
   getCachedChannelIds,
   getChannelKey,
   getIdentity,
@@ -197,9 +206,14 @@ export {
   loadCachedChannelKeys,
   loadKeyBundle,
   onSessionReady,
+  type ParsedMessageContent,
+  parseMessageContent,
   persistIdentity,
   provisionChannelKeyBatched,
+  redistributeChannelKeys,
   registerPublicKey,
+  releaseAllBlobURLs,
+  releaseBlobURL,
   restoreIdentity,
   rotateChannelKey,
   serializeIdentity,
@@ -207,26 +221,12 @@ export {
   storeKeyBundle,
   teardownSession,
   unwrapChannelKey,
+  unwrapFileKey,
   validateRecoveryPhrase,
   verifySignature,
   wrapChannelKey,
-  wrapKeyForMembers,
-  // File encryption
-  acquireBlobURL,
-  type AttachmentMeta,
-  base64ToUint8,
-  buildMessageContent,
-  decryptFile,
-  encryptFile,
-  generateFileKey,
-  generateImageThumbnail,
-  generateVideoThumbnail,
-  parseMessageContent,
-  type ParsedMessageContent,
-  releaseAllBlobURLs,
-  releaseBlobURL,
-  unwrapFileKey,
   wrapFileKey,
+  wrapKeyForMembers,
 } from './crypto/index.ts';
 // Gateway
 export {
@@ -234,6 +234,7 @@ export {
   disconnect as gatewayDisconnect,
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
+export * from './keybinds/index.ts';
 // Onboarding templates
 export {
   SERVER_TEMPLATES,
@@ -348,7 +349,6 @@ export type {
   VoiceParticipantsState,
 } from './store/voiceParticipants.ts';
 export { useVoiceParticipantsStore } from './store/voiceParticipants.ts';
-export * from './keybinds/index.ts';
 export * from './tiling/index.ts';
 // Types — Electron API
 export type { ElectronAPI } from './types/electron.d.ts';

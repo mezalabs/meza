@@ -1,9 +1,5 @@
 import type { PaneContent } from '@meza/core';
-import {
-  ackMessage,
-  useMessageStore,
-  useReadStateStore,
-} from '@meza/core';
+import { ackMessage, useMessageStore, useReadStateStore } from '@meza/core';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { type ReactNode, useEffect, useState } from 'react';
 import {
@@ -94,7 +90,11 @@ export function SidebarContextMenu({
 
   return (
     <>
-      <ContextMenu.Root onOpenChange={(open) => { if (!open) setHoveredSplit(null); }}>
+      <ContextMenu.Root
+        onOpenChange={(open) => {
+          if (!open) setHoveredSplit(null);
+        }}
+      >
         <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content className="min-w-[180px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in">
@@ -140,7 +140,9 @@ export function SidebarContextMenu({
                   asChild
                 >
                   <div
-                    onPointerEnter={() => setHoveredSplit({ direction: 'horizontal', before: true })}
+                    onPointerEnter={() =>
+                      setHoveredSplit({ direction: 'horizontal', before: true })
+                    }
                     onPointerLeave={() => setHoveredSplit(null)}
                   >
                     Split left
@@ -152,7 +154,12 @@ export function SidebarContextMenu({
                   asChild
                 >
                   <div
-                    onPointerEnter={() => setHoveredSplit({ direction: 'horizontal', before: false })}
+                    onPointerEnter={() =>
+                      setHoveredSplit({
+                        direction: 'horizontal',
+                        before: false,
+                      })
+                    }
                     onPointerLeave={() => setHoveredSplit(null)}
                   >
                     Split right
@@ -164,7 +171,9 @@ export function SidebarContextMenu({
                   asChild
                 >
                   <div
-                    onPointerEnter={() => setHoveredSplit({ direction: 'vertical', before: true })}
+                    onPointerEnter={() =>
+                      setHoveredSplit({ direction: 'vertical', before: true })
+                    }
                     onPointerLeave={() => setHoveredSplit(null)}
                   >
                     Split up
@@ -176,7 +185,9 @@ export function SidebarContextMenu({
                   asChild
                 >
                   <div
-                    onPointerEnter={() => setHoveredSplit({ direction: 'vertical', before: false })}
+                    onPointerEnter={() =>
+                      setHoveredSplit({ direction: 'vertical', before: false })
+                    }
                     onPointerLeave={() => setHoveredSplit(null)}
                   >
                     Split down

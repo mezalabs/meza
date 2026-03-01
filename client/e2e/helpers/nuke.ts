@@ -179,10 +179,14 @@ async function nukeRedis() {
   const host = url.hostname;
   const port = Number(url.port || 6379);
 
-  const emails = ['e2e_alice@test.local', 'e2e_bob@test.local', 'e2e_charlie@test.local'];
+  const emails = [
+    'e2e_alice@test.local',
+    'e2e_bob@test.local',
+    'e2e_charlie@test.local',
+  ];
   const keys = emails.map((e) => `ratelimit:recovery:${e}`);
 
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     const sock = net.createConnection({ host, port }, () => {
       // DEL key1 key2 key3
       const args = ['DEL', ...keys];

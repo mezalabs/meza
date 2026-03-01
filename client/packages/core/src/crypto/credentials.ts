@@ -67,8 +67,6 @@ export async function restoreIdentity(
  * Called at registration and login so other members can verify signatures
  * and wrap channel keys for this user.
  */
-export async function registerPublicKey(
-  publicKey: Uint8Array,
-): Promise<void> {
+export async function registerPublicKey(publicKey: Uint8Array): Promise<void> {
   await registerPublicKeyRpc(publicKey);
 }

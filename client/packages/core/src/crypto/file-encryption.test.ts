@@ -161,9 +161,9 @@ describe('wrapFileKey / unwrapFileKey', () => {
   });
 
   it('throws for too-short encrypted key', async () => {
-    await expect(
-      unwrapFileKey('ch1', new Uint8Array(3)),
-    ).rejects.toThrow('Invalid encrypted key: too short');
+    await expect(unwrapFileKey('ch1', new Uint8Array(3))).rejects.toThrow(
+      'Invalid encrypted key: too short',
+    );
   });
 });
 

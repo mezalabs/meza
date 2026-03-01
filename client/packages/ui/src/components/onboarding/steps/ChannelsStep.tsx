@@ -1,5 +1,10 @@
 import { ChannelType, type TemplateChannel } from '@meza/core';
-import { HashIcon, LockSimpleIcon, SpeakerHighIcon, XIcon } from '@phosphor-icons/react';
+import {
+  HashIcon,
+  LockSimpleIcon,
+  SpeakerHighIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 
 interface ChannelsStepProps {
@@ -82,7 +87,11 @@ export function ChannelsStep({
                 className="flex items-center gap-2 rounded-lg bg-bg-surface px-3 py-2"
               >
                 <span className="text-text-muted">
-                  {ch.isPrivate ? <LockSimpleIcon size={14} aria-hidden="true" /> : <HashIcon weight="regular" size={14} aria-hidden="true" />}
+                  {ch.isPrivate ? (
+                    <LockSimpleIcon size={14} aria-hidden="true" />
+                  ) : (
+                    <HashIcon weight="regular" size={14} aria-hidden="true" />
+                  )}
                 </span>
                 {editingIndex === i ? (
                   <input
@@ -143,7 +152,9 @@ export function ChannelsStep({
                   key={`${ch.name}-${i}`}
                   className="flex items-center gap-2 rounded-lg bg-bg-surface px-3 py-2"
                 >
-                  <span className="text-text-muted"><SpeakerHighIcon size={14} aria-hidden="true" /></span>
+                  <span className="text-text-muted">
+                    <SpeakerHighIcon size={14} aria-hidden="true" />
+                  </span>
                   {editingIndex === i ? (
                     <input
                       type="text"

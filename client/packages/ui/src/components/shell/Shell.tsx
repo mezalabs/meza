@@ -1,11 +1,3 @@
-import type { DropPosition, PaneContent } from '@meza/core';
-import {
-  LOBBY_SERVER_ID,
-  paneCount,
-  siblingSwapZone,
-  useAuthStore,
-  useServerStore,
-} from '@meza/core';
 import type {
   DragEndEvent,
   DragMoveEvent,
@@ -18,10 +10,22 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
+import type { DropPosition, PaneContent } from '@meza/core';
+import {
+  LOBBY_SERVER_ID,
+  paneCount,
+  siblingSwapZone,
+  useAuthStore,
+  useServerStore,
+} from '@meza/core';
 import { IconContext } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useKeybinds } from '../../hooks/useKeybinds.ts';
-import { MAX_PANES, useSimpleMode, useTilingStore } from '../../stores/tiling.ts';
+import {
+  MAX_PANES,
+  useSimpleMode,
+  useTilingStore,
+} from '../../stores/tiling.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ContentArea } from './ContentArea.tsx';
@@ -85,8 +89,7 @@ export function Shell() {
     if (!isAuthenticated) return;
 
     // Check if dismissed this session
-    if (sessionStorage.getItem('meza:getStartedDismissed') === 'true')
-      return;
+    if (sessionStorage.getItem('meza:getStartedDismissed') === 'true') return;
 
     // Check if user only has the Lobby server (or no servers)
     const serverIds = Object.keys(servers);
@@ -238,11 +241,7 @@ export function Shell() {
       const zone = zoneRef.current;
 
       if (data?.type === 'pane') {
-        if (
-          targetPaneId &&
-          data.paneId !== targetPaneId &&
-          zone
-        ) {
+        if (targetPaneId && data.paneId !== targetPaneId && zone) {
           const currentRoot = useTilingStore.getState().root;
           const siblingZone = siblingSwapZone(
             currentRoot,

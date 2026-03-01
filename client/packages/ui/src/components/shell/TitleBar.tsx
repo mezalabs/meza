@@ -114,9 +114,7 @@ export function TitleBar() {
     >
       {/* macOS: space for traffic light buttons */}
       {isMac && <div className="w-[78px]" />}
-      <span className="px-3 text-xs font-medium text-text-tertiary">
-        Meza
-      </span>
+      <span className="px-3 text-xs font-medium text-text-tertiary">Meza</span>
       <div className="flex-1" />
       {/* Windows/Linux: custom window controls */}
       {!isMac && <WindowControls />}

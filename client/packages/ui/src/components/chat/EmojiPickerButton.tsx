@@ -1,5 +1,5 @@
-import * as Popover from '@radix-ui/react-popover';
 import { SmileyIcon } from '@phosphor-icons/react';
+import * as Popover from '@radix-ui/react-popover';
 import { memo, useState } from 'react';
 import { EmojiPicker } from './EmojiPicker.tsx';
 

@@ -84,7 +84,9 @@ export class ChannelPage {
     await this.ensureChannelsLoaded();
     const nav = this.page.locator('nav[aria-label="Channels"]');
     // Channel buttons use data-channel-type attribute and contain the channel name as text.
-    const channelBtn = nav.locator('button[data-channel-type]').filter({ hasText: channelName });
+    const channelBtn = nav
+      .locator('button[data-channel-type]')
+      .filter({ hasText: channelName });
     await channelBtn.click({ timeout: 10_000 });
     // Wait for main content to load (composer for text, or voice UI)
     await expect(

@@ -325,13 +325,16 @@ export function openChannelSettingsPane(serverId: string, channelId: string) {
  * Used when a channel is deleted to clean up stale panes.
  */
 export function closeChannelPanes(channelId: string) {
-  useTilingStore.getState().closePanesMatching(
-    (content) =>
-      (content.type === 'channel' && content.channelId === channelId) ||
-      (content.type === 'channelSettings' && content.channelId === channelId) ||
-      (content.type === 'voice' && content.channelId === channelId) ||
-      (content.type === 'screenShare' && content.channelId === channelId),
-  );
+  useTilingStore
+    .getState()
+    .closePanesMatching(
+      (content) =>
+        (content.type === 'channel' && content.channelId === channelId) ||
+        (content.type === 'channelSettings' &&
+          content.channelId === channelId) ||
+        (content.type === 'voice' && content.channelId === channelId) ||
+        (content.type === 'screenShare' && content.channelId === channelId),
+    );
 }
 
 /**

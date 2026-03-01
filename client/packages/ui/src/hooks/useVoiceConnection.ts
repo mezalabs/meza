@@ -68,9 +68,7 @@ export async function voiceConnect(channelId: string, channelName: string) {
   } catch (err) {
     // Rollback optimistic add on failure
     if (userId) {
-      useVoiceParticipantsStore
-        .getState()
-        .removeParticipant(channelId, userId);
+      useVoiceParticipantsStore.getState().removeParticipant(channelId, userId);
     }
     useVoiceStore.getState().setError(mapVoiceError(err));
   }
@@ -89,11 +87,13 @@ export function voiceDisconnect() {
     leaveVoiceChannel(state.channelId).catch(() => {});
     // Close voice and screen-share panes for this channel in a single update
     const disconnectedChannelId = state.channelId;
-    useTilingStore.getState().closePanesMatching(
-      (content) =>
-        (content.type === 'voice' || content.type === 'screenShare') &&
-        content.channelId === disconnectedChannelId,
-    );
+    useTilingStore
+      .getState()
+      .closePanesMatching(
+        (content) =>
+          (content.type === 'voice' || content.type === 'screenShare') &&
+          content.channelId === disconnectedChannelId,
+      );
   }
   useVoiceStore.getState().disconnect();
   const { soundEnabled, enabledSounds } =

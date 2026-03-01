@@ -1,6 +1,6 @@
 import { ChannelType, createChannel, useServerStore } from '@meza/core';
-import * as Dialog from '@radix-ui/react-dialog';
 import { HashIcon, SpeakerHighIcon } from '@phosphor-icons/react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { type FormEvent, useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
 

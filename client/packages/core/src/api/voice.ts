@@ -1,5 +1,5 @@
-import { VoiceService } from '@meza/gen/meza/v1/voice_pb.ts';
 import { Code, ConnectError, createClient } from '@connectrpc/connect';
+import { VoiceService } from '@meza/gen/meza/v1/voice_pb.ts';
 import { transport } from './client.ts';
 
 const voiceClient = createClient(VoiceService, transport);

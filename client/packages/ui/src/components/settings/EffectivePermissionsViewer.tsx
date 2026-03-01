@@ -199,7 +199,11 @@ function PermissionCategoryView({
   return (
     <details className="group rounded-md border border-border bg-bg-surface">
       <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-sm font-medium text-text">
-        <CaretRightIcon size={16} className="shrink-0 text-text-muted transition-transform group-open:rotate-90" aria-hidden="true" />
+        <CaretRightIcon
+          size={16}
+          className="shrink-0 text-text-muted transition-transform group-open:rotate-90"
+          aria-hidden="true"
+        />
         <span>{meta.label}</span>
         <span className="text-xs font-normal text-text-subtle">
           {grantedCount}/{permKeys.length} granted
@@ -224,9 +228,20 @@ function PermissionCategoryView({
                 </div>
               </div>
               {granted ? (
-                <CheckIcon size={20} className="shrink-0 text-success" role="img" aria-label="Granted" />
+                <CheckIcon
+                  size={20}
+                  className="shrink-0 text-success"
+                  role="img"
+                  aria-label="Granted"
+                />
               ) : (
-                <XIcon weight="regular" size={20} className="shrink-0 text-text-subtle" role="img" aria-label="Denied" />
+                <XIcon
+                  weight="regular"
+                  size={20}
+                  className="shrink-0 text-text-subtle"
+                  role="img"
+                  aria-label="Denied"
+                />
               )}
             </div>
           );

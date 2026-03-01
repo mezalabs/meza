@@ -120,17 +120,11 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
     // Open channel settings for delete-me, navigate to Danger Zone
     await channelNav.getByText('delete-me').first().click({ button: 'right' });
     await alicePage.getByRole('menuitem', { name: 'Channel Settings' }).click();
-    await alicePage
-      .getByRole('button', { name: 'Danger Zone' })
-      .click();
-    await alicePage
-      .getByRole('button', { name: 'Delete Channel' })
-      .click();
+    await alicePage.getByRole('button', { name: 'Danger Zone' }).click();
+    await alicePage.getByRole('button', { name: 'Delete Channel' }).click();
     // Confirm deletion by typing channel name
     await alicePage.locator('#confirm-delete').fill('delete-me');
-    await alicePage
-      .getByRole('button', { name: 'Delete Channel' })
-      .click();
+    await alicePage.getByRole('button', { name: 'Delete Channel' }).click();
     await expect(channelNav.getByText('delete-me')).not.toBeVisible({
       timeout: 5_000,
     });

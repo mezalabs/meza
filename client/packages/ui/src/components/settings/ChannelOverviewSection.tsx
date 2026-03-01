@@ -177,8 +177,8 @@ export function ChannelOverviewSection({
       <div className="space-y-1.5">
         <span className="block text-sm font-medium text-text">Privacy</span>
         <p className="text-sm text-text-muted">
-          {channel.isPrivate ? 'Private' : 'Public'} — channel privacy is set
-          at creation and cannot be changed.
+          {channel.isPrivate ? 'Private' : 'Public'} — channel privacy is set at
+          creation and cannot be changed.
         </p>
       </div>
 

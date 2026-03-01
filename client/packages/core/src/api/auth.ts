@@ -1,9 +1,6 @@
-import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
-import type {
-  AudioPreferences,
-  User,
-} from '@meza/gen/meza/v1/models_pb.ts';
 import { Code, ConnectError, createClient } from '@connectrpc/connect';
+import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
+import type { AudioPreferences, User } from '@meza/gen/meza/v1/models_pb.ts';
 import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';

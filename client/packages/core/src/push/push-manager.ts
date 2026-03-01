@@ -1,5 +1,5 @@
-import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
 import { createClient } from '@connectrpc/connect';
+import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
 import { transport } from '../api/client.ts';
 import { getVAPIDPublicKey } from '../api/notification.ts';
 import { isElectron } from '../utils/platform.ts';

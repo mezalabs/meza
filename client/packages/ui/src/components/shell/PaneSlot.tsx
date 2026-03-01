@@ -1,5 +1,5 @@
-import type { DropPosition } from '@meza/core';
 import { useDroppable } from '@dnd-kit/core';
+import type { DropPosition } from '@meza/core';
 import type { ReactNode } from 'react';
 
 interface PaneSlotProps {
@@ -8,11 +8,7 @@ interface PaneSlotProps {
   children: ReactNode;
 }
 
-export function PaneSlot({
-  paneId,
-  isDragging,
-  children,
-}: PaneSlotProps) {
+export function PaneSlot({ paneId, isDragging, children }: PaneSlotProps) {
   const { setNodeRef } = useDroppable({
     id: `drop-${paneId}`,
     data: { paneId },

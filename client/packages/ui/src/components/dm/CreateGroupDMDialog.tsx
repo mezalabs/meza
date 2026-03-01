@@ -177,7 +177,11 @@ export function CreateGroupDMDialog({
                         {friend.displayName || friend.username}
                       </span>
                       {isSelected && (
-                        <CheckIcon size={16} className="text-accent" aria-hidden="true" />
+                        <CheckIcon
+                          size={16}
+                          className="text-accent"
+                          aria-hidden="true"
+                        />
                       )}
                     </button>
                   );

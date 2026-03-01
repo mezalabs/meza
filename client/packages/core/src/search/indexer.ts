@@ -1,6 +1,6 @@
+import { createClient } from '@connectrpc/connect';
 import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import type { Message } from '@meza/gen/meza/v1/models_pb.ts';
-import { createClient } from '@connectrpc/connect';
 import { transport } from '../api/client.ts';
 import { parseMessageContent } from '../crypto/messages.ts';
 import { clearAllIndexes, hasIndex, indexMessage } from './local-index.ts';

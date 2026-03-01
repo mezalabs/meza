@@ -64,7 +64,10 @@ function loadFromStorage(): Partial<AudioSettingsState> {
       result.outputDeviceId = parsed.outputDeviceId;
     if (typeof parsed.inputGain === 'number' && isFinite(parsed.inputGain))
       result.inputGain = Math.max(0, Math.min(2, parsed.inputGain));
-    if (typeof parsed.outputVolume === 'number' && isFinite(parsed.outputVolume))
+    if (
+      typeof parsed.outputVolume === 'number' &&
+      isFinite(parsed.outputVolume)
+    )
       result.outputVolume = Math.max(0, Math.min(1, parsed.outputVolume));
     if (
       typeof parsed.perUserVolumes === 'object' &&
@@ -76,7 +79,10 @@ function loadFromStorage(): Partial<AudioSettingsState> {
       typeof parsed.soundboardVolume === 'number' &&
       isFinite(parsed.soundboardVolume)
     )
-      result.soundboardVolume = Math.max(0, Math.min(2, parsed.soundboardVolume));
+      result.soundboardVolume = Math.max(
+        0,
+        Math.min(2, parsed.soundboardVolume),
+      );
     if (typeof parsed.hearOwnSoundboard === 'boolean')
       result.hearOwnSoundboard = parsed.hearOwnSoundboard;
     if (typeof parsed.noiseSuppression === 'boolean')

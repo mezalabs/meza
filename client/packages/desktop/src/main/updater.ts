@@ -1,5 +1,6 @@
 import { type BrowserWindow, ipcMain } from 'electron';
 import pkg from 'electron-updater';
+
 const { autoUpdater } = pkg;
 
 export function initAutoUpdater(win: BrowserWindow): void {

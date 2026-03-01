@@ -7,8 +7,8 @@ import {
   releaseBlobURL,
   unwrapFileKey,
 } from '@meza/core';
-import * as Dialog from '@radix-ui/react-dialog';
 import { CaretLeftIcon, CaretRightIcon, XIcon } from '@phosphor-icons/react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useRef, useState } from 'react';
 import { useImageViewerStore } from '../../stores/imageViewer.ts';
 
