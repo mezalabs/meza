@@ -843,7 +843,14 @@ const MessageItem = memo(function MessageItem({
     if (isStillEncrypted) {
       text = '';
     } else {
-      text = decoder.decode(msg.encryptedContent);
+      // Always parse through parseMessageContent to handle V1 JSON format.
+      // This prevents raw JSON like {"t":"hello","a":{}} from leaking to the UI
+      // when decryptInBackground updates the store after the first render.
+      try {
+        text = parseMessageContent(msg.encryptedContent).text;
+      } catch {
+        text = decoder.decode(msg.encryptedContent);
+      }
     }
   } else {
     text = '';
@@ -1291,7 +1298,12 @@ function ReplyPreviewBar({
   }
 
   // Check if parent is deleted (soft-deleted messages have empty content and deleted flag)
-  const parentText = decoder.decode(parentMessage.encryptedContent);
+  let parentText: string;
+  try {
+    parentText = parseMessageContent(parentMessage.encryptedContent).text;
+  } catch {
+    parentText = decoder.decode(parentMessage.encryptedContent);
+  }
   if (!parentText && parentMessage.id) {
     // Heuristic: if we have the message but it has no content, it may be deleted
     // The server filters out deleted messages, so if we got it back empty, show placeholder

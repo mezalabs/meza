@@ -2,6 +2,7 @@ import type { EncryptedUploadResult, UploadedFile } from '@meza/core';
 import {
   buildMessageContent,
   gatewaySendTyping,
+  parseMessageContent,
   sendMessage,
   uploadEncryptedFile,
   useChannelStore,
@@ -76,6 +77,7 @@ export function MessageComposer({
     encrypt,
     ready: encryptionReady,
     isEncrypted,
+    retry: retryEncryption,
   } = useChannelEncryption(channelId);
 
   // Focus textarea on mount and channel switch.
@@ -504,10 +506,20 @@ export function MessageComposer({
     });
   }
 
-  // Truncate reply preview text (strip markdown for clean display)
-  const replyPreviewText = replyingTo
-    ? stripMarkdown(decoder.decode(replyingTo.encryptedContent)).slice(0, 100)
-    : '';
+  // Truncate reply preview text (strip markdown for clean display).
+  // Use parseMessageContent to handle V1 JSON format and avoid showing raw JSON.
+  let replyPreviewText = '';
+  if (replyingTo) {
+    try {
+      replyPreviewText = stripMarkdown(
+        parseMessageContent(replyingTo.encryptedContent).text,
+      ).slice(0, 100);
+    } catch {
+      replyPreviewText = stripMarkdown(
+        decoder.decode(replyingTo.encryptedContent),
+      ).slice(0, 100);
+    }
+  }
 
   const encryptionPending = needsEncryption && !encryptionReady;
   const encryptionUnavailable =
@@ -515,6 +527,19 @@ export function MessageComposer({
 
   return (
     <div className="flex-shrink-0 px-2 pt-1 pb-2">
+      {/* Encryption retry banner */}
+      {encryptionUnavailable && (
+        <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-xs text-error">
+          <span>Encryption unavailable</span>
+          <button
+            type="button"
+            onClick={retryEncryption}
+            className="underline text-error hover:text-text"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {/* Reply preview bar */}
       {replyingTo && (
         <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-xs border-l-2 border-accent">
@@ -684,7 +709,7 @@ export function MessageComposer({
               encryptionPending
                 ? 'Setting up encryption…'
                 : encryptionUnavailable
-                  ? 'Encryption unavailable — re-login to send messages'
+                  ? 'Encryption unavailable'
                   : replyingTo
                     ? 'Type a reply…'
                     : channelName

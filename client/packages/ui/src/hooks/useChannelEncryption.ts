@@ -28,11 +28,18 @@ export interface ChannelEncryption {
   encrypt: (plaintext: Uint8Array) => Promise<EncryptedMessage | null>;
   /** Whether this channel uses E2EE (always true with universal encryption). */
   isEncrypted: boolean;
+  /** Manually retry key initialization (e.g. after timeout). */
+  retry: () => void;
 }
 
 /** Retry delays used only after lazy init fails (another client won the
- *  key-creation race and is distributing — we wait for their keys). */
-const KEY_RETRY_DELAYS_MS = [1_000, 2_000];
+ *  key-creation race and is distributing — we wait for their keys).
+ *  Increased from [1000, 2000] to give more time for large-server
+ *  key distribution while keeping total wait under 5s. */
+const KEY_RETRY_DELAYS_MS = [500, 1_000, 1_500, 2_000];
+
+/** Minimum interval between manual retries to prevent rapid clicking. */
+const RETRY_COOLDOWN_MS = 10_000;
 
 /**
  * Manages channel key state for an encrypted channel.
@@ -44,6 +51,9 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
   const [ready, setReady] = useState(false);
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [sessionReady, setSessionReady] = useState(isSessionReady);
+  // Incrementing this counter re-runs the init effect (manual retry).
+  const [retryCounter, setRetryCounter] = useState(0);
+  const lastRetryRef = useRef(0);
 
   // Keep refs in sync so the encrypt callback always reads current values
   // (avoids stale closure when state transitions between render and action).
@@ -162,7 +172,15 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
     return () => {
       cancelled = true;
     };
-  }, [channelId, sessionReady]);
+  }, [channelId, sessionReady, retryCounter]);
+
+  // Manual retry with cooldown to prevent rapid clicking
+  const retry = useCallback(() => {
+    const now = Date.now();
+    if (now - lastRetryRef.current < RETRY_COOLDOWN_MS) return;
+    lastRetryRef.current = now;
+    setRetryCounter((c) => c + 1);
+  }, []);
 
   const encrypt = useCallback(
     async (plaintext: Uint8Array): Promise<EncryptedMessage | null> => {
@@ -177,5 +195,5 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
     [channelId],
   );
 
-  return { ready, encrypt, isEncrypted };
+  return { ready, encrypt, isEncrypted, retry };
 }

@@ -356,3 +356,4 @@ export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { getBaseUrl, isElectron } from './utils/platform.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';
+export { retryWithBackoff } from './utils/retry.ts';

@@ -266,4 +266,24 @@ export class ChannelPage {
     const container = this.messageContainer(messageText);
     await expect(container.getByLabel('Pinned')).toBeVisible();
   }
+
+  // ---------------------------------------------------------------------------
+  // E2EE assertions
+  // ---------------------------------------------------------------------------
+
+  /** Assert no raw JSON content like {"t":"..."} is visible in the message list. */
+  async expectNoRawJson() {
+    await expect(
+      this.messageList.locator('text=/\\{"t":/'),
+    ).toHaveCount(0, { timeout: 5_000 });
+  }
+
+  /** Wait for encryption to initialize (composer placeholder stops saying "Setting up encryption"). */
+  async waitForEncryption() {
+    await expect(this.composer).not.toHaveAttribute(
+      'placeholder',
+      /Setting up encryption/,
+      { timeout: 15_000 },
+    );
+  }
 }
