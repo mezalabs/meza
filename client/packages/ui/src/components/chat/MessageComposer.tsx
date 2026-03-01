@@ -739,7 +739,7 @@ export function MessageComposer({
                 disabled ||
                 (!draft.trim() && pendingFiles.length === 0)
               }
-              className="flex-shrink-0 self-end mb-4 mr-3 p-1.5 text-accent disabled:text-text-subtle transition-colors"
+              className="flex-shrink-0 self-start mt-5 mr-5 text-accent disabled:text-text-subtle transition-colors"
               aria-label="Send message"
             >
               <PaperPlaneRightIcon size={22} aria-hidden="true" />
