@@ -19,6 +19,7 @@ import {
   useTrackToggle,
   VideoTrack,
 } from '@livekit/components-react';
+import type { TrackReference } from '@livekit/components-core';
 import type { Participant } from 'livekit-client';
 import { RoomEvent, Track } from 'livekit-client';
 import {
@@ -452,7 +453,10 @@ function ScreenShareButton() {
 }
 
 function ScreenShareGrid({ channelId }: { channelId: string }) {
-  const tracks = useTracks([Track.Source.ScreenShare]);
+  const allTracks = useTracks([Track.Source.ScreenShare]);
+  const tracks = allTracks.filter(
+    (t): t is TrackReference => t.publication !== undefined,
+  );
 
   if (tracks.length === 0) return null;
 

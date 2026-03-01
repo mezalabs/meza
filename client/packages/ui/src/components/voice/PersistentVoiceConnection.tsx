@@ -18,6 +18,7 @@ import type {
   RemoteParticipant,
   RemoteTrack,
   RemoteTrackPublication,
+  TrackPublication,
 } from 'livekit-client';
 import { DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
@@ -179,7 +180,7 @@ function VoiceEventHandler() {
 
     // Sync track mute/unmute to participants store for instant sidebar updates
     const onTrackMuted = (
-      _publication: RemoteTrackPublication | LocalTrackPublication,
+      _publication: TrackPublication,
       participant: Participant,
     ) => {
       const channelId = useVoiceStore.getState().channelId;
@@ -194,7 +195,7 @@ function VoiceEventHandler() {
     };
 
     const onTrackUnmuted = (
-      _publication: RemoteTrackPublication | LocalTrackPublication,
+      _publication: TrackPublication,
       participant: Participant,
     ) => {
       const channelId = useVoiceStore.getState().channelId;

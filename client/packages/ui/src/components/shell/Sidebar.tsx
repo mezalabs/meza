@@ -1236,7 +1236,7 @@ function SidebarChannelItem({
             className={`rounded p-0.5 text-text transition-opacity ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} hover:bg-bg-elevated`}
             onClick={(e) => {
               e.stopPropagation();
-              openChannelSettingsPane(serverId, channelId);
+              if (serverId) openChannelSettingsPane(serverId, channelId);
             }}
             aria-label="Channel settings"
             title="Channel settings"

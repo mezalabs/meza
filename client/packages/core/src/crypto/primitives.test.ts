@@ -315,7 +315,9 @@ describe('nonce uniqueness', () => {
     for (let i = 0; i < 1000; i++) {
       const encrypted = await encryptPayload(key, plaintext);
       // First 12 bytes are the nonce
-      const nonce = Buffer.from(encrypted.slice(0, 12)).toString('hex');
+      const nonce = Array.from(encrypted.slice(0, 12), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
       nonces.add(nonce);
     }
 
@@ -343,7 +345,9 @@ describe('ephemeral key uniqueness', () => {
     for (let i = 0; i < 50; i++) {
       const envelope = await wrapChannelKey(channelKey, identity.publicKey);
       // First 32 bytes are the ephemeral public key
-      const ephPub = Buffer.from(envelope.slice(0, 32)).toString('hex');
+      const ephPub = Array.from(envelope.slice(0, 32), (b) =>
+        b.toString(16).padStart(2, '0'),
+      ).join('');
       ephemeralKeys.add(ephPub);
     }
 
