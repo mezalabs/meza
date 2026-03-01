@@ -106,10 +106,10 @@ export function Pane({
                 <img
                   src={iconSrc}
                   alt={serverName}
-                  className="h-6 w-6 rounded-md object-cover flex-shrink-0"
+                  className="h-5 w-5 rounded-sm object-cover flex-shrink-0"
                 />
               ) : (
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-accent text-[11px] font-bold text-black flex-shrink-0">
+                <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-accent text-[10px] font-bold text-black flex-shrink-0">
                   {serverName.charAt(0).toUpperCase()}
                 </span>
               )}

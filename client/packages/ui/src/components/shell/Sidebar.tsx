@@ -66,6 +66,7 @@ import {
 } from '../../stores/tiling.ts';
 import { CreateGroupDMDialog } from '../dm/CreateGroupDMDialog.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
+import { MezaIcon } from '../shared/MezaIcon.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 import { VoiceConnectionBar } from '../voice/VoiceConnectionBar.tsx';
 import { CreateChannelDialog } from './CreateChannelDialog.tsx';
@@ -299,7 +300,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       style={style}
     >
       {/* Two-column layout: server icons | channel list */}
-      <div className="flex flex-1 min-h-0 m-1.5 rounded-xl border border-border/40 shadow-md overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Server list */}
         <nav
           className="flex w-16 flex-shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/40 px-1 py-3"
@@ -312,15 +313,15 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             )}
             <button
               type="button"
-              className={`relative flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold transition-colors ${
+              className={`relative flex h-10 w-10 items-center justify-center rounded-[10px] text-xl font-semibold transition-colors ${
                 showDMs
-                  ? 'bg-accent text-black'
+                  ? 'bg-bg-surface text-accent'
                   : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
               }`}
               title="Direct Messages"
               onClick={selectDMs}
             >
-              @
+              <MezaIcon className="h-6 w-6" />
               {hasDMUnread && !showDMs && (
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
               )}
@@ -396,7 +397,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
           {showDMs ? (
             <>
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-text-subtle">
+                <h2 className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle">
                   Direct Messages
                 </h2>
                 <button
@@ -480,7 +481,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             <>
               {/* Server name + settings */}
               {selectedServerId && servers[selectedServerId] && (
-                <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="mb-3 flex items-center justify-between gap-3 pl-2">
                   <h2 className="text-base font-semibold text-text truncate">
                     {servers[selectedServerId].name}
                   </h2>
@@ -780,7 +781,7 @@ function SidebarFooter() {
             <div
               className={`rounded-full transition-shadow ${
                 isSpeaking
-                  ? 'ring-[2.5px] ring-success shadow-[0_0_6px_oklch(0.72_0.19_142/0.4)]'
+                  ? 'ring-[2.5px] ring-success shadow-[0_0_6px_oklch(0.72_0.19_157/0.4)]'
                   : ''
               }`}
             >
@@ -1309,7 +1310,7 @@ function SidebarVoiceParticipant({
       <div
         className={`rounded-full transition-shadow ${
           isSpeaking
-            ? 'ring-[2px] ring-success shadow-[0_0_4px_oklch(0.72_0.19_142/0.4)]'
+            ? 'ring-[2px] ring-success shadow-[0_0_4px_oklch(0.72_0.19_157/0.4)]'
             : ''
         }`}
       >

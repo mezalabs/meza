@@ -149,7 +149,7 @@ function RequestDetail({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="px-3 py-1.5 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-500 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 text-xs font-medium rounded bg-success text-black hover:bg-success/80 transition-colors disabled:opacity-50"
             disabled={loading}
             onClick={async () => {
               setLoading(true);

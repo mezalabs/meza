@@ -283,7 +283,7 @@ function IncomingRequestRow({ request }: { request: FriendRequestEntry }) {
       <div className="flex items-center gap-1">
         <button
           type="button"
-          className="px-2.5 py-1 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-500 transition-colors disabled:opacity-50"
+          className="px-2.5 py-1 text-xs font-medium rounded bg-success text-black hover:bg-success/80 transition-colors disabled:opacity-50"
           disabled={loading}
           onClick={async () => {
             setLoading(true);

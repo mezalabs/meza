@@ -21,11 +21,11 @@
   --color-bg-elevated: oklch(0.26 0 0);
   --color-bg-overlay: oklch(0.17 0 0);
 
-  /* ── Amber accent scale ── */
-  --color-accent: oklch(0.75 0.16 65);
-  --color-accent-hover: oklch(0.8 0.17 65);
-  --color-accent-muted: oklch(0.55 0.1 65);
-  --color-accent-subtle: oklch(0.3 0.04 65);
+  /* ── Mint accent scale ── */
+  --color-accent: oklch(0.9 0.17 157);
+  --color-accent-hover: oklch(0.93 0.14 157);
+  --color-accent-muted: oklch(0.65 0.11 157);
+  --color-accent-subtle: oklch(0.35 0.05 157);
 
   /* ── Text ── */
   --color-text: oklch(0.93 0 0);
@@ -37,10 +37,10 @@
   --color-border-hover: oklch(0.4 0 0);
 
   /* ── Focus ring ── */
-  --color-focus: oklch(0.75 0.16 65);
+  --color-focus: oklch(0.9 0.17 157);
 
   /* ── Semantic ── */
-  --color-success: oklch(0.7 0.15 145);
+  --color-success: oklch(0.7 0.15 157);
   --color-warning: oklch(0.75 0.15 85);
   --color-error: oklch(0.65 0.2 25);
   --color-info: oklch(0.7 0.12 230);
@@ -208,7 +208,7 @@ html {
     background-color: transparent;
   }
   30% {
-    background-color: oklch(0.75 0.16 65 / 0.15);
+    background-color: oklch(0.9 0.17 157 / 0.15);
   }
 }
 
@@ -290,7 +290,7 @@ html {
 .hljs-template-tag,
 .hljs-template-variable,
 .hljs-type {
-  color: oklch(0.72 0.12 145); /* green */
+  color: oklch(0.72 0.12 157); /* green */
 }
 
 .hljs-comment,
@@ -304,7 +304,7 @@ html {
 .hljs-regexp,
 .hljs-literal,
 .hljs-link {
-  color: oklch(0.75 0.16 65); /* accent amber */
+  color: oklch(0.9 0.17 157); /* accent mint */
 }
 
 .hljs-symbol,
@@ -335,7 +335,7 @@ em-emoji-picker {
   --em-rgb-background: 46, 46, 46; /* sRGB of bg-elevated oklch(0.26 0 0) */
   --em-rgb-input: 36, 36, 36; /* sRGB of bg-base oklch(0.18 0 0) */
   --em-rgb-color: 229, 229, 229; /* sRGB of text oklch(0.93 0 0) */
-  --em-rgb-accent: 204, 163, 82;
+  --em-rgb-accent: 100, 255, 175;
   --em-color-border: var(--color-border);
   --em-color-border-over: var(--color-border-hover);
   --font-family: var(--font-sans);

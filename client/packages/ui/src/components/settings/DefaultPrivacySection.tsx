@@ -88,7 +88,7 @@ export function DefaultPrivacySection({
       {feedback && (
         <output
           className={`block text-sm ${
-            feedback.type === 'success' ? 'text-green-400' : 'text-red-400'
+            feedback.type === 'success' ? 'text-success' : 'text-error'
           }`}
         >
           {feedback.message}
