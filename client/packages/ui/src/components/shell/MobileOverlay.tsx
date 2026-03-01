@@ -1,4 +1,4 @@
-import { XIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 
 interface MobileOverlayProps {
   open: boolean;
@@ -22,14 +22,14 @@ export function MobileOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-bg-base safe-top safe-bottom">
-      <header className="flex h-12 flex-shrink-0 items-center gap-3 border-b border-border/40 px-4">
+      <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border/40 px-2">
         <button
           type="button"
           onClick={onClose}
-          className="p-2 -ml-2 text-text-muted hover:text-text transition-colors"
-          aria-label="Close"
+          className="p-2 text-text-muted hover:text-text transition-colors"
+          aria-label="Back"
         >
-          <XIcon size={20} aria-hidden="true" />
+          <ArrowLeftIcon size={20} aria-hidden="true" />
         </button>
         <h2 className="flex-1 truncate text-base font-semibold text-text">
           {title}
