@@ -4,7 +4,7 @@ dotenv: ['.env']
 
 vars:
   COMPOSE_FILE: deploy/docker/docker-compose.yml
-  INFRA_SERVICES: postgres redis nats scylla minio livekit meilisearch
+  INFRA_SERVICES: postgres redis nats scylla minio livekit
   WORKTREE_ID:
     sh: |
       root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: Not inside a git repository" >&2; exit 1; }
@@ -17,7 +17,7 @@ vars:
 
 tasks:
   up:
-    desc: Start infrastructure services (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit, Meilisearch)
+    desc: Start infrastructure services (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit)
     cmds:
       - |
         current_project="{{.COMPOSE_PROJECT}}"
@@ -82,7 +82,6 @@ tasks:
         echo "  NATS          localhost:4222 (monitoring: localhost:8222)"
         echo "  MinIO         localhost:9000 (console: localhost:9001)"
         echo "  LiveKit       localhost:7880"
-        echo "  Meilisearch   localhost:7700"
 
   migrate:
     desc: Run all database migrations (PostgreSQL + ScyllaDB)

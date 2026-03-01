@@ -95,20 +95,6 @@ services:
       LIVEKIT_KEYS: "devkey: devsecret"
     command: --dev --bind 0.0.0.0
 
-  meilisearch:
-    image: getmeili/meilisearch
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_ENV: development
-    volumes:
-      - meili_data:/meili_data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   # ── Meza Services ────────────────────────────────────────────
 
   gateway:
@@ -274,4 +260,3 @@ volumes:
   scylla_data:
   redis_data:
   minio_data:
-  meili_data:

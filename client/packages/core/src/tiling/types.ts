@@ -16,7 +16,7 @@ export type PaneContent =
     }
   | { type: 'settings'; section?: string }
   | { type: 'profile'; userId: string }
-  | { type: 'search'; query?: string }
+  | { type: 'search'; query?: string; channelId?: string }
   | { type: 'serverSettings'; serverId: string }
   | { type: 'channelSettings'; serverId: string; channelId: string }
   | { type: 'serverOnboarding'; serverId: string }

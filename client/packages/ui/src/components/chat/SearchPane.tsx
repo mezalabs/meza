@@ -16,47 +16,22 @@ import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
-const decoder = new TextDecoder();
-
-/** Strip all HTML except <mark> tags from Meilisearch highlight strings. */
-function sanitizeHighlight(html: string): string {
-  // Split on <mark> and </mark>, escape HTML in text segments, rejoin.
-  const parts: string[] = [];
-  const markRe = /<\/?mark>/gi;
-  let lastIndex = 0;
-  for (let m = markRe.exec(html); m !== null; m = markRe.exec(html)) {
-    if (m.index > lastIndex) {
-      parts.push(escapeHtml(html.slice(lastIndex, m.index)));
-    }
-    parts.push(m[0].toLowerCase() === '<mark>' ? '<mark>' : '</mark>');
-    lastIndex = markRe.lastIndex;
-  }
-  if (lastIndex < html.length) {
-    parts.push(escapeHtml(html.slice(lastIndex)));
-  }
-  return parts.join('');
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 interface SearchPaneProps {
   initialQuery?: string;
   serverId?: string;
+  channelId?: string;
 }
 
-export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
+export function SearchPane({
+  initialQuery,
+  serverId,
+  channelId,
+}: SearchPaneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const query = useSearchStore((s) => s.query);
   const isLoading = useSearchStore((s) => s.isLoading);
   const results = useSearchStore((s) => s.results);
-  const totalHits = useSearchStore((s) => s.totalHits);
+  const hasMore = useSearchStore((s) => s.hasMore);
   const error = useSearchStore((s) => s.error);
 
   const [localQuery, setLocalQuery] = useState(initialQuery ?? '');
@@ -71,9 +46,6 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
 
   // Build a channelId -> name map once instead of per-row .find() selectors.
-  // Extract the raw array (stable reference) and derive the Map in useMemo
-  // to avoid creating a new Map on every render (which would cause infinite
-  // re-renders since Zustand uses Object.is equality).
   const channels = useChannelStore((s) =>
     selectedServerId ? s.byServer[selectedServerId] : undefined,
   );
@@ -86,20 +58,24 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
     return map;
   }, [channels]);
 
+  // Set channelId on the search store so server-side search is reachable.
+  useEffect(() => {
+    if (channelId) {
+      useSearchStore.getState().setChannelId(channelId);
+    }
+  }, [channelId]);
+
   // Focus input on mount.
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Set server scope.
+  // Reset on unmount.
   useEffect(() => {
-    if (selectedServerId) {
-      useSearchStore.getState().setServerId(selectedServerId);
-    }
     return () => {
       useSearchStore.getState().reset();
     };
-  }, [selectedServerId]);
+  }, []);
 
   // Set initial query if provided.
   useEffect(() => {
@@ -114,7 +90,6 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!localQuery.trim()) return;
       const store = useSearchStore.getState();
       store.setQuery(localQuery.trim());
       store.search();
@@ -186,9 +161,9 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
 
         {results.length > 0 && (
           <div className="divide-y divide-border">
-            {totalHits > results.length && (
+            {hasMore && (
               <div className="px-4 py-2 text-xs text-text-subtle bg-bg-secondary">
-                Showing {results.length} of {totalHits} results
+                More results available — refine your filters to narrow down
               </div>
             )}
             {results.map((result, i) => (
@@ -235,10 +210,13 @@ const SearchResultRow = React.memo(function SearchResultRow({
 
   const authorName = useDisplayName(authorId, selectedServerId ?? undefined);
 
-  // Get content to display.
+  // For server results, show metadata only (content is E2EE encrypted).
+  // For local results (already decrypted via FlexSearch), show plaintext.
   let content = '';
+  const hasAttachments =
+    result.message?.attachments && result.message.attachments.length > 0;
   if (result.source === 'server' && result.message) {
-    content = decoder.decode(result.message.encryptedContent);
+    content = hasAttachments ? 'Message with attachments' : 'Encrypted message';
   } else if (result.localResult) {
     content = result.localResult.content;
   }
@@ -281,17 +259,15 @@ const SearchResultRow = React.memo(function SearchResultRow({
         )}
         <span className="text-xs text-text-subtle ml-auto">{timestamp}</span>
       </div>
-      {result.source === 'server' && result.highlight ? (
-        <p
-          className="text-sm text-text-secondary line-clamp-2 [&_mark]:bg-accent/30 [&_mark]:text-text-primary [&_mark]:rounded-sm [&_mark]:px-0.5"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: highlight HTML is sanitized to only allow <mark> tags
-          dangerouslySetInnerHTML={{
-            __html: sanitizeHighlight(result.highlight),
-          }}
-        />
-      ) : (
-        <p className="text-sm text-text-secondary line-clamp-2">{content}</p>
-      )}
+      <p className="text-sm text-text-secondary line-clamp-2">
+        {result.source === 'server' ? (
+          <span className="italic text-text-subtle">
+            {content} — click to jump
+          </span>
+        ) : (
+          content
+        )}
+      </p>
     </button>
   );
 });

@@ -122,73 +122,80 @@ export function Pane({
         <span className="flex-1 truncate font-medium text-text-muted">
           {label}
         </span>
-        {onOpenChannelSettings && (
-          <button
-            type="button"
-            className="rounded-md p-1 text-text-subtle hover:bg-bg-elevated hover:text-text transition-colors"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenChannelSettings();
-            }}
-            aria-label="Channel settings"
-            title="Channel settings"
-          >
-            <GearIcon size={16} aria-hidden="true" />
-          </button>
-        )}
-        {onTogglePins && (
-          <button
-            type="button"
-            className={`rounded-md p-1 transition-colors ${
-              showPins
-                ? 'text-accent hover:text-accent-hover'
-                : 'text-text-subtle hover:bg-bg-elevated hover:text-text'
-            }`}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onTogglePins();
-            }}
-            aria-label={
-              showPins ? 'Hide pinned messages' : 'Show pinned messages'
-            }
-          >
-            <PushPinIcon size={16} aria-hidden="true" />
-          </button>
-        )}
-        {onToggleMembers && (
-          <button
-            type="button"
-            className={`rounded-md p-1 transition-colors ${
-              showMembers
-                ? 'text-accent hover:text-accent-hover'
-                : 'text-text-subtle hover:bg-bg-elevated hover:text-text'
-            }`}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleMembers();
-            }}
-            aria-label={showMembers ? 'Hide members' : 'Show members'}
-          >
-            <UsersThreeIcon size={16} aria-hidden="true" />
-          </button>
-        )}
-        {showClose && (
-          <button
-            type="button"
-            className="rounded-md p-1 text-text-subtle hover:bg-bg-elevated hover:text-text"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose?.();
-            }}
-            aria-label={`Close ${label}`}
-          >
-            <XIcon weight="regular" size={14} aria-hidden="true" />
-          </button>
-        )}
+        {/* aria-disabled={false} prevents dnd-kit's drag handle aria-disabled from disabling nested buttons */}
+        <div
+          className="flex items-center gap-0.5"
+          role="toolbar"
+          aria-disabled={false}
+        >
+          {onOpenChannelSettings && (
+            <button
+              type="button"
+              className="rounded-md p-1 text-text-subtle hover:bg-bg-elevated hover:text-text transition-colors"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenChannelSettings();
+              }}
+              aria-label="Channel settings"
+              title="Channel settings"
+            >
+              <GearIcon size={16} aria-hidden="true" />
+            </button>
+          )}
+          {onTogglePins && (
+            <button
+              type="button"
+              className={`rounded-md p-1 transition-colors ${
+                showPins
+                  ? 'text-accent hover:text-accent-hover'
+                  : 'text-text-subtle hover:bg-bg-elevated hover:text-text'
+              }`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePins();
+              }}
+              aria-label={
+                showPins ? 'Hide pinned messages' : 'Show pinned messages'
+              }
+            >
+              <PushPinIcon size={16} aria-hidden="true" />
+            </button>
+          )}
+          {onToggleMembers && (
+            <button
+              type="button"
+              className={`rounded-md p-1 transition-colors ${
+                showMembers
+                  ? 'text-accent hover:text-accent-hover'
+                  : 'text-text-subtle hover:bg-bg-elevated hover:text-text'
+              }`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMembers();
+              }}
+              aria-label={showMembers ? 'Hide members' : 'Show members'}
+            >
+              <UsersThreeIcon size={16} aria-hidden="true" />
+            </button>
+          )}
+          {showClose && (
+            <button
+              type="button"
+              className="rounded-md p-1 text-text-subtle hover:bg-bg-elevated hover:text-text"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose?.();
+              }}
+              aria-label={`Close ${label}`}
+            >
+              <XIcon weight="regular" size={14} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

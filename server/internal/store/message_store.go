@@ -227,6 +227,113 @@ func (s *MessageStore) scanMessages(_ context.Context, cql string, args ...any) 
 	return messages, nil
 }
 
+const (
+	defaultSearchLimit = 25
+	maxSearchLimit     = 100
+	searchPageSize     = 500
+	maxScanDepth       = 10_000
+)
+
+// SearchMessages performs a two-phase metadata scan + hydration for filtered message search.
+// Phase 1 reads only metadata columns (no encrypted_content) to find matching IDs.
+// Phase 2 hydrates matched results via GetMessagesByIDs.
+func (s *MessageStore) SearchMessages(ctx context.Context, opts SearchMessagesOpts) ([]*models.Message, bool, error) {
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = defaultSearchLimit
+	}
+	if limit > maxSearchLimit {
+		limit = maxSearchLimit
+	}
+
+	// Phase 1: metadata-only scan to find matching message IDs.
+	var cql string
+	var args []any
+	if opts.BeforeID != "" {
+		cql = `SELECT message_id, author_id, attachment_ids, mentioned_user_ids, deleted
+		       FROM messages WHERE channel_id = ? AND message_id < ?
+		       ORDER BY message_id DESC`
+		args = []any{opts.ChannelID, opts.BeforeID}
+	} else {
+		cql = `SELECT message_id, author_id, attachment_ids, mentioned_user_ids, deleted
+		       FROM messages WHERE channel_id = ?
+		       ORDER BY message_id DESC`
+		args = []any{opts.ChannelID}
+	}
+
+	iter := s.session.Query(cql, args...).Consistency(gocql.One).PageSize(searchPageSize).Iter()
+
+	var matchedIDs []string
+	var scanned int
+	scanCapReached := false
+
+	var messageID, authorID string
+	var attachmentIDs []string
+	var mentionedUserIDs []string
+	var deleted bool
+
+	for iter.Scan(&messageID, &authorID, &attachmentIDs, &mentionedUserIDs, &deleted) {
+		scanned++
+
+		if scanned > maxScanDepth {
+			scanCapReached = true
+			break
+		}
+
+		// Application-level filtering.
+		if deleted {
+			continue
+		}
+		if opts.AuthorID != "" && authorID != opts.AuthorID {
+			continue
+		}
+		if opts.HasAttachment != nil {
+			hasAtt := len(attachmentIDs) > 0
+			if *opts.HasAttachment != hasAtt {
+				continue
+			}
+		}
+		if opts.MentionedUserID != "" {
+			if !slices.Contains(mentionedUserIDs, opts.MentionedUserID) {
+				continue
+			}
+		}
+
+		matchedIDs = append(matchedIDs, messageID)
+		if len(matchedIDs) > limit {
+			break // got limit+1, enough for has_more
+		}
+	}
+	if err := iter.Close(); err != nil {
+		return nil, false, fmt.Errorf("search scan: %w", err)
+	}
+
+	hasMore := len(matchedIDs) > limit || scanCapReached
+	if len(matchedIDs) > limit {
+		matchedIDs = matchedIDs[:limit]
+	}
+
+	if len(matchedIDs) == 0 {
+		return nil, hasMore, nil
+	}
+
+	// Phase 2: hydrate matched IDs with full message data.
+	msgMap, err := s.GetMessagesByIDs(ctx, opts.ChannelID, matchedIDs)
+	if err != nil {
+		return nil, false, fmt.Errorf("search hydrate: %w", err)
+	}
+
+	// Preserve the scan order (newest first).
+	messages := make([]*models.Message, 0, len(matchedIDs))
+	for _, id := range matchedIDs {
+		if msg, ok := msgMap[id]; ok {
+			messages = append(messages, msg)
+		}
+	}
+
+	return messages, hasMore, nil
+}
+
 func (s *MessageStore) CountMessagesAfter(_ context.Context, channelID, afterMessageID string) (int32, error) {
 	iter := s.session.Query(
 		`SELECT message_id FROM meza.messages

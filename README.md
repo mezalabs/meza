@@ -14,7 +14,7 @@ End-to-end encrypted, real-time chat platform. Self-hostable with Docker Compose
 - **Real-time messaging** — WebSocket gateway with sharded connections (~5k per shard)
 - **Voice and video** — LiveKit WebRTC integration
 - **File sharing** — S3-compatible storage with thumbnails and image processing
-- **Full-text search** — Meilisearch-powered message search
+- **Metadata search** — Channel-scoped message filtering by author, date, attachments, and mentions
 - **Federation** — Cross-instance communication via signed JWT assertions
 - **Tiling window manager UI** — i3/sway-inspired pane layout, no traditional page routing
 - **Self-hostable** — Docker Compose for development, production-ready with standard infrastructure
@@ -58,7 +58,7 @@ cp .env.example .env
 task start
 ```
 
-This starts all infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit, Meilisearch), runs migrations, and launches all services + the Vite dev server. The app is available at `http://localhost:4080`.
+This starts all infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit), runs migrations, and launches all services + the Vite dev server. The app is available at `http://localhost:4080`.
 
 On first run, initialize the database:
 

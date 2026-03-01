@@ -30,7 +30,6 @@ It supports text messaging, voice, and video — with end-to-end encryption by d
 | Primary database | PostgreSQL | 16+ | Relational data: users, servers, channels, roles, permissions |
 | Message store | ScyllaDB | 6.x | High write throughput, horizontal scaling, CQL compatible |
 | Cache/Presence | Redis | 7+ | In-memory presence tracking, session state, cross-node pub/sub |
-| Search | Meilisearch | 1.x | Message full-text search, lightweight, Rust-based |
 | Object storage | S3-compatible | MinIO or AWS S3 | File uploads, avatars, attachments |
 
 ---
@@ -119,7 +118,7 @@ It supports text messaging, voice, and video — with end-to-end encryption by d
 - Channel members (add, remove, list per channel)
 - Friends and blocks (send/accept/decline requests, block/unblock users)
 - Server onboarding (rules acknowledgment, onboarding completion)
-- Message metadata search (via Meilisearch integration, E2EE: no plaintext content indexed)
+- Message metadata search (direct ScyllaDB queries, channel-scoped: author, date, attachments, mentions)
 - Link preview embedding (via NATS embed worker)
 - Server templates (create server from template)
 - Persists messages to ScyllaDB

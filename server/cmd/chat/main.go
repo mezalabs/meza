@@ -21,7 +21,6 @@ import (
 	"github.com/meza-chat/meza/internal/observability"
 	"github.com/meza-chat/meza/internal/permissions"
 	"github.com/meza-chat/meza/internal/ratelimit"
-	"github.com/meza-chat/meza/internal/search"
 	bfredis "github.com/meza-chat/meza/internal/redis"
 	"github.com/meza-chat/meza/internal/store"
 )
@@ -83,18 +82,6 @@ func main() {
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	permCache := permissions.NewCache(rdb)
 
-	// Initialize Meilisearch client for full-text search (best-effort — nil if unavailable).
-	var searchClient Searcher
-	if cfg.MeiliURL != "" {
-		sc, err := search.NewClient(cfg.MeiliURL, cfg.MeiliAPIKey)
-		if err != nil {
-			slog.Warn("meilisearch unavailable, search disabled", "err", err)
-		} else {
-			searchClient = sc
-			slog.Info("meilisearch connected", "url", cfg.MeiliURL)
-		}
-	}
-
 	svc := newChatService(chatServiceConfig{
 		Pool:                    pool,
 		ChatStore:               chatStore,
@@ -119,7 +106,6 @@ func main() {
 		NC:                      nc,
 		RDB:                     rdb,
 		PermCache:               permCache,
-		SearchClient:            searchClient,
 	})
 
 	// Build interceptor options: user existence check, token blocklist, + optional Ed25519 dual validation

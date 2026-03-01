@@ -211,6 +211,9 @@ func (m *mockMessageStoreGW) GetMessagesByIDs(_ context.Context, _ string, _ []s
 func (m *mockMessageStoreGW) CountMessagesAfter(_ context.Context, _, _ string) (int32, error) {
 	return 0, nil
 }
+func (m *mockMessageStoreGW) SearchMessages(_ context.Context, _ store.SearchMessagesOpts) ([]*models.Message, bool, error) {
+	return nil, false, nil
+}
 func (m *mockMessageStoreGW) InsertReplyIndex(_ context.Context, _, _, _, _ string, _ time.Time) error {
 	return nil
 }
