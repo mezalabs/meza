@@ -311,6 +311,9 @@ describe('gateway', () => {
       let env = lastSentEnvelope(sock);
       expect(env?.op).toBe(GatewayOpCode.GATEWAY_OP_HEARTBEAT);
 
+      // Deliver a HEARTBEAT_ACK so the ACK-timeout check (45s) doesn't fire
+      deliverEnvelope(sock, GatewayOpCode.GATEWAY_OP_HEARTBEAT_ACK);
+
       // Advance another 30s -> second heartbeat
       vi.advanceTimersByTime(30_000);
       expect(sock.send).toHaveBeenCalledTimes(2);

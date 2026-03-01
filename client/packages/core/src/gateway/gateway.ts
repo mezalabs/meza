@@ -100,7 +100,8 @@ let reconnectAttempts = 0;
 let generation = 0;
 let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
-let isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+let isOnline =
+  typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
 
 // --- Signing public key cache for message signature verification ---
 const SIGNING_KEY_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -890,6 +891,7 @@ function scheduleReconnect() {
     useGatewayStore.getState().setStatus('reconnecting');
     return;
   }
+  if (reconnectAttempts >= 10) return;
   reconnectAttempts++;
   const gw = useGatewayStore.getState();
   gw.setStatus('reconnecting');
