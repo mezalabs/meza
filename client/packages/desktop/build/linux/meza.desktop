@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=${productName}
+Comment=Real-time encrypted chat
+Exec=${executable}
+Icon=${name}
+Type=Application
+Categories=Network;InstantMessaging;Chat;
+MimeType=x-scheme-handler/meza;

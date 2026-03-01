@@ -1,6 +1,8 @@
 {
   "name": "@meza/desktop",
   "version": "0.0.1",
+  "description": "Meza desktop client — real-time encrypted chat",
+  "author": "Meza Chat",
   "type": "module",
   "private": true,
   "main": "out/main/index.js",

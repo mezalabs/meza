@@ -51,9 +51,7 @@ nsis:
 linux:
   category: Network
   desktop:
-    Name: Meza
-    Comment: Real-time encrypted chat
-    MimeType: x-scheme-handler/meza
+    entry: build/linux/meza.desktop
   target:
     - target: AppImage
       arch:
