@@ -136,9 +136,10 @@ jobs:
             client/packages/desktop/release/**/*.exe
             client/packages/desktop/release/**/*.AppImage
             client/packages/desktop/release/**/*.deb
-            client/packages/desktop/release/**/*.yml
-            client/packages/desktop/release/**/*.yaml
+            client/packages/desktop/release/**/latest*.yml
+            client/packages/desktop/release/**/latest*.yaml
             !client/packages/desktop/release/**/*.blockmap
+            !client/packages/desktop/release/**/elevate.exe
           retention-days: 30
 
   release:
@@ -161,12 +162,15 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#desktop-v}"
 
-          # Collect all release files (flatten nested dirs)
+          # Collect release files (exclude debug/internal artifacts)
           mkdir -p release-files
           find artifacts -type f \( \
             -name "*.dmg" -o -name "*.zip" -o -name "*.exe" \
             -o -name "*.AppImage" -o -name "*.deb" \
-            -o -name "*.yml" -o -name "*.yaml" \
+          \) ! -name "elevate.exe" -exec cp {} release-files/ \;
+          # Include auto-update manifests only
+          find artifacts -type f \( \
+            -name "latest*.yml" -o -name "latest*.yaml" \
           \) -exec cp {} release-files/ \;
 
           echo "Creating draft release for $TAG"
