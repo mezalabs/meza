@@ -1,6 +1,7 @@
 import { MEZA_VERSION } from '@meza/core';
 import { IconContext } from '@phosphor-icons/react';
 import { AuthForm } from './AuthForm.tsx';
+import { MezaLogo } from './MezaLogo.tsx';
 
 export function LandingPage() {
   return (
@@ -9,9 +10,7 @@ export function LandingPage() {
         <div className="w-full max-w-sm space-y-6 px-4">
           {/* Branding */}
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight text-text">
-              <span className="text-accent">Meza</span>
-            </h1>
+            <MezaLogo className="mx-auto h-10 translate-x-1 text-accent" />
             <p className="mt-2 text-sm text-text-muted">
               End-to-end encrypted chat. No tracking, no ads.
             </p>
