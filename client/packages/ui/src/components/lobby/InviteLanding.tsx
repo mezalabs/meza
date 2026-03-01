@@ -44,52 +44,52 @@ export function InviteLanding() {
 
   return (
     <IconContext.Provider value={{ weight: 'fill' }}>
-    <div className="flex min-h-0 w-full flex-1 items-center justify-center bg-bg-base">
-      <div className="w-full max-w-sm space-y-6 px-4">
-        {/* Server preview */}
-        <div className="text-center">
-          {loading ? (
-            <div className="text-sm text-text-muted">Loading invite...</div>
-          ) : error ? (
-            <>
-              <div className="text-sm text-error">{error}</div>
-              <p className="mt-2 text-sm text-text-muted">
-                You can still create an account below.
-              </p>
-            </>
-          ) : preview ? (
-            <>
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-2xl font-bold text-black">
-                {preview.name.charAt(0).toUpperCase()}
-              </div>
-              <h1 className="mt-4 text-xl font-semibold text-text">
-                You've been invited to join
-              </h1>
-              <p className="mt-1 text-lg font-medium text-accent">
-                {preview.name}
-              </p>
-              <p className="mt-1 text-sm text-text-muted">
-                {preview.memberCount}{' '}
-                {preview.memberCount === 1 ? 'member' : 'members'}
-              </p>
-            </>
-          ) : null}
-        </div>
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center bg-bg-base">
+        <div className="w-full max-w-sm space-y-6 px-4">
+          {/* Server preview */}
+          <div className="text-center">
+            {loading ? (
+              <div className="text-sm text-text-muted">Loading invite...</div>
+            ) : error ? (
+              <>
+                <div className="text-sm text-error">{error}</div>
+                <p className="mt-2 text-sm text-text-muted">
+                  You can still create an account below.
+                </p>
+              </>
+            ) : preview ? (
+              <>
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-2xl font-bold text-black">
+                  {preview.name.charAt(0).toUpperCase()}
+                </div>
+                <h1 className="mt-4 text-xl font-semibold text-text">
+                  You've been invited to join
+                </h1>
+                <p className="mt-1 text-lg font-medium text-accent">
+                  {preview.name}
+                </p>
+                <p className="mt-1 text-sm text-text-muted">
+                  {preview.memberCount}{' '}
+                  {preview.memberCount === 1 ? 'member' : 'members'}
+                </p>
+              </>
+            ) : null}
+          </div>
 
-        {/* Divider */}
-        <div className="border-t border-border" />
+          {/* Divider */}
+          <div className="border-t border-border" />
 
-        {/* Auth form */}
-        <div>
-          <p className="mb-3 text-center text-sm text-text-muted">
-            {preview
-              ? 'Create an account to accept this invite.'
-              : 'Create an account to get started.'}
-          </p>
-          <AuthForm />
+          {/* Auth form */}
+          <div>
+            <p className="mb-3 text-center text-sm text-text-muted">
+              {preview
+                ? 'Create an account to accept this invite.'
+                : 'Create an account to get started.'}
+            </p>
+            <AuthForm />
+          </div>
         </div>
       </div>
-    </div>
     </IconContext.Provider>
   );
 }

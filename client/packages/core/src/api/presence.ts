@@ -1,8 +1,8 @@
+import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import {
   PresenceService,
   PresenceStatus,
 } from '@meza/gen/meza/v1/presence_pb.ts';
-import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import { usePresenceStore } from '../store/presence.ts';
 import { transport } from './client.ts';
 

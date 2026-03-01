@@ -1,15 +1,3 @@
-import {
-  getProfile,
-  paneCount,
-  useAudioSettingsStore,
-  useChannelStore,
-  useStreamSettingsStore,
-  useUsersStore,
-  useVoiceParticipantsStore,
-  useVoiceStore,
-  soundManager,
-  useNotificationSettingsStore,
-} from '@meza/core';
 import type { TrackReference } from '@livekit/components-react';
 import {
   useIsSpeaking,
@@ -20,21 +8,36 @@ import {
   useTrackToggle,
   VideoTrack,
 } from '@livekit/components-react';
-import type { Participant } from 'livekit-client';
-import { RoomEvent, Track } from 'livekit-client';
+import {
+  getProfile,
+  paneCount,
+  soundManager,
+  useAudioSettingsStore,
+  useChannelStore,
+  useNotificationSettingsStore,
+  useStreamSettingsStore,
+  useUsersStore,
+  useVoiceParticipantsStore,
+  useVoiceStore,
+} from '@meza/core';
 import {
   EarSlashIcon,
   MicrophoneIcon,
   MicrophoneSlashIcon,
   MonitorArrowUpIcon,
   MonitorIcon,
-  VideoCameraIcon,
   PhoneSlashIcon,
   SpeakerHighIcon,
   SpeakerSlashIcon,
+  VideoCameraIcon,
 } from '@phosphor-icons/react';
+import type { Participant } from 'livekit-client';
+import { RoomEvent, Track } from 'livekit-client';
 import { useEffect, useRef, useState } from 'react';
-import { resolveDisplayName, useDisplayName } from '../../hooks/useDisplayName.ts';
+import {
+  resolveDisplayName,
+  useDisplayName,
+} from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { MAX_PANES, useTilingStore } from '../../stores/tiling.ts';
@@ -124,7 +127,11 @@ function DisconnectedView({
   return (
     <>
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-surface">
-        <SpeakerHighIcon size={24} className="text-text-subtle" aria-hidden="true" />
+        <SpeakerHighIcon
+          size={24}
+          className="text-text-subtle"
+          aria-hidden="true"
+        />
       </div>
       <p className="text-sm text-text-muted">
         {isConnectedElsewhere
@@ -308,7 +315,11 @@ function ParticipantRow({
         ) : (
           isMuted && (
             <span title="Muted">
-              <MicrophoneSlashIcon size={14} className="text-text-subtle" aria-hidden="true" />
+              <MicrophoneSlashIcon
+                size={14}
+                className="text-text-subtle"
+                aria-hidden="true"
+              />
             </span>
           )
         )}
@@ -329,7 +340,11 @@ function ParticipantRow({
       {/* Per-user volume slider */}
       {showVolume && !isLocal && (
         <div className="ml-10 flex items-center gap-2 rounded-md bg-bg-surface px-2 py-1">
-          <SpeakerHighIcon size={12} className="text-text-subtle" aria-hidden="true" />
+          <SpeakerHighIcon
+            size={12}
+            className="text-text-subtle"
+            aria-hidden="true"
+          />
           <input
             type="range"
             min={0}
@@ -387,7 +402,11 @@ function MuteButton() {
       }`}
       title={enabled ? 'Mute' : 'Unmute'}
     >
-      {enabled ? <MicrophoneIcon size={22} aria-hidden="true" /> : <MicrophoneSlashIcon size={22} aria-hidden="true" />}
+      {enabled ? (
+        <MicrophoneIcon size={22} aria-hidden="true" />
+      ) : (
+        <MicrophoneSlashIcon size={22} aria-hidden="true" />
+      )}
     </button>
   );
 }
@@ -447,7 +466,11 @@ function ScreenShareButton() {
       }`}
       title={isSharing ? 'Stop sharing' : 'Share screen'}
     >
-      {isSharing ? <MonitorIcon size={22} aria-hidden="true" /> : <MonitorArrowUpIcon size={22} aria-hidden="true" />}
+      {isSharing ? (
+        <MonitorIcon size={22} aria-hidden="true" />
+      ) : (
+        <MonitorArrowUpIcon size={22} aria-hidden="true" />
+      )}
     </button>
   );
 }
@@ -579,7 +602,11 @@ function ThumbnailAudioToggle({
       }`}
       title={isMuted ? 'Unmute stream audio' : 'Mute stream audio'}
     >
-      {isMuted ? <SpeakerSlashIcon size={14} aria-hidden="true" /> : <SpeakerHighIcon size={14} aria-hidden="true" />}
+      {isMuted ? (
+        <SpeakerSlashIcon size={14} aria-hidden="true" />
+      ) : (
+        <SpeakerHighIcon size={14} aria-hidden="true" />
+      )}
     </button>
   );
 }

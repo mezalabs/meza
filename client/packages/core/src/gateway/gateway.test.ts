@@ -1,12 +1,9 @@
-import {
-  EventSchema,
-  TypingEventSchema,
-} from '@meza/gen/meza/v1/chat_pb.ts';
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
+import { EventSchema, TypingEventSchema } from '@meza/gen/meza/v1/chat_pb.ts';
 import {
   GatewayEnvelopeSchema,
   GatewayOpCode,
 } from '@meza/gen/meza/v1/gateway_pb.ts';
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../store/auth.ts';
 import { useChannelStore } from '../store/channels.ts';

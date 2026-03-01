@@ -1,9 +1,5 @@
-import type {
-  DMChannel,
-  DropPosition,
-  PaneContent,
-  PaneId,
-} from '@meza/core';
+import { DragOverlay } from '@dnd-kit/core';
+import type { DMChannel, DropPosition, PaneContent, PaneId } from '@meza/core';
 import {
   ChannelType,
   getDMDisplayName,
@@ -18,7 +14,6 @@ import {
   useRoleStore,
   useServerStore,
 } from '@meza/core';
-import { DragOverlay } from '@dnd-kit/core';
 import {
   AtIcon,
   BookOpenIcon,

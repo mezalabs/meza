@@ -1,3 +1,5 @@
+import { create } from '@bufbuild/protobuf';
+import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import {
   AttachmentSchema,
@@ -5,8 +7,6 @@ import {
   type DMChannel,
   MessageSchema,
 } from '@meza/gen/meza/v1/models_pb.ts';
-import { create } from '@bufbuild/protobuf';
-import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import {
   createChannelKey,
   getIdentity,
@@ -16,7 +16,6 @@ import {
   redistributeChannelKeys,
   wrapKeyForMembers,
 } from '../crypto/index.ts';
-import { Permissions } from '../store/permissions.ts';
 import { useAuthStore } from '../store/auth.ts';
 import { useBlockStore } from '../store/blocks.ts';
 import { useChannelGroupStore } from '../store/channel-groups.ts';
@@ -26,6 +25,7 @@ import { useEmojiStore } from '../store/emojis.ts';
 import { useFriendStore } from '../store/friends.ts';
 import { useMemberStore } from '../store/members.ts';
 import { useMessageStore } from '../store/messages.ts';
+import { Permissions } from '../store/permissions.ts';
 import { usePinStore } from '../store/pins.ts';
 import { useReactionStore } from '../store/reactions.ts';
 import { useRoleStore } from '../store/roles.ts';
@@ -166,10 +166,7 @@ export async function createChannel(
           await provisionChannelKeyBatched(res.channel.id);
         }
       } catch (err) {
-        console.error(
-          '[E2EE] Failed to provision key for new channel:',
-          err,
-        );
+        console.error('[E2EE] Failed to provision key for new channel:', err);
       }
     }
     store.setLoading(false);

@@ -1,3 +1,5 @@
+import { useDraggable } from '@dnd-kit/core';
+import { useIsSpeaking, useMaybeRoomContext } from '@livekit/components-react';
 import type { DMChannel, PaneContent } from '@meza/core';
 import {
   ChannelType,
@@ -29,8 +31,6 @@ import {
   useVoiceParticipantsStore,
   useVoiceStore,
 } from '@meza/core';
-import { useDraggable } from '@dnd-kit/core';
-import { useIsSpeaking, useMaybeRoomContext } from '@livekit/components-react';
 import {
   ArrowRightIcon,
   BookOpenIcon,

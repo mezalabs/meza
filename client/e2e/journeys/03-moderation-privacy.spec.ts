@@ -60,7 +60,9 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     // Bob should NOT see #private channel (not a member)
     const channelNav = bobPage.locator('nav[aria-label="Channels"]');
     await expect(
-      channelNav.locator('button[data-channel-type="private"]').filter({ hasText: 'private' }),
+      channelNav
+        .locator('button[data-channel-type="private"]')
+        .filter({ hasText: 'private' }),
     ).not.toBeVisible({ timeout: 5_000 });
 
     // Alice should see #private channel (owner)
@@ -71,7 +73,9 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await alice.selectServer(SERVER);
     const aliceNav = alicePage.locator('nav[aria-label="Channels"]');
     await expect(
-      aliceNav.locator('button[data-channel-type="private"]').filter({ hasText: 'private' }),
+      aliceNav
+        .locator('button[data-channel-type="private"]')
+        .filter({ hasText: 'private' }),
     ).toBeVisible({ timeout: 5_000 });
   });
 

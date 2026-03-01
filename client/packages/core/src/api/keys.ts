@@ -3,8 +3,8 @@
  * Wraps KeyService RPCs for public key registration and channel key envelope management.
  */
 
-import { KeyService } from '@meza/gen/meza/v1/keys_pb.ts';
 import { createClient } from '@connectrpc/connect';
+import { KeyService } from '@meza/gen/meza/v1/keys_pb.ts';
 import { transport } from './client.ts';
 
 const keysClient = createClient(KeyService, transport);

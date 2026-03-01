@@ -125,9 +125,9 @@ test.describe('Group direct messages', () => {
       await alicePage.getByTitle('Create Group DM').click();
 
       // Dialog should be visible
-      await expect(
-        alicePage.getByText('Create Group DM').first(),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(alicePage.getByText('Create Group DM').first()).toBeVisible({
+        timeout: 10_000,
+      });
 
       // Select bob and charlie from the friend list
       await alicePage.getByText('e2e_bob').click();

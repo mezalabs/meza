@@ -21,7 +21,12 @@ import {
   useRoleStore,
   useServerStore,
 } from '@meza/core';
-import { CaretRightIcon, CheckIcon, MinusIcon, XIcon } from '@phosphor-icons/react';
+import {
+  CaretRightIcon,
+  CheckIcon,
+  MinusIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /* ---------------------------------------------------------------------------
@@ -238,7 +243,11 @@ function OverrideCategorySection({
   return (
     <details className="group rounded-md border border-border bg-bg-surface">
       <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-sm font-medium text-text">
-        <CaretRightIcon size={16} className="shrink-0 text-text-muted transition-transform group-open:rotate-90" aria-hidden="true" />
+        <CaretRightIcon
+          size={16}
+          className="shrink-0 text-text-muted transition-transform group-open:rotate-90"
+          aria-hidden="true"
+        />
         <span>{meta.label}</span>
         <span className="text-xs font-normal text-text-subtle">
           {permKeys.length}{' '}
@@ -846,7 +855,11 @@ export function ChannelOverrideEditor({
                     }
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
                   >
-                    <CaretRightIcon size={16} className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`} aria-hidden="true" />
+                    <CaretRightIcon
+                      size={16}
+                      className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      aria-hidden="true"
+                    />
                     {role.color !== 0 && (
                       <span
                         className="inline-block h-3 w-3 rounded-full"
@@ -975,7 +988,11 @@ export function ChannelOverrideEditor({
                     }
                     className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
                   >
-                    <CaretRightIcon size={16} className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`} aria-hidden="true" />
+                    <CaretRightIcon
+                      size={16}
+                      className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                      aria-hidden="true"
+                    />
                     <span className="h-5 w-5 shrink-0 rounded-full bg-bg-elevated" />
                     <span className="text-sm font-medium text-text">
                       {member.nickname || member.userId.slice(0, 8)}

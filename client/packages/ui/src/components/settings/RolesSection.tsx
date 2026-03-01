@@ -1,4 +1,19 @@
 import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   CATEGORY_META,
   createRole,
   deleteRole,
@@ -15,21 +30,6 @@ import {
   useRoleStore,
   useServerStore,
 } from '@meza/core';
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { CaretRightIcon, DotsSixVerticalIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -844,7 +844,11 @@ function PermissionCategory({
   return (
     <details className="group rounded-md border border-border bg-bg-surface">
       <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-sm font-medium text-text">
-        <CaretRightIcon size={16} className="shrink-0 text-text-muted transition-transform group-open:rotate-90" aria-hidden="true" />
+        <CaretRightIcon
+          size={16}
+          className="shrink-0 text-text-muted transition-transform group-open:rotate-90"
+          aria-hidden="true"
+        />
         <span>{meta.label}</span>
         <span className="text-xs font-normal text-text-subtle">
           {permKeys.length}{' '}

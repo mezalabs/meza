@@ -4,8 +4,8 @@ import {
   type Keybind,
   type KeybindId,
 } from '@meza/core';
-import * as Dialog from '@radix-ui/react-dialog';
 import { XIcon } from '@phosphor-icons/react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useMemo } from 'react';
 import { useSimpleMode } from '../../stores/tiling.ts';
 

@@ -69,9 +69,9 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
     const aliceJoinBtn = alicePage.getByRole('button', { name: /join voice/i });
     await expect(aliceJoinBtn).toBeVisible({ timeout: 15_000 });
     await aliceJoinBtn.click();
-    await expect(
-      alicePage.locator('main').getByText(/connected/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(alicePage.locator('main').getByText(/connected/i)).toBeVisible(
+      { timeout: 15_000 },
+    );
 
     // Bob joins voice
     await bob.goto(SERVER, 'general');
@@ -79,9 +79,9 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
     const bobJoinBtn = bobPage.getByRole('button', { name: /join voice/i });
     await expect(bobJoinBtn).toBeVisible({ timeout: 15_000 });
     await bobJoinBtn.click();
-    await expect(
-      bobPage.locator('main').getByText(/connected/i),
-    ).toBeVisible({ timeout: 15_000 });
+    await expect(bobPage.locator('main').getByText(/connected/i)).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Alice leaves voice
     const aliceLeaveBtn = alicePage

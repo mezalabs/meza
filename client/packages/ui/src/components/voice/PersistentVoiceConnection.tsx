@@ -1,4 +1,9 @@
 import {
+  LiveKitRoom,
+  RoomAudioRenderer,
+  useRoomContext,
+} from '@livekit/components-react';
+import {
   soundManager,
   useAudioSettingsStore,
   useNotificationSettingsStore,
@@ -6,11 +11,6 @@ import {
   useVoiceParticipantsStore,
   useVoiceStore,
 } from '@meza/core';
-import {
-  LiveKitRoom,
-  RoomAudioRenderer,
-  useRoomContext,
-} from '@livekit/components-react';
 import type {
   LocalTrackPublication,
   Participant,
@@ -20,7 +20,7 @@ import type {
   RemoteTrackPublication,
   TrackPublication,
 } from 'livekit-client';
-import { DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
+import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 
@@ -214,7 +214,11 @@ function VoiceEventHandler() {
       if (publication.source !== Track.Source.ScreenShare) return;
       const channelId = useVoiceStore.getState().channelId;
       if (channelId) {
-        useVoiceParticipantsStore.getState().updateParticipant(channelId, room.localParticipant.identity, { isStreamingVideo: true });
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, room.localParticipant.identity, {
+            isStreamingVideo: true,
+          });
       }
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
@@ -227,7 +231,11 @@ function VoiceEventHandler() {
       if (publication.source !== Track.Source.ScreenShare) return;
       const channelId = useVoiceStore.getState().channelId;
       if (channelId) {
-        useVoiceParticipantsStore.getState().updateParticipant(channelId, room.localParticipant.identity, { isStreamingVideo: false });
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, room.localParticipant.identity, {
+            isStreamingVideo: false,
+          });
       }
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
@@ -244,7 +252,11 @@ function VoiceEventHandler() {
       if (publication.source !== Track.Source.ScreenShare) return;
       const channelId = useVoiceStore.getState().channelId;
       if (channelId) {
-        useVoiceParticipantsStore.getState().updateParticipant(channelId, participant.identity, { isStreamingVideo: true });
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, participant.identity, {
+            isStreamingVideo: true,
+          });
       }
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
@@ -260,7 +272,11 @@ function VoiceEventHandler() {
       if (publication.source !== Track.Source.ScreenShare) return;
       const channelId = useVoiceStore.getState().channelId;
       if (channelId) {
-        useVoiceParticipantsStore.getState().updateParticipant(channelId, participant.identity, { isStreamingVideo: false });
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, participant.identity, {
+            isStreamingVideo: false,
+          });
       }
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();

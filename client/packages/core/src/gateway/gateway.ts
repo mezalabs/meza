@@ -1,3 +1,4 @@
+import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import {
   EventSchema,
   FriendRequestEntrySchema,
@@ -8,7 +9,6 @@ import {
   GatewayOpCode,
 } from '@meza/gen/meza/v1/gateway_pb.ts';
 import { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
-import { create, fromBinary, toBinary } from '@bufbuild/protobuf';
 import {
   listChannels as fetchChannels,
   listDMChannels as fetchDMChannels,

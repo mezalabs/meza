@@ -128,7 +128,10 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
       <div className="px-4 py-3 border-b border-border bg-bg-secondary">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-text-subtle" aria-hidden="true" />
+            <MagnifyingGlassIcon
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-text-subtle"
+              aria-hidden="true"
+            />
             <input
               ref={inputRef}
               type="text"
@@ -155,7 +158,10 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
       <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading && (
           <div className="flex items-center justify-center py-12 text-text-subtle text-sm">
-            <SpinnerGapIcon className="animate-spin size-5 mr-2" aria-hidden="true" />
+            <SpinnerGapIcon
+              className="animate-spin size-5 mr-2"
+              aria-hidden="true"
+            />
             Searching...
           </div>
         )}

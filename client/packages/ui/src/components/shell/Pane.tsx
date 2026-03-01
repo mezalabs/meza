@@ -1,7 +1,13 @@
+import { useDraggable } from '@dnd-kit/core';
 import type { DropPosition } from '@meza/core';
 import { useAuthStore } from '@meza/core';
-import { useDraggable } from '@dnd-kit/core';
-import { ChatIcon, GearIcon, PushPinIcon, UsersThreeIcon, XIcon } from '@phosphor-icons/react';
+import {
+  ChatIcon,
+  GearIcon,
+  PushPinIcon,
+  UsersThreeIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { type ReactNode, useState } from 'react';
 import { DropZoneOverlay } from './PaneSlot.tsx';
 
@@ -204,11 +210,7 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center gap-3 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-surface">
-        <ChatIcon
-          size={24}
-          className="text-text-subtle"
-          aria-hidden="true"
-        />
+        <ChatIcon size={24} className="text-text-subtle" aria-hidden="true" />
       </div>
       <p className="text-sm text-text-muted">
         Select a channel to start chatting

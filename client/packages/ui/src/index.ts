@@ -9,9 +9,9 @@ export { Pane } from './components/shell/Pane.tsx';
 export { ResizeHandle } from './components/shell/ResizeHandle.tsx';
 // Shell components
 export { Shell } from './components/shell/Shell.tsx';
-export { TitleBar } from './components/shell/TitleBar.tsx';
 export { Sidebar } from './components/shell/Sidebar.tsx';
 export { TilingRenderer } from './components/shell/TilingRenderer.tsx';
+export { TitleBar } from './components/shell/TitleBar.tsx';
 export type {
   NavigationActions,
   NavigationState,

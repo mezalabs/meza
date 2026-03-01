@@ -16,7 +16,9 @@ vi.mock('./channel-keys.ts', () => ({
 const sessionStorageMap = new Map<string, string>();
 const mockSessionStorage = {
   getItem: vi.fn((key: string) => sessionStorageMap.get(key) ?? null),
-  setItem: vi.fn((key: string, value: string) => sessionStorageMap.set(key, value)),
+  setItem: vi.fn((key: string, value: string) =>
+    sessionStorageMap.set(key, value),
+  ),
   removeItem: vi.fn((key: string) => sessionStorageMap.delete(key)),
   clear: vi.fn(() => sessionStorageMap.clear()),
   get length() {
@@ -36,8 +38,12 @@ const {
 } = await import('./session.ts');
 
 const { restoreIdentity } = await import('./credentials.ts');
-const { initChannelKeys, loadCachedChannelKeys, clearChannelKeyCache, flushChannelKeys } =
-  await import('./channel-keys.ts');
+const {
+  initChannelKeys,
+  loadCachedChannelKeys,
+  clearChannelKeyCache,
+  flushChannelKeys,
+} = await import('./channel-keys.ts');
 
 const fakeKeypair = {
   secretKey: crypto.getRandomValues(new Uint8Array(32)),

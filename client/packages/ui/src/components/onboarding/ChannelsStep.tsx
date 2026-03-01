@@ -93,7 +93,11 @@ export function ChannelsStep({
                 }`}
               >
                 {selectedIds.has(ch.id) && (
-                  <CheckIcon size={16} className="text-black" aria-hidden="true" />
+                  <CheckIcon
+                    size={16}
+                    className="text-black"
+                    aria-hidden="true"
+                  />
                 )}
               </div>
             )}

@@ -1,10 +1,10 @@
+import { useLocalParticipant } from '@livekit/components-react';
 import type {
   ContentHint,
   ScreenSharePresetKey,
   ViewerQuality,
 } from '@meza/core';
 import { useStreamSettingsStore, useVoiceStore } from '@meza/core';
-import { useLocalParticipant } from '@livekit/components-react';
 
 const PRESET_OPTIONS: { value: ScreenSharePresetKey; label: string }[] = [
   { value: 'h360fps3', label: '360p \u00B7 3 fps (Low bandwidth)' },

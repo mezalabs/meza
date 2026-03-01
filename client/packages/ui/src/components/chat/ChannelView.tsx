@@ -783,9 +783,7 @@ function DecryptingText() {
     return () => clearInterval(id);
   }, [layout]);
 
-  const display = chars.map((c, i) =>
-    layout.spaces.has(i) ? '\u2004' : c,
-  );
+  const display = chars.map((c, i) => (layout.spaces.has(i) ? '\u2004' : c));
 
   return (
     <output

@@ -248,7 +248,11 @@ function FileAttachment({ attachment }: { attachment: Attachment }) {
       rel="noopener noreferrer"
       className="flex items-center gap-3 rounded-md border border-border bg-bg-elevated px-3 py-2 hover:bg-bg-surface transition-colors max-w-[300px]"
     >
-      <FileTextIcon size={20} className="flex-shrink-0 text-text-muted" aria-hidden="true" />
+      <FileTextIcon
+        size={20}
+        className="flex-shrink-0 text-text-muted"
+        aria-hidden="true"
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm text-text truncate">{attachment.filename}</p>
         <p className="text-xs text-text-muted">

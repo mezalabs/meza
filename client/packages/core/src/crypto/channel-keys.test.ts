@@ -125,9 +125,7 @@ describe('fetchAndCacheChannelKeys', () => {
     const channelKey = generateChannelKey();
     const envelope = await wrapChannelKey(channelKey, alice.publicKey);
 
-    vi.mocked(getKeyEnvelopes).mockResolvedValue([
-      { keyVersion: 1, envelope },
-    ]);
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([{ keyVersion: 1, envelope }]);
 
     await fetchAndCacheChannelKeys('ch1');
 
@@ -187,7 +185,7 @@ describe('distributeKeyToMember', () => {
     const call = vi.mocked(storeKeyEnvelopes).mock.calls[0];
     const envelope = call[2][0].envelope;
     const unwrapped = await unwrapChannelKey(envelope, bob.secretKey);
-    const originalKey = (await getChannelKey('ch1', 1));
+    const originalKey = await getChannelKey('ch1', 1);
     expect(unwrapped).toEqual(originalKey);
   });
 
@@ -201,9 +199,7 @@ describe('rotateChannelKey', () => {
   it('generates new key, wraps for members, and calls rotate RPC', async () => {
     createChannelKey('ch1');
 
-    const remaining = new Map<string, Uint8Array>([
-      ['alice', alice.publicKey],
-    ]);
+    const remaining = new Map<string, Uint8Array>([['alice', alice.publicKey]]);
 
     vi.mocked(rotateChannelKeyRpc).mockResolvedValue(2);
 

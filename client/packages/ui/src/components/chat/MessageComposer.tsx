@@ -565,7 +565,11 @@ export function MessageComposer({
               ) : (
                 <div className="flex h-16 w-16 items-center justify-center">
                   <div className="text-center px-1">
-                    <FileIcon size={16} className="mx-auto text-text-muted" aria-hidden="true" />
+                    <FileIcon
+                      size={16}
+                      className="mx-auto text-text-muted"
+                      aria-hidden="true"
+                    />
                     <p className="text-[9px] text-text-muted mt-0.5 truncate max-w-[56px]">
                       {pf.file.name}
                     </p>

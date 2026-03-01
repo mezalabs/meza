@@ -12,15 +12,13 @@ vi.mock('../api/keys.ts', () => ({
 }));
 
 // Dynamic imports after mocks
-const {
-  createIdentity,
-  persistIdentity,
-  restoreIdentity,
-  registerPublicKey,
-} = await import('./credentials.ts');
+const { createIdentity, persistIdentity, restoreIdentity, registerPublicKey } =
+  await import('./credentials.ts');
 
 const { storeKeyBundle, loadKeyBundle } = await import('./storage.ts');
-const { registerPublicKey: registerPublicKeyRpc } = await import('../api/keys.ts');
+const { registerPublicKey: registerPublicKeyRpc } = await import(
+  '../api/keys.ts'
+);
 
 beforeEach(() => {
   vi.clearAllMocks();

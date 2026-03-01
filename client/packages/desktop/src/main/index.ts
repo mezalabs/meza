@@ -20,10 +20,7 @@ import { initAutoUpdater } from './updater.js';
 // On Linux, enable PipeWire-based screen capture so getDisplayMedia() goes
 // through xdg-desktop-portal natively (single dialog, no desktopCapturer).
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch(
-    'enable-features',
-    'WebRTCPipeWireCapturer',
-  );
+  app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
 }
 
 // Single-instance lock

@@ -46,11 +46,7 @@ describe('remarkMezaSpoiler', () => {
 
   it('handles multiple spoilers in one line', () => {
     const tree = parse('||one|| and ||two||');
-    expect(childTypes(tree)).toEqual([
-      'mezaSpoiler',
-      'text',
-      'mezaSpoiler',
-    ]);
+    expect(childTypes(tree)).toEqual(['mezaSpoiler', 'text', 'mezaSpoiler']);
     expect(spoilerValues(tree)).toEqual(['one', 'two']);
   });
 

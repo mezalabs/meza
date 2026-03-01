@@ -7,8 +7,8 @@ import {
   HandshakeIcon,
   PaletteIcon,
   ShieldIcon,
-  SpeakerHighIcon,
   SparkleIcon,
+  SpeakerHighIcon,
 } from '@phosphor-icons/react';
 
 const iconMap: Record<string, Icon> = {

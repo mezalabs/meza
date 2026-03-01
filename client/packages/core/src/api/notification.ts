@@ -1,5 +1,5 @@
-import { NotificationService } from '@meza/gen/meza/v1/notification_pb.ts';
 import { createClient } from '@connectrpc/connect';
+import { NotificationService } from '@meza/gen/meza/v1/notification_pb.ts';
 import { transport } from './client.ts';
 
 const notificationClient = createClient(NotificationService, transport);

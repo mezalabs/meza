@@ -190,9 +190,9 @@ function AddFriendTab() {
     <div className="flex flex-col items-center justify-center h-full text-text-subtle text-sm p-8">
       <p className="font-medium text-text-primary">Add Friend</p>
       <p className="mt-2 text-center text-xs max-w-sm">
-        You can add friends from profile cards and member lists throughout
-        Meza. Click on a user's avatar or name to view their profile, then
-        click "Add Friend".
+        You can add friends from profile cards and member lists throughout Meza.
+        Click on a user's avatar or name to view their profile, then click "Add
+        Friend".
       </p>
     </div>
   );
@@ -211,7 +211,11 @@ function FriendRow({
 
   return (
     <div className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-tertiary/50 transition-colors group">
-      <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName || user.username || '?'} size="lg" />
+      <Avatar
+        avatarUrl={user.avatarUrl}
+        displayName={user.displayName || user.username || '?'}
+        size="lg"
+      />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-text-primary truncate">
           {user.displayName || user.username}
@@ -263,7 +267,11 @@ function IncomingRequestRow({ request }: { request: FriendRequestEntry }) {
 
   return (
     <div className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-tertiary/50 transition-colors">
-      <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName || user.username || '?'} size="lg" />
+      <Avatar
+        avatarUrl={user.avatarUrl}
+        displayName={user.displayName || user.username || '?'}
+        size="lg"
+      />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-text-primary truncate">
           {user.displayName || user.username}
@@ -318,7 +326,11 @@ function OutgoingRequestRow({ request }: { request: FriendRequestEntry }) {
 
   return (
     <div className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-tertiary/50 transition-colors">
-      <Avatar avatarUrl={user.avatarUrl} displayName={user.displayName || user.username || '?'} size="lg" />
+      <Avatar
+        avatarUrl={user.avatarUrl}
+        displayName={user.displayName || user.username || '?'}
+        size="lg"
+      />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-text-primary truncate">
           {user.displayName || user.username}

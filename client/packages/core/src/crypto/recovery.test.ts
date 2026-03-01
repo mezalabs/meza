@@ -83,7 +83,10 @@ describe('encryptRecoveryBundle / decryptRecoveryBundle', () => {
     const recoveryKey = await deriveRecoveryKey(phrase);
     const plaintext = crypto.getRandomValues(new Uint8Array(64));
 
-    const { ciphertext, iv } = await encryptRecoveryBundle(recoveryKey, plaintext);
+    const { ciphertext, iv } = await encryptRecoveryBundle(
+      recoveryKey,
+      plaintext,
+    );
     expect(ciphertext).toBeInstanceOf(Uint8Array);
     expect(iv).toBeInstanceOf(Uint8Array);
     expect(iv.length).toBe(12);
@@ -95,9 +98,14 @@ describe('encryptRecoveryBundle / decryptRecoveryBundle', () => {
   it('decrypts to original identity bytes', async () => {
     const phrase = await generateRecoveryPhrase();
     const recoveryKey = await deriveRecoveryKey(phrase);
-    const identityBytes = new TextEncoder().encode('fake-identity-keypair-64-bytes!!fake-identity-keypair-64-bytes!!');
+    const identityBytes = new TextEncoder().encode(
+      'fake-identity-keypair-64-bytes!!fake-identity-keypair-64-bytes!!',
+    );
 
-    const { ciphertext, iv } = await encryptRecoveryBundle(recoveryKey, identityBytes);
+    const { ciphertext, iv } = await encryptRecoveryBundle(
+      recoveryKey,
+      identityBytes,
+    );
     const decrypted = await decryptRecoveryBundle(recoveryKey, ciphertext, iv);
     expect(new TextDecoder().decode(decrypted)).toBe(
       'fake-identity-keypair-64-bytes!!fake-identity-keypair-64-bytes!!',
@@ -111,7 +119,10 @@ describe('encryptRecoveryBundle / decryptRecoveryBundle', () => {
     const recoveryKey2 = await deriveRecoveryKey(phrase2);
     const plaintext = crypto.getRandomValues(new Uint8Array(64));
 
-    const { ciphertext, iv } = await encryptRecoveryBundle(recoveryKey1, plaintext);
+    const { ciphertext, iv } = await encryptRecoveryBundle(
+      recoveryKey1,
+      plaintext,
+    );
     await expect(
       decryptRecoveryBundle(recoveryKey2, ciphertext, iv),
     ).rejects.toThrow();
@@ -131,8 +142,16 @@ describe('encryptRecoveryBundle / decryptRecoveryBundle', () => {
     expect(enc1.ciphertext).not.toEqual(enc2.ciphertext);
 
     // Both decrypt to the same plaintext
-    const dec1 = await decryptRecoveryBundle(recoveryKey, enc1.ciphertext, enc1.iv);
-    const dec2 = await decryptRecoveryBundle(recoveryKey, enc2.ciphertext, enc2.iv);
+    const dec1 = await decryptRecoveryBundle(
+      recoveryKey,
+      enc1.ciphertext,
+      enc1.iv,
+    );
+    const dec2 = await decryptRecoveryBundle(
+      recoveryKey,
+      enc2.ciphertext,
+      enc2.iv,
+    );
     expect(dec1).toEqual(plaintext);
     expect(dec2).toEqual(plaintext);
   });
@@ -145,7 +164,11 @@ describe('validateRecoveryPhrase', () => {
   });
 
   it('returns false for garbage input', async () => {
-    expect(await validateRecoveryPhrase('not a valid mnemonic phrase at all yo dude')).toBe(false);
+    expect(
+      await validateRecoveryPhrase(
+        'not a valid mnemonic phrase at all yo dude',
+      ),
+    ).toBe(false);
   });
 
   it('validates case-insensitively', async () => {
