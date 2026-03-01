@@ -688,7 +688,7 @@ export function MessageComposer({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={sending || disabled || pendingFiles.length >= MAX_FILES}
+            disabled={sending || disabled || encryptionPending || pendingFiles.length >= MAX_FILES}
             className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
             title="Attach files"
           >

@@ -43,6 +43,12 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
   await chapter(alicePage, testInfo, 'File Attachments', async () => {
     await alice.goto(SERVER, 'general');
 
+    // Wait for E2EE channel key setup before attaching files — the attach
+    // button is disabled while encryption is pending.
+    await expect(alicePage.getByTitle('Attach files')).toBeEnabled({
+      timeout: 15_000,
+    });
+
     const txtPath = createTestTextFile();
     const fileChooserPromise = alicePage.waitForEvent('filechooser');
     await alicePage.getByTitle('Attach files').click();
@@ -57,7 +63,7 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
       alice.messageList
         .getByText('test-upload.txt')
         .or(alice.messageList.locator('a[download]')),
-    ).toBeVisible({ timeout: 10_000 });
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   // ---- Chapter: Voice Channel ----
