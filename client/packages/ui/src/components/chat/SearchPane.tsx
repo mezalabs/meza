@@ -16,8 +16,6 @@ import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
-const decoder = new TextDecoder();
-
 interface SearchPaneProps {
   initialQuery?: string;
   serverId?: string;
