@@ -80,8 +80,6 @@ protocols:
     schemes:
       - meza
 
-# Auto-update
+# Auto-update (checked at runtime by electron-updater)
 publish:
   provider: github
-  releaseType: draft
-  vPrefixedTagName: true
