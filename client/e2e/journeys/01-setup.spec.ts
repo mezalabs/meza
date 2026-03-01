@@ -41,7 +41,7 @@ let aliceRecoveryPhrase = '';
 let inviteCode = '';
 
 test('Journey 1: Setup', async ({ browser }, testInfo) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000); // 5 min — registers 3 users with expensive crypto
 
   // ---- Chapter: Alice Registration ----
   const { context: aliceCtx, page: alicePage } = await createContext(
