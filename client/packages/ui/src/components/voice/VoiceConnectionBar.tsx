@@ -41,13 +41,13 @@ export function VoiceConnectionBar() {
       <div className="flex items-center gap-2.5">
         {/* Status icon in squircle */}
         <div
-          className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${
+          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${
             status === 'connected'
               ? 'bg-success/8 text-success'
               : 'bg-warning/8 text-warning animate-pulse'
           }`}
         >
-          <UserSoundIcon size={20} aria-hidden="true" />
+          <UserSoundIcon size={16} aria-hidden="true" />
         </div>
 
         {/* Stacked label + channel name */}
@@ -61,10 +61,10 @@ export function VoiceConnectionBar() {
             setPaneContent(focusedPaneId, { type: 'voice', channelId });
           }}
         >
-          <span className="text-[10px] font-mono uppercase tracking-wide text-success">
+          <span className="truncate text-[11px] font-mono tracking-wide text-success">
             Voice Connected
           </span>
-          <span className="truncate text-sm font-medium text-text">
+          <span className="truncate text-xs text-text">
             {channelName ?? 'Voice Channel'}
             {serverName ? (
               <span className="text-text-muted font-normal">

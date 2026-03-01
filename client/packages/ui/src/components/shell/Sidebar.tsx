@@ -300,7 +300,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       style={style}
     >
       {/* Two-column layout: server icons | channel list */}
-      <div className="flex flex-1 min-h-0 m-1.5 rounded-xl border border-border/40 shadow-md overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Server list */}
         <nav
           className="flex w-16 flex-shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/40 px-1 py-3"
@@ -397,7 +397,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
           {showDMs ? (
             <>
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-text-subtle">
+                <h2 className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle">
                   Direct Messages
                 </h2>
                 <button

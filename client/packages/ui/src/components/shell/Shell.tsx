@@ -60,7 +60,7 @@ function parseDragData(
 }
 
 const SIDEBAR_MIN = 240;
-const SIDEBAR_MAX = 340;
+const SIDEBAR_MAX = 420;
 const SIDEBAR_STORAGE_KEY = 'meza:sidebarWidth';
 function readStoredWidth(): number {
   const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
@@ -295,10 +295,11 @@ export function Shell() {
               <Sidebar style={{ width: sidebarWidth }} />
               <ContentArea
                 resizeHandle={
-                  <hr
+                  <div
                     onPointerDown={handleSidebarResize}
                     onDoubleClick={handleSidebarResizeReset}
-                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10 cursor-col-resize select-none border-none bg-transparent transition-colors hover:bg-white/10"
+                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10 cursor-col-resize select-none bg-transparent transition-colors hover:bg-white/10"
+                    role="separator"
                     aria-orientation="vertical"
                     aria-label="Resize sidebar"
                   />
