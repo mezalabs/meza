@@ -2,6 +2,7 @@ import type { EncryptedUploadResult, UploadedFile } from '@meza/core';
 import {
   buildMessageContent,
   gatewaySendTyping,
+  safeParseMessageText,
   sendMessage,
   uploadEncryptedFile,
   useChannelStore,
@@ -32,8 +33,6 @@ interface PendingFile {
   progress: number; // 0-100
   error: string | null;
 }
-
-const decoder = new TextDecoder();
 
 interface MessageComposerProps {
   channelId: string;
@@ -76,6 +75,7 @@ export function MessageComposer({
     encrypt,
     ready: encryptionReady,
     isEncrypted,
+    retry: retryEncryption,
   } = useChannelEncryption(channelId);
 
   // Focus textarea on mount and channel switch.
@@ -504,9 +504,13 @@ export function MessageComposer({
     });
   }
 
-  // Truncate reply preview text (strip markdown for clean display)
+  // Truncate reply preview text (strip markdown for clean display).
+  // Use safeParseMessageText to handle V1 JSON format and avoid showing raw JSON.
   const replyPreviewText = replyingTo
-    ? stripMarkdown(decoder.decode(replyingTo.encryptedContent)).slice(0, 100)
+    ? stripMarkdown(safeParseMessageText(replyingTo.encryptedContent)).slice(
+        0,
+        100,
+      )
     : '';
 
   const encryptionPending = needsEncryption && !encryptionReady;
@@ -515,6 +519,15 @@ export function MessageComposer({
 
   return (
     <div className="flex-shrink-0 px-2 pt-1 pb-2">
+      {/* Encryption retry banner */}
+      {encryptionUnavailable && (
+        <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-sm text-error">
+          <span>Encryption unavailable</span>
+          <button type="button" onClick={retryEncryption} className="underline">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Reply preview bar */}
       {replyingTo && (
         <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-xs border-l-2 border-accent">
@@ -669,7 +682,12 @@ export function MessageComposer({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={sending || disabled || pendingFiles.length >= MAX_FILES}
+            disabled={
+              sending ||
+              disabled ||
+              encryptionPending ||
+              pendingFiles.length >= MAX_FILES
+            }
             className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
             title="Attach files"
           >
@@ -684,7 +702,7 @@ export function MessageComposer({
               encryptionPending
                 ? 'Setting up encryption…'
                 : encryptionUnavailable
-                  ? 'Encryption unavailable — re-login to send messages'
+                  ? 'Encryption unavailable'
                   : replyingTo
                     ? 'Type a reply…'
                     : channelName

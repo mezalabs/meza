@@ -35,16 +35,8 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
   await bob.goto(SERVER, CHANNEL);
 
   // Wait for E2EE key initialization on the public channel
-  await expect(alice.composer).not.toHaveAttribute(
-    'placeholder',
-    /Setting up encryption/,
-    { timeout: 15_000 },
-  );
-  await expect(bob.composer).not.toHaveAttribute(
-    'placeholder',
-    /Setting up encryption/,
-    { timeout: 15_000 },
-  );
+  await alice.waitForEncryption();
+  await bob.waitForEncryption();
 
   // ---- Chapter: Basic Messaging ----
   const helloMsg = `Hello from alice ${ts()}`;

@@ -34,6 +34,7 @@ export {
   registerPublicKey,
   restoreIdentity,
 } from './credentials.ts';
+export { decryptAndUpdateMessage } from './decrypt-store.ts';
 export {
   decryptFile,
   encryptFile,
@@ -56,6 +57,7 @@ export {
   encryptMessage,
   type ParsedMessageContent,
   parseMessageContent,
+  safeParseMessageText,
 } from './messages.ts';
 export {
   clearAesKeyCache,
