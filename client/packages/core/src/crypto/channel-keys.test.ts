@@ -13,6 +13,7 @@ vi.mock('../api/keys.ts', () => ({
   getKeyEnvelopes: vi.fn(),
   storeKeyEnvelopes: vi.fn(),
   rotateChannelKeyRpc: vi.fn(),
+  listMembersWithViewChannel: vi.fn(),
 }));
 
 // Mock storage module
@@ -33,13 +34,18 @@ const {
   getLatestKeyVersion,
   hasChannelKey,
   initChannelKeys,
+  lazyInitChannelKey,
   loadCachedChannelKeys,
   rotateChannelKey,
   wrapKeyForMembers,
 } = await import('./channel-keys.ts');
 
-const { getKeyEnvelopes, storeKeyEnvelopes, rotateChannelKeyRpc } =
-  await import('../api/keys.ts');
+const {
+  getKeyEnvelopes,
+  storeKeyEnvelopes,
+  rotateChannelKeyRpc,
+  listMembersWithViewChannel,
+} = await import('../api/keys.ts');
 
 const { storeChannelKeys, loadChannelKeys } = await import('./storage.ts');
 
@@ -327,5 +333,131 @@ describe('rapid sequential rotations', () => {
 
     // Latest version should be 6
     expect(getLatestKeyVersion('ch-rapid')).toBe(6);
+  });
+});
+
+describe('pre-initialization error paths', () => {
+  // This nested describe does NOT call initChannelKeys in its beforeEach
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearChannelKeyCache();
+    // Intentionally NO initChannelKeys call — identity is null
+  });
+
+  it('fetchAndCacheChannelKeys throws "Channel keys not initialized" when identity is null', async () => {
+    await expect(fetchAndCacheChannelKeys('ch1')).rejects.toThrow(
+      'Channel keys not initialized',
+    );
+  });
+
+  it('getChannelKey throws when identity is null and key not cached', async () => {
+    await expect(getChannelKey('ch1', 1)).rejects.toThrow(
+      'Channel keys not initialized',
+    );
+  });
+
+  it('lazyInitChannelKey returns false when identity is null', async () => {
+    const result = await lazyInitChannelKey('ch1', 'user-1');
+    expect(result).toBe(false);
+  });
+});
+
+describe('fetch deduplication', () => {
+  it('coalesces concurrent fetches for same channel into single API call', async () => {
+    const channelKey = generateChannelKey();
+    const envelope = await wrapChannelKey(channelKey, alice.publicKey);
+
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([
+      { keyVersion: 1, envelope },
+    ]);
+
+    // Fire two concurrent fetches for the same channel
+    const [r1, r2] = await Promise.all([
+      fetchAndCacheChannelKeys('ch1'),
+      fetchAndCacheChannelKeys('ch1'),
+    ]);
+
+    // Both resolve but only one API call was made
+    expect(r1).toBeUndefined();
+    expect(r2).toBeUndefined();
+    expect(getKeyEnvelopes).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows new fetch after previous completes', async () => {
+    const channelKey = generateChannelKey();
+    const envelope = await wrapChannelKey(channelKey, alice.publicKey);
+
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([
+      { keyVersion: 1, envelope },
+    ]);
+
+    await fetchAndCacheChannelKeys('ch1');
+    expect(getKeyEnvelopes).toHaveBeenCalledTimes(1);
+
+    await fetchAndCacheChannelKeys('ch1');
+    expect(getKeyEnvelopes).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('lazyInitChannelKey', () => {
+  it('creates new key and stores self-envelope when no key exists', async () => {
+    vi.mocked(rotateChannelKeyRpc).mockResolvedValue(1);
+    vi.mocked(listMembersWithViewChannel).mockResolvedValue({
+      members: [],
+      nextCursor: '',
+    });
+
+    const result = await lazyInitChannelKey('ch-lazy', 'alice');
+
+    expect(result).toBe(true);
+    expect(rotateChannelKeyRpc).toHaveBeenCalledWith(
+      'ch-lazy',
+      0,
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: 'alice',
+          envelope: expect.any(Uint8Array),
+        }),
+      ]),
+    );
+    expect(hasChannelKey('ch-lazy')).toBe(true);
+  });
+
+  it('on version conflict, re-fetches the winner key', async () => {
+    // rotateChannelKeyRpc throws (version conflict)
+    vi.mocked(rotateChannelKeyRpc).mockRejectedValue(
+      new Error('version conflict'),
+    );
+
+    // The re-fetch should return a valid key
+    const winnerKey = generateChannelKey();
+    const winnerEnvelope = await wrapChannelKey(winnerKey, alice.publicKey);
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([
+      { keyVersion: 1, envelope: winnerEnvelope },
+    ]);
+
+    const result = await lazyInitChannelKey('ch-conflict', 'alice');
+
+    expect(result).toBe(true);
+    expect(getKeyEnvelopes).toHaveBeenCalledWith('ch-conflict');
+    expect(hasChannelKey('ch-conflict')).toBe(true);
+  });
+
+  it('deduplicates concurrent lazy init calls', async () => {
+    vi.mocked(rotateChannelKeyRpc).mockResolvedValue(1);
+    vi.mocked(listMembersWithViewChannel).mockResolvedValue({
+      members: [],
+      nextCursor: '',
+    });
+
+    const [r1, r2] = await Promise.all([
+      lazyInitChannelKey('ch-dedup', 'alice'),
+      lazyInitChannelKey('ch-dedup', 'alice'),
+    ]);
+
+    // Both get the same result but RPC called only once
+    expect(r1).toBe(true);
+    expect(r2).toBe(true);
+    expect(rotateChannelKeyRpc).toHaveBeenCalledTimes(1);
   });
 });

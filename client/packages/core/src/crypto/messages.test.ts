@@ -33,6 +33,8 @@ const {
   parseMessageContent,
 } = await import('./messages.ts');
 
+const { getIdentity } = await import('./session.ts');
+
 beforeEach(() => {
   vi.clearAllMocks();
   clearChannelKeyCache();
@@ -420,5 +422,18 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
     // biome-ignore lint/style/noNonNullAssertion: asserted defined above
     const thumb = base64ToUint8(parsed.attachmentMeta!['att-1'].mt);
     expect(thumb).toEqual(new Uint8Array([255, 128, 0]));
+  });
+});
+
+describe('encryptMessage pre-session-ready', () => {
+  it('throws when identity is null', async () => {
+    createChannelKey('ch1');
+
+    vi.mocked(getIdentity).mockReturnValueOnce(null);
+
+    const content = new TextEncoder().encode('test');
+    await expect(encryptMessage('ch1', content)).rejects.toThrow(
+      'E2EE session not initialized',
+    );
   });
 });
