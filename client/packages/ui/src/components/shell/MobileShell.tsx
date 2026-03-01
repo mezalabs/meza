@@ -1,5 +1,5 @@
 import type { PaneContent } from '@meza/core';
-import { useChannelStore } from '@meza/core';
+import { useChannelStore, useVoiceStore } from '@meza/core';
 import {
   ArrowLeftIcon,
   IconContext,
@@ -23,7 +23,6 @@ import { ProfileView } from '../profile/ProfileView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
-import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ScreenSharePane } from '../voice/ScreenSharePane.tsx';
 import { VoicePanel } from '../voice/VoicePanel.tsx';
@@ -56,6 +55,14 @@ export function MobileShell() {
 
   // Sync browser history for Android back button
   useMobileHistory();
+
+  // Auto-close voice fullscreen when user disconnects
+  const voiceStatus = useVoiceStore((s) => s.status);
+  useEffect(() => {
+    if (voiceStatus === 'idle' && mobileVoiceFullscreen) {
+      closeMobileVoice();
+    }
+  }, [voiceStatus, mobileVoiceFullscreen, closeMobileVoice]);
 
   // Pins toggle state for channel view
   const [showPins, setShowPins] = useState(false);
@@ -109,12 +116,7 @@ export function MobileShell() {
         <PersistentVoiceConnection>
           <div className="relative flex min-h-0 flex-1">
             {/* Base layer: sidebar (server rail + channel list) */}
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex min-h-0 flex-1">
-                <Sidebar style={{ width: '100%' }} />
-              </div>
-              <MobileVoiceBar />
-            </div>
+            <Sidebar style={{ width: '100%' }} />
 
             {/* Slide-over layer: channel / DM content */}
             <MobileSlideOver open={!!mobileActiveChannel} onClose={handleBack}>
@@ -253,7 +255,6 @@ function MobileChannelContent({
 
       {/* Content */}
       <div className="flex flex-1 min-h-0 min-w-0 flex-col">
-        <MobileVoiceBar />
         {renderMobileContent(content, { showPins, onTogglePins })}
       </div>
     </div>

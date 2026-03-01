@@ -24,11 +24,12 @@ export function MobileVoiceBar() {
   );
   const { disconnect } = useVoiceConnection();
   const openMobileVoice = useNavigationStore((s) => s.openMobileVoice);
+  const closeMobileVoice = useNavigationStore((s) => s.closeMobileVoice);
 
   if (status !== 'connected' && status !== 'reconnecting') return null;
 
   return (
-    <div className="flex-shrink-0 mx-1.5 px-3 py-2 bg-bg-surface rounded-lg border border-border/50">
+    <div className="flex-shrink-0 px-3 py-2">
       <div className="flex items-center gap-2.5">
         <div
           className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md ${
@@ -71,7 +72,10 @@ export function MobileVoiceBar() {
 
         <button
           type="button"
-          onClick={disconnect}
+          onClick={() => {
+            closeMobileVoice();
+            disconnect();
+          }}
           className="p-2 text-error hover:text-error/80 transition-colors"
           aria-label="Disconnect"
           title="Disconnect"

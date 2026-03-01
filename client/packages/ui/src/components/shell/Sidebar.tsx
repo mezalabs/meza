@@ -69,6 +69,7 @@ import { CreateGroupDMDialog } from '../dm/CreateGroupDMDialog.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MezaIcon } from '../shared/MezaIcon.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { VoiceConnectionBar } from '../voice/VoiceConnectionBar.tsx';
 import { CreateChannelDialog } from './CreateChannelDialog.tsx';
 import { CreateServerDialog } from './CreateServerDialog.tsx';
@@ -704,8 +705,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
         </nav>
       </div>
 
-      {/* Voice connection bar (visible when connected, desktop only — mobile uses MobileVoiceBar) */}
-      {!isMobile && <VoiceConnectionBar />}
+      {/* Voice connection bar (visible when connected) */}
+      {isMobile ? <MobileVoiceBar /> : <VoiceConnectionBar />}
 
       {/* Settings footer */}
       <SidebarFooter />
