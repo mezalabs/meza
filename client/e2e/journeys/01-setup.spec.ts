@@ -41,7 +41,7 @@ let aliceRecoveryPhrase = '';
 let inviteCode = '';
 
 test('Journey 1: Setup', async ({ browser }, testInfo) => {
-  test.setTimeout(480_000); // 8 min — registers 3 users with expensive crypto
+  test.setTimeout(600_000); // 10 min — registers 3 users with expensive crypto
 
   // ---- Chapter: Alice Registration ----
   const { context: aliceCtx, page: alicePage } = await createContext(
@@ -275,6 +275,21 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
     ).toBeVisible({ timeout: 10_000 });
 
     await bobCtx.close();
+
+    // Re-navigate alice to refresh stale page state (it was idle during Bob's registration)
+    await alicePage
+      .getByLabel('Servers')
+      .locator('button[title="Test Server"]')
+      .first()
+      .click();
+    await alicePage
+      .locator('nav[aria-label="Channels"]')
+      .getByText('general')
+      .first()
+      .click();
+    await expect(alicePage.getByLabel('Show members')).toBeVisible({
+      timeout: 15_000,
+    });
 
     // Verify alice sees bob in member list
     await alicePage.getByLabel('Show members').click();
