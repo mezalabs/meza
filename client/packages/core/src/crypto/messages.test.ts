@@ -317,7 +317,8 @@ describe('parseMessageContent', () => {
     expect(parsed.attachmentMeta?.['att-1'].ct).toBe('video/mp4');
 
     // Verify micro-thumbnail round-trips through base64
-    const recoveredThumb = base64ToUint8(parsed.attachmentMeta?.['att-1'].mt);
+    // biome-ignore lint/style/noNonNullAssertion: asserted defined above
+    const recoveredThumb = base64ToUint8(parsed.attachmentMeta!['att-1'].mt);
     expect(recoveredThumb).toEqual(microThumb);
   });
 
@@ -416,7 +417,8 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
     expect(parsed.text).toBe('beautiful sunset');
     expect(parsed.attachmentMeta?.['att-1'].fn).toBe('sunset.webp');
 
-    const thumb = base64ToUint8(parsed.attachmentMeta?.['att-1'].mt);
+    // biome-ignore lint/style/noNonNullAssertion: asserted defined above
+    const thumb = base64ToUint8(parsed.attachmentMeta!['att-1'].mt);
     expect(thumb).toEqual(new Uint8Array([255, 128, 0]));
   });
 });
