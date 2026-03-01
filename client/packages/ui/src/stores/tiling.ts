@@ -16,6 +16,7 @@ import {
 import { nanoid } from 'nanoid';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { useMobile } from '../hooks/useMobile.ts';
 
 export const MAX_PANES = 8;
 const INITIAL_PANE_ID = 'initial';
@@ -301,7 +302,9 @@ export const useTilingStore = create<TilingState & TilingActions>()(
 );
 
 export function useSimpleMode(): boolean {
-  return useAuthStore((s) => s.user?.simpleMode ?? false);
+  const userPref = useAuthStore((s) => s.user?.simpleMode ?? false);
+  const isMobile = useMobile();
+  return isMobile || userPref;
 }
 
 /**

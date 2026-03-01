@@ -21,6 +21,7 @@ import {
 import { IconContext } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useKeybinds } from '../../hooks/useKeybinds.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import {
   MAX_PANES,
   useSimpleMode,
@@ -30,6 +31,7 @@ import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ContentArea } from './ContentArea.tsx';
 import { computeDropZone } from './computeDropZone.ts';
+import { MobileShell } from './MobileShell.tsx';
 import { ShortcutHelpOverlay } from './ShortcutHelpOverlay.tsx';
 import { Sidebar } from './Sidebar.tsx';
 
@@ -72,6 +74,13 @@ function readStoredWidth(): number {
 }
 
 export function Shell() {
+  const isMobile = useMobile();
+  if (isMobile) return <MobileShell />;
+
+  return <DesktopShell />;
+}
+
+function DesktopShell() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(readStoredWidth);
   const rafId = useRef(0);

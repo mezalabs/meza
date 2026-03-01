@@ -7,12 +7,18 @@ import {
   useChannelStore,
   useMessageStore,
 } from '@meza/core';
-import { FileIcon, PaperclipIcon, XIcon } from '@phosphor-icons/react';
+import {
+  FileIcon,
+  PaperclipIcon,
+  PaperPlaneRightIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { getCommand } from '../../commands/index.ts';
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { EmojiAutocomplete } from './EmojiAutocomplete.tsx';
 import { EmojiPickerButton } from './EmojiPickerButton.tsx';
@@ -71,6 +77,7 @@ export function MessageComposer({
       : undefined,
   );
   const channelName = channel?.name;
+  const isMobile = useMobile();
   const needsEncryption = true; // Universal E2EE: all channels encrypted
   const {
     encrypt,
@@ -78,11 +85,11 @@ export function MessageComposer({
     isEncrypted,
   } = useChannelEncryption(channelId);
 
-  // Focus textarea on mount and channel switch.
+  // Focus textarea on mount and channel switch (skip on mobile to avoid keyboard popup).
   // biome-ignore lint/correctness/useExhaustiveDependencies: channelId triggers re-focus on channel switch
   useEffect(() => {
-    textareaRef.current?.focus();
-  }, [channelId]);
+    if (!isMobile) textareaRef.current?.focus();
+  }, [channelId, isMobile]);
 
   const replyingTo = useMessageStore((s) => s.replyingTo[channelId] ?? null);
   const replyAuthorName = useDisplayName(replyingTo?.authorId ?? '', serverId);
@@ -112,7 +119,9 @@ export function MessageComposer({
   }, []);
 
   // Re-grab focus when clicking non-interactive areas (e.g. message list).
+  // Disabled on mobile — users need to be able to dismiss the keyboard by tapping away.
   const handleBlur = useCallback(() => {
+    if (isMobile) return;
     requestAnimationFrame(() => {
       const active = document.activeElement;
       const isInteractive =
@@ -127,7 +136,7 @@ export function MessageComposer({
         textareaRef.current?.focus();
       }
     });
-  }, []);
+  }, [isMobile]);
 
   // Revoke any outstanding object URLs when the component unmounts to prevent memory leaks.
   const pendingFilesRef = useRef(pendingFiles);
@@ -462,7 +471,7 @@ export function MessageComposer({
       cancelReply();
       return;
     }
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault();
       handleSend();
     }
@@ -679,7 +688,7 @@ export function MessageComposer({
           <textarea
             ref={textareaRef}
             className="flex-1 resize-none rounded-none border-none bg-transparent text-text focus:outline-none overflow-y-auto"
-            style={{ maxHeight: '150px' }}
+            style={{ maxHeight: isMobile ? '80px' : '150px' }}
             placeholder={
               encryptionPending
                 ? 'Setting up encryption…'
@@ -719,6 +728,23 @@ export function MessageComposer({
             disabled={sending || disabled}
             serverId={serverId}
           />
+
+          {/* Mobile send button */}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => handleSend()}
+              disabled={
+                sending ||
+                disabled ||
+                (!draft.trim() && pendingFiles.length === 0)
+              }
+              className="flex-shrink-0 self-end mb-4 mr-3 p-1.5 text-accent disabled:text-text-subtle transition-colors"
+              aria-label="Send message"
+            >
+              <PaperPlaneRightIcon size={22} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -577,6 +577,11 @@ export function ChannelView({
           ref={scrollRef}
           className="flex flex-1 flex-col overflow-y-auto px-4 pt-2 pb-4"
           onScroll={handleScroll}
+          onTouchStart={() => {
+            // On mobile, tapping the message list dismisses the keyboard
+            const active = document.activeElement;
+            if (active instanceof HTMLTextAreaElement) active.blur();
+          }}
           data-testid="message-list"
         >
           {isLoading && messages.length === 0 && (
