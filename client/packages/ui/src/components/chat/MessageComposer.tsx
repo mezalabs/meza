@@ -2,7 +2,7 @@ import type { EncryptedUploadResult, UploadedFile } from '@meza/core';
 import {
   buildMessageContent,
   gatewaySendTyping,
-  parseMessageContent,
+  safeParseMessageText,
   sendMessage,
   uploadEncryptedFile,
   useChannelStore,
@@ -507,19 +507,13 @@ export function MessageComposer({
   }
 
   // Truncate reply preview text (strip markdown for clean display).
-  // Use parseMessageContent to handle V1 JSON format and avoid showing raw JSON.
-  let replyPreviewText = '';
-  if (replyingTo) {
-    try {
-      replyPreviewText = stripMarkdown(
-        parseMessageContent(replyingTo.encryptedContent).text,
-      ).slice(0, 100);
-    } catch {
-      replyPreviewText = stripMarkdown(
-        decoder.decode(replyingTo.encryptedContent),
-      ).slice(0, 100);
-    }
-  }
+  // Use safeParseMessageText to handle V1 JSON format and avoid showing raw JSON.
+  const replyPreviewText = replyingTo
+    ? stripMarkdown(safeParseMessageText(replyingTo.encryptedContent)).slice(
+        0,
+        100,
+      )
+    : '';
 
   const encryptionPending = needsEncryption && !encryptionReady;
   const encryptionUnavailable =

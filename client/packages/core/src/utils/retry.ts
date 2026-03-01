@@ -37,7 +37,7 @@ export async function retryWithBackoff<T>(
       if (signal?.cancelled) throw err;
       if (attempt === maxAttempts) throw err;
       if (shouldRetry && !shouldRetry(err)) throw err;
-      const jitteredDelay = Math.floor(Math.random() * delay);
+      const jitteredDelay = Math.max(1, Math.floor(Math.random() * delay));
       if (onRetry) onRetry(attempt, jitteredDelay);
       await new Promise((r) => setTimeout(r, jitteredDelay));
       if (signal?.cancelled) throw err;

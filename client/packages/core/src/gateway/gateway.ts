@@ -250,7 +250,11 @@ function decryptInBackground(
             },
           },
         );
-      } catch {
+      } catch (err) {
+        console.warn(
+          `[E2EE] channel key fetch failed after retries for ${channelId}:`,
+          err,
+        );
         return;
       }
     }

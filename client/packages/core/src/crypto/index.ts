@@ -56,6 +56,7 @@ export {
   encryptMessage,
   type ParsedMessageContent,
   parseMessageContent,
+  safeParseMessageText,
 } from './messages.ts';
 export {
   clearAesKeyCache,
