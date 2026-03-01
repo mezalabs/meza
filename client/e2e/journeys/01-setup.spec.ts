@@ -110,7 +110,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
     expect(aliceRecoveryPhrase.split(' ').length).toBe(12);
 
     // Verify alice is in the app shell
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
 
@@ -245,7 +245,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.bob.username,
       TEST_USERS.bob.password,
     );
-    await expect(bobPage.getByLabel('Log out')).toBeVisible({
+    await expect(bobPage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(bobCtx, 'bob');
@@ -292,7 +292,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.charlie.username,
       TEST_USERS.charlie.password,
     );
-    await expect(charliePage.getByLabel('Log out')).toBeVisible({
+    await expect(charliePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(charlieCtx, 'charlie');

@@ -208,12 +208,16 @@ jobs:
           go build -o /tmp/meza-presence ./cmd/presence
           go build -o /tmp/meza-media ./cmd/media
           go build -o /tmp/meza-voice ./cmd/voice
+          go build -o /tmp/meza-notification ./cmd/notification
+          go build -o /tmp/meza-keys ./cmd/keys
           MEZA_LISTEN_ADDR=:8080 MEZA_CHAT_SERVICE_URL=http://localhost:8082 /tmp/meza-gateway &
           MEZA_LISTEN_ADDR=:8081 /tmp/meza-auth &
           MEZA_LISTEN_ADDR=:8082 /tmp/meza-chat &
           MEZA_LISTEN_ADDR=:8083 /tmp/meza-presence &
           MEZA_LISTEN_ADDR=:8084 MEZA_S3_BUCKET=meza-media MEZA_S3_ACCESS_KEY=minioadmin MEZA_S3_SECRET_KEY=minioadmin /tmp/meza-media &
           MEZA_LISTEN_ADDR=:8085 /tmp/meza-voice &
+          MEZA_LISTEN_ADDR=:8086 /tmp/meza-notification &
+          MEZA_LISTEN_ADDR=:8088 /tmp/meza-keys &
           sleep 5
         env:
           MEZA_POSTGRES_URL: postgres://meza:meza@localhost:5432/meza?sslmode=disable

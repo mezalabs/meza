@@ -99,7 +99,7 @@ export class ChannelPage {
   /** Navigate to a channel in a specific server and wait for it to load. */
   async goto(serverName: string, channelName: string) {
     await this.page.goto('/');
-    await expect(this.page.getByLabel('Log out')).toBeVisible({
+    await expect(this.page.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await this.selectServer(serverName);

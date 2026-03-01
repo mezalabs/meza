@@ -65,6 +65,7 @@ export function SettingsView({ section }: SettingsViewProps) {
             gatewayDisconnect();
             logout();
           }}
+          aria-label="Log out"
         >
           <SignOutIcon size={14} aria-hidden="true" />
           Log Out
