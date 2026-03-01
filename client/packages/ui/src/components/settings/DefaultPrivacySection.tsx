@@ -25,7 +25,7 @@ export function DefaultPrivacySection({
       setEnabled(server.defaultChannelPrivacy);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverId]);
+  }, [server]);
 
   async function handleToggle() {
     const next = !enabled;

@@ -313,11 +313,11 @@ describe('parseMessageContent', () => {
 
     expect(parsed.text).toBe('watch this');
     expect(parsed.attachmentMeta).toBeDefined();
-    expect(parsed.attachmentMeta!['att-1'].fn).toBe('video.mp4');
-    expect(parsed.attachmentMeta!['att-1'].ct).toBe('video/mp4');
+    expect(parsed.attachmentMeta?.['att-1'].fn).toBe('video.mp4');
+    expect(parsed.attachmentMeta?.['att-1'].ct).toBe('video/mp4');
 
     // Verify micro-thumbnail round-trips through base64
-    const recoveredThumb = base64ToUint8(parsed.attachmentMeta!['att-1'].mt);
+    const recoveredThumb = base64ToUint8(parsed.attachmentMeta?.['att-1'].mt);
     expect(recoveredThumb).toEqual(microThumb);
   });
 
@@ -365,9 +365,10 @@ describe('parseMessageContent', () => {
     const parsed = parseMessageContent(content);
 
     expect(parsed.text).toBe('files attached');
+    // biome-ignore lint/style/noNonNullAssertion: test assertion — attachmentMeta is guaranteed present
     expect(Object.keys(parsed.attachmentMeta!)).toHaveLength(2);
-    expect(parsed.attachmentMeta!['att-1'].fn).toBe('photo.jpg');
-    expect(parsed.attachmentMeta!['att-2'].fn).toBe('doc.pdf');
+    expect(parsed.attachmentMeta?.['att-1'].fn).toBe('photo.jpg');
+    expect(parsed.attachmentMeta?.['att-2'].fn).toBe('doc.pdf');
   });
 });
 
@@ -413,9 +414,9 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
 
     const parsed = parseMessageContent(decrypted);
     expect(parsed.text).toBe('beautiful sunset');
-    expect(parsed.attachmentMeta!['att-1'].fn).toBe('sunset.webp');
+    expect(parsed.attachmentMeta?.['att-1'].fn).toBe('sunset.webp');
 
-    const thumb = base64ToUint8(parsed.attachmentMeta!['att-1'].mt);
+    const thumb = base64ToUint8(parsed.attachmentMeta?.['att-1'].mt);
     expect(thumb).toEqual(new Uint8Array([255, 128, 0]));
   });
 });

@@ -59,15 +59,15 @@ describe('persistIdentity + restoreIdentity', () => {
 
     // The stored bundle should be [12 bytes IV][ciphertext]
     // ciphertext = 64 bytes identity + 16 bytes GCM tag = 80 bytes
-    expect(storedBundle!.length).toBe(12 + 64 + 16);
+    expect(storedBundle?.length).toBe(12 + 64 + 16);
 
     // Set up loadKeyBundle to return the stored bundle
     vi.mocked(loadKeyBundle).mockResolvedValue(storedBundle);
 
     const restored = await restoreIdentity(masterKey);
     expect(restored).not.toBeNull();
-    expect(restored!.secretKey).toEqual(kp.secretKey);
-    expect(restored!.publicKey).toEqual(kp.publicKey);
+    expect(restored?.secretKey).toEqual(kp.secretKey);
+    expect(restored?.publicKey).toEqual(kp.publicKey);
   });
 
   it('restoreIdentity with wrong masterKey throws', async () => {

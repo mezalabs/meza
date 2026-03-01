@@ -25,7 +25,7 @@ function SplitPreviewOverlay({ hovered }: { hovered: HoveredSplit }) {
       `[data-pane-id="${focusedPaneId}"]`,
     );
     if (el) setRect(el.getBoundingClientRect());
-  }, [focusedPaneId, hovered]);
+  }, [focusedPaneId]);
 
   if (!rect) return null;
 
@@ -114,9 +114,10 @@ export function SidebarContextMenu({
                 {serverId && (
                   <ContextMenu.Item
                     className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
-                    onSelect={() =>
-                      openChannelSettingsPane(serverId, channelId!)
-                    }
+                    onSelect={() => {
+                      if (channelId)
+                        openChannelSettingsPane(serverId, channelId);
+                    }}
                   >
                     Channel Settings
                   </ContextMenu.Item>

@@ -366,8 +366,8 @@ function AudioSettingsSync() {
   const noiseSuppression = useAudioSettingsStore((s) => s.noiseSuppression);
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
-  const outputVolume = useAudioSettingsStore((s) => s.outputVolume);
-  const perUserVolumes = useAudioSettingsStore((s) => s.perUserVolumes);
+  const _outputVolume = useAudioSettingsStore((s) => s.outputVolume);
+  const _perUserVolumes = useAudioSettingsStore((s) => s.perUserVolumes);
   const soundboardVolume = useAudioSettingsStore((s) => s.soundboardVolume);
 
   // Track first render to avoid switching devices on mount
@@ -411,7 +411,7 @@ function AudioSettingsSync() {
     for (const p of room.remoteParticipants.values()) {
       applyParticipantVolume(p);
     }
-  }, [room, outputVolume, perUserVolumes]);
+  }, [room]);
 
   // Apply soundboard volume to Unknown-source tracks
   useEffect(() => {

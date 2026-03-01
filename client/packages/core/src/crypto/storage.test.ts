@@ -57,8 +57,8 @@ describe('storeChannelKeys / loadChannelKeys', () => {
     const loaded = await loadChannelKeys();
 
     expect(loaded).not.toBeNull();
-    expect(loaded!.encryptedKeys).toEqual(encryptedKeys);
-    expect(loaded!.iv).toEqual(iv);
+    expect(loaded?.encryptedKeys).toEqual(encryptedKeys);
+    expect(loaded?.iv).toEqual(iv);
   });
 
   it('loadChannelKeys returns null when empty', async () => {
@@ -76,8 +76,8 @@ describe('storeChannelKeys / loadChannelKeys', () => {
     await storeChannelKeys(keys2, iv2);
     const loaded = await loadChannelKeys();
 
-    expect(loaded!.encryptedKeys).toEqual(keys2);
-    expect(loaded!.iv).toEqual(iv2);
+    expect(loaded?.encryptedKeys).toEqual(keys2);
+    expect(loaded?.iv).toEqual(iv2);
   });
 });
 
