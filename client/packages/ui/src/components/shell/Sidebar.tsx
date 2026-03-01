@@ -704,8 +704,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
         </nav>
       </div>
 
-      {/* Voice connection bar (visible when connected) */}
-      <VoiceConnectionBar />
+      {/* Voice connection bar (visible when connected, desktop only — mobile uses MobileVoiceBar) */}
+      {!isMobile && <VoiceConnectionBar />}
 
       {/* Settings footer */}
       <SidebarFooter />
