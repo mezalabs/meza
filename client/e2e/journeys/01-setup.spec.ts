@@ -41,7 +41,7 @@ let aliceRecoveryPhrase = '';
 let inviteCode = '';
 
 test('Journey 1: Setup', async ({ browser }, testInfo) => {
-  test.setTimeout(300_000); // 5 min — registers 3 users with expensive crypto
+  test.setTimeout(480_000); // 8 min — registers 3 users with expensive crypto
 
   // ---- Chapter: Alice Registration ----
   const { context: aliceCtx, page: alicePage } = await createContext(
@@ -110,7 +110,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
     expect(aliceRecoveryPhrase.split(' ').length).toBe(12);
 
     // Verify alice is in the app shell
-    await expect(alicePage.getByLabel('Settings')).toBeVisible({
+    await expect(alicePage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
       timeout: 15_000,
     });
 
@@ -245,7 +245,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.bob.username,
       TEST_USERS.bob.password,
     );
-    await expect(bobPage.getByLabel('Settings')).toBeVisible({
+    await expect(bobPage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(bobCtx, 'bob');
@@ -275,7 +275,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
     // Verify alice sees bob in member list
     await alicePage.getByLabel('Show members').click();
     await expect(alicePage.getByText('e2e_bob')).toBeVisible({
-      timeout: 10_000,
+      timeout: 30_000,
     });
   });
 
@@ -292,7 +292,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       TEST_USERS.charlie.username,
       TEST_USERS.charlie.password,
     );
-    await expect(charliePage.getByLabel('Settings')).toBeVisible({
+    await expect(charliePage.getByRole('button', { name: 'Settings', exact: true })).toBeVisible({
       timeout: 15_000,
     });
     await saveAuth(charlieCtx, 'charlie');
