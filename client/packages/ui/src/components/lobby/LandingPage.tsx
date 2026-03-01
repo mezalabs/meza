@@ -10,7 +10,7 @@ export function LandingPage() {
         <div className="w-full max-w-sm space-y-6 px-4">
           {/* Branding */}
           <div className="text-center">
-            <MezaLogo className="mx-auto h-10 text-accent" />
+            <MezaLogo className="mx-auto h-10 translate-x-1 text-accent" />
             <p className="mt-2 text-sm text-text-muted">
               End-to-end encrypted chat. No tracking, no ads.
             </p>
