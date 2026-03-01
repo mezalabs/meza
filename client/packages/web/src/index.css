@@ -22,7 +22,7 @@
   --color-bg-overlay: oklch(0.17 0 0);
 
   /* ── Mint accent scale ── */
-  --color-accent: oklch(0.90 0.17 157);
+  --color-accent: oklch(0.9 0.17 157);
   --color-accent-hover: oklch(0.93 0.14 157);
   --color-accent-muted: oklch(0.65 0.11 157);
   --color-accent-subtle: oklch(0.35 0.05 157);
@@ -37,7 +37,7 @@
   --color-border-hover: oklch(0.4 0 0);
 
   /* ── Focus ring ── */
-  --color-focus: oklch(0.90 0.17 157);
+  --color-focus: oklch(0.9 0.17 157);
 
   /* ── Semantic ── */
   --color-success: oklch(0.7 0.15 157);
@@ -208,7 +208,7 @@ html {
     background-color: transparent;
   }
   30% {
-    background-color: oklch(0.90 0.17 157 / 0.15);
+    background-color: oklch(0.9 0.17 157 / 0.15);
   }
 }
 
@@ -304,7 +304,7 @@ html {
 .hljs-regexp,
 .hljs-literal,
 .hljs-link {
-  color: oklch(0.90 0.17 157); /* accent mint */
+  color: oklch(0.9 0.17 157); /* accent mint */
 }
 
 .hljs-symbol,
