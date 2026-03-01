@@ -313,7 +313,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             )}
             <button
               type="button"
-              className={`relative flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold transition-colors ${
+              className={`relative flex h-10 w-10 items-center justify-center rounded-[10px] text-xl font-semibold transition-colors ${
                 showDMs
                   ? 'bg-bg-surface text-accent'
                   : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
@@ -321,7 +321,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               title="Direct Messages"
               onClick={selectDMs}
             >
-              <MezaIcon className="h-5 w-5" />
+              <MezaIcon className="h-6 w-6" />
               {hasDMUnread && !showDMs && (
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
               )}
