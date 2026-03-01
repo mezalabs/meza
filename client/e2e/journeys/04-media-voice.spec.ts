@@ -61,14 +61,13 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
   });
 
   // ---- Chapter: Voice Channel ----
+  // Clicking a voice channel in the sidebar auto-connects (see SidebarChannelItem),
+  // so we wait for "Connected" directly instead of looking for "Join Voice".
   await chapter(alicePage, testInfo, 'Voice Channel', async () => {
     await alice.selectServer(SERVER);
     await alice.selectChannel('voice');
 
-    // Alice joins voice
-    const aliceJoinBtn = alicePage.getByRole('button', { name: /join voice/i });
-    await expect(aliceJoinBtn).toBeVisible({ timeout: 15_000 });
-    await aliceJoinBtn.click();
+    // Alice auto-joins voice via sidebar click
     await expect(alicePage.locator('main').getByText(/connected/i)).toBeVisible(
       { timeout: 15_000 },
     );
@@ -76,9 +75,6 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
     // Bob joins voice
     await bob.goto(SERVER, 'general');
     await bob.selectChannel('voice');
-    const bobJoinBtn = bobPage.getByRole('button', { name: /join voice/i });
-    await expect(bobJoinBtn).toBeVisible({ timeout: 15_000 });
-    await bobJoinBtn.click();
     await expect(bobPage.locator('main').getByText(/connected/i)).toBeVisible({
       timeout: 15_000,
     });

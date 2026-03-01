@@ -154,6 +154,8 @@ export const useTilingStore = create<TilingState & TilingActions>()(
     setPaneContent: (id, content) => {
       set((state) => {
         state.panes[id] = content;
+        // Dismiss overlay when navigating to new content so it doesn't block the view.
+        state.overlayContent = null;
       });
     },
 
@@ -344,15 +346,28 @@ export function closeChannelPanes(channelId: string) {
 export function openSearchPane(query?: string) {
   const store = useTilingStore.getState();
 
+  // Capture channelId from the focused pane before replacing it.
+  const focusedContent = store.panes[store.focusedPaneId];
+  const channelId =
+    focusedContent?.type === 'channel'
+      ? focusedContent.channelId
+      : focusedContent?.type === 'dm'
+        ? focusedContent.conversationId
+        : undefined;
+
   for (const [paneId, content] of Object.entries(store.panes)) {
     if (content.type === 'search') {
       store.focusPane(paneId);
       if (query !== undefined) {
-        store.setPaneContent(paneId, { type: 'search', query });
+        store.setPaneContent(paneId, { type: 'search', query, channelId });
       }
       return;
     }
   }
 
-  store.setPaneContent(store.focusedPaneId, { type: 'search', query });
+  store.setPaneContent(store.focusedPaneId, {
+    type: 'search',
+    query,
+    channelId,
+  });
 }

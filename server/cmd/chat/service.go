@@ -1243,24 +1243,32 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 // to prevent partition scans from starving real-time message CRUD operations.
 var searchSemaphore = make(chan struct{}, 5)
 
+// searchRateLimitScript atomically increments a counter and sets TTL on first use.
+// Returns the new count. Avoids INCR/EXPIRE race where a crash between the two
+// commands would leave the key without a TTL, permanently blocking the user.
+var searchRateLimitScript = redis.NewScript(`
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return count
+`)
+
 func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v1.SearchMessagesRequest]) (*connect.Response[v1.SearchMessagesResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
 	}
 
-	// Per-user rate limit: 5 searches per 10 seconds.
+	// Per-user rate limit: 5 searches per 10 seconds (atomic Lua script).
 	rlKey := fmt.Sprintf("search_rl:%s", userID)
-	count, err := s.rdb.Incr(ctx, rlKey).Result()
+	count, err := searchRateLimitScript.Run(ctx, s.rdb, []string{rlKey}, 10).Int64()
 	if err != nil {
 		slog.Error("search rate limit check", "err", err, "user", userID)
-	} else {
-		if count == 1 {
-			s.rdb.Expire(ctx, rlKey, 10*time.Second)
-		}
-		if count > 5 {
-			return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("search rate limit exceeded"))
-		}
+		return nil, connect.NewError(connect.CodeUnavailable, errors.New("search temporarily unavailable"))
+	}
+	if count > 5 {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("search rate limit exceeded"))
 	}
 
 	// Global concurrency cap.
@@ -1276,13 +1284,32 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
 
-	// Permission check: verify channel membership.
-	_, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, *req.Msg.ChannelId, userID)
+	// Permission check: verify channel membership and access.
+	ch, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, *req.Msg.ChannelId, userID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
 	}
 	if !isMember {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member"))
+	}
+
+	// Check private channel access (server channels only; DMs already verified via channel_members).
+	if err := s.requireChannelAccess(ctx, ch, userID); err != nil {
+		return nil, err
+	}
+
+	// Permission checks (server channels only; DMs skip).
+	if ch.ServerID != "" {
+		perms, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
+		if permErr != nil {
+			return nil, permErr
+		}
+		if !permissions.Has(perms, permissions.ViewChannel) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ViewChannel permission"))
+		}
+		if !permissions.Has(perms, permissions.ReadMessageHistory) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
 	}
 
 	// Clamp limit.

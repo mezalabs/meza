@@ -16,14 +16,17 @@ import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
-const decoder = new TextDecoder();
-
 interface SearchPaneProps {
   initialQuery?: string;
   serverId?: string;
+  channelId?: string;
 }
 
-export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
+export function SearchPane({
+  initialQuery,
+  serverId,
+  channelId,
+}: SearchPaneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const query = useSearchStore((s) => s.query);
   const isLoading = useSearchStore((s) => s.isLoading);
@@ -54,6 +57,13 @@ export function SearchPane({ initialQuery, serverId }: SearchPaneProps) {
     }
     return map;
   }, [channels]);
+
+  // Set channelId on the search store so server-side search is reachable.
+  useEffect(() => {
+    if (channelId) {
+      useSearchStore.getState().setChannelId(channelId);
+    }
+  }, [channelId]);
 
   // Focus input on mount.
   useEffect(() => {
@@ -200,10 +210,13 @@ const SearchResultRow = React.memo(function SearchResultRow({
 
   const authorName = useDisplayName(authorId, selectedServerId ?? undefined);
 
-  // Get content to display.
+  // For server results, show metadata only (content is E2EE encrypted).
+  // For local results (already decrypted via FlexSearch), show plaintext.
   let content = '';
+  const hasAttachments =
+    result.message?.attachments && result.message.attachments.length > 0;
   if (result.source === 'server' && result.message) {
-    content = decoder.decode(result.message.encryptedContent);
+    content = hasAttachments ? 'Message with attachments' : 'Encrypted message';
   } else if (result.localResult) {
     content = result.localResult.content;
   }
@@ -246,7 +259,15 @@ const SearchResultRow = React.memo(function SearchResultRow({
         )}
         <span className="text-xs text-text-subtle ml-auto">{timestamp}</span>
       </div>
-      <p className="text-sm text-text-secondary line-clamp-2">{content}</p>
+      <p className="text-sm text-text-secondary line-clamp-2">
+        {result.source === 'server' ? (
+          <span className="italic text-text-subtle">
+            {content} — click to jump
+          </span>
+        ) : (
+          content
+        )}
+      </p>
     </button>
   );
 });
