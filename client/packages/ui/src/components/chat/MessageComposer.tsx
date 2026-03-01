@@ -523,12 +523,12 @@ export function MessageComposer({
     <div className="flex-shrink-0 px-2 pt-1 pb-2">
       {/* Encryption retry banner */}
       {encryptionUnavailable && (
-        <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-xs text-error">
+        <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-sm text-error">
           <span>Encryption unavailable</span>
           <button
             type="button"
             onClick={retryEncryption}
-            className="underline text-error hover:text-text"
+            className="underline"
           >
             Retry
           </button>

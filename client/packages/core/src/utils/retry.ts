@@ -3,6 +3,13 @@
  *
  * Uses "full jitter" strategy: uniform random in [0, min(cap, base * 2^attempt)]
  * to prevent thundering herd across multiple tabs/clients.
+ *
+ * The `signal` option uses a simple `{ cancelled: boolean }` interface rather
+ * than `AbortSignal` — the gateway passes a getter tied to its generation
+ * counter (`{ get cancelled() { return gen !== generation } }`), which avoids
+ * AbortController ceremony for fire-and-forget operations. If this utility is
+ * ever exported publicly, consider accepting `AbortSignal` instead.
+ *
  * @see https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/
  */
 export async function retryWithBackoff<T>(

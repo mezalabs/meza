@@ -10,6 +10,7 @@ export {
   releaseAllBlobURLs,
   releaseBlobURL,
 } from './blob-urls.ts';
+export { decryptAndUpdateMessage } from './decrypt-store.ts';
 export {
   clearChannelKeyCache,
   createChannelKey,

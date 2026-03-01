@@ -171,6 +171,7 @@ export {
   createChannelKey,
   createIdentity,
   type DerivedKeys,
+  decryptAndUpdateMessage,
   decryptFile,
   decryptMessage,
   decryptPayload,
