@@ -10,6 +10,7 @@ import {
   soundManager,
   useNotificationSettingsStore,
 } from '@meza/core';
+import type { TrackReference } from '@livekit/components-react';
 import {
   useIsSpeaking,
   useLocalParticipant,
@@ -19,7 +20,6 @@ import {
   useTrackToggle,
   VideoTrack,
 } from '@livekit/components-react';
-import type { TrackReference } from '@livekit/components-core';
 import type { Participant } from 'livekit-client';
 import { RoomEvent, Track } from 'livekit-client';
 import {
