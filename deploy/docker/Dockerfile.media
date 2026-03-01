@@ -1,0 +1,22 @@
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache vips-dev gcc musl-dev
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o /out/media ./cmd/media
+
+FROM alpine:3.21
+RUN apk add --no-cache vips glib
+RUN addgroup -S meza && adduser -S meza -G meza
+
+ENV MALLOC_ARENA_MAX=2
+
+COPY --from=builder /out/media /usr/local/bin/app
+
+USER meza
+EXPOSE 8084
+ENTRYPOINT ["/usr/local/bin/app"]

@@ -1,0 +1,27 @@
+FROM node:22-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
+
+WORKDIR /app
+
+# Copy workspace config and lockfile first for layer caching
+COPY client/pnpm-workspace.yaml client/package.json client/pnpm-lock.yaml ./
+
+# Copy package.json files for each workspace package
+COPY client/packages/core/package.json packages/core/
+COPY client/packages/ui/package.json packages/ui/
+COPY client/packages/web/package.json packages/web/
+COPY client/packages/desktop/package.json packages/desktop/
+COPY client/gen/package.json gen/
+
+# Copy source code before install so COPY doesn't clobber node_modules symlinks
+COPY client/packages/ packages/
+COPY client/gen/ gen/
+COPY client/tsconfig.json client/tsconfig.base.json ./
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @meza/web... build
+
+# Final image: just the built assets
+FROM alpine:3.21
+COPY --from=builder /app/packages/web/dist /srv/www
