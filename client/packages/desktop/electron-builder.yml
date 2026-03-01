@@ -1,5 +1,6 @@
 appId: com.meza.desktop
 productName: Meza
+artifactName: "${productName}-${version}-${arch}.${ext}"
 asar: true
 compression: normal
 
@@ -49,6 +50,7 @@ nsis:
 
 # Linux
 linux:
+  executableName: meza
   category: Network
   desktop:
     entry: build/linux/meza.desktop
