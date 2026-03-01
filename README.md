@@ -1,4 +1,5 @@
-# Meza
+
+<img width="100" height="32" alt="meza-repo" src="https://github.com/user-attachments/assets/07b3182c-e2a8-4662-8e49-f5b9b1990e3a" />
 
 End-to-end encrypted, real-time chat platform. Self-hostable with Docker Compose.
 
