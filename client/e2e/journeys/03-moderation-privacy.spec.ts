@@ -32,7 +32,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
   // ---- Chapter: Roles ----
   await chapter(alicePage, testInfo, 'Roles', async () => {
     await alicePage.goto('/');
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await alice.selectServer(SERVER);
@@ -52,7 +52,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
   // ---- Chapter: Private Channels ----
   await chapter(bobPage, testInfo, 'Private Channels', async () => {
     await bobPage.goto('/');
-    await expect(bobPage.getByLabel('Log out')).toBeVisible({
+    await expect(bobPage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await bob.selectServer(SERVER);
@@ -67,7 +67,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
 
     // Alice should see #private channel (owner)
     await alicePage.goto('/');
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await alice.selectServer(SERVER);
@@ -121,7 +121,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     // Bob navigates to DMs and sees the message.
     // Scope DM sidebar locator to the aside panel to avoid matching profile panes.
     await bobPage.goto('/');
-    await expect(bobPage.getByLabel('Log out')).toBeVisible({
+    await expect(bobPage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
 
@@ -156,7 +156,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
 
   await chapter(charliePage, testInfo, 'Message Requests', async () => {
     await charliePage.goto('/');
-    await expect(charliePage.getByLabel('Log out')).toBeVisible({
+    await expect(charliePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
 
@@ -186,7 +186,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
 
     // Alice checks message requests
     await alicePage.goto('/');
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
     await alicePage.getByLabel('Servers').locator('button').first().click();

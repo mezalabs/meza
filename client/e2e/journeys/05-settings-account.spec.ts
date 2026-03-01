@@ -27,7 +27,7 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
   const alice = new ChannelPage(alicePage);
 
   await alicePage.goto('/');
-  await expect(alicePage.getByLabel('Log out')).toBeVisible({
+  await expect(alicePage.getByLabel('Settings')).toBeVisible({
     timeout: 15_000,
   });
 
@@ -132,7 +132,8 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
 
   // ---- Chapter: Session Management ----
   await chapter(alicePage, testInfo, 'Session Management', async () => {
-    // Alice logs out
+    // Alice logs out (open settings then click Log out)
+    await alicePage.getByLabel('Settings').click();
     await alicePage.getByLabel('Log out').click();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
@@ -142,13 +143,13 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
     const auth = new AuthPage(alicePage);
     await auth.goto();
     await auth.login('e2e_alice@test.local', 'testpass123');
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 30_000,
     });
 
     // Refresh page → still logged in
     await alicePage.reload();
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -161,7 +162,8 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       .trim();
     expect(recoveryPhrase.split(' ').length).toBe(12);
 
-    // Log out
+    // Log out (open settings then click Log out)
+    await alicePage.getByLabel('Settings').click();
     await alicePage.getByLabel('Log out').click();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
@@ -177,11 +179,12 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       recoveryPhrase,
       newPassword,
     );
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 60_000,
     });
 
-    // Login with new password after logout
+    // Login with new password after logout (open settings then click Log out)
+    await alicePage.getByLabel('Settings').click();
     await alicePage.getByLabel('Log out').click();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
@@ -190,7 +193,7 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
     const newAuth = new AuthPage(alicePage);
     await newAuth.goto();
     await newAuth.login('e2e_alice@test.local', newPassword);
-    await expect(alicePage.getByLabel('Log out')).toBeVisible({
+    await expect(alicePage.getByLabel('Settings')).toBeVisible({
       timeout: 30_000,
     });
   });

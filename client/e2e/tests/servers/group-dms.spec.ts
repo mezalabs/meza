@@ -113,7 +113,7 @@ test.describe('Group direct messages', () => {
 
     try {
       await alicePage.goto('/');
-      await expect(alicePage.getByLabel('Log out')).toBeVisible({
+      await expect(alicePage.getByLabel('Settings')).toBeVisible({
         timeout: 15_000,
       });
 
@@ -183,7 +183,7 @@ test.describe('Group direct messages', () => {
     try {
       // Alice sees the group DM in her sidebar
       await alicePage.goto('/');
-      await expect(alicePage.getByLabel('Log out')).toBeVisible({
+      await expect(alicePage.getByLabel('Settings')).toBeVisible({
         timeout: 15_000,
       });
       await alicePage.getByTitle('Direct Messages').click();
@@ -193,7 +193,7 @@ test.describe('Group direct messages', () => {
 
       // Bob also sees it
       await bobPage.goto('/');
-      await expect(bobPage.getByLabel('Log out')).toBeVisible({
+      await expect(bobPage.getByLabel('Settings')).toBeVisible({
         timeout: 15_000,
       });
       await bobPage.getByTitle('Direct Messages').click();
@@ -217,7 +217,7 @@ test.describe('Group direct messages', () => {
 
     try {
       await alicePage.goto('/');
-      await expect(alicePage.getByLabel('Log out')).toBeVisible({
+      await expect(alicePage.getByLabel('Settings')).toBeVisible({
         timeout: 15_000,
       });
       await alicePage.getByTitle('Direct Messages').click();
