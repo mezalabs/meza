@@ -2,7 +2,10 @@
   "name": "@meza/desktop",
   "version": "0.0.1",
   "description": "Meza desktop client — real-time encrypted chat",
-  "author": "Meza Chat",
+  "author": {
+    "name": "Meza Chat",
+    "email": "hello@meza.chat"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/mezalabs/meza.git"
