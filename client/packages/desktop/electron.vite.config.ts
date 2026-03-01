@@ -19,5 +19,8 @@ export default defineConfig({
       },
     },
   },
+  // Renderer is intentionally empty — @meza/web's pre-built output is copied
+  // into out/renderer/ before packaging. Do NOT add input config here or it
+  // will clobber the renderer directory.
   renderer: {},
 });
