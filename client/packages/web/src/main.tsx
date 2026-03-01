@@ -77,7 +77,7 @@ function App() {
   else content = <LandingPage />;
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden">
+    <div className="flex h-dvh w-screen flex-col overflow-hidden">
       <TitleBar />
       {content}
     </div>

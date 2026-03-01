@@ -55,6 +55,7 @@ import { ParticipantEvent } from 'livekit-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticipants.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
@@ -68,6 +69,7 @@ import { CreateGroupDMDialog } from '../dm/CreateGroupDMDialog.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MezaIcon } from '../shared/MezaIcon.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { VoiceConnectionBar } from '../voice/VoiceConnectionBar.tsx';
 import { CreateChannelDialog } from './CreateChannelDialog.tsx';
 import { CreateServerDialog } from './CreateServerDialog.tsx';
@@ -88,6 +90,7 @@ const EMPTY_GROUPS: { id: string; name: string; position: number }[] = [];
 const EMPTY_ARR: readonly never[] = [];
 
 export function Sidebar({ style }: { style?: React.CSSProperties }) {
+  const isMobile = useMobile();
   const servers = useServerStore((s) => s.servers);
   const serversLoading = useServerStore((s) => s.isLoading);
   const channelsLoading = useChannelStore((s) => s.isLoading);
@@ -161,11 +164,12 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     pendingServerNavRef.current = serverId;
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isMobile is stable and intentionally excluded to avoid re-triggering
   useEffect(() => {
     const first = serverList[0];
     if (!selectedServerId && !showDMs && first) {
       selectServer(first.id);
-      navigateToDefaultChannel(first.id);
+      if (!isMobile) navigateToDefaultChannel(first.id);
     }
   }, [
     selectedServerId,
@@ -303,7 +307,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Server list */}
         <nav
-          className="flex w-16 flex-shrink-0 flex-col items-center gap-2 overflow-y-auto border-r border-border/40 px-1 py-3"
+          className="flex w-20 md:w-16 flex-shrink-0 flex-col items-center gap-2.5 md:gap-2 overflow-y-auto border-r border-border/40 px-1.5 md:px-1 py-3"
           aria-label="Servers"
         >
           {/* DM icon */}
@@ -313,7 +317,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             )}
             <button
               type="button"
-              className={`relative flex h-10 w-10 items-center justify-center rounded-[10px] text-xl font-semibold transition-colors ${
+              className={`relative flex h-12 w-12 md:h-10 md:w-10 items-center justify-center rounded-[10px] text-xl font-semibold transition-colors ${
                 showDMs
                   ? 'bg-bg-surface text-accent'
                   : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
@@ -321,7 +325,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               title="Direct Messages"
               onClick={selectDMs}
             >
-              <MezaIcon className="h-6 w-6" />
+              <MezaIcon className="h-7 w-7 md:h-6 md:w-6" />
               {hasDMUnread && !showDMs && (
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
               )}
@@ -357,7 +361,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               isSelected={server.id === selectedServerId}
               onSelect={() => {
                 selectServer(server.id);
-                navigateToDefaultChannel(server.id);
+                if (!isMobile) navigateToDefaultChannel(server.id);
               }}
             />
           ))}
@@ -371,7 +375,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                   useTilingStore.getState();
                 setPaneContent(focusedPaneId, { type: 'createServer' });
               }}
-              className="flex h-10 w-10 items-center justify-center rounded-[10px] border-2 border-dashed border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
+              className="flex h-12 w-12 md:h-10 md:w-10 items-center justify-center rounded-[10px] border-2 border-dashed border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
               aria-label="Create server"
               title="Create a server"
             >
@@ -380,7 +384,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             <button
               type="button"
               onClick={() => setJoinOpen(true)}
-              className="flex h-10 w-10 items-center justify-center rounded-[10px] border-2 border-dashed border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
+              className="flex h-12 w-12 md:h-10 md:w-10 items-center justify-center rounded-[10px] border-2 border-dashed border-border text-text-muted hover:border-accent hover:text-accent transition-colors"
               aria-label="Join server"
               title="Join a server"
             >
@@ -391,7 +395,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
 
         {/* Channel / DM list */}
         <nav
-          className="flex flex-1 min-w-0 flex-col gap-0.5 overflow-y-auto pl-1.5 pr-1.5 py-3"
+          className="flex flex-1 min-w-0 flex-col gap-1 md:gap-0.5 overflow-y-auto pl-2 pr-2 md:pl-1.5 md:pr-1.5 py-3"
           aria-label={showDMs ? 'Direct Messages' : 'Channels'}
         >
           {showDMs ? (
@@ -412,7 +416,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
 
               <button
                 type="button"
-                className="flex items-center justify-between w-full px-2 py-1.5 mb-1 text-base font-medium text-text-primary rounded hover:bg-bg-tertiary transition-colors"
+                className="flex items-center justify-between w-full px-2 py-2.5 md:py-1.5 mb-1 text-base font-medium text-text-primary rounded hover:bg-bg-tertiary transition-colors"
                 onClick={() => {
                   if (sidebarFocusedPaneId) {
                     sidebarSetPaneContent(sidebarFocusedPaneId, {
@@ -432,7 +436,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               {pendingRequestCount > 0 && (
                 <button
                   type="button"
-                  className="flex items-center justify-between w-full px-2 py-1.5 mb-1 text-base font-medium text-text-primary rounded hover:bg-bg-tertiary transition-colors"
+                  className="flex items-center justify-between w-full px-2 py-2.5 md:py-1.5 mb-1 text-base font-medium text-text-primary rounded hover:bg-bg-tertiary transition-colors"
                   onClick={() => {
                     if (sidebarFocusedPaneId) {
                       sidebarSetPaneContent(sidebarFocusedPaneId, {
@@ -702,7 +706,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       </div>
 
       {/* Voice connection bar (visible when connected) */}
-      <VoiceConnectionBar />
+      {isMobile ? <MobileVoiceBar /> : <VoiceConnectionBar />}
 
       {/* Settings footer */}
       <SidebarFooter />
@@ -895,7 +899,7 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
       {...dragAttributes}
       {...dragListeners}
       type="button"
-      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-base transition-colors ${
+      className={`flex items-center gap-2 rounded-md px-2 py-2.5 md:py-1.5 text-base transition-colors ${
         isDragging ? 'opacity-40' : ''
       } ${
         active
@@ -1029,7 +1033,7 @@ function ServerIcon({
       )}
       <button
         type="button"
-        className={`relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[10px] text-sm font-semibold transition-colors ${
+        className={`relative flex h-12 w-12 md:h-10 md:w-10 items-center justify-center overflow-hidden rounded-[10px] text-sm font-semibold transition-colors ${
           isSelected
             ? iconSrc
               ? ''
@@ -1203,12 +1207,14 @@ function SidebarChannelItem({
         serverId={serverId}
         isPrivate={isPrivate}
       >
-        <button
+        {/* biome-ignore lint/a11y/useSemanticElements: div required to avoid nested <button> (inner gear icon is a real button) */}
+        <div
           ref={setDragRef}
           {...dragAttributes}
           {...dragListeners}
-          type="button"
-          className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-base transition-colors ${
+          role="button"
+          tabIndex={0}
+          className={`group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2.5 md:py-1.5 text-base transition-colors ${
             isDragging ? 'opacity-40' : ''
           } ${
             active
@@ -1221,6 +1227,14 @@ function SidebarChannelItem({
             setPaneContent(focusedPaneId, content);
             if (isVoice && useVoiceStore.getState().channelId !== channelId)
               voiceConnect(channelId, channelName);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setPaneContent(focusedPaneId, content);
+              if (isVoice && useVoiceStore.getState().channelId !== channelId)
+                voiceConnect(channelId, channelName);
+            }
           }}
           data-channel-type={channelDataType}
         >
@@ -1250,7 +1264,7 @@ function SidebarChannelItem({
           >
             <GearIcon size={16} aria-hidden="true" />
           </button>
-        </button>
+        </div>
       </SidebarContextMenu>
 
       {isVoice && voiceParticipants.length > 0 && (

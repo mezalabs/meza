@@ -1,4 +1,6 @@
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { BansSection } from './BansSection.tsx';
 import { DefaultPrivacySection } from './DefaultPrivacySection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
@@ -22,8 +24,63 @@ interface ServerSettingsViewProps {
 }
 
 export function ServerSettingsView({ serverId }: ServerSettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<SectionId>('roles');
+  const isMobile = useMobile();
+  const [activeSection, setActiveSection] = useState<SectionId | null>(
+    isMobile ? null : 'roles',
+  );
 
+  const activeSectionLabel = SERVER_SETTINGS_SECTIONS.find(
+    (s) => s.id === activeSection,
+  )?.label;
+
+  // Mobile: show nav list or content, not both
+  if (isMobile) {
+    if (activeSection) {
+      return (
+        <div className="flex flex-1 min-h-0 flex-col">
+          <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border/40 px-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection(null)}
+              className="p-2 text-text-muted hover:text-text transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeftIcon size={20} aria-hidden="true" />
+            </button>
+            <h2 className="flex-1 truncate text-base font-semibold text-text">
+              {activeSectionLabel}
+            </h2>
+          </header>
+          <div className="flex-1 overflow-y-auto p-4">
+            {renderServerSettingsContent(activeSection, serverId)}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
+        aria-label="Server settings sections"
+      >
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+          Server Settings
+        </h2>
+        {SERVER_SETTINGS_SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className="rounded-md px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-text transition-colors"
+            onClick={() => setActiveSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </nav>
+    );
+  }
+
+  // Desktop: side-by-side layout
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
       {/* Settings nav sidebar */}
@@ -52,19 +109,30 @@ export function ServerSettingsView({ serverId }: ServerSettingsViewProps) {
 
       {/* Settings content area */}
       <div className="flex-1 overflow-y-auto p-6">
-        {activeSection === 'roles' && <RolesSection serverId={serverId} />}
-        {activeSection === 'privacy' && (
-          <DefaultPrivacySection serverId={serverId} />
-        )}
-        {activeSection === 'emojis' && <EmojisSection serverId={serverId} />}
-        {activeSection === 'soundboard' && (
-          <SoundsSection serverId={serverId} />
-        )}
-        {activeSection === 'bans' && <BansSection serverId={serverId} />}
-        {activeSection === 'onboarding' && (
-          <OnboardingSection serverId={serverId} />
-        )}
+        {renderServerSettingsContent(activeSection, serverId)}
       </div>
     </div>
   );
+}
+
+function renderServerSettingsContent(
+  section: SectionId | null,
+  serverId: string,
+) {
+  switch (section) {
+    case 'roles':
+      return <RolesSection serverId={serverId} />;
+    case 'privacy':
+      return <DefaultPrivacySection serverId={serverId} />;
+    case 'emojis':
+      return <EmojisSection serverId={serverId} />;
+    case 'soundboard':
+      return <SoundsSection serverId={serverId} />;
+    case 'bans':
+      return <BansSection serverId={serverId} />;
+    case 'onboarding':
+      return <OnboardingSection serverId={serverId} />;
+    default:
+      return null;
+  }
 }
