@@ -218,7 +218,11 @@ function renderPaneContent(
       return <FriendsPane tab={content.tab} />;
     case 'search':
       return (
-        <SearchPane initialQuery={content.query} serverId={opts.serverId} />
+        <SearchPane
+          initialQuery={content.query}
+          serverId={opts.serverId}
+          channelId={content.channelId}
+        />
       );
     default:
       return null;

@@ -194,6 +194,16 @@ type GetMessagesOpts struct {
 	Limit  int
 }
 
+// SearchMessagesOpts holds filter and pagination options for SearchMessages.
+type SearchMessagesOpts struct {
+	ChannelID       string
+	AuthorID        string
+	HasAttachment   *bool
+	MentionedUserID string
+	BeforeID        string // ULID cursor — only messages with ID < this
+	Limit           int    // default 25, max 100
+}
+
 // MessageStorer provides access to message data in ScyllaDB.
 type MessageStorer interface {
 	InsertMessage(ctx context.Context, msg *models.Message) error
@@ -204,6 +214,7 @@ type MessageStorer interface {
 	BulkDeleteMessages(ctx context.Context, channelID string, messageIDs []string) error
 	GetMessagesByIDs(ctx context.Context, channelID string, messageIDs []string) (map[string]*models.Message, error)
 	CountMessagesAfter(ctx context.Context, channelID, afterMessageID string) (int32, error)
+	SearchMessages(ctx context.Context, opts SearchMessagesOpts) ([]*models.Message, bool, error)
 	InsertReplyIndex(ctx context.Context, channelID, replyToID, messageID, authorID string, createdAt time.Time) error
 	DeleteReplyIndex(ctx context.Context, channelID, replyToID, messageID string) error
 	GetReplies(ctx context.Context, channelID, messageID string, limit int) ([]*models.ReplyEntry, int, error)

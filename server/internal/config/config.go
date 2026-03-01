@@ -44,10 +44,6 @@ type Config struct {
 	S3Region   string `envconfig:"S3_REGION" default:"us-east-1"`
 	S3UseSSL   bool   `envconfig:"S3_USE_SSL" default:"false"`
 
-	// Search (Meilisearch)
-	MeiliURL    string `envconfig:"MEILI_URL" default:"http://localhost:7700"`
-	MeiliAPIKey string `envconfig:"MEILI_API_KEY"` // Empty in dev mode
-
 	// Voice (LiveKit)
 	LiveKitHost      string `envconfig:"LIVEKIT_HOST"`
 	LiveKitPublicURL string `envconfig:"LIVEKIT_PUBLIC_URL"` // URL returned to clients; defaults to LiveKitHost

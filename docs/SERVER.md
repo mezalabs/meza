@@ -41,7 +41,6 @@ server/
 │   ├── embed/                      # Link preview extraction (OpenGraph)
 │   ├── federation/                 # Federation assertion verification
 │   ├── middleware/                 # Security headers
-│   ├── search/                     # Meilisearch integration
 │   └── testutil/                   # Test helpers
 ├── migrations/                     # PostgreSQL + ScyllaDB migrations
 └── gen/                            # Auto-generated from proto/ (do not edit)
@@ -193,11 +192,11 @@ Permission enforcement follows a 9-step resolution algorithm:
 
 ## Search Security
 
-Meilisearch indexes **message metadata only** — no plaintext content (E2EE). Enforces:
-- Mandatory scoping by `server_id` or `channel_id`
-- Membership verification
-- Post-filter `ViewChannel` permission check per channel
-- No server-side highlight content (XSS prevention)
+Search queries ScyllaDB metadata directly — no plaintext content (E2EE). Enforces:
+- Mandatory scoping by `channel_id`
+- Channel membership verification
+- Per-user rate limiting (5 req/10s) and global concurrency limits
+- Scan depth cap (10,000 rows) to prevent resource exhaustion
 
 ---
 

@@ -8,7 +8,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 echo "Starting Meza infrastructure..."
-docker compose -f "$COMPOSE_FILE" up -d postgres redis nats scylla minio livekit meilisearch
+docker compose -f "$COMPOSE_FILE" up -d postgres redis nats scylla minio livekit
 
 echo "Waiting for services to be healthy..."
 
@@ -30,7 +30,6 @@ echo "  Redis:        localhost:6379"
 echo "  NATS:         localhost:4222 (monitoring: localhost:8222)"
 echo "  MinIO:        localhost:9000 (console: localhost:9001)"
 echo "  LiveKit:      localhost:7880"
-echo "  Meilisearch:  localhost:7700"
 echo ""
 echo "Run Go services:"
 echo "  cd server && go run ./cmd/gateway"
