@@ -481,7 +481,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             <>
               {/* Server name + settings */}
               {selectedServerId && servers[selectedServerId] && (
-                <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="mb-3 flex items-center justify-between gap-3 pl-2">
                   <h2 className="text-base font-semibold text-text truncate">
                     {servers[selectedServerId].name}
                   </h2>
