@@ -4,6 +4,8 @@ import {
   decryptFile,
   fetchEncryptedMedia,
   getMediaURL,
+  isSessionReady,
+  onSessionReady,
   releaseBlobURL,
   unwrapFileKey,
 } from '@meza/core';
@@ -67,12 +69,20 @@ function EncryptedViewerImage({
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
   const [fullUrl, setFullUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [sessionOk, setSessionOk] = useState(isSessionReady);
   const mountedRef = useRef(true);
   const thumbKey = `viewer-thumb-${attachment.id}`;
   const fullKey = `viewer-full-${attachment.id}`;
 
+  // Wait for E2EE session to be ready before attempting decryption
+  useEffect(() => {
+    if (sessionOk) return;
+    return onSessionReady(() => setSessionOk(true));
+  }, [sessionOk]);
+
   useEffect(() => {
     mountedRef.current = true;
+    if (!sessionOk) return;
     let cancelled = false;
 
     (async () => {
@@ -119,7 +129,7 @@ function EncryptedViewerImage({
       releaseBlobURL(thumbKey);
       releaseBlobURL(fullKey);
     };
-  }, [attachment, channelId, thumbKey, fullKey]);
+  }, [attachment, channelId, thumbKey, fullKey, sessionOk]);
 
   const displayUrl = fullUrl ?? thumbUrl;
 

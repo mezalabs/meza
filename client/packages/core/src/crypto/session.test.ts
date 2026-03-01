@@ -269,3 +269,78 @@ describe('onSessionReady', () => {
     unsubscribe();
   });
 });
+
+describe('async bootstrap timing', () => {
+  it('isSessionReady() returns false while bootstrapSession() is in progress', async () => {
+    const masterKey = crypto.getRandomValues(new Uint8Array(32));
+
+    // Use a delayed restoreIdentity to keep bootstrap in progress
+    let resolveRestore: (value: typeof fakeKeypair) => void;
+    vi.mocked(restoreIdentity).mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolveRestore = r;
+        }),
+    );
+
+    const bootstrapPromise = bootstrapSession(masterKey);
+
+    // While waiting for restoreIdentity, session should not be ready
+    expect(isSessionReady()).toBe(false);
+    expect(getIdentity()).toBeNull();
+
+    // Now resolve restoreIdentity
+    // biome-ignore lint/style/noNonNullAssertion: resolveRestore is assigned by the mock implementation above
+    resolveRestore!(fakeKeypair);
+    await bootstrapPromise;
+
+    expect(isSessionReady()).toBe(true);
+  });
+
+  it('onSessionReady callback fires only after loadCachedChannelKeys completes', async () => {
+    const masterKey = crypto.getRandomValues(new Uint8Array(32));
+
+    // Delay loadCachedChannelKeys to observe ordering
+    let resolveLoad: () => void;
+    vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
+    vi.mocked(loadCachedChannelKeys).mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          resolveLoad = r;
+        }),
+    );
+
+    const cb = vi.fn();
+
+    onSessionReady(cb);
+    const bootstrapPromise = bootstrapSession(masterKey);
+
+    // Wait for restoreIdentity to resolve and loadCachedChannelKeys to be called
+    await vi.waitFor(() => expect(loadCachedChannelKeys).toHaveBeenCalled());
+
+    // Not fired yet — loadCachedChannelKeys hasn't completed
+    expect(cb).not.toHaveBeenCalled();
+
+    // biome-ignore lint/style/noNonNullAssertion: resolveLoad is assigned by the mock implementation above
+    resolveLoad!();
+    await bootstrapPromise;
+
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('loadCachedChannelKeys failure does not prevent session from becoming ready', async () => {
+    const masterKey = crypto.getRandomValues(new Uint8Array(32));
+
+    vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
+    vi.mocked(loadCachedChannelKeys).mockRejectedValue(
+      new Error('IndexedDB unavailable'),
+    );
+
+    const result = await bootstrapSession(masterKey);
+
+    // Session should still be ready despite loadCachedChannelKeys failure
+    expect(result).toBe(true);
+    expect(isSessionReady()).toBe(true);
+    expect(getIdentity()).toBe(fakeKeypair);
+  });
+});
