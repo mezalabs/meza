@@ -8,6 +8,7 @@ import {
   GatewayEnvelopeSchema,
   GatewayOpCode,
 } from '@meza/gen/meza/v1/gateway_pb.ts';
+import type { Message } from '@meza/gen/meza/v1/models_pb.ts';
 import { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
 import {
   listChannels as fetchChannels,
@@ -24,7 +25,7 @@ import {
   fetchAndCacheChannelKeys,
   hasChannelKey,
 } from '../crypto/channel-keys.ts';
-import { decryptMessage, parseMessageContent } from '../crypto/messages.ts';
+import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
 import { isSessionReady } from '../crypto/session.ts';
 import { indexIncomingMessage } from '../search/indexer.ts';
 import type { SoundType } from '../sound/SoundManager.ts';
@@ -51,6 +52,7 @@ import { useSoundStore } from '../store/sounds.ts';
 import { useTypingStore } from '../store/typing.ts';
 import { useVoiceStore } from '../store/voice.ts';
 import { getBaseUrl } from '../utils/platform.ts';
+import { retryWithBackoff } from '../utils/retry.ts';
 
 /**
  * Validate the shape of the READY payload to prevent corrupted state.
@@ -102,6 +104,9 @@ let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
 let isOnline =
   typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
+
+/** Deduplicate concurrent channel-key retry promises per channel. */
+const keyRetryInFlight = new Map<string, Promise<boolean>>();
 
 // --- Signing public key cache for message signature verification ---
 const SIGNING_KEY_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -177,67 +182,120 @@ async function getOrFetchPublicKey(userId: string): Promise<Uint8Array | null> {
 }
 
 /**
+ * Fetch a user's public key with retry+backoff. Useful when a new user
+ * hasn't registered their key yet — they may still be bootstrapping.
+ */
+async function fetchPublicKeyWithRetry(
+  userId: string,
+  gen: number,
+): Promise<Uint8Array | null> {
+  try {
+    return await retryWithBackoff(
+      async () => {
+        const pk = await getOrFetchPublicKey(userId);
+        if (!pk) throw new Error('public key not available');
+        return pk;
+      },
+      {
+        maxAttempts: 3,
+        initialDelayMs: 2_000,
+        maxDelayMs: 10_000,
+        signal: {
+          get cancelled() {
+            return gen !== generation;
+          },
+        },
+        onRetry: (attempt, delayMs) => {
+          console.warn(
+            `[E2EE] retrying public key fetch for ${userId} (attempt ${attempt}, delay ${delayMs}ms)`,
+          );
+        },
+      },
+    );
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ensure the channel key is available, retrying with backoff if needed.
+ * Deduplicates concurrent requests for the same channel so that a burst
+ * of messages (e.g. 50 arriving on reconnect) shares a single retry.
+ */
+async function ensureChannelKey(
+  channelId: string,
+  gen: number,
+): Promise<boolean> {
+  if (hasChannelKey(channelId)) return true;
+
+  const existing = keyRetryInFlight.get(channelId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    try {
+      await retryWithBackoff(
+        async () => {
+          await fetchAndCacheChannelKeys(channelId);
+          if (!hasChannelKey(channelId))
+            throw new Error('key not yet available');
+        },
+        {
+          maxAttempts: 3,
+          initialDelayMs: 1_000,
+          maxDelayMs: 5_000,
+          signal: {
+            get cancelled() {
+              return gen !== generation;
+            },
+          },
+          onRetry: (attempt, delayMs) => {
+            console.warn(
+              `[E2EE] retrying channel key fetch for ${channelId} (attempt ${attempt}, delay ${delayMs}ms)`,
+            );
+          },
+        },
+      );
+      return hasChannelKey(channelId);
+    } catch {
+      return false;
+    } finally {
+      keyRetryInFlight.delete(channelId);
+    }
+  })();
+
+  keyRetryInFlight.set(channelId, promise);
+  return promise;
+}
+
+/**
  * Attempt to decrypt an encrypted message and update the store in place.
  * Fire-and-forget — failures are logged and the message stays encrypted.
+ * Retries key-fetch with backoff if the channel key is not yet available.
+ *
+ * Note: ChannelView may also decrypt the same messages via its fetch-time
+ * handler or its `keysAvailable` effect. Idempotency is handled by the
+ * shared {@link decryptAndUpdateMessage} function (keyVersion > 0 guard),
+ * so concurrent calls from both paths are safe.
  */
 function decryptInBackground(
   channelId: string,
-  msg: {
-    id: string;
-    authorId: string;
-    keyVersion: number;
-    encryptedContent: Uint8Array;
-  },
+  msg: Pick<
+    Message,
+    'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'
+  >,
+  gen: number,
 ): void {
   (async () => {
-    // Ensure we have the channel key
-    if (!hasChannelKey(channelId)) {
-      try {
-        await fetchAndCacheChannelKeys(channelId);
-      } catch {
-        return;
-      }
-    }
-    if (!hasChannelKey(channelId)) return;
+    // Bail if the gateway has reconnected since this was queued
+    if (gen !== generation) return;
+
+    if (!(await ensureChannelKey(channelId, gen))) return;
+    if (gen !== generation) return;
+
     try {
       const pubKey = await getOrFetchPublicKey(msg.authorId);
-      if (!pubKey) return;
-      const plaintext = await decryptMessage(
-        channelId,
-        msg.keyVersion,
-        msg.encryptedContent,
-        pubKey,
-      );
-
-      // Parse the decrypted content for V1 JSON format
-      const parsed = parseMessageContent(plaintext);
-
-      // Update the message in the store with decrypted content
-      const stored = useMessageStore.getState().byId[channelId]?.[msg.id];
-      if (stored && stored.keyVersion > 0) {
-        // Enrich attachments with metadata from the encrypted JSON payload
-        let enrichedAttachments = stored.attachments;
-        if (parsed.attachmentMeta && stored.attachments.length > 0) {
-          enrichedAttachments = stored.attachments.map((att) => {
-            const meta = parsed.attachmentMeta?.[att.id];
-            if (!meta) return att;
-            return {
-              ...att,
-              filename: meta.fn || att.filename,
-              contentType: meta.ct || att.contentType,
-            };
-          });
-        }
-
-        // Store the text portion (not the raw V1 bytes) as UTF-8
-        const textBytes = new TextEncoder().encode(parsed.text);
-        useMessageStore.getState().updateMessage(channelId, {
-          ...stored,
-          encryptedContent: textBytes,
-          keyVersion: 0,
-          attachments: enrichedAttachments,
-        });
-      }
+      if (!pubKey || gen !== generation) return;
+      await decryptAndUpdateMessage(channelId, msg, pubKey);
     } catch (err) {
       console.error(
         `[E2EE] gateway decrypt failed for msg ${msg.id} in ${channelId}:`,
@@ -428,7 +486,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // fire off background decryption that updates the store once done.
         useMessageStore.getState().addMessage(msg.channelId, msg);
         if (msg.keyVersion > 0 && isSessionReady()) {
-          decryptInBackground(msg.channelId, msg);
+          decryptInBackground(msg.channelId, msg, generation);
         }
         useTypingStore.getState().clearUser(msg.channelId, msg.authorId);
         // Increment unread count for messages from other users, but only if
@@ -460,7 +518,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         useMessageStore.getState().updateMessage(msg.channelId, msg);
         // Decrypt edited content (same as messageCreate)
         if (msg.keyVersion > 0 && isSessionReady()) {
-          decryptInBackground(msg.channelId, msg);
+          decryptInBackground(msg.channelId, msg, generation);
         }
       } else if (
         event.payload.case === 'messageDelete' &&
@@ -514,11 +572,13 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         ) {
           const serverId = joinedMember.serverId;
           const newUserId = joinedMember.userId;
-          // Distribute keys asynchronously — best-effort, fallback exists
+          // Distribute keys asynchronously with retry — the new user may
+          // still be bootstrapping their identity keys.
+          const gen = generation;
           (async () => {
             try {
-              const maybePk = await getOrFetchPublicKey(newUserId);
-              if (!maybePk) return;
+              const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
+              if (!maybePk || gen !== generation) return;
               const pk: Uint8Array = maybePk;
               // Get all channels in this server that we have keys for,
               // but skip private channels — the new member won't have
@@ -647,10 +707,12 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           fetchDMChannels().catch(() => {});
         }
         // If a new member was added and we have the channel key, distribute it
+        // with retry — the new user may still be bootstrapping.
         if (userId !== currentUserId && chId && isSessionReady()) {
           if (hasChannelKey(chId)) {
-            getOrFetchPublicKey(userId).then((pk) => {
-              if (pk) {
+            const gen = generation;
+            fetchPublicKeyWithRetry(userId, gen).then((pk) => {
+              if (pk && gen === generation) {
                 distributeKeyToMember(chId, userId, pk).catch((err) =>
                   console.error(
                     `[E2EE] distributeKeyToMember failed for ${userId} in ${chId}:`,
@@ -923,6 +985,7 @@ export function disconnect() {
     ws = null;
   }
   typingThrottles.clear();
+  keyRetryInFlight.clear();
   signingKeyCache.clear();
   lastHeartbeatAck = 0;
   hasConnectedBefore = false;

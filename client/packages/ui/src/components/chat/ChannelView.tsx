@@ -4,7 +4,7 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
-  decryptMessage,
+  decryptAndUpdateMessage,
   editMessage,
   encryptMessage,
   fetchAndCacheChannelKeys,
@@ -22,8 +22,8 @@ import {
   listRoles,
   listUserEmojis,
   Permissions,
-  parseMessageContent,
   pinMessage,
+  safeParseMessageText,
   toISO,
   unpinMessage,
   useAuthStore,
@@ -48,6 +48,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -303,32 +304,7 @@ export function ChannelView({
               const pk = pubKeys[msg.authorId];
               if (!pk) continue;
               try {
-                const plaintext = await decryptMessage(
-                  channelId,
-                  msg.keyVersion,
-                  msg.encryptedContent,
-                  pk,
-                );
-                const parsed = parseMessageContent(plaintext);
-                const textBytes = new TextEncoder().encode(parsed.text);
-                let enrichedAttachments = msg.attachments;
-                if (parsed.attachmentMeta && msg.attachments.length > 0) {
-                  enrichedAttachments = msg.attachments.map((att) => {
-                    const meta = parsed.attachmentMeta?.[att.id];
-                    if (!meta) return att;
-                    return {
-                      ...att,
-                      filename: meta.fn || att.filename,
-                      contentType: meta.ct || att.contentType,
-                    };
-                  });
-                }
-                useMessageStore.getState().updateMessage(channelId, {
-                  ...msg,
-                  encryptedContent: textBytes,
-                  keyVersion: 0,
-                  attachments: enrichedAttachments,
-                });
+                await decryptAndUpdateMessage(channelId, msg, pk);
               } catch (err) {
                 console.error(
                   `[E2EE] historical decrypt failed for ${msg.id}:`,
@@ -352,6 +328,11 @@ export function ChannelView({
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
   // (e.g., key distribution from channel creator hadn't completed yet).
+  //
+  // The gateway's `decryptInBackground` may also be decrypting these same
+  // messages concurrently via real-time delivery. This is safe because
+  // `decryptAndUpdateMessage` uses a keyVersion > 0 idempotency guard,
+  // ensuring only the first path to finish writes the plaintext.
   useEffect(() => {
     if (!keysAvailable || !needsEncryption || !channelId) return;
     const messages = useMessageStore.getState().byChannel[channelId] ?? [];
@@ -377,32 +358,7 @@ export function ChannelView({
         const pk = pubKeys[msg.authorId];
         if (!pk) continue;
         try {
-          const plaintext = await decryptMessage(
-            channelId,
-            msg.keyVersion,
-            msg.encryptedContent,
-            pk,
-          );
-          const parsed = parseMessageContent(plaintext);
-          const textBytes = new TextEncoder().encode(parsed.text);
-          let enrichedAttachments = msg.attachments;
-          if (parsed.attachmentMeta && msg.attachments.length > 0) {
-            enrichedAttachments = msg.attachments.map((att) => {
-              const meta = parsed.attachmentMeta?.[att.id];
-              if (!meta) return att;
-              return {
-                ...att,
-                filename: meta.fn || att.filename,
-                contentType: meta.ct || att.contentType,
-              };
-            });
-          }
-          useMessageStore.getState().updateMessage(channelId, {
-            ...msg,
-            encryptedContent: textBytes,
-            keyVersion: 0,
-            attachments: enrichedAttachments,
-          });
+          await decryptAndUpdateMessage(channelId, msg, pk);
         } catch (err) {
           console.error(`[E2EE] deferred decrypt failed for ${msg.id}:`, err);
         }
@@ -727,8 +683,6 @@ export function ChannelView({
   );
 }
 
-const decoder = new TextDecoder();
-
 /** Resolve author display name via the shared fallback chain. */
 function useAuthorName(authorId: string, serverId: string | undefined) {
   return useDisplayName(authorId, serverId);
@@ -838,16 +792,15 @@ const MessageItem = memo(function MessageItem({
   // Historical messages are decrypted in the fetch effect above.
   // keyVersion > 0 means still encrypted; 0 means plaintext.
   const isStillEncrypted = needsEncryption && msg.keyVersion > 0;
-  let text: string;
-  if (msg.encryptedContent.length > 0) {
-    if (isStillEncrypted) {
-      text = '';
-    } else {
-      text = decoder.decode(msg.encryptedContent);
+  const text = useMemo(() => {
+    // Always parse through safeParseMessageText to handle V1 JSON format.
+    // This prevents raw JSON like {"t":"hello","a":{}} from leaking to the UI
+    // when decryptInBackground updates the store after the first render.
+    if (msg.encryptedContent.length > 0 && !isStillEncrypted) {
+      return safeParseMessageText(msg.encryptedContent);
     }
-  } else {
-    text = '';
-  }
+    return '';
+  }, [msg.encryptedContent, isStillEncrypted]);
   const memberName = useAuthorName(msg.authorId, serverId);
   const authorAvatar = useAuthorAvatar(msg.authorId);
   const authorLabel = memberName;
@@ -1282,19 +1235,18 @@ function ReplyPreviewBar({
   parentAuthorName: string;
   onJump: () => void;
 }) {
+  const parentText = useMemo(
+    () =>
+      parentMessage ? safeParseMessageText(parentMessage.encryptedContent) : '',
+    [parentMessage],
+  );
+
   if (!parentMessage) {
     return (
       <div className="mb-0.5 text-xs text-text-subtle italic">
         Original message not available
       </div>
     );
-  }
-
-  // Check if parent is deleted (soft-deleted messages have empty content and deleted flag)
-  const parentText = decoder.decode(parentMessage.encryptedContent);
-  if (!parentText && parentMessage.id) {
-    // Heuristic: if we have the message but it has no content, it may be deleted
-    // The server filters out deleted messages, so if we got it back empty, show placeholder
   }
 
   const parentLabel = parentAuthorName;

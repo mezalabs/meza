@@ -108,6 +108,18 @@ export function parseMessageContent(content: Uint8Array): ParsedMessageContent {
   return { text: new TextDecoder().decode(content) };
 }
 
+/**
+ * Safely parse message content bytes to text, with fallback for corrupt V1 data.
+ * Use this at render time to avoid raw JSON leaking to the UI.
+ */
+export function safeParseMessageText(content: Uint8Array): string {
+  try {
+    return parseMessageContent(content).text;
+  } catch {
+    return new TextDecoder().decode(content);
+  }
+}
+
 // --- Base64 helpers ---
 
 function uint8ToBase64(bytes: Uint8Array): string {
