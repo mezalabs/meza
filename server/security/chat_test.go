@@ -199,52 +199,6 @@ func TestServerNameNoValidation(t *testing.T) {
 	}
 }
 
-// TestMeilisearchFilterInjection tests whether crafted server IDs containing
-// Meilisearch filter operators can escape the %q-formatted filter string.
-//
-// Severity: MEDIUM
-// Finding: buildFilters in meilisearch.go uses fmt.Sprintf("server_id = %q", ...)
-// which uses Go's quoting. If Meilisearch interprets the Go-escaped characters
-// differently, filter injection is possible.
-//
-// Remediation: Use Meilisearch's built-in filter parameter binding instead of
-// string formatting with %q.
-func TestMeilisearchFilterInjection(t *testing.T) {
-	ctx := context.Background()
-	suffix := uniqueSuffix(t)
-	user := registerUser(t, "ms_"+suffix)
-	serverID := mustCreateServer(t, user.AccessToken)
-	channelID := mustCreateChannel(t, user.AccessToken, serverID)
-
-	// Send a message so search has content to index.
-	mustSendMessage(t, user.AccessToken, channelID, []byte("test message for search"))
-
-	chat := newChatClient()
-
-	// Try filter injection via crafted query with Meilisearch operators.
-	// The search endpoint uses server_id from the request, which we control.
-	injectionPayloads := []string{
-		`" OR server_id = "other_id`,
-		`" AND 1=1 OR "`,
-		`\"; DROP INDEX messages; "`,
-	}
-
-	for _, payload := range injectionPayloads {
-		t.Run(payload, func(t *testing.T) {
-			p := payload
-			_, err := chat.SearchMessages(ctx, authedRequest(user.AccessToken, &v1.SearchMessagesRequest{
-				Query:    "test",
-				ServerId: &p,
-			}))
-			// We expect an error (CodeNotFound or CodeInvalidArgument).
-			// If we get results, the injection may have succeeded.
-			if err == nil {
-				t.Errorf("POTENTIAL VULNERABILITY: SearchMessages accepted injected server_id %q", payload)
-			}
-		})
-	}
-}
-
 // TestInviteCodeInjection verifies that invite code lookups are safe against
 // SQL/NoSQL injection patterns.
 //

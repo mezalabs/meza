@@ -1434,20 +1434,17 @@ export async function getEffectivePermissions(
 }
 
 export interface SearchMessagesParams {
-  query: string;
-  serverId?: string;
-  channelId?: string;
+  channelId: string;
   authorId?: string;
   hasAttachment?: boolean;
+  mentionedUserId?: string;
+  beforeId?: string;
   limit?: number;
 }
 
 export interface SearchMessagesResult {
-  results: Array<{
-    message: import('@meza/gen/meza/v1/chat_pb.ts').SearchResult['message'];
-    highlight: string;
-  }>;
-  totalHits: number;
+  messages: import('@meza/gen/meza/v1/models_pb.ts').Message[];
+  hasMore: boolean;
 }
 
 export async function searchMessages(
@@ -1455,19 +1452,16 @@ export async function searchMessages(
 ): Promise<SearchMessagesResult> {
   try {
     const res = await chatClient.searchMessages({
-      query: params.query,
-      serverId: params.serverId,
       channelId: params.channelId,
       authorId: params.authorId,
       hasAttachment: params.hasAttachment,
+      mentionedUserId: params.mentionedUserId,
+      beforeId: params.beforeId,
       limit: params.limit ?? 25,
     });
     return {
-      results: res.results.map((r) => ({
-        message: r.message,
-        highlight: r.highlight,
-      })),
-      totalHits: res.totalHits,
+      messages: res.messages,
+      hasMore: res.hasMore,
     };
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });

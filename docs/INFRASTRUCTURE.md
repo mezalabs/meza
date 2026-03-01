@@ -20,7 +20,6 @@ Infrastructure services managed via `deploy/docker/docker-compose.yml`:
 | NATS | `nats:2.10-alpine` | 4222, 8222 |
 | MinIO (S3) | `minio/minio` | 9000, 9001 |
 | LiveKit | `livekit/livekit-server` | 7880, 7881, 7882/udp |
-| Meilisearch | `getmeili/meilisearch` | 7700 |
 
 All services have health checks configured. The `notification` service (port 8086) requires `MEZA_VAPID_PUBLIC_KEY` and `MEZA_VAPID_PRIVATE_KEY` for Web Push.
 
@@ -134,7 +133,7 @@ Triggers: push to `main` and pull requests to `main`.
 The project uses [Task](https://taskfile.dev/) as a task runner. See `Taskfile.yml` at the repo root.
 
 ```bash
-# Start infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit, Meilisearch)
+# Start infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit)
 task up
 
 # Run database migrations (PostgreSQL + ScyllaDB)

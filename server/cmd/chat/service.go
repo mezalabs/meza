@@ -23,21 +23,11 @@ import (
 	"github.com/meza-chat/meza/internal/embed"
 	"github.com/meza-chat/meza/internal/models"
 	"github.com/meza-chat/meza/internal/permissions"
-	"github.com/meza-chat/meza/internal/search"
 	"github.com/meza-chat/meza/internal/store"
 	"github.com/meza-chat/meza/internal/subjects"
 )
 
 var validULID = regexp.MustCompile(`^[0-9A-Z]{26}$`)
-
-// Searcher abstracts the search backend so tests can inject a mock.
-type Searcher interface {
-	IndexMessage(doc search.MessageDocument)
-	UpdateMessage(doc search.MessageDocument)
-	DeleteMessage(messageID string)
-	DeleteChannelMessages(channelID string)
-	Search(params search.SearchParams) ([]search.SearchResult, int64, error)
-}
 
 // EncryptionChecker checks whether a channel has been set up for E2EE.
 // Used as a defense-in-depth measure to reject plaintext messages on encrypted channels.
@@ -87,7 +77,6 @@ type chatService struct {
 	nc                      *nats.Conn
 	rdb                     *redis.Client
 	permCache               *permissions.Cache
-	searchClient            Searcher
 }
 
 type chatServiceConfig struct {
@@ -114,7 +103,6 @@ type chatServiceConfig struct {
 	NC                      *nats.Conn
 	RDB                     *redis.Client
 	PermCache               *permissions.Cache
-	SearchClient            Searcher
 }
 
 func newChatService(cfg chatServiceConfig) *chatService {
@@ -142,7 +130,6 @@ func newChatService(cfg chatServiceConfig) *chatService {
 		nc:                      cfg.NC,
 		rdb:                     cfg.RDB,
 		permCache:               cfg.PermCache,
-		searchClient:            cfg.SearchClient,
 	}
 }
 
@@ -1252,143 +1239,92 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 	}), nil
 }
 
+// searchSemaphore limits concurrent search requests across the service instance
+// to prevent partition scans from starving real-time message CRUD operations.
+var searchSemaphore = make(chan struct{}, 5)
+
 func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v1.SearchMessagesRequest]) (*connect.Response[v1.SearchMessagesResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
 	}
-	if req.Msg.Query == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("query is required"))
-	}
-	if s.searchClient == nil {
-		return nil, connect.NewError(connect.CodeUnavailable, errors.New("search is not available"))
-	}
 
-	// Require at least one scope parameter to prevent unscoped global search.
-	hasServerScope := req.Msg.ServerId != nil && *req.Msg.ServerId != ""
-	hasChannelScope := req.Msg.ChannelId != nil && *req.Msg.ChannelId != ""
-	if !hasServerScope && !hasChannelScope {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id or channel_id is required"))
-	}
-
-	// Permission check: if scoped to a channel, verify membership.
-	if req.Msg.ChannelId != nil && *req.Msg.ChannelId != "" {
-		_, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, *req.Msg.ChannelId, userID)
-		if err != nil {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
+	// Per-user rate limit: 5 searches per 10 seconds.
+	rlKey := fmt.Sprintf("search_rl:%s", userID)
+	count, err := s.rdb.Incr(ctx, rlKey).Result()
+	if err != nil {
+		slog.Error("search rate limit check", "err", err, "user", userID)
+	} else {
+		if count == 1 {
+			s.rdb.Expire(ctx, rlKey, 10*time.Second)
 		}
-		if !isMember {
-			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member"))
+		if count > 5 {
+			return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("search rate limit exceeded"))
 		}
 	}
 
-	// Permission check: if scoped to a server, verify membership.
-	if req.Msg.ServerId != nil && *req.Msg.ServerId != "" {
-		if err := s.requireMembership(ctx, userID, *req.Msg.ServerId); err != nil {
-			return nil, err
-		}
+	// Global concurrency cap.
+	select {
+	case searchSemaphore <- struct{}{}:
+		defer func() { <-searchSemaphore }()
+	default:
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many concurrent searches"))
 	}
 
-	params := search.SearchParams{
-		Query: req.Msg.Query,
-		Limit: int64(req.Msg.Limit),
+	// Require channel_id — server-scoped search is deferred.
+	if req.Msg.ChannelId == nil || *req.Msg.ChannelId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
-	if req.Msg.ServerId != nil {
-		params.ServerID = *req.Msg.ServerId
+
+	// Permission check: verify channel membership.
+	_, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, *req.Msg.ChannelId, userID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
 	}
-	if req.Msg.ChannelId != nil {
-		params.ChannelID = *req.Msg.ChannelId
+	if !isMember {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member"))
+	}
+
+	// Clamp limit.
+	limit := int(req.Msg.Limit)
+	if limit <= 0 {
+		limit = 25
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	// Build search options.
+	opts := store.SearchMessagesOpts{
+		ChannelID: *req.Msg.ChannelId,
+		Limit:     limit,
 	}
 	if req.Msg.AuthorId != nil {
-		params.AuthorID = *req.Msg.AuthorId
+		opts.AuthorID = *req.Msg.AuthorId
 	}
 	if req.Msg.HasAttachment != nil {
 		ha := *req.Msg.HasAttachment
-		params.HasAttachment = &ha
+		opts.HasAttachment = &ha
+	}
+	if req.Msg.MentionedUserId != nil {
+		opts.MentionedUserID = *req.Msg.MentionedUserId
 	}
 	if req.Msg.BeforeId != nil && *req.Msg.BeforeId != "" {
-		params.BeforeID = *req.Msg.BeforeId
+		opts.BeforeID = *req.Msg.BeforeId
 	}
 
-	hits, totalHits, err := s.searchClient.Search(params)
+	messages, hasMore, err := s.messageStore.SearchMessages(ctx, opts)
 	if err != nil {
-		slog.Error("search messages", "err", err, "user", userID)
+		slog.Error("search messages", "err", err, "user", userID, "channel", *req.Msg.ChannelId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("search failed"))
 	}
 
-	// Post-filter: check ViewChannel permission on each result's channel.
-	// Collect unique channel IDs grouped by server for batch permission resolution.
-	type chanKey struct {
-		serverID  string
-		channelID string
-	}
-	seen := make(map[chanKey]struct{})
-	channelsByServer := make(map[string][]string)
-	for _, hit := range hits {
-		k := chanKey{hit.Doc.ServerID, hit.Doc.ChannelID}
-		if _, ok := seen[k]; !ok {
-			seen[k] = struct{}{}
-			channelsByServer[hit.Doc.ServerID] = append(channelsByServer[hit.Doc.ServerID], hit.Doc.ChannelID)
-		}
-	}
-
-	// Resolve permissions per server and collect accessible channel set.
-	accessibleChannels := make(map[string]struct{})
-	for srvID, chIDs := range channelsByServer {
-		permsMap, permErr := s.resolvePermissionsBatch(ctx, userID, srvID, chIDs)
-		if permErr != nil {
-			slog.Error("batch resolving search permissions", "err", permErr, "server", srvID)
-			continue
-		}
-		for _, chID := range chIDs {
-			if chPerms, ok := permsMap[chID]; ok && permissions.Has(chPerms, permissions.ViewChannel) {
-				accessibleChannels[chID] = struct{}{}
-			}
-		}
-	}
-
-	// Filter hits to only accessible channels.
-	filteredHits := make([]search.SearchResult, 0, len(hits))
-	for _, hit := range hits {
-		if _, ok := accessibleChannels[hit.Doc.ChannelID]; ok {
-			filteredHits = append(filteredHits, hit)
-		}
-	}
-	hits = filteredHits
-
-	// Group hits by channel for batch fetching from ScyllaDB.
-	hitsByChannel := make(map[string][]search.SearchResult)
-	for _, hit := range hits {
-		hitsByChannel[hit.Doc.ChannelID] = append(hitsByChannel[hit.Doc.ChannelID], hit)
-	}
-
-	allMsgs := make(map[string]*models.Message)
-	for chID, chHits := range hitsByChannel {
-		ids := make([]string, len(chHits))
-		for i, h := range chHits {
-			ids[i] = h.Doc.ID
-		}
-		msgs, batchErr := s.messageStore.GetMessagesByIDs(ctx, chID, ids)
-		if batchErr != nil {
-			slog.Error("batch fetch messages", "err", batchErr, "channel", chID)
-			continue
-		}
-		for id, msg := range msgs {
-			allMsgs[id] = msg
-		}
-	}
-
-	// First pass: collect all attachment IDs across all messages.
+	// Collect all attachment IDs for bulk fetch.
 	var allAttachmentIDs []string
-	for _, hit := range hits {
-		msg, ok := allMsgs[hit.Doc.ID]
-		if !ok || msg.Deleted {
-			continue
-		}
+	for _, msg := range messages {
 		allAttachmentIDs = append(allAttachmentIDs, msg.AttachmentIDs...)
 	}
 
-	// Single bulk fetch for all attachments.
 	var allAttachments map[string]*models.Attachment
 	if len(allAttachmentIDs) > 0 {
 		attMap, attErr := s.mediaStore.GetAttachmentsByIDs(ctx, allAttachmentIDs)
@@ -1399,27 +1335,19 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 		}
 	}
 
-	// Second pass: build results in original hit order with attachments distributed.
-	results := make([]*v1.SearchResult, 0, len(hits))
-	for _, hit := range hits {
-		msg, ok := allMsgs[hit.Doc.ID]
-		if !ok || msg.Deleted {
-			continue
-		}
-
+	// Build proto response.
+	protoMessages := make([]*v1.Message, 0, len(messages))
+	for _, msg := range messages {
 		var protoAttachments []*v1.Attachment
 		if len(msg.AttachmentIDs) > 0 && allAttachments != nil {
 			protoAttachments = toProtoAttachments(msg.AttachmentIDs, allAttachments)
 		}
-
-		results = append(results, &v1.SearchResult{
-			Message: messageToProto(msg, protoAttachments),
-		})
+		protoMessages = append(protoMessages, messageToProto(msg, protoAttachments))
 	}
 
 	return connect.NewResponse(&v1.SearchMessagesResponse{
-		Results:   results,
-		TotalHits: int32(totalHits),
+		Messages: protoMessages,
+		HasMore:  hasMore,
 	}), nil
 }
 

@@ -19,7 +19,6 @@ import (
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/models"
 	"github.com/meza-chat/meza/internal/permissions"
-	"github.com/meza-chat/meza/internal/search"
 	"github.com/meza-chat/meza/internal/store"
 	"github.com/meza-chat/meza/internal/testutil"
 )
@@ -594,6 +593,28 @@ func (m *mockMessageStore) GetReplies(_ context.Context, channelID, messageID st
 
 func (m *mockMessageStore) CountMessagesAfter(_ context.Context, _, _ string) (int32, error) {
 	return 0, nil
+}
+
+func (m *mockMessageStore) SearchMessages(_ context.Context, opts store.SearchMessagesOpts) ([]*models.Message, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var results []*models.Message
+	for _, msg := range m.messages[opts.ChannelID] {
+		if msg.Deleted {
+			continue
+		}
+		results = append(results, msg)
+	}
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 25
+	}
+	hasMore := len(results) > limit
+	if len(results) > limit {
+		results = results[:limit]
+	}
+	return results, hasMore, nil
 }
 
 // mockInviteStore implements store.InviteStorer for testing.
@@ -4092,273 +4113,3 @@ func TestDeleteParentDoesNotAffectReplies(t *testing.T) {
 	}
 }
 
-// mockSearcher implements the Searcher interface for testing SearchMessages.
-type mockSearcher struct {
-	results   []search.SearchResult
-	totalHits int64
-	err       error
-}
-
-func (m *mockSearcher) IndexMessage(_ search.MessageDocument)         {}
-func (m *mockSearcher) UpdateMessage(_ search.MessageDocument)        {}
-func (m *mockSearcher) DeleteMessage(_ string)                        {}
-func (m *mockSearcher) DeleteChannelMessages(_ string)                {}
-func (m *mockSearcher) Search(_ search.SearchParams) ([]search.SearchResult, int64, error) {
-	return m.results, m.totalHits, m.err
-}
-
-// setupSearchTestServer creates a test server with a configurable Searcher.
-// If searcher is nil, the service will have no search client (returns CodeUnavailable).
-func setupSearchTestServer(t *testing.T, searcher Searcher) (mezav1connect.ChatServiceClient, *mockChatStore, *mockMessageStore, *mockRoleStore) {
-	t.Helper()
-	roleStore := newMockRoleStore()
-	chatStore := newMockChatStore(roleStore)
-	messageStore := newMockMessageStore()
-	inviteStore := newMockInviteStore()
-	banStore := newMockBanStore()
-	pinStore := newMockPinStore()
-	emojiStore := &mockEmojiStore{}
-	nc := testutil.StartTestNATS(t)
-
-	svc := newChatService(chatServiceConfig{
-		ChatStore:               chatStore,
-		MessageStore:            messageStore,
-		InviteStore:             inviteStore,
-		RoleStore:               roleStore,
-		BanStore:                banStore,
-		PinStore:                pinStore,
-		EmojiStore:              emojiStore,
-		MediaStore:              newMockMediaStore(),
-		PermissionOverrideStore: &mockPermissionOverrideStore{},
-		NC:                      nc,
-		PermCache:               permissions.NewCache(nil),
-		SearchClient:            searcher,
-	})
-
-	interceptor := connect.WithInterceptors(auth.NewConnectInterceptor(testutil.TestEd25519Keys.PublicKey))
-	mux := http.NewServeMux()
-	path, handler := mezav1connect.NewChatServiceHandler(svc, interceptor)
-	mux.Handle(path, handler)
-
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
-
-	client := mezav1connect.NewChatServiceClient(http.DefaultClient, srv.URL)
-	return client, chatStore, messageStore, roleStore
-}
-
-func TestSearchMessages(t *testing.T) {
-	serverID := func(s string) *string { return &s }
-	channelID := func(s string) *string { return &s }
-
-	tests := []struct {
-		name       string
-		searcher   Searcher
-		setupState func(t *testing.T, cs *mockChatStore, ms *mockMessageStore, rs *mockRoleStore) (userID string, req *v1.SearchMessagesRequest)
-		wantCode   connect.Code
-		wantCount  int // expected number of results (only checked on success)
-		wantTotal  int32
-	}{
-		{
-			name:     "nil search client returns CodeUnavailable",
-			searcher: nil,
-			setupState: func(t *testing.T, cs *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := models.NewID()
-				srvID := models.NewID()
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: userID}
-				cs.members[srvID] = map[string]bool{userID: true}
-				cs.mu.Unlock()
-				return userID, &v1.SearchMessagesRequest{
-					Query:    "hello",
-					ServerId: serverID(srvID),
-				}
-			},
-			wantCode: connect.CodeUnavailable,
-		},
-		{
-			name:     "empty query returns CodeInvalidArgument",
-			searcher: &mockSearcher{},
-			setupState: func(t *testing.T, cs *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := models.NewID()
-				srvID := models.NewID()
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: userID}
-				cs.members[srvID] = map[string]bool{userID: true}
-				cs.mu.Unlock()
-				return userID, &v1.SearchMessagesRequest{
-					Query:    "",
-					ServerId: serverID(srvID),
-				}
-			},
-			wantCode: connect.CodeInvalidArgument,
-		},
-		{
-			name:     "unscoped search (no server_id or channel_id) returns CodeInvalidArgument",
-			searcher: &mockSearcher{},
-			setupState: func(t *testing.T, _ *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := models.NewID()
-				return userID, &v1.SearchMessagesRequest{
-					Query: "hello",
-				}
-			},
-			wantCode: connect.CodeInvalidArgument,
-		},
-		{
-			name:     "non-member server search returns CodePermissionDenied",
-			searcher: &mockSearcher{},
-			setupState: func(t *testing.T, cs *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				ownerID := models.NewID()
-				outsiderID := models.NewID()
-				srvID := models.NewID()
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: ownerID}
-				cs.members[srvID] = map[string]bool{ownerID: true}
-				cs.mu.Unlock()
-				return outsiderID, &v1.SearchMessagesRequest{
-					Query:    "hello",
-					ServerId: serverID(srvID),
-				}
-			},
-			wantCode: connect.CodePermissionDenied,
-		},
-		{
-			name:     "non-member channel search returns CodePermissionDenied",
-			searcher: &mockSearcher{},
-			setupState: func(t *testing.T, cs *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				ownerID := models.NewID()
-				outsiderID := models.NewID()
-				srvID := models.NewID()
-				chID := models.NewID()
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: ownerID}
-				cs.members[srvID] = map[string]bool{ownerID: true}
-				cs.channels[chID] = &models.Channel{ID: chID, ServerID: srvID, Name: "general", Type: 1}
-				cs.mu.Unlock()
-				return outsiderID, &v1.SearchMessagesRequest{
-					Query:     "hello",
-					ChannelId: channelID(chID),
-				}
-			},
-			wantCode: connect.CodePermissionDenied,
-		},
-		{
-			name:     "channel not found returns CodeNotFound",
-			searcher: &mockSearcher{},
-			setupState: func(t *testing.T, _ *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := models.NewID()
-				return userID, &v1.SearchMessagesRequest{
-					Query:     "hello",
-					ChannelId: channelID(models.NewID()),
-				}
-			},
-			wantCode: connect.CodeNotFound,
-		},
-		{
-			name: "successful server-scoped search returns results",
-			searcher: &mockSearcher{
-				results: []search.SearchResult{
-					{Doc: search.MessageDocument{ID: "MSG1", ChannelID: "CH1", ServerID: "SRV1", AuthorID: "USR1"}},
-					{Doc: search.MessageDocument{ID: "MSG2", ChannelID: "CH1", ServerID: "SRV1", AuthorID: "USR1"}},
-				},
-				totalHits: 2,
-			},
-			setupState: func(t *testing.T, cs *mockChatStore, ms *mockMessageStore, rs *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := "USR1"
-				srvID := "SRV1"
-				chID := "CH1"
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: userID}
-				cs.members[srvID] = map[string]bool{userID: true}
-				cs.channels[chID] = &models.Channel{ID: chID, ServerID: srvID, Name: "general", Type: 1}
-				cs.mu.Unlock()
-
-				// Create @everyone role (ID = serverID) with default permissions including ViewChannel.
-				rs.CreateRole(context.Background(), &models.Role{
-					ID:          srvID,
-					ServerID:    srvID,
-					Name:        "@everyone",
-					Position:    0,
-					Permissions: permissions.DefaultEveryonePermissions,
-				})
-
-				// Pre-populate messages in the message store so hydration works.
-				ms.mu.Lock()
-				ms.messages[chID] = []*models.Message{
-					{MessageID: "MSG1", ChannelID: chID, AuthorID: userID, EncryptedContent: []byte("hello"), CreatedAt: time.Now()},
-					{MessageID: "MSG2", ChannelID: chID, AuthorID: userID, EncryptedContent: []byte("world"), CreatedAt: time.Now()},
-				}
-				ms.mu.Unlock()
-
-				return userID, &v1.SearchMessagesRequest{
-					Query:    "hello",
-					ServerId: serverID(srvID),
-				}
-			},
-			wantCode:  0, // success
-			wantCount: 2,
-			wantTotal: 2,
-		},
-		{
-			name: "search backend error returns CodeInternal",
-			searcher: &mockSearcher{
-				err: errors.New("meilisearch down"),
-			},
-			setupState: func(t *testing.T, cs *mockChatStore, _ *mockMessageStore, _ *mockRoleStore) (string, *v1.SearchMessagesRequest) {
-				t.Helper()
-				userID := models.NewID()
-				srvID := models.NewID()
-				cs.mu.Lock()
-				cs.servers[srvID] = &models.Server{ID: srvID, Name: "test", OwnerID: userID}
-				cs.members[srvID] = map[string]bool{userID: true}
-				cs.mu.Unlock()
-				return userID, &v1.SearchMessagesRequest{
-					Query:    "hello",
-					ServerId: serverID(srvID),
-				}
-			},
-			wantCode: connect.CodeInternal,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			client, chatStore, msgStore, roleStore := setupSearchTestServer(t, tt.searcher)
-			userID, req := tt.setupState(t, chatStore, msgStore, roleStore)
-
-			resp, err := client.SearchMessages(context.Background(), testutil.AuthedRequest(t, userID, req))
-
-			if tt.wantCode != 0 {
-				if err == nil {
-					t.Fatalf("expected error with code %v, got nil", tt.wantCode)
-				}
-				var connErr *connect.Error
-				if !errors.As(err, &connErr) {
-					t.Fatalf("expected connect.Error, got %T: %v", err, err)
-				}
-				if connErr.Code() != tt.wantCode {
-					t.Errorf("error code = %v, want %v", connErr.Code(), tt.wantCode)
-				}
-				return
-			}
-
-			// Success path.
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got := len(resp.Msg.Results); got != tt.wantCount {
-				t.Errorf("result count = %d, want %d", got, tt.wantCount)
-			}
-			if resp.Msg.TotalHits != tt.wantTotal {
-				t.Errorf("total_hits = %d, want %d", resp.Msg.TotalHits, tt.wantTotal)
-			}
-		})
-	}
-}

@@ -20,7 +20,7 @@ cp .env.example .env
 task start
 ```
 
-This starts all infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit, Meilisearch), runs migrations, and launches all Go services + the Vite dev server. The app will be available at `http://localhost:4080`.
+This starts all infrastructure (Postgres, ScyllaDB, Redis, NATS, MinIO, LiveKit), runs migrations, and launches all Go services + the Vite dev server. The app will be available at `http://localhost:4080`.
 
 ## Running Tests
 

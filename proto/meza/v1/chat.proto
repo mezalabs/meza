@@ -1176,25 +1176,22 @@ message ListFriendRequestsResponse {
 // Search
 
 message SearchMessagesRequest {
-  string query = 1;
-  // At least one of server_id or channel_id is required.
+  reserved 1;              // was query, removed 2026-02-28
+  reserved "query";
   optional string server_id = 2;
-  // At least one of server_id or channel_id is required.
   optional string channel_id = 3;
   optional string author_id = 4;
   optional bool has_attachment = 5;
   int32 limit = 6;
   optional string before_id = 7;
+  optional string mentioned_user_id = 8;
 }
 
 message SearchMessagesResponse {
-  repeated SearchResult results = 1;
-  int32 total_hits = 2;
-}
-
-message SearchResult {
-  Message message = 1;
-  string highlight = 2;
+  repeated Message messages = 1;
+  reserved 2;              // was total_hits, removed 2026-02-28
+  reserved "total_hits";
+  bool has_more = 3;
 }
 
 // Internal NATS job message for embed URL fetching.
