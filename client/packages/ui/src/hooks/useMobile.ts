@@ -1,0 +1,26 @@
+import { useSyncExternalStore } from 'react';
+
+const MOBILE_QUERY = '(max-width: 767px)';
+
+function subscribe(callback: () => void): () => void {
+  const mql = window.matchMedia(MOBILE_QUERY);
+  mql.addEventListener('change', callback);
+  return () => mql.removeEventListener('change', callback);
+}
+
+function getSnapshot(): boolean {
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
+/**
+ * Reactive hook that returns `true` when the viewport is <= 767px (mobile).
+ * Uses `matchMedia` for efficient change detection (no resize polling).
+ * Returns `false` during SSR / initial server render for hydration safety.
+ */
+export function useMobile(): boolean {
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}

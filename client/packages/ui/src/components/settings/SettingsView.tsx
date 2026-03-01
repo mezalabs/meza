@@ -1,6 +1,7 @@
 import { gatewayDisconnect, logout } from '@meza/core';
-import { SignOutIcon } from '@phosphor-icons/react';
+import { ArrowLeftIcon, SignOutIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { AccountSection } from './AccountSection.tsx';
 import { AppearanceSection } from './AppearanceSection.tsx';
 import { DevicesSection } from './DevicesSection.tsx';
@@ -30,10 +31,75 @@ interface SettingsViewProps {
 }
 
 export function SettingsView({ section }: SettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<SectionId>(
-    (section as SectionId) || 'account',
+  const isMobile = useMobile();
+  const [activeSection, setActiveSection] = useState<SectionId | null>(
+    isMobile ? null : (section as SectionId) || 'account',
   );
 
+  const activeSectionLabel = SETTINGS_SECTIONS.find(
+    (s) => s.id === activeSection,
+  )?.label;
+
+  // Mobile: show nav list or content, not both
+  if (isMobile) {
+    if (activeSection) {
+      return (
+        <div className="flex flex-1 min-h-0 flex-col">
+          <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border/40 px-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection(null)}
+              className="p-2 text-text-muted hover:text-text transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeftIcon size={20} aria-hidden="true" />
+            </button>
+            <h2 className="flex-1 truncate text-base font-semibold text-text">
+              {activeSectionLabel}
+            </h2>
+          </header>
+          <div className="flex-1 overflow-y-auto p-4">
+            {renderSettingsContent(activeSection)}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
+        aria-label="Settings sections"
+      >
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+          Settings
+        </h2>
+        {SETTINGS_SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className="rounded-md px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-text transition-colors"
+            onClick={() => setActiveSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="mt-auto flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-danger transition-colors"
+          onClick={() => {
+            gatewayDisconnect();
+            logout();
+          }}
+          aria-label="Log out"
+        >
+          <SignOutIcon size={14} aria-hidden="true" />
+          Log Out
+        </button>
+      </nav>
+    );
+  }
+
+  // Desktop: side-by-side layout
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
       {/* Settings nav sidebar */}
@@ -74,16 +140,33 @@ export function SettingsView({ section }: SettingsViewProps) {
 
       {/* Settings content area */}
       <div className="flex-1 overflow-y-auto p-6">
-        {activeSection === 'account' && <AccountSection />}
-        {activeSection === 'appearance' && <AppearanceSection />}
-        {activeSection === 'notifications' && <NotificationsSection />}
-        {activeSection === 'privacy' && <PrivacySection />}
-        {activeSection === 'devices' && <DevicesSection />}
-        {activeSection === 'voice' && <VoiceAudioSection />}
-        {activeSection === 'streaming' && <StreamingSection />}
-        {activeSection === 'emojis' && <EmojisSection />}
-        {activeSection === 'soundboard' && <SoundsSection />}
+        {renderSettingsContent(activeSection)}
       </div>
     </div>
   );
+}
+
+function renderSettingsContent(section: SectionId | null) {
+  switch (section) {
+    case 'account':
+      return <AccountSection />;
+    case 'appearance':
+      return <AppearanceSection />;
+    case 'notifications':
+      return <NotificationsSection />;
+    case 'privacy':
+      return <PrivacySection />;
+    case 'devices':
+      return <DevicesSection />;
+    case 'voice':
+      return <VoiceAudioSection />;
+    case 'streaming':
+      return <StreamingSection />;
+    case 'emojis':
+      return <EmojisSection />;
+    case 'soundboard':
+      return <SoundsSection />;
+    default:
+      return null;
+  }
 }

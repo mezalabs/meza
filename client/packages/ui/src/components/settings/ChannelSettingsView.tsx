@@ -7,7 +7,9 @@ import {
   useChannelStore,
   useServerStore,
 } from '@meza/core';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { closeChannelPanes } from '../../stores/tiling.ts';
 import { ChannelOverrideEditor } from './ChannelOverrideEditor.tsx';
 import { ChannelOverviewSection } from './ChannelOverviewSection.tsx';
@@ -35,6 +37,7 @@ export function ChannelSettingsView({
   serverId,
   channelId,
 }: ChannelSettingsViewProps) {
+  const isMobile = useMobile();
   const userId = useAuthStore((s) => s.user?.id);
   const server = useServerStore((s) => s.servers[serverId]);
   const channels = useChannelStore((s) => s.byServer[serverId]);
@@ -66,18 +69,82 @@ export function ChannelSettingsView({
     [canManageChannels, canManageRoles],
   );
 
-  const [activeSection, setActiveSection] = useState<string>('');
+  const [activeSection, setActiveSection] = useState<string>(
+    isMobile ? '' : '',
+  );
 
-  // Default to first visible section.
+  // Default to first visible section (desktop only — mobile starts on nav list).
   useEffect(() => {
+    if (isMobile) return;
     if (
       visibleSections.length > 0 &&
       !visibleSections.some((s) => s.id === activeSection)
     ) {
       setActiveSection(visibleSections[0].id);
     }
-  }, [visibleSections, activeSection]);
+  }, [visibleSections, activeSection, isMobile]);
 
+  const activeSectionLabel = visibleSections.find(
+    (s) => s.id === activeSection,
+  )?.label;
+
+  // Mobile: show nav list or content, not both
+  if (isMobile) {
+    if (activeSection) {
+      return (
+        <div className="flex flex-1 min-h-0 flex-col">
+          <header className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-border/40 px-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection('')}
+              className="p-2 text-text-muted hover:text-text transition-colors"
+              aria-label="Back"
+            >
+              <ArrowLeftIcon size={20} aria-hidden="true" />
+            </button>
+            <h2 className="flex-1 truncate text-base font-semibold text-text">
+              {activeSectionLabel}
+            </h2>
+          </header>
+          <div className="flex-1 overflow-y-auto p-4">
+            {renderChannelSettingsContent(
+              activeSection,
+              serverId,
+              channelId,
+              channel,
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
+        aria-label="Channel settings sections"
+      >
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+          Channel Settings
+        </h2>
+        {visibleSections.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`rounded-md px-3 py-2.5 text-left text-sm transition-colors ${
+              s.id === 'danger'
+                ? 'mt-auto text-error hover:bg-bg-surface'
+                : 'text-text-muted hover:bg-bg-surface hover:text-text'
+            }`}
+            onClick={() => setActiveSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </nav>
+    );
+  }
+
+  // Desktop: side-by-side layout
   return (
     <div
       className="flex flex-1 min-h-0 min-w-0"
@@ -110,28 +177,47 @@ export function ChannelSettingsView({
 
       {/* Settings content area */}
       <div className="flex-1 overflow-y-auto p-6">
-        {activeSection === 'overview' && (
-          <ChannelOverviewSection serverId={serverId} channelId={channelId} />
-        )}
-        {activeSection === 'permissions' && (
-          <ChannelOverrideEditor serverId={serverId} channelId={channelId} />
-        )}
-        {activeSection === 'effective' && (
-          <EffectivePermissionsViewer
-            serverId={serverId}
-            channelId={channelId}
-          />
-        )}
-        {activeSection === 'danger' && channel && (
-          <DangerZoneSection
-            channelId={channelId}
-            channelName={channel.name}
-            isDefault={channel.isDefault}
-          />
+        {renderChannelSettingsContent(
+          activeSection,
+          serverId,
+          channelId,
+          channel,
         )}
       </div>
     </div>
   );
+}
+
+function renderChannelSettingsContent(
+  section: string,
+  serverId: string,
+  channelId: string,
+  channel: { name: string; isDefault: boolean } | undefined,
+) {
+  switch (section) {
+    case 'overview':
+      return (
+        <ChannelOverviewSection serverId={serverId} channelId={channelId} />
+      );
+    case 'permissions':
+      return (
+        <ChannelOverrideEditor serverId={serverId} channelId={channelId} />
+      );
+    case 'effective':
+      return (
+        <EffectivePermissionsViewer serverId={serverId} channelId={channelId} />
+      );
+    case 'danger':
+      return channel ? (
+        <DangerZoneSection
+          channelId={channelId}
+          channelName={channel.name}
+          isDefault={channel.isDefault}
+        />
+      ) : null;
+    default:
+      return null;
+  }
 }
 
 /* ---------------------------------------------------------------------------

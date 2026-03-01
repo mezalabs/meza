@@ -39,6 +39,7 @@ import {
   useDisplayName,
 } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { MAX_PANES, useTilingStore } from '../../stores/tiling.ts';
 import {
@@ -430,9 +431,13 @@ function ScreenShareButton() {
   const { localParticipant } = useLocalParticipant();
   const isSharing = localParticipant.isScreenShareEnabled;
   const isToggling = useRef(false);
+  const isMobile = useMobile();
 
-  // Hide if getDisplayMedia is not available (mobile, insecure context).
-  if (typeof navigator.mediaDevices?.getDisplayMedia !== 'function') {
+  // Hide on mobile or if getDisplayMedia is not available.
+  if (
+    isMobile ||
+    typeof navigator.mediaDevices?.getDisplayMedia !== 'function'
+  ) {
     return null;
   }
 
