@@ -51,7 +51,10 @@ import { decryptMessage, parseMessageContent } from './messages.ts';
  */
 export async function decryptAndUpdateMessage(
   channelId: string,
-  msg: Pick<Message, 'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'>,
+  msg: Pick<
+    Message,
+    'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'
+  >,
   senderPublicKey: Uint8Array,
 ): Promise<boolean> {
   const plaintext = await decryptMessage(

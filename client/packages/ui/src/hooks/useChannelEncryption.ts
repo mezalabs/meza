@@ -93,6 +93,7 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
   }, [sessionReady]);
 
   // Fetch and cache channel keys when session is ready
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retryCounter is an intentional re-trigger for manual retry
   useEffect(() => {
     if (!channelId) return;
 

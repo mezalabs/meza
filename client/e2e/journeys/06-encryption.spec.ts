@@ -68,42 +68,32 @@ test('Journey 6: Encryption', async ({ browser }, testInfo) => {
   });
 
   // ---- Chapter 2: Historical message decrypt for existing user ----
-  await chapter(
-    bobPage,
-    testInfo,
-    'Historical messages readable',
-    async () => {
-      // Alice sends some messages while Bob is on the same channel
-      const msgs = Array.from({ length: 3 }, (_, i) => `History ${i} ${ts()}`);
-      for (const m of msgs) {
-        await alice.sendMessage(m);
-      }
+  await chapter(bobPage, testInfo, 'Historical messages readable', async () => {
+    // Alice sends some messages while Bob is on the same channel
+    const msgs = Array.from({ length: 3 }, (_, i) => `History ${i} ${ts()}`);
+    for (const m of msgs) {
+      await alice.sendMessage(m);
+    }
 
-      // Bob should see all messages as readable text
-      for (const m of msgs) {
-        await bob.expectMessage(m);
-      }
-      await bob.expectNoRawJson();
-    },
-  );
+    // Bob should see all messages as readable text
+    for (const m of msgs) {
+      await bob.expectMessage(m);
+    }
+    await bob.expectNoRawJson();
+  });
 
   // ---- Chapter 3: New channel — first message encryption ----
-  await chapter(
-    alicePage,
-    testInfo,
-    'New channel first message',
-    async () => {
-      // This test uses the existing general channel since creating channels
-      // requires additional UI interaction. We verify the lazy init path
-      // by sending a message immediately after navigation.
-      const freshMsg = `Fresh channel msg ${ts()}`;
-      await alice.sendMessage(freshMsg);
-      await alice.expectMessage(freshMsg);
-      await alice.expectNoRawJson();
-      await bob.expectMessage(freshMsg);
-      await bob.expectNoRawJson();
-    },
-  );
+  await chapter(alicePage, testInfo, 'New channel first message', async () => {
+    // This test uses the existing general channel since creating channels
+    // requires additional UI interaction. We verify the lazy init path
+    // by sending a message immediately after navigation.
+    const freshMsg = `Fresh channel msg ${ts()}`;
+    await alice.sendMessage(freshMsg);
+    await alice.expectMessage(freshMsg);
+    await alice.expectNoRawJson();
+    await bob.expectMessage(freshMsg);
+    await bob.expectNoRawJson();
+  });
 
   // ---- Chapter 4: Page refresh — crypto state persistence ----
   await chapter(bobPage, testInfo, 'Page refresh persistence', async () => {
@@ -133,28 +123,23 @@ test('Journey 6: Encryption', async ({ browser }, testInfo) => {
   });
 
   // ---- Chapter 5: Rapid message burst — race condition stress ----
-  await chapter(
-    alicePage,
-    testInfo,
-    'Rapid message burst',
-    async () => {
-      const burstMsgs = Array.from(
-        { length: 10 },
-        (_, i) => `Burst ${i} ${ts()}`,
-      );
-      for (const m of burstMsgs) {
-        await alice.sendMessage(m);
-      }
+  await chapter(alicePage, testInfo, 'Rapid message burst', async () => {
+    const burstMsgs = Array.from(
+      { length: 10 },
+      (_, i) => `Burst ${i} ${ts()}`,
+    );
+    for (const m of burstMsgs) {
+      await alice.sendMessage(m);
+    }
 
-      // All messages visible for both users as readable text
-      for (const m of burstMsgs) {
-        await alice.expectMessage(m);
-        await bob.expectMessage(m);
-      }
-      await alice.expectNoRawJson();
-      await bob.expectNoRawJson();
-    },
-  );
+    // All messages visible for both users as readable text
+    for (const m of burstMsgs) {
+      await alice.expectMessage(m);
+      await bob.expectMessage(m);
+    }
+    await alice.expectNoRawJson();
+    await bob.expectNoRawJson();
+  });
 
   // ---- Chapter 6: Bidirectional key availability ----
   await chapter(

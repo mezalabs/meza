@@ -34,8 +34,6 @@ interface PendingFile {
   error: string | null;
 }
 
-const decoder = new TextDecoder();
-
 interface MessageComposerProps {
   channelId: string;
   serverId?: string;
@@ -525,11 +523,7 @@ export function MessageComposer({
       {encryptionUnavailable && (
         <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-sm text-error">
           <span>Encryption unavailable</span>
-          <button
-            type="button"
-            onClick={retryEncryption}
-            className="underline"
-          >
+          <button type="button" onClick={retryEncryption} className="underline">
             Retry
           </button>
         </div>
@@ -688,7 +682,12 @@ export function MessageComposer({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={sending || disabled || encryptionPending || pendingFiles.length >= MAX_FILES}
+            disabled={
+              sending ||
+              disabled ||
+              encryptionPending ||
+              pendingFiles.length >= MAX_FILES
+            }
             className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
             title="Attach files"
           >

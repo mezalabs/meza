@@ -22,8 +22,8 @@ import {
   listRoles,
   listUserEmojis,
   Permissions,
-  safeParseMessageText,
   pinMessage,
+  safeParseMessageText,
   toISO,
   unpinMessage,
   useAuthStore,
@@ -683,8 +683,6 @@ export function ChannelView({
   );
 }
 
-const decoder = new TextDecoder();
-
 /** Resolve author display name via the shared fallback chain. */
 function useAuthorName(authorId: string, serverId: string | undefined) {
   return useDisplayName(authorId, serverId);
@@ -1237,22 +1235,18 @@ function ReplyPreviewBar({
   parentAuthorName: string;
   onJump: () => void;
 }) {
+  const parentText = useMemo(
+    () =>
+      parentMessage ? safeParseMessageText(parentMessage.encryptedContent) : '',
+    [parentMessage],
+  );
+
   if (!parentMessage) {
     return (
       <div className="mb-0.5 text-xs text-text-subtle italic">
         Original message not available
       </div>
     );
-  }
-
-  // Check if parent is deleted (soft-deleted messages have empty content and deleted flag)
-  const parentText = useMemo(
-    () => safeParseMessageText(parentMessage.encryptedContent),
-    [parentMessage.encryptedContent],
-  );
-  if (!parentText && parentMessage.id) {
-    // Heuristic: if we have the message but it has no content, it may be deleted
-    // The server filters out deleted messages, so if we got it back empty, show placeholder
   }
 
   const parentLabel = parentAuthorName;

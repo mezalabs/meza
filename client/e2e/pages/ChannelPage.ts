@@ -273,9 +273,9 @@ export class ChannelPage {
 
   /** Assert no raw JSON content like {"t":"..."} is visible in the message list. */
   async expectNoRawJson() {
-    await expect(
-      this.messageList.locator('text=/\\{"t":/'),
-    ).toHaveCount(0, { timeout: 5_000 });
+    await expect(this.messageList.locator('text=/\\{"t":/')).toHaveCount(0, {
+      timeout: 5_000,
+    });
   }
 
   /** Wait for encryption to initialize (composer placeholder stops saying "Setting up encryption"). */

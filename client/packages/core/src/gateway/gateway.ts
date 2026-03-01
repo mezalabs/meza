@@ -200,7 +200,11 @@ async function fetchPublicKeyWithRetry(
         maxAttempts: 3,
         initialDelayMs: 2_000,
         maxDelayMs: 10_000,
-        signal: { get cancelled() { return gen !== generation; } },
+        signal: {
+          get cancelled() {
+            return gen !== generation;
+          },
+        },
         onRetry: (attempt, delayMs) => {
           console.warn(
             `[E2EE] retrying public key fetch for ${userId} (attempt ${attempt}, delay ${delayMs}ms)`,
@@ -218,7 +222,10 @@ async function fetchPublicKeyWithRetry(
  * Deduplicates concurrent requests for the same channel so that a burst
  * of messages (e.g. 50 arriving on reconnect) shares a single retry.
  */
-async function ensureChannelKey(channelId: string, gen: number): Promise<boolean> {
+async function ensureChannelKey(
+  channelId: string,
+  gen: number,
+): Promise<boolean> {
   if (hasChannelKey(channelId)) return true;
 
   const existing = keyRetryInFlight.get(channelId);
@@ -229,13 +236,18 @@ async function ensureChannelKey(channelId: string, gen: number): Promise<boolean
       await retryWithBackoff(
         async () => {
           await fetchAndCacheChannelKeys(channelId);
-          if (!hasChannelKey(channelId)) throw new Error('key not yet available');
+          if (!hasChannelKey(channelId))
+            throw new Error('key not yet available');
         },
         {
           maxAttempts: 3,
           initialDelayMs: 1_000,
           maxDelayMs: 5_000,
-          signal: { get cancelled() { return gen !== generation; } },
+          signal: {
+            get cancelled() {
+              return gen !== generation;
+            },
+          },
           onRetry: (attempt, delayMs) => {
             console.warn(
               `[E2EE] retrying channel key fetch for ${channelId} (attempt ${attempt}, delay ${delayMs}ms)`,
@@ -267,14 +279,17 @@ async function ensureChannelKey(channelId: string, gen: number): Promise<boolean
  */
 function decryptInBackground(
   channelId: string,
-  msg: Pick<Message, 'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'>,
+  msg: Pick<
+    Message,
+    'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'
+  >,
   gen: number,
 ): void {
   (async () => {
     // Bail if the gateway has reconnected since this was queued
     if (gen !== generation) return;
 
-    if (!await ensureChannelKey(channelId, gen)) return;
+    if (!(await ensureChannelKey(channelId, gen))) return;
     if (gen !== generation) return;
 
     try {
