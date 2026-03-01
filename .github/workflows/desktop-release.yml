@@ -114,9 +114,8 @@ jobs:
           # Unset empty signing vars so electron-builder doesn't treat "" as a file path
           [ -z "$CSC_LINK" ] && unset CSC_LINK CSC_KEY_PASSWORD && export CSC_IDENTITY_AUTO_DISCOVERY=false
           [ -z "$WIN_CSC_LINK" ] && unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
-          pnpm exec electron-builder --${{ matrix.platform }} --publish always
+          pnpm exec electron-builder --${{ matrix.platform }} --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # macOS code signing
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
@@ -128,7 +127,6 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Upload build artifacts
-        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.platform }}
@@ -142,3 +140,39 @@ jobs:
             client/packages/desktop/release/**/*.yaml
             !client/packages/desktop/release/**/*.blockmap
           retention-days: 30
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#desktop-v}"
+
+          # Collect all release files (flatten nested dirs)
+          mkdir -p release-files
+          find artifacts -type f \( \
+            -name "*.dmg" -o -name "*.zip" -o -name "*.exe" \
+            -o -name "*.AppImage" -o -name "*.deb" \
+            -o -name "*.yml" -o -name "*.yaml" \
+          \) -exec cp {} release-files/ \;
+
+          echo "Creating draft release for $TAG"
+          ls -lh release-files/
+
+          gh release create "$TAG" release-files/* \
+            --title "Desktop v${VERSION}" \
+            --draft \
+            --generate-notes
