@@ -517,3 +517,28 @@ tasks:
       - mkdir -p packages/desktop/out/renderer
       - cp -r packages/web/dist/* packages/desktop/out/renderer/
       - pnpm --filter @meza/desktop build
+
+  release:desktop:
+    desc: "Bump desktop version, commit, and tag (usage: task release:desktop -- 0.2.0)"
+    cmds:
+      - |
+        VERSION="{{.CLI_ARGS}}"
+        if [ -z "$VERSION" ]; then
+          echo "Usage: task release:desktop -- <version>"
+          echo "  Example: task release:desktop -- 0.2.0"
+          exit 1
+        fi
+        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "Error: version must be valid semver (got: $VERSION)"
+          exit 1
+        fi
+        cd client/packages/desktop
+        jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+        mv package.json.tmp package.json
+        cd ../../..
+        git add client/packages/desktop/package.json
+        git commit -m "chore(desktop): bump version to $VERSION"
+        git tag "desktop-v${VERSION}"
+        echo ""
+        echo "Created tag desktop-v${VERSION}"
+        echo "Run 'git push && git push --tags' to trigger the release build"

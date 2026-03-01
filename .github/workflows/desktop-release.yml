@@ -1,0 +1,139 @@
+name: Desktop Release
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. desktop-v0.1.0). Defaults to latest desktop-v* tag.'
+        required: false
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: client/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+
+      - name: Check tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#desktop-v}"
+          PKG_VERSION=$(node -p "require('./client/packages/desktop/package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Type check
+        working-directory: client
+        run: pnpm check
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: win
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: client/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        working-directory: client
+        run: pnpm --filter @meza/web build
+
+      - name: Copy web build to desktop renderer
+        shell: bash
+        run: |
+          mkdir -p client/packages/desktop/out/renderer
+          cp -r client/packages/web/dist/* client/packages/desktop/out/renderer/
+
+      - name: Verify renderer build
+        shell: bash
+        run: |
+          if [ ! -f client/packages/desktop/out/renderer/index.html ]; then
+            echo "::error::Web build was not copied to renderer directory"
+            exit 1
+          fi
+
+      - name: Build desktop (main + preload)
+        working-directory: client/packages/desktop
+        run: pnpm run build
+
+      - name: Package desktop app
+        working-directory: client/packages/desktop
+        run: pnpm exec electron-builder --${{ matrix.platform }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows code signing
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Upload build artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: |
+            client/packages/desktop/release/**/*.dmg
+            client/packages/desktop/release/**/*.zip
+            client/packages/desktop/release/**/*.exe
+            client/packages/desktop/release/**/*.AppImage
+            client/packages/desktop/release/**/*.deb
+            client/packages/desktop/release/**/*.yml
+            client/packages/desktop/release/**/*.yaml
+            !client/packages/desktop/release/**/*.blockmap
+          retention-days: 30
