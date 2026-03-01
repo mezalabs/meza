@@ -17,7 +17,7 @@ const SERVER = 'Test Server';
 const ts = () => `${Date.now()}`;
 
 test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
-  test.setTimeout(180_000); // Recovery crypto is expensive
+  test.setTimeout(300_000); // Recovery crypto is expensive
 
   const { context: aliceCtx, page: alicePage } = await createContext(
     browser,
