@@ -117,6 +117,7 @@ export async function teardownSession(): Promise<void> {
   clearMasterKey();
   identity = null;
   sessionReady = false;
+  readyListeners.length = 0;
 }
 
 /**

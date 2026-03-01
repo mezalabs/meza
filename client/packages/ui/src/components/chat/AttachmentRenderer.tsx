@@ -4,6 +4,8 @@ import {
   decryptFile,
   fetchEncryptedMedia,
   getMediaURL,
+  isSessionReady,
+  onSessionReady,
   releaseBlobURL,
   unwrapFileKey,
 } from '@meza/core';
@@ -40,12 +42,20 @@ function useDecryptedThumbnail(
 ): { blobUrl: string | null; error: boolean } {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [sessionOk, setSessionOk] = useState(isSessionReady);
   const mountedRef = useRef(true);
   const thumbKey = `thumb-${attachment.id}`;
 
+  // Wait for E2EE session to be ready before attempting decryption
+  useEffect(() => {
+    if (sessionOk) return;
+    return onSessionReady(() => setSessionOk(true));
+  }, [sessionOk]);
+
   useEffect(() => {
     mountedRef.current = true;
-    if (!isEncrypted(attachment) || !attachment.hasThumbnail) return;
+    if (!sessionOk || !isEncrypted(attachment) || !attachment.hasThumbnail)
+      return;
 
     let cancelled = false;
     (async () => {
@@ -77,7 +87,7 @@ function useDecryptedThumbnail(
       mountedRef.current = false;
       releaseBlobURL(thumbKey);
     };
-  }, [attachment, channelId, thumbKey]);
+  }, [attachment, channelId, thumbKey, sessionOk]);
 
   return { blobUrl, error };
 }
@@ -349,6 +359,7 @@ function EncryptedVideoAttachment({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const mountedRef = useRef(true);
+  const busyRef = useRef(false);
   const videoKey = `video-${attachment.id}`;
 
   useEffect(() => {
@@ -360,7 +371,8 @@ function EncryptedVideoAttachment({
   }, [videoKey]);
 
   async function handlePlay() {
-    if (videoUrl || loading) return;
+    if (videoUrl || busyRef.current || !isSessionReady()) return;
+    busyRef.current = true;
     setLoading(true);
     setError(false);
     try {
@@ -379,6 +391,7 @@ function EncryptedVideoAttachment({
       console.error(`[E2EE] Video decrypt failed for ${attachment.id}:`, err);
       if (mountedRef.current) setError(true);
     } finally {
+      busyRef.current = false;
       if (mountedRef.current) setLoading(false);
     }
   }
@@ -468,15 +481,28 @@ function EncryptedFileAttachment({
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   async function handleDownload() {
-    if (loading) return;
+    if (busyRef.current || !isSessionReady()) return;
+    busyRef.current = true;
     setLoading(true);
     setError(false);
     try {
       const encData = await fetchEncryptedMedia(attachment.id);
+      if (!mountedRef.current) return;
       const fileKey = await unwrapFileKey(channelId, attachment.encryptedKey);
+      if (!mountedRef.current) return;
       const fileBytes = await decryptFile(fileKey, encData);
+      if (!mountedRef.current) return;
       const blob = new Blob([fileBytes as BlobPart], {
         type: attachment.contentType,
       });
@@ -490,9 +516,10 @@ function EncryptedFileAttachment({
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(`[E2EE] File decrypt failed for ${attachment.id}:`, err);
-      setError(true);
+      if (mountedRef.current) setError(true);
     } finally {
-      setLoading(false);
+      busyRef.current = false;
+      if (mountedRef.current) setLoading(false);
     }
   }
 

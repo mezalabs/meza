@@ -167,6 +167,23 @@ describe('wrapFileKey / unwrapFileKey', () => {
   });
 });
 
+describe('unwrapFileKey before session ready', () => {
+  it('unwrapFileKey fails when channel keys are not initialized', async () => {
+    createChannelKey('ch1');
+    const fileKey = generateFileKey();
+    const envelope = await wrapFileKey('ch1', fileKey);
+
+    // Clear all channel key state (simulating pre-bootstrap)
+    clearChannelKeyCache();
+
+    // unwrapFileKey needs to fetch the channel key, which fails without identity
+    await expect(unwrapFileKey('ch1', envelope)).rejects.toThrow(
+      'Channel keys not initialized',
+    );
+  });
+
+});
+
 describe('full file encryption flow', () => {
   it('encrypt file + wrap key → unwrap key + decrypt file', async () => {
     createChannelKey('ch1');
