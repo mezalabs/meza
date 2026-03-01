@@ -46,14 +46,13 @@ import {
   PlusIcon,
   ScrollIcon,
   SpeakerHighIcon,
-  SpeakerSlashIcon,
   UserPlusIcon,
   UsersThreeIcon,
   VideoCameraIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
 import { ParticipantEvent } from 'livekit-client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticipants.ts';
@@ -138,13 +137,42 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
 
   // Auto-select first server if none selected (and not in DM mode)
   const serverList = useMemo(() => Object.values(servers), [servers]);
+
+  // Navigate focused pane to the first text channel of a server
+  const pendingServerNavRef = useRef<string | null>(null);
+  const navigateToDefaultChannel = useCallback((serverId: string) => {
+    const serverChannels = useChannelStore.getState().byServer[serverId];
+    if (serverChannels?.length) {
+      const first =
+        serverChannels.find((ch) => ch.type !== ChannelType.VOICE) ??
+        serverChannels[0];
+      if (first) {
+        const { focusedPaneId, setPaneContent } = useTilingStore.getState();
+        setPaneContent(focusedPaneId, {
+          type: 'channel',
+          channelId: first.id,
+        });
+        pendingServerNavRef.current = null;
+        return;
+      }
+    }
+    // Channels not loaded yet — mark pending so the effect handles it
+    pendingServerNavRef.current = serverId;
+  }, []);
+
   useEffect(() => {
     const first = serverList[0];
     if (!selectedServerId && !showDMs && first) {
       selectServer(first.id);
       navigateToDefaultChannel(first.id);
     }
-  }, [selectedServerId, showDMs, serverList, selectServer]);
+  }, [
+    selectedServerId,
+    showDMs,
+    serverList,
+    selectServer,
+    navigateToDefaultChannel,
+  ]);
 
   // Fetch DM channels and message requests when entering DM mode (and on reconnect)
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
@@ -165,28 +193,6 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       listChannelGroups(selectedServerId).catch(() => {});
     }
   }, [selectedServerId, isAuthenticated, reconnectCount]);
-
-  // Navigate focused pane to the first text channel of a server
-  const pendingServerNavRef = useRef<string | null>(null);
-  const navigateToDefaultChannel = (serverId: string) => {
-    const serverChannels = useChannelStore.getState().byServer[serverId];
-    if (serverChannels?.length) {
-      const first =
-        serverChannels.find((ch) => ch.type !== ChannelType.VOICE) ??
-        serverChannels[0];
-      if (first) {
-        const { focusedPaneId, setPaneContent } = useTilingStore.getState();
-        setPaneContent(focusedPaneId, {
-          type: 'channel',
-          channelId: first.id,
-        });
-        pendingServerNavRef.current = null;
-        return;
-      }
-    }
-    // Channels not loaded yet — mark pending so the effect handles it
-    pendingServerNavRef.current = serverId;
-  };
 
   // Fetch presence for server members (and on reconnect)
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
@@ -1127,7 +1133,7 @@ function SidebarChannelItem({
   channelType,
   isPrivate,
   serverId,
-  channelGroupId,
+  channelGroupId: _channelGroupId,
 }: {
   channelId: string;
   channelName: string;
@@ -1230,8 +1236,8 @@ function SidebarChannelItem({
               {unreadCount >= 1000 ? '999+' : unreadCount}
             </span>
           )}
-          <span
-            role="button"
+          <button
+            type="button"
             tabIndex={-1}
             className={`rounded p-0.5 text-text transition-opacity ${active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} hover:bg-bg-elevated`}
             onClick={(e) => {
@@ -1242,7 +1248,7 @@ function SidebarChannelItem({
             title="Channel settings"
           >
             <GearIcon size={16} aria-hidden="true" />
-          </span>
+          </button>
         </button>
       </SidebarContextMenu>
 

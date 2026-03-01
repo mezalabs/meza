@@ -62,11 +62,14 @@ function loadFromStorage(): Partial<AudioSettingsState> {
       result.inputDeviceId = parsed.inputDeviceId;
     if (typeof parsed.outputDeviceId === 'string')
       result.outputDeviceId = parsed.outputDeviceId;
-    if (typeof parsed.inputGain === 'number' && isFinite(parsed.inputGain))
+    if (
+      typeof parsed.inputGain === 'number' &&
+      Number.isFinite(parsed.inputGain)
+    )
       result.inputGain = Math.max(0, Math.min(2, parsed.inputGain));
     if (
       typeof parsed.outputVolume === 'number' &&
-      isFinite(parsed.outputVolume)
+      Number.isFinite(parsed.outputVolume)
     )
       result.outputVolume = Math.max(0, Math.min(1, parsed.outputVolume));
     if (
@@ -77,7 +80,7 @@ function loadFromStorage(): Partial<AudioSettingsState> {
       result.perUserVolumes = parsed.perUserVolumes;
     if (
       typeof parsed.soundboardVolume === 'number' &&
-      isFinite(parsed.soundboardVolume)
+      Number.isFinite(parsed.soundboardVolume)
     )
       result.soundboardVolume = Math.max(
         0,

@@ -295,11 +295,10 @@ export function Shell() {
               <Sidebar style={{ width: sidebarWidth }} />
               <ContentArea
                 resizeHandle={
-                  <div
+                  <hr
                     onPointerDown={handleSidebarResize}
                     onDoubleClick={handleSidebarResizeReset}
-                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10 cursor-col-resize select-none transition-colors hover:bg-white/10"
-                    role="separator"
+                    className="absolute left-0 top-0 bottom-0 w-1.5 z-10 cursor-col-resize select-none border-none bg-transparent transition-colors hover:bg-white/10"
                     aria-orientation="vertical"
                     aria-label="Resize sidebar"
                   />

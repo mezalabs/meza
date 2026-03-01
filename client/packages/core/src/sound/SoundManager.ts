@@ -117,17 +117,18 @@ class SoundManager {
     if (!buffer) return;
 
     // Resume suspended AudioContext (browser autoplay policy)
-    if (this.ctx!.state === 'suspended') {
+    if (this.ctx?.state === 'suspended') {
       try {
-        await this.ctx!.resume();
+        await this.ctx?.resume();
       } catch {
         return;
       }
     }
 
-    const source = this.ctx!.createBufferSource();
+    const source = this.ctx?.createBufferSource();
+    if (!source || !this.gain) return;
     source.buffer = buffer;
-    source.connect(this.gain!);
+    source.connect(this.gain);
     source.start();
     this.lastPlayed.set(type, Date.now());
   }
@@ -139,17 +140,18 @@ class SoundManager {
     const buffer = this.buffers.get(type);
     if (!buffer) return;
 
-    if (this.ctx!.state === 'suspended') {
+    if (this.ctx?.state === 'suspended') {
       try {
-        await this.ctx!.resume();
+        await this.ctx?.resume();
       } catch {
         return;
       }
     }
 
-    const source = this.ctx!.createBufferSource();
+    const source = this.ctx?.createBufferSource();
+    if (!source || !this.gain) return;
     source.buffer = buffer;
-    source.connect(this.gain!);
+    source.connect(this.gain);
     source.start();
   }
 

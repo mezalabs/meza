@@ -36,7 +36,7 @@ interface PaneProps {
 export function Pane({
   label = 'Empty',
   icon = '#',
-  focused = false,
+  focused: _focused = false,
   showClose = false,
   onClose,
   onFocus,

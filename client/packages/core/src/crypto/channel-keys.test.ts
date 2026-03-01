@@ -103,6 +103,7 @@ describe('wrapKeyForMembers', () => {
     }
 
     // Alice can unwrap her envelope
+    // biome-ignore lint/style/noNonNullAssertion: test assertion — value is guaranteed by test setup
     const aliceEnvelope = envelopes.find((e) => e.userId === 'alice')!;
     const unwrapped = await unwrapChannelKey(
       aliceEnvelope.envelope,
@@ -111,6 +112,7 @@ describe('wrapKeyForMembers', () => {
     expect(unwrapped).toEqual(channelKey);
 
     // Bob can unwrap his envelope
+    // biome-ignore lint/style/noNonNullAssertion: test assertion — value is guaranteed by test setup
     const bobEnvelope = envelopes.find((e) => e.userId === 'bob')!;
     const unwrappedBob = await unwrapChannelKey(
       bobEnvelope.envelope,

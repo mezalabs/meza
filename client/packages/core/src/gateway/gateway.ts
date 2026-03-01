@@ -219,7 +219,7 @@ function decryptInBackground(
         let enrichedAttachments = stored.attachments;
         if (parsed.attachmentMeta && stored.attachments.length > 0) {
           enrichedAttachments = stored.attachments.map((att) => {
-            const meta = parsed.attachmentMeta![att.id];
+            const meta = parsed.attachmentMeta?.[att.id];
             if (!meta) return att;
             return {
               ...att,

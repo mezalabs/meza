@@ -73,8 +73,10 @@ export const usePinStore = create<PinState & PinActions>()(
         if (msgId && existing.some((p) => p.message?.id === msgId)) return;
         state.byChannel[channelId] = [pin, ...existing];
         if (msgId) {
-          const ids = (state.pinnedIds[channelId] ??= {});
-          ids[msgId] = true;
+          if (!state.pinnedIds[channelId]) {
+            state.pinnedIds[channelId] = {};
+          }
+          state.pinnedIds[channelId][msgId] = true;
         }
       });
     },

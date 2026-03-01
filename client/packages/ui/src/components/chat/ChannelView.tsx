@@ -147,7 +147,7 @@ export function ChannelView({
   const wasNearBottomRef = useRef(true);
   const lastAckedIdRef = useRef<string | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const reconnectCount = useGatewayStore((s) => s.reconnectCount);
+  const _reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const needsEncryption = true; // Universal E2EE: all channels encrypted
   const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
   const hasEmojis = useEmojiStore((s) =>
@@ -347,8 +347,7 @@ export function ChannelView({
     return () => {
       ignore = true;
     };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch messages after gateway reconnect
-  }, [channelId, isAuthenticated, needsEncryption, reconnectCount]);
+  }, [channelId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps -- reconnectCount is an intentional trigger
 
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
@@ -412,7 +411,7 @@ export function ChannelView({
     return () => {
       cancelled = true;
     };
-  }, [keysAvailable, channelId, needsEncryption]);
+  }, [keysAvailable, channelId]);
 
   // Fetch server emojis so MarkdownRenderer can resolve emoji tags in messages.
   useEffect(() => {

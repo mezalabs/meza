@@ -64,7 +64,7 @@ export function MessageComposer({
   const resolvedServerId = useChannelStore(
     (s) => serverId || s.channelToServer[channelId],
   );
-  const isDM = !resolvedServerId;
+  const _isDM = !resolvedServerId;
   const channel = useChannelStore((s) =>
     resolvedServerId
       ? s.byServer[resolvedServerId]?.find((c) => c.id === channelId)
