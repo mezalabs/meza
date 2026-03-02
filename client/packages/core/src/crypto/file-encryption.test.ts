@@ -181,7 +181,6 @@ describe('unwrapFileKey before session ready', () => {
       'Channel keys not initialized',
     );
   });
-
 });
 
 describe('full file encryption flow', () => {

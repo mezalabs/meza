@@ -7,6 +7,9 @@ export default defineConfig({
   resolve: {
     dedupe: ['@phosphor-icons/react', 'react', 'react-dom'],
   },
+  optimizeDeps: {
+    exclude: ['@jitsi/rnnoise-wasm'],
+  },
   server: {
     port: 4080,
     allowedHosts: ['.share.zrok.io'],

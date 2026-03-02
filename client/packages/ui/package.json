@@ -9,12 +9,12 @@
     }
   },
   "dependencies": {
-    "@meza/core": "workspace:*",
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@livekit/components-react": "^2.9.19",
+    "@meza/core": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-context-menu": "^2.2.16",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -41,6 +41,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@jitsi/rnnoise-wasm": "^0.2.1",
     "@types/mdast": "^4.0.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
