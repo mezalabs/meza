@@ -32,6 +32,7 @@ import {
 } from '@meza/core';
 import { CaretRightIcon, DotsSixVerticalIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { roleColorHex } from '../../utils/color.ts';
 
 const EMPTY_ROLES: never[] = [];
 
@@ -472,7 +473,7 @@ function RoleCardDisplay({
           <span
             className="inline-block h-3 w-3 rounded-full"
             style={{
-              backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
+              backgroundColor: roleColorHex(role.color),
             }}
           />
         )}
@@ -600,7 +601,7 @@ function RoleForm({
 }: RoleFormProps) {
   const [name, setName] = useState(initialName);
   const [colorHex, setColorHex] = useState(
-    initialColor ? `#${initialColor.toString(16).padStart(6, '0')}` : '#000000',
+    roleColorHex(initialColor) ?? '#000000',
   );
   const [permissions, setPermissions] = useState(initialPermissions);
   const [isSelfAssignable, setIsSelfAssignable] = useState(

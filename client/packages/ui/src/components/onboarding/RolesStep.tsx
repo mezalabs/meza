@@ -1,4 +1,5 @@
 import type { Role } from '@meza/core';
+import { roleColorHex } from '../../utils/color.ts';
 
 interface RolesStepProps {
   roles: Role[];
@@ -34,11 +35,7 @@ export function RolesStep({
       <div className="flex flex-wrap gap-2">
         {roles.map((role) => {
           const selected = selectedIds.has(role.id);
-          // Convert int color to hex for display
-          const colorHex =
-            role.color > 0
-              ? `#${role.color.toString(16).padStart(6, '0')}`
-              : undefined;
+          const colorHex = roleColorHex(role.color);
 
           return (
             <button

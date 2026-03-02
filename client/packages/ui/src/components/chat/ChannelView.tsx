@@ -53,10 +53,11 @@ import {
   useState,
 } from 'react';
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
+import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
-import { Avatar } from '../shared/Avatar.tsx';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
+import { Avatar } from '../shared/Avatar.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
@@ -810,6 +811,7 @@ const MessageItem = memo(function MessageItem({
   const memberName = useAuthorName(msg.authorId, serverId);
   const authorAvatar = useAuthorAvatar(msg.authorId);
   const authorLabel = memberName;
+  const authorColor = useDisplayColor(msg.authorId, serverId);
   const time = msg.createdAt
     ? new Date(Number(msg.createdAt.seconds) * 1000)
     : null;
@@ -980,6 +982,8 @@ const MessageItem = memo(function MessageItem({
             <ReplyPreviewBar
               parentMessage={parentMessage}
               parentAuthorName={parentAuthorName}
+              parentAuthorId={parentMessage?.authorId}
+              serverId={serverId}
               onJump={() => {
                 if (msg.replyToId) onJumpToMessage(msg.replyToId);
               }}
@@ -1073,7 +1077,10 @@ const MessageItem = memo(function MessageItem({
 
           <div className="flex items-start gap-2">
             <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
-              <button type="button" className="mt-0.5 flex-shrink-0 cursor-pointer">
+              <button
+                type="button"
+                className="mt-0.5 flex-shrink-0 cursor-pointer"
+              >
                 <Avatar
                   avatarUrl={authorAvatar}
                   displayName={authorLabel}
@@ -1086,7 +1093,8 @@ const MessageItem = memo(function MessageItem({
                 <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
                   <button
                     type="button"
-                    className={`text-sm font-medium cursor-pointer hover:underline ${isOwn ? 'text-accent' : 'text-text'}`}
+                    className="text-sm font-medium cursor-pointer hover:underline text-text"
+                    style={authorColor ? { color: authorColor } : undefined}
                   >
                     {authorLabel}
                   </button>
@@ -1238,12 +1246,17 @@ const MessageItem = memo(function MessageItem({
 function ReplyPreviewBar({
   parentMessage,
   parentAuthorName,
+  parentAuthorId,
+  serverId,
   onJump,
 }: {
   parentMessage: Message | null;
   parentAuthorName: string;
+  parentAuthorId: string | undefined;
+  serverId: string | undefined;
   onJump: () => void;
 }) {
+  const parentColor = useDisplayColor(parentAuthorId ?? '', serverId);
   const parentText = useMemo(
     () =>
       parentMessage ? safeParseMessageText(parentMessage.encryptedContent) : '',
@@ -1267,7 +1280,12 @@ function ReplyPreviewBar({
       className="mb-0.5 flex items-center gap-1.5 text-xs text-text-muted hover:text-text cursor-pointer border-l-2 border-text-subtle pl-2 w-full text-left"
       onClick={onJump}
     >
-      <span className="font-medium text-text-muted">{parentLabel}</span>
+      <span
+        className="font-medium text-text-muted"
+        style={parentColor ? { color: parentColor } : undefined}
+      >
+        {parentLabel}
+      </span>
       <span className="truncate text-text-subtle">
         {snippet || 'Original message was deleted'}
       </span>
@@ -1288,6 +1306,7 @@ function ReplyAccordionEntry({
   onJump: () => void;
 }) {
   const authorName = useAuthorName(entry.authorId, serverId);
+  const authorColor = useDisplayColor(entry.authorId, serverId);
   const label = authorName;
   const time = entry.createdAt
     ? new Date(Number(entry.createdAt.seconds) * 1000)
@@ -1300,7 +1319,12 @@ function ReplyAccordionEntry({
 
   return (
     <div className="flex items-center gap-2 text-xs">
-      <span className="font-medium text-text">{label}</span>
+      <span
+        className="font-medium text-text"
+        style={authorColor ? { color: authorColor } : undefined}
+      >
+        {label}
+      </span>
       {time && (
         <span className="text-text-subtle">{formatRelativeTime(time)}</span>
       )}

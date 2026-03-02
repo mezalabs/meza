@@ -1,6 +1,7 @@
 import { useAuthStore, useMemberStore, useRoleStore } from '@meza/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
+import { roleColorHex } from '../../utils/color.ts';
 
 interface MentionItem {
   type: 'user' | 'role' | 'everyone';
@@ -83,11 +84,20 @@ export function MentionAutocomplete({
       const name =
         member.nickname || resolveDisplayName(member.userId, serverId);
       if (name.toLowerCase().startsWith(lowerQuery) || !lowerQuery) {
+        // Find highest-positioned role color for this member
+        let memberColor: number | undefined;
+        for (const role of roles) {
+          if (member.roleIds.includes(role.id) && role.color) {
+            memberColor = role.color;
+            break; // roles sorted by position desc
+          }
+        }
         results.push({
           type: 'user',
           id: member.userId,
           displayName: name,
           insertText: `<@${member.userId}>`,
+          color: memberColor,
         });
         matched++;
       }
@@ -166,8 +176,8 @@ export function MentionAutocomplete({
               style={
                 item.color
                   ? {
-                      backgroundColor: `#${item.color.toString(16).padStart(6, '0')}30`,
-                      color: `#${item.color.toString(16).padStart(6, '0')}`,
+                      backgroundColor: `${roleColorHex(item.color)}30`,
+                      color: roleColorHex(item.color),
                     }
                   : undefined
               }
@@ -175,11 +185,23 @@ export function MentionAutocomplete({
               R
             </span>
           ) : (
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-bg-surface text-xs font-medium text-text-muted">
+            <span
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-bg-surface text-xs font-medium text-text-muted"
+              style={
+                item.color ? { color: roleColorHex(item.color) } : undefined
+              }
+            >
               {item.displayName[0]?.toUpperCase() ?? '?'}
             </span>
           )}
-          <span className="truncate">
+          <span
+            className="truncate"
+            style={
+              item.type !== 'everyone' && item.color && i !== selectedIndex
+                ? { color: roleColorHex(item.color) }
+                : undefined
+            }
+          >
             {item.type === 'everyone' ? '@everyone' : item.displayName}
           </span>
         </button>

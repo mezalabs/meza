@@ -28,6 +28,7 @@ import {
   XIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { roleColorHex } from '../../utils/color.ts';
 
 /* ---------------------------------------------------------------------------
  * Types
@@ -377,7 +378,7 @@ function RoleOverridePanel({
             <span
               className="inline-block h-3 w-3 rounded-full"
               style={{
-                backgroundColor: `#${roleColor.toString(16).padStart(6, '0')}`,
+                backgroundColor: roleColorHex(roleColor),
               }}
             />
           )}
@@ -864,7 +865,7 @@ export function ChannelOverrideEditor({
                       <span
                         className="inline-block h-3 w-3 rounded-full"
                         style={{
-                          backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
+                          backgroundColor: roleColorHex(role.color),
                         }}
                       />
                     )}

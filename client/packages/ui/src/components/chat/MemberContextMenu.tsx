@@ -12,6 +12,7 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { openProfilePane, useTilingStore } from '../../stores/tiling.ts';
+import { roleColorHex } from '../../utils/color.ts';
 
 const EMPTY_ROLES: never[] = [];
 
@@ -207,7 +208,7 @@ export function MemberContextMenu({
                               <span
                                 className="inline-block h-3 w-3 shrink-0 rounded-full"
                                 style={{
-                                  backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
+                                  backgroundColor: roleColorHex(role.color),
                                 }}
                               />
                               <span className="truncate">{role.name}</span>
