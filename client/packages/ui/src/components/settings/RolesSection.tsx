@@ -30,7 +30,12 @@ import {
   useRoleStore,
   useServerStore,
 } from '@meza/core';
-import { CaretRightIcon, DotsSixVerticalIcon } from '@phosphor-icons/react';
+import {
+  CaretRightIcon,
+  CheckIcon,
+  DotsSixVerticalIcon,
+  MinusIcon,
+} from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { roleColorHex } from '../../utils/color.ts';
 
@@ -66,9 +71,7 @@ export function RolesSection({ serverId }: RolesSectionProps) {
   const server = useServerStore((s) => s.servers[serverId]);
   const members = useMemberStore((s) => s.byServer[serverId]);
   const [showCreate, setShowCreate] = useState(false);
-  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [callerPermissions, setCallerPermissions] = useState<bigint>(0n);
 
   // Drag snapshot: freeze role list during active drag to prevent gateway events
@@ -145,16 +148,9 @@ export function RolesSection({ serverId }: RolesSectionProps) {
   }, [serverId, isAuthenticated]);
 
   async function handleDeleteRole(roleId: string) {
-    setIsDeleting(true);
-    try {
-      await deleteRole(roleId);
-      useRoleStore.getState().removeRole(serverId, roleId);
-      setDeleteConfirmId(null);
-    } catch {
-      // Error handled by store
-    } finally {
-      setIsDeleting(false);
-    }
+    await deleteRole(roleId);
+    useRoleStore.getState().removeRole(serverId, roleId);
+    setExpandedRoleId(null);
   }
 
   function handleDragStart() {
@@ -200,34 +196,32 @@ export function RolesSection({ serverId }: RolesSectionProps) {
       </div>
 
       {showCreate && (
-        <RoleForm
-          serverId={serverId}
-          callerPermissions={callerPermissions}
-          isOwner={isOwner}
-          onCancel={() => setShowCreate(false)}
-          onDone={() => setShowCreate(false)}
-        />
+        <div className="mb-3 rounded-lg border border-border bg-bg-surface p-3">
+          <RoleForm
+            serverId={serverId}
+            callerPermissions={callerPermissions}
+            isOwner={isOwner}
+            onCancel={() => setShowCreate(false)}
+            onDone={() => setShowCreate(false)}
+          />
+        </div>
       )}
 
       {roles.length === 0 && !showCreate && (
         <p className="text-sm text-text-muted">No roles configured.</p>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1.5">
         {/* Non-draggable: roles above caller's position */}
         {aboveCallerRoles.map((role) => (
-          <RoleCard
+          <RoleItem
             key={role.id}
             role={role}
             serverId={serverId}
             isEveryone={false}
             canEdit={false}
-            editingRoleId={editingRoleId}
-            setEditingRoleId={setEditingRoleId}
-            deleteConfirmId={deleteConfirmId}
-            setDeleteConfirmId={setDeleteConfirmId}
-            isDeleting={isDeleting}
-            onDelete={handleDeleteRole}
+            isExpanded={expandedRoleId === role.id}
+            onToggle={() => {}}
             callerPermissions={callerPermissions}
             isOwner={isOwner}
           />
@@ -245,18 +239,17 @@ export function RolesSection({ serverId }: RolesSectionProps) {
             strategy={verticalListSortingStrategy}
           >
             {draggableRoles.map((role) => (
-              <SortableRoleCard
+              <SortableRoleItem
                 key={role.id}
                 role={role}
                 serverId={serverId}
-                editingRoleId={editingRoleId}
-                setEditingRoleId={setEditingRoleId}
-                deleteConfirmId={deleteConfirmId}
-                setDeleteConfirmId={setDeleteConfirmId}
-                isDeleting={isDeleting}
-                onDelete={handleDeleteRole}
+                isExpanded={expandedRoleId === role.id}
+                onToggle={() =>
+                  setExpandedRoleId(expandedRoleId === role.id ? null : role.id)
+                }
                 callerPermissions={callerPermissions}
                 isOwner={isOwner}
+                onDelete={handleDeleteRole}
               />
             ))}
           </SortableContext>
@@ -264,17 +257,17 @@ export function RolesSection({ serverId }: RolesSectionProps) {
 
         {/* @everyone always at the bottom */}
         {everyoneRole && (
-          <RoleCard
+          <RoleItem
             role={everyoneRole}
             serverId={serverId}
             isEveryone={true}
             canEdit={true}
-            editingRoleId={editingRoleId}
-            setEditingRoleId={setEditingRoleId}
-            deleteConfirmId={deleteConfirmId}
-            setDeleteConfirmId={setDeleteConfirmId}
-            isDeleting={isDeleting}
-            onDelete={handleDeleteRole}
+            isExpanded={expandedRoleId === everyoneRole.id}
+            onToggle={() =>
+              setExpandedRoleId(
+                expandedRoleId === everyoneRole.id ? null : everyoneRole.id,
+              )
+            }
             callerPermissions={callerPermissions}
             isOwner={isOwner}
           />
@@ -285,10 +278,10 @@ export function RolesSection({ serverId }: RolesSectionProps) {
 }
 
 /* ---------------------------------------------------------------------------
- * Role Card (non-sortable)
+ * Role Item (non-sortable, accordion style)
  * --------------------------------------------------------------------------- */
 
-interface RoleCardProps {
+interface RoleItemProps {
   role: {
     id: string;
     name: string;
@@ -300,81 +293,111 @@ interface RoleCardProps {
   serverId: string;
   isEveryone: boolean;
   canEdit: boolean;
-  editingRoleId: string | null;
-  setEditingRoleId: (id: string | null) => void;
-  deleteConfirmId: string | null;
-  setDeleteConfirmId: (id: string | null) => void;
-  isDeleting: boolean;
-  onDelete: (id: string) => void;
+  isExpanded: boolean;
+  onToggle: () => void;
   callerPermissions: bigint;
   isOwner: boolean;
+  onDelete?: (id: string) => Promise<void>;
 }
 
-function RoleCard({
+function RoleItem({
   role,
   serverId,
   isEveryone,
   canEdit,
-  editingRoleId,
-  setEditingRoleId,
-  deleteConfirmId,
-  setDeleteConfirmId,
-  isDeleting,
-  onDelete,
+  isExpanded,
+  onToggle,
   callerPermissions,
   isOwner,
-}: RoleCardProps) {
+  onDelete,
+}: RoleItemProps) {
   const permCount = countPermissions(role.permissions);
 
   return (
-    <div className="rounded-lg border border-border bg-bg-surface p-3">
-      {editingRoleId === role.id ? (
-        <RoleForm
-          serverId={serverId}
-          roleId={role.id}
-          initialName={role.name}
-          initialColor={role.color}
-          initialPermissions={role.permissions}
-          initialIsSelfAssignable={role.isSelfAssignable}
-          isEveryone={isEveryone}
-          callerPermissions={callerPermissions}
-          isOwner={isOwner}
-          onCancel={() => setEditingRoleId(null)}
-          onDone={() => setEditingRoleId(null)}
-        />
-      ) : (
-        <RoleCardDisplay
-          role={role}
-          isEveryone={isEveryone}
-          canEdit={canEdit}
-          permCount={permCount}
-          setEditingRoleId={setEditingRoleId}
-          deleteConfirmId={deleteConfirmId}
-          setDeleteConfirmId={setDeleteConfirmId}
-          isDeleting={isDeleting}
-          onDelete={onDelete}
-        />
+    <div className="rounded-lg border border-border bg-bg-surface">
+      <button
+        type="button"
+        onClick={canEdit ? onToggle : undefined}
+        className={`flex w-full items-center gap-2 px-3 py-2.5 text-left ${
+          canEdit ? 'cursor-pointer' : 'cursor-default'
+        }`}
+      >
+        {canEdit && (
+          <CaretRightIcon
+            size={16}
+            className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+        )}
+        {role.color !== 0 && (
+          <span
+            className="inline-block h-3 w-3 rounded-full"
+            style={{
+              backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
+            }}
+          />
+        )}
+        <span className="text-sm font-medium text-text">
+          {isEveryone ? '@everyone' : role.name}
+        </span>
+        {isEveryone && (
+          <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-text-muted">
+            default
+          </span>
+        )}
+        <span className="rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent">
+          {permCount} {permCount === 1 ? 'permission' : 'permissions'}
+        </span>
+        {!canEdit && (
+          <span className="ml-auto rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-text-muted">
+            higher role
+          </span>
+        )}
+      </button>
+
+      {isExpanded && canEdit && (
+        <div className="px-3 pb-3">
+          <RoleForm
+            serverId={serverId}
+            roleId={role.id}
+            initialName={role.name}
+            initialColor={role.color}
+            initialPermissions={role.permissions}
+            initialIsSelfAssignable={role.isSelfAssignable}
+            isEveryone={isEveryone}
+            callerPermissions={callerPermissions}
+            isOwner={isOwner}
+            onCancel={onToggle}
+            onDone={onToggle}
+            onDelete={!isEveryone ? onDelete : undefined}
+          />
+        </div>
       )}
     </div>
   );
 }
 
 /* ---------------------------------------------------------------------------
- * Sortable Role Card (draggable)
+ * Sortable Role Item (draggable, accordion style)
  * --------------------------------------------------------------------------- */
 
-function SortableRoleCard({
+function SortableRoleItem({
   role,
   serverId,
-  editingRoleId,
-  setEditingRoleId,
-  deleteConfirmId,
-  setDeleteConfirmId,
-  isDeleting,
-  onDelete,
+  isExpanded,
+  onToggle,
   callerPermissions,
   isOwner,
-}: Omit<RoleCardProps, 'isEveryone' | 'canEdit'>) {
+  onDelete,
+}: {
+  role: RoleItemProps['role'];
+  serverId: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  callerPermissions: bigint;
+  isOwner: boolean;
+  onDelete: (id: string) => Promise<void>;
+}) {
   const {
     attributes,
     listeners,
@@ -396,45 +419,60 @@ function SortableRoleCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="rounded-lg border border-border bg-bg-surface p-3"
+      className="rounded-lg border border-border bg-bg-surface"
     >
-      {editingRoleId === role.id ? (
-        <RoleForm
-          serverId={serverId}
-          roleId={role.id}
-          initialName={role.name}
-          initialColor={role.color}
-          initialPermissions={role.permissions}
-          initialIsSelfAssignable={role.isSelfAssignable}
-          callerPermissions={callerPermissions}
-          isOwner={isOwner}
-          onCancel={() => setEditingRoleId(null)}
-          onDone={() => setEditingRoleId(null)}
-        />
-      ) : (
-        <div className="flex items-center gap-2">
-          {/* Drag handle */}
-          <button
-            type="button"
-            className="cursor-grab touch-none text-text-muted hover:text-text active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <DotsSixVerticalIcon size={16} aria-hidden="true" />
-          </button>
-          <div className="flex-1">
-            <RoleCardDisplay
-              role={role}
-              isEveryone={false}
-              canEdit={true}
-              permCount={permCount}
-              setEditingRoleId={setEditingRoleId}
-              deleteConfirmId={deleteConfirmId}
-              setDeleteConfirmId={setDeleteConfirmId}
-              isDeleting={isDeleting}
-              onDelete={onDelete}
+      <div className="flex items-center">
+        {/* Drag handle */}
+        <button
+          type="button"
+          className="cursor-grab touch-none py-2.5 pl-2 text-text-muted hover:text-text active:cursor-grabbing"
+          {...attributes}
+          {...listeners}
+        >
+          <DotsSixVerticalIcon size={16} aria-hidden="true" />
+        </button>
+
+        {/* Clickable header */}
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center gap-2 px-2 py-2.5 text-left"
+        >
+          <CaretRightIcon
+            size={16}
+            className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+            aria-hidden="true"
+          />
+          {role.color !== 0 && (
+            <span
+              className="inline-block h-3 w-3 rounded-full"
+              style={{
+                backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
+              }}
             />
-          </div>
+          )}
+          <span className="text-sm font-medium text-text">{role.name}</span>
+          <span className="rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent">
+            {permCount} {permCount === 1 ? 'permission' : 'permissions'}
+          </span>
+        </button>
+      </div>
+
+      {isExpanded && (
+        <div className="px-3 pb-3">
+          <RoleForm
+            serverId={serverId}
+            roleId={role.id}
+            initialName={role.name}
+            initialColor={role.color}
+            initialPermissions={role.permissions}
+            initialIsSelfAssignable={role.isSelfAssignable}
+            callerPermissions={callerPermissions}
+            isOwner={isOwner}
+            onCancel={onToggle}
+            onDone={onToggle}
+            onDelete={onDelete}
+          />
         </div>
       )}
     </div>
@@ -442,129 +480,76 @@ function SortableRoleCard({
 }
 
 /* ---------------------------------------------------------------------------
- * Shared role card display content
+ * PermissionToggle — grant / not granted (button-group style like overrides)
  * --------------------------------------------------------------------------- */
 
-function RoleCardDisplay({
-  role,
-  isEveryone,
-  canEdit,
-  permCount,
-  setEditingRoleId,
-  deleteConfirmId,
-  setDeleteConfirmId,
-  isDeleting,
-  onDelete,
-}: {
-  role: { id: string; name: string; color: number };
-  isEveryone: boolean;
-  canEdit: boolean;
-  permCount: number;
-  setEditingRoleId: (id: string | null) => void;
-  deleteConfirmId: string | null;
-  setDeleteConfirmId: (id: string | null) => void;
-  isDeleting: boolean;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        {role.color !== 0 && (
-          <span
-            className="inline-block h-3 w-3 rounded-full"
-            style={{
-              backgroundColor: roleColorHex(role.color),
-            }}
-          />
-        )}
-        <span className="font-medium text-text">
-          {isEveryone ? '@everyone' : role.name}
-        </span>
-        {isEveryone && (
-          <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-text-muted">
-            default
-          </span>
-        )}
-        <span className="rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent">
-          {permCount} {permCount === 1 ? 'permission' : 'permissions'}
-        </span>
-      </div>
-      <div className="flex items-center gap-1">
-        {canEdit && (
-          <button
-            type="button"
-            onClick={() => setEditingRoleId(role.id)}
-            className="rounded-md px-2 py-1 text-sm text-text-muted hover:bg-bg-elevated hover:text-text"
-          >
-            Edit
-          </button>
-        )}
-        {!isEveryone && canEdit && deleteConfirmId === role.id ? (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={() => onDelete(role.id)}
-              className="rounded-md bg-error px-2 py-1 text-sm font-medium text-white hover:bg-error/80 disabled:opacity-50"
-            >
-              {isDeleting ? 'Deleting...' : 'Confirm'}
-            </button>
-            <button
-              type="button"
-              disabled={isDeleting}
-              onClick={() => setDeleteConfirmId(null)}
-              className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : !isEveryone && canEdit ? (
-          <button
-            type="button"
-            onClick={() => setDeleteConfirmId(role.id)}
-            className="rounded-md px-2 py-1 text-sm text-error hover:bg-error/10"
-          >
-            Delete
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------------------------------
- * Toggle Switch (reuses DefaultPrivacySection pattern)
- * --------------------------------------------------------------------------- */
-
-function Toggle({
-  checked,
+function PermissionToggle({
+  granted,
   onChange,
   disabled,
   label,
 }: {
-  checked: boolean;
-  onChange: () => void;
+  granted: boolean;
+  onChange: (next: boolean) => void;
   disabled?: boolean;
-  label?: string;
+  label: string;
 }) {
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (disabled) return;
+    if (
+      e.key === 'ArrowRight' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowUp'
+    ) {
+      e.preventDefault();
+      onChange(!granted);
+    }
+  }
+
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={onChange}
-      disabled={disabled}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-        checked ? 'bg-accent' : 'bg-bg-surface'
-      }`}
+    <div
+      role="radiogroup"
+      aria-label={`${label} permission`}
+      className="flex items-center gap-0.5"
+      onKeyDown={handleKeyDown}
     >
-      <span
-        className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
+      {/* biome-ignore lint/a11y/useSemanticElements: toggle uses custom radio buttons for visual consistency with channel overrides */}
+      <button
+        type="button"
+        role="radio"
+        aria-checked={!granted}
+        aria-label="Not granted"
+        disabled={disabled}
+        onClick={() => onChange(false)}
+        className={`flex h-7 w-7 items-center justify-center rounded-l-md text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          !granted
+            ? 'bg-bg-elevated text-text'
+            : 'bg-bg-elevated text-text-subtle hover:text-text'
         }`}
-      />
-    </button>
+        tabIndex={!granted ? 0 : -1}
+      >
+        <MinusIcon size={14} aria-hidden="true" />
+      </button>
+
+      {/* biome-ignore lint/a11y/useSemanticElements: toggle uses custom radio buttons for visual consistency with channel overrides */}
+      <button
+        type="button"
+        role="radio"
+        aria-checked={granted}
+        aria-label="Granted"
+        disabled={disabled}
+        onClick={() => onChange(true)}
+        className={`flex h-7 w-7 items-center justify-center rounded-r-md text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          granted
+            ? 'bg-success/20 text-success'
+            : 'bg-bg-elevated text-text-subtle hover:text-text'
+        }`}
+        tabIndex={granted ? 0 : -1}
+      >
+        <CheckIcon size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
@@ -584,6 +569,7 @@ interface RoleFormProps {
   isOwner: boolean;
   onCancel: () => void;
   onDone: () => void;
+  onDelete?: (roleId: string) => Promise<void>;
 }
 
 function RoleForm({
@@ -598,6 +584,7 @@ function RoleForm({
   isOwner,
   onCancel,
   onDone,
+  onDelete,
 }: RoleFormProps) {
   const [name, setName] = useState(initialName);
   const [colorHex, setColorHex] = useState(
@@ -610,19 +597,20 @@ function RoleForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [pendingAdminGrant, setPendingAdminGrant] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  function togglePermission(perm: bigint) {
-    // If granting ADMINISTRATOR, show confirmation instead of toggling directly.
+  function togglePermission(perm: bigint, granted: boolean) {
+    // If granting ADMINISTRATOR, show confirmation instead.
     if (
+      granted &&
       perm === Permissions.ADMINISTRATOR &&
       (permissions & Permissions.ADMINISTRATOR) === 0n
     ) {
       setPendingAdminGrant(true);
       return;
     }
-    setPermissions((prev) =>
-      (prev & perm) !== 0n ? prev & ~perm : prev | perm,
-    );
+    setPermissions((prev) => (granted ? prev | perm : prev & ~perm));
   }
 
   function confirmAdminGrant() {
@@ -670,130 +658,180 @@ function RoleForm({
     }
   }
 
+  async function handleDelete() {
+    if (!roleId || !onDelete) return;
+    setIsDeleting(true);
+    try {
+      await onDelete(roleId);
+    } catch {
+      setSubmitError('Failed to delete role');
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(false);
+    }
+  }
+
   const hasAdmin = (permissions & Permissions.ADMINISTRATOR) !== 0n;
 
   return (
-    <div className="rounded-lg border border-border bg-bg-overlay p-3">
-      <div className="flex flex-col gap-4">
-        {/* @everyone header */}
-        {isEveryone && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-text">@everyone</span>
-            <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-text-muted">
-              default
-            </span>
-            <span className="text-xs text-text-subtle">
-              Base permissions for all server members
-            </span>
-          </div>
-        )}
-
-        {/* Name + Color row (hidden for @everyone) */}
-        {!isEveryone && (
-          <div className="flex gap-3">
-            <div className="flex-1">
-              {/* biome-ignore lint/a11y/noLabelWithoutControl: label wraps its input */}
-              <label className="block text-sm font-medium text-text-muted">
-                Name
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={isSubmitting}
-                placeholder="Role name"
-                className="mt-1 w-full rounded-md border border-border bg-bg-surface px-3 py-1.5 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none disabled:opacity-50"
-              />
-            </div>
-            <div>
-              {/* biome-ignore lint/a11y/noLabelWithoutControl: label is adjacent to its input */}
-              <label className="block text-sm font-medium text-text-muted">
-                Color
-              </label>
-              <input
-                type="color"
-                value={colorHex}
-                onChange={(e) => setColorHex(e.target.value)}
-                disabled={isSubmitting}
-                className="mt-1 h-[34px] w-12 cursor-pointer rounded-md border border-border bg-bg-surface"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Self-assignable checkbox (hidden for @everyone) */}
-        {!isEveryone && (
-          <label className="flex items-center gap-2 text-sm text-text">
-            <input
-              type="checkbox"
-              checked={isSelfAssignable}
-              onChange={() => setIsSelfAssignable((v) => !v)}
-              disabled={isSubmitting}
-              className="rounded border-border"
-            />
-            Allow members to self-assign this role
-          </label>
-        )}
-
-        {/* Administrator warning banner */}
-        {hasAdmin && (
-          <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
-            This role has Administrator privileges. Members with this role
-            bypass all permission checks and channel overrides.
-          </div>
-        )}
-
-        {/* Pending admin grant confirmation */}
-        {pendingAdminGrant && (
-          <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2">
-            <p className="text-sm font-medium text-warning">
-              Grant Administrator access?
-            </p>
-            <p className="mt-1 text-xs text-text-muted">
-              Members with this role will have full access to every permission
-              and bypass all channel overrides. This cannot be undone easily.
-            </p>
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={confirmAdminGrant}
-                className="rounded-md bg-warning px-3 py-1 text-sm font-medium text-black hover:bg-warning/80"
-              >
-                Grant Administrator
-              </button>
-              <button
-                type="button"
-                onClick={cancelAdminGrant}
-                className="rounded-md bg-bg-surface px-3 py-1 text-sm text-text-muted hover:bg-bg-elevated hover:text-text"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Permission categories */}
-        <div>
-          <span className="block text-sm font-medium text-text-muted">
-            Permissions
+    <div className="flex flex-col gap-4">
+      {/* @everyone header */}
+      {isEveryone && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-text">@everyone</span>
+          <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-text-muted">
+            default
           </span>
-          <div className="mt-2 flex flex-col gap-1">
-            {CATEGORY_ORDER.map((cat) => (
-              <PermissionCategory
-                key={cat}
-                category={cat}
-                permissions={permissions}
-                onToggle={togglePermission}
-                callerHasPerm={callerHasPerm}
-                disabled={isSubmitting}
-              />
-            ))}
+          <span className="text-xs text-text-subtle">
+            Base permissions for all server members
+          </span>
+        </div>
+      )}
+
+      {/* Name + Color row (hidden for @everyone) */}
+      {!isEveryone && (
+        <div className="flex gap-3">
+          <div className="flex-1">
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label wraps its input */}
+            <label className="block text-sm font-medium text-text-muted">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={isSubmitting}
+              placeholder="Role name"
+              className="mt-1 w-full rounded-md border border-border bg-bg-surface px-3 py-1.5 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none disabled:opacity-50"
+            />
+          </div>
+          <div>
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: label is adjacent to its input */}
+            <label className="block text-sm font-medium text-text-muted">
+              Color
+            </label>
+            <input
+              type="color"
+              value={colorHex}
+              onChange={(e) => setColorHex(e.target.value)}
+              disabled={isSubmitting}
+              className="mt-1 h-[34px] w-12 cursor-pointer rounded-md border border-border bg-bg-surface"
+            />
           </div>
         </div>
+      )}
 
-        {submitError && <p className="text-xs text-error">{submitError}</p>}
+      {/* Self-assignable checkbox (hidden for @everyone) */}
+      {!isEveryone && (
+        <label className="flex items-center gap-2 text-sm text-text">
+          <input
+            type="checkbox"
+            checked={isSelfAssignable}
+            onChange={() => setIsSelfAssignable((v) => !v)}
+            disabled={isSubmitting}
+            className="rounded border-border"
+          />
+          Allow members to self-assign this role
+        </label>
+      )}
 
-        <div className="flex justify-end gap-2">
+      {/* Administrator warning banner */}
+      {hasAdmin && (
+        <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-sm text-warning">
+          This role has Administrator privileges. Members with this role bypass
+          all permission checks and channel overrides.
+        </div>
+      )}
+
+      {/* Pending admin grant confirmation */}
+      {pendingAdminGrant && (
+        <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2">
+          <p className="text-sm font-medium text-warning">
+            Grant Administrator access?
+          </p>
+          <p className="mt-1 text-xs text-text-muted">
+            Members with this role will have full access to every permission and
+            bypass all channel overrides. This cannot be undone easily.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={confirmAdminGrant}
+              className="rounded-md bg-warning px-3 py-1 text-sm font-medium text-black hover:bg-warning/80"
+            >
+              Grant Administrator
+            </button>
+            <button
+              type="button"
+              onClick={cancelAdminGrant}
+              className="rounded-md bg-bg-surface px-3 py-1 text-sm text-text-muted hover:bg-bg-elevated hover:text-text"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Permission categories */}
+      <div>
+        <span className="block text-sm font-medium text-text-muted">
+          Permissions
+        </span>
+        <div className="mt-2 flex flex-col gap-1">
+          {CATEGORY_ORDER.map((cat) => (
+            <PermissionCategory
+              key={cat}
+              category={cat}
+              permissions={permissions}
+              onToggle={togglePermission}
+              callerHasPerm={callerHasPerm}
+              disabled={isSubmitting}
+            />
+          ))}
+        </div>
+      </div>
+
+      {submitError && <p className="text-xs text-error">{submitError}</p>}
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-between">
+        {/* Delete (left side, only for existing non-@everyone roles) */}
+        <div>
+          {roleId &&
+            onDelete &&
+            !isEveryone &&
+            (deleteConfirm ? (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleDelete}
+                  className="rounded-md bg-error px-2 py-1 text-sm font-medium text-white hover:bg-error/80 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setDeleteConfirm(false)}
+                  className="rounded-md px-2 py-1 text-sm text-text-muted hover:text-text"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm(true)}
+                className="rounded-md px-2 py-1 text-sm text-error hover:bg-error/10"
+              >
+                Delete Role
+              </button>
+            ))}
+        </div>
+
+        {/* Save / Cancel (right side) */}
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={onCancel}
@@ -823,7 +861,7 @@ function RoleForm({
 }
 
 /* ---------------------------------------------------------------------------
- * Permission Category (collapsible <details>)
+ * Permission Category (collapsible <details>, borderless)
  * --------------------------------------------------------------------------- */
 
 function PermissionCategory({
@@ -835,7 +873,7 @@ function PermissionCategory({
 }: {
   category: PermCategory;
   permissions: bigint;
-  onToggle: (perm: bigint) => void;
+  onToggle: (perm: bigint, granted: boolean) => void;
   callerHasPerm: (perm: bigint) => boolean;
   disabled: boolean;
 }) {
@@ -843,8 +881,8 @@ function PermissionCategory({
   const permKeys = PERMISSIONS_BY_CATEGORY[category];
 
   return (
-    <details className="group rounded-md border border-border bg-bg-surface">
-      <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 text-sm font-medium text-text">
+    <details className="group">
+      <summary className="flex cursor-pointer select-none items-center gap-2 py-2 text-sm font-medium text-text">
         <CaretRightIcon
           size={16}
           className="shrink-0 text-text-muted transition-transform group-open:rotate-90"
@@ -856,12 +894,12 @@ function PermissionCategory({
           {permKeys.length === 1 ? 'permission' : 'permissions'}
         </span>
       </summary>
-      <div className="flex flex-col gap-0.5 px-3 pb-3">
+      <div className="flex flex-col gap-0.5 pb-1 pl-6">
         {permKeys.map((key) => {
           const info = PERMISSION_INFO[key];
           const bit = Permissions[key as keyof typeof Permissions];
           if (!info || bit === undefined) return null;
-          const isOn = (permissions & bit) !== 0n;
+          const isGranted = (permissions & bit) !== 0n;
           const canToggle = callerHasPerm(bit);
 
           return (
@@ -878,9 +916,9 @@ function PermissionCategory({
                   {info.description}
                 </div>
               </div>
-              <Toggle
-                checked={isOn}
-                onChange={() => onToggle(bit)}
+              <PermissionToggle
+                granted={isGranted}
+                onChange={(next) => onToggle(bit, next)}
                 disabled={disabled || !canToggle}
                 label={info.name}
               />
