@@ -366,20 +366,20 @@ client/packages/mobile/src/hooks/useNavigation.ts      (store → router bridge)
 
 **Client-side tasks:**
 
-- [ ] Configure `expo-notifications` plugin in `app.json`
-- [ ] Request notification permissions on first launch (after login)
-- [ ] Get push token (`getDevicePushTokenAsync` for raw FCM/APNs token)
-- [ ] Send push token via `RegisterDevice` RPC
-- [ ] Handle push token rotation (`addPushTokenListener`)
-- [ ] Set notification handler for foreground notifications
-- [ ] Register background notification task via `expo-task-manager`
-- [ ] Handle notification tap → deep link to channel:
-  - [ ] Parse `channel_id` from notification data
-  - [ ] Navigate via Expo Router: `router.push(\`/(app)/(channels)/${channelId}\`)`
-  - [ ] Handle cold start from notification tap (auth gate → bootstrap → navigate)
-- [ ] Android: create notification channels (`messages`, `calls`)
-- [ ] Configure `google-services.json` for FCM (Android)
-- [ ] Test: background app → send message from web → push appears → tap → opens correct channel
+- [x] Configure `expo-notifications` plugin in `app.json`
+- [x] Request notification permissions on first launch (after login)
+- [x] Get push token (`getDevicePushTokenAsync` for raw FCM/APNs token)
+- [x] Send push token via `RegisterDevice` RPC
+- [x] Handle push token rotation (`addPushTokenListener`)
+- [x] Set notification handler for foreground notifications
+- [ ] Register background notification task via `expo-task-manager` (deferred — requires server-side FCM/APNs)
+- [x] Handle notification tap → deep link to channel:
+  - [x] Parse `channel_id` from notification data
+  - [x] Navigate via Expo Router: `router.push(\`/(app)/(channels)/${channelId}\`)`
+  - [x] Handle cold start from notification tap (auth gate → bootstrap → navigate)
+- [x] Android: create notification channels (`messages`, `calls`)
+- [ ] Configure `google-services.json` for FCM (Android) (deferred — requires Firebase project)
+- [ ] Test: background app → send message from web → push appears → tap → opens correct channel (requires server-side)
 
 **Success criteria:** Push notifications delivered reliably on both platforms. Tapping navigates to the correct channel, even on cold start.
 

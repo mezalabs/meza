@@ -15,6 +15,11 @@ import {
   useAuthStore,
 } from '@meza/core';
 import { AppState, type AppStateStatus } from 'react-native';
+import {
+  registerForPushNotifications,
+  setupNotificationResponseHandler,
+  setupTokenRefreshHandler,
+} from './push';
 
 let initialized = false;
 
@@ -34,7 +39,14 @@ export function initSessionLifecycle() {
     bootstrapSession().catch((err) => {
       console.warn('[Mobile] bootstrapSession failed on startup:', err);
     });
+    registerForPushNotifications().catch((err) => {
+      console.warn('[Mobile] push registration failed on startup:', err);
+    });
   }
+
+  // Set up push notification handlers
+  setupNotificationResponseHandler();
+  setupTokenRefreshHandler();
 
   // Subscribe to auth state changes
   let wasAuthenticated = state.isAuthenticated;
@@ -44,6 +56,10 @@ export function initSessionLifecycle() {
       gatewayConnect(next.accessToken);
       bootstrapSession().catch((err) => {
         console.warn('[Mobile] bootstrapSession failed:', err);
+      });
+      // Register push token after login
+      registerForPushNotifications().catch((err) => {
+        console.warn('[Mobile] push registration failed:', err);
       });
     } else if (!next.isAuthenticated && wasAuthenticated) {
       // Logged out
