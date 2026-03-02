@@ -1,6 +1,8 @@
 import { useAuthStore, useMemberStore, useRoleStore } from '@meza/core';
 import { useMemo } from 'react';
+import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
+import { roleColorHex } from '../../utils/color.ts';
 
 interface MentionBadgeProps {
   type: 'user' | 'role' | 'everyone';
@@ -44,24 +46,32 @@ export function MentionBadge({ type, userId, serverId }: MentionBadgeProps) {
     return role?.color || undefined;
   }, [type, userId, roles]);
 
+  // User mention color: resolve from highest role (server) or profile (DM)
+  const userDisplayColor = useDisplayColor(
+    type === 'user' ? (userId ?? '') : '',
+    serverId,
+  );
+
   const isCurrentUser = type === 'user' && userId === currentUserId;
 
-  const colorHex = roleColor
-    ? `#${roleColor.toString(16).padStart(6, '0')}`
-    : undefined;
+  const colorHex = roleColor ? roleColorHex(roleColor) : undefined;
+
+  // Determine effective mention color
+  const mentionColor =
+    type === 'role' ? colorHex : type === 'user' ? userDisplayColor : undefined;
 
   return (
     <span
       className={`rounded px-0.5 cursor-pointer ${
         isCurrentUser
           ? 'bg-accent/25 text-accent font-medium'
-          : type === 'role' && colorHex
+          : mentionColor
             ? 'font-medium'
             : 'bg-accent/15 text-accent'
       }`}
       style={
-        type === 'role' && colorHex
-          ? { backgroundColor: `${colorHex}20`, color: colorHex }
+        !isCurrentUser && mentionColor
+          ? { backgroundColor: `${mentionColor}20`, color: mentionColor }
           : undefined
       }
     >

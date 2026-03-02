@@ -14,6 +14,7 @@ import {
   useServerStore,
 } from '@meza/core';
 import { useEffect, useMemo, useState } from 'react';
+import { roleColorHex } from '../../utils/color.ts';
 
 interface OnboardingSectionProps {
   serverId: string;
@@ -355,8 +356,7 @@ function RoleToggle({
   checked: boolean;
   onChange: (checked: boolean) => void;
 }) {
-  const colorHex =
-    role.color > 0 ? `#${role.color.toString(16).padStart(6, '0')}` : undefined;
+  const colorHex = roleColorHex(role.color);
 
   return (
     <label className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-bg-surface cursor-pointer">

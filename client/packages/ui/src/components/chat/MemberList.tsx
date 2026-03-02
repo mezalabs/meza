@@ -7,7 +7,9 @@ import {
   useUsersStore,
 } from '@meza/core';
 import { useEffect, useMemo } from 'react';
+import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
+import { roleColorHex } from '../../utils/color.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 import { UserProfileTrigger } from '../shared/UserProfileTrigger.tsx';
@@ -103,7 +105,7 @@ export function MemberList({ serverId }: MemberListProps) {
               <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{
-                  backgroundColor: `#${group.roleColor.toString(16).padStart(6, '0')}`,
+                  backgroundColor: roleColorHex(group.roleColor),
                 }}
               />
             )}
@@ -112,35 +114,56 @@ export function MemberList({ serverId }: MemberListProps) {
             </h3>
           </div>
           {group.members.map((m) => (
-            <MemberContextMenu
+            <MemberRow
               key={m.userId}
               serverId={serverId}
               userId={m.userId}
               displayName={m.displayName}
-            >
-              <UserProfileTrigger userId={m.userId} serverId={serverId}>
-                <div className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-bg-surface">
-                  <div className="relative">
-                    <Avatar
-                      avatarUrl={m.avatarUrl}
-                      displayName={m.displayName}
-                      size="md"
-                    />
-                    <PresenceDot
-                      userId={m.userId}
-                      size="sm"
-                      className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-overlay"
-                    />
-                  </div>
-                  <span className="truncate text-sm text-text">
-                    {m.displayName}
-                  </span>
-                </div>
-              </UserProfileTrigger>
-            </MemberContextMenu>
+              avatarUrl={m.avatarUrl}
+            />
           ))}
         </div>
       ))}
     </div>
+  );
+}
+
+function MemberRow({
+  serverId,
+  userId,
+  displayName,
+  avatarUrl,
+}: {
+  serverId: string;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string;
+}) {
+  const displayColor = useDisplayColor(userId, serverId);
+  return (
+    <MemberContextMenu
+      serverId={serverId}
+      userId={userId}
+      displayName={displayName}
+    >
+      <UserProfileTrigger userId={userId} serverId={serverId}>
+        <div className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-bg-surface">
+          <div className="relative">
+            <Avatar avatarUrl={avatarUrl} displayName={displayName} size="md" />
+            <PresenceDot
+              userId={userId}
+              size="sm"
+              className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-overlay"
+            />
+          </div>
+          <span
+            className="truncate text-sm text-text"
+            style={displayColor ? { color: displayColor } : undefined}
+          >
+            {displayName}
+          </span>
+        </div>
+      </UserProfileTrigger>
+    </MemberContextMenu>
   );
 }

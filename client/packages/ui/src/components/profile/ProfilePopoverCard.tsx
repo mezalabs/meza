@@ -1,33 +1,39 @@
 import {
   createOrGetDMChannel,
   getMediaURL,
+  getMutualServers,
   getPresence,
   getProfile,
-  getMutualServers,
   getUserVoiceActivity,
-  sendFriendRequest,
   type StoredServer,
   type StoredUser,
-  type VoiceActivity,
+  sendFriendRequest,
   useAuthStore,
   useBlockStore,
   useFriendStore,
   useMemberStore,
   useRoleStore,
   useUsersStore,
+  type VoiceActivity,
 } from '@meza/core';
 import { SpeakerHighIcon, UserIcon } from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { voiceConnect } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
-import { useTilingStore } from '../../stores/tiling.ts';
-import { openProfilePane } from '../../stores/tiling.ts';
+import { openProfilePane, useTilingStore } from '../../stores/tiling.ts';
+import { roleColorHex } from '../../utils/color.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
 const EMPTY_STRINGS: readonly string[] = [];
-const EMPTY_ROLES: readonly { id: string; name: string; color: number; position: number }[] = [];
+const EMPTY_ROLES: readonly {
+  id: string;
+  name: string;
+  color: number;
+  position: number;
+}[] = [];
 
 interface ProfilePopoverCardProps {
   userId: string;
@@ -78,6 +84,7 @@ function ProfileCardContent({
   onClose: () => void;
 }) {
   const currentUser = useAuthStore((s) => s.user);
+  const displayColor = useDisplayColor(userId, serverId);
   const cachedProfile = useUsersStore((s) => s.profiles[userId]);
   const [profile, setProfile] = useState<StoredUser | null>(
     cachedProfile ?? null,
@@ -100,9 +107,7 @@ function ProfileCardContent({
   const serverRoles = useRoleStore(
     (s) => (serverId ? s.byServer[serverId] : undefined) ?? EMPTY_ROLES,
   );
-  const memberRoles = serverRoles.filter((r) =>
-    memberRoleIds.includes(r.id),
-  );
+  const memberRoles = serverRoles.filter((r) => memberRoleIds.includes(r.id));
 
   // Track the userId that initiated the fetch so we can discard stale results.
   const fetchIdRef = useRef(0);
@@ -194,7 +199,10 @@ function ProfileCardContent({
         {/* Name + pronouns */}
         <div className="mb-1">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-semibold text-text truncate">
+            <span
+              className="text-base font-semibold text-text truncate"
+              style={displayColor ? { color: displayColor } : undefined}
+            >
               {profile.displayName || profile.username}
             </span>
             {profile.pronouns && (
@@ -214,9 +222,7 @@ function ProfileCardContent({
                 <span
                   className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                   style={{
-                    backgroundColor: role.color
-                      ? `#${role.color.toString(16).padStart(6, '0')}`
-                      : undefined,
+                    backgroundColor: roleColorHex(role.color),
                   }}
                 />
                 {role.name}
@@ -372,9 +378,7 @@ function MutualServerRow({
   server: StoredServer;
   onNavigate: () => void;
 }) {
-  const memberCount = useMemberStore(
-    (s) => s.byServer[server.id]?.length ?? 0,
-  );
+  const memberCount = useMemberStore((s) => s.byServer[server.id]?.length ?? 0);
 
   return (
     <button

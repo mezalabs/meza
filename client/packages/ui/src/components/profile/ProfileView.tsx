@@ -18,7 +18,6 @@ import {
   sendFriendRequest,
   UploadPurpose,
   type User,
-  type VoiceActivity,
   unblockUser,
   updateProfile,
   uploadFile,
@@ -26,6 +25,7 @@ import {
   useBlockStore,
   useFriendStore,
   useUsersStore,
+  type VoiceActivity,
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -80,7 +80,9 @@ export function ProfileView({ userId }: ProfileViewProps) {
 
   useEffect(() => {
     fetchProfile();
-    return () => { profileFetchIdRef.current++; };
+    return () => {
+      profileFetchIdRef.current++;
+    };
   }, [fetchProfile]);
 
   // Fetch presence for this user
@@ -95,15 +97,23 @@ export function ProfileView({ userId }: ProfileViewProps) {
     if (isOwnProfile || isBlocked) return;
     const id = ++mutualFetchIdRef.current;
     getUserVoiceActivity(userId)
-      .then((va) => { if (id === mutualFetchIdRef.current) setVoiceActivity(va); })
+      .then((va) => {
+        if (id === mutualFetchIdRef.current) setVoiceActivity(va);
+      })
       .catch(() => {});
     getMutualServers(userId)
-      .then((ms) => { if (id === mutualFetchIdRef.current) setMutualServers(ms); })
+      .then((ms) => {
+        if (id === mutualFetchIdRef.current) setMutualServers(ms);
+      })
       .catch(() => {});
     getMutualFriends(userId)
-      .then((mf) => { if (id === mutualFetchIdRef.current) setMutualFriends(mf); })
+      .then((mf) => {
+        if (id === mutualFetchIdRef.current) setMutualFriends(mf);
+      })
       .catch(() => {});
-    return () => { mutualFetchIdRef.current++; };
+    return () => {
+      mutualFetchIdRef.current++;
+    };
   }, [userId, isOwnProfile, isBlocked]);
 
   if (viewState === 'loading') {
@@ -264,7 +274,10 @@ export function ProfileView({ userId }: ProfileViewProps) {
                   >
                     {s.iconUrl ? (
                       <img
-                        src={getMediaURL(s.iconUrl.replace(/^\/media\//, ''), false)}
+                        src={getMediaURL(
+                          s.iconUrl.replace(/^\/media\//, ''),
+                          false,
+                        )}
                         alt=""
                         className="h-4 w-4 rounded-full object-cover"
                       />
@@ -432,8 +445,11 @@ export function ProfileView({ userId }: ProfileViewProps) {
   );
 }
 
-
-function ConnectionIcon({ platform }: { platform: StoredUserConnection['platform'] }) {
+function ConnectionIcon({
+  platform,
+}: {
+  platform: StoredUserConnection['platform'];
+}) {
   // Simple colored dot per platform — keeps bundle small, no icon library needed
   const colors: Record<string, string> = {
     github: '#333',
@@ -859,7 +875,11 @@ function ProfileEditMode({
                   value={conn.platform}
                   onChange={(e) => {
                     const next = [...connections];
-                    next[idx] = { ...conn, platform: e.target.value as StoredUserConnection['platform'] };
+                    next[idx] = {
+                      ...conn,
+                      platform: e.target
+                        .value as StoredUserConnection['platform'],
+                    };
                     setConnections(next);
                   }}
                 >
