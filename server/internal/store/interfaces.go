@@ -20,7 +20,7 @@ var ErrAlreadyExists = errors.New("already exists")
 type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
-	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string) (*models.User, error)
+	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
 	GetSalt(ctx context.Context, email string) ([]byte, error)
 	StoreRefreshToken(ctx context.Context, tokenHash, userID, deviceID string, expiresAt time.Time) error
@@ -66,6 +66,7 @@ type ChatStorer interface {
 	UpdateDMStatus(ctx context.Context, channelID, status string) error
 	ListPendingDMRequests(ctx context.Context, recipientID string) ([]*models.DMChannelWithParticipants, error)
 	ShareAnyServer(ctx context.Context, userID1, userID2 string) (bool, error)
+	GetMutualServers(ctx context.Context, userID1, userID2 string) ([]*models.Server, error)
 	GetDMOtherParticipantID(ctx context.Context, channelID, userID string) (string, error)
 	// Channel member operations for private channels.
 	AddChannelMember(ctx context.Context, channelID, userID string) error
@@ -133,6 +134,7 @@ type FriendStorer interface {
 	CountPendingOutgoingRequests(ctx context.Context, userID string) (int, error)
 	RemoveFriendshipsByUser(ctx context.Context, userID, otherID string) error
 	RemoveFriendshipsByUserTx(ctx context.Context, tx pgx.Tx, userID, otherID string) error
+	GetMutualFriends(ctx context.Context, userID1, userID2 string) ([]*models.User, error)
 }
 
 // BanStorer provides access to ban data in Postgres.

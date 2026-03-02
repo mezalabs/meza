@@ -79,8 +79,14 @@ func (m *mockChatStore) CreateChannel(context.Context, string, string, int, bool
 func (m *mockChatStore) GetChannel(context.Context, string) (*models.Channel, error) {
 	panic("not implemented")
 }
-func (m *mockChatStore) ListChannels(context.Context, string, string) ([]*models.Channel, error) {
-	panic("not implemented")
+func (m *mockChatStore) ListChannels(_ context.Context, serverID, _ string) ([]*models.Channel, error) {
+	var channels []*models.Channel
+	for _, ch := range m.channels {
+		if ch.ServerID == serverID {
+			channels = append(channels, ch)
+		}
+	}
+	return channels, nil
 }
 func (m *mockChatStore) UpdateChannel(context.Context, string, *string, *string, *int, *bool, *int, *bool, *string) (*models.Channel, error) {
 	panic("not implemented")
@@ -149,6 +155,17 @@ func (m *mockChatStore) ListPendingDMRequests(context.Context, string) ([]*model
 }
 func (m *mockChatStore) ShareAnyServer(context.Context, string, string) (bool, error) {
 	return false, nil
+}
+func (m *mockChatStore) GetMutualServers(_ context.Context, userID1, userID2 string) ([]*models.Server, error) {
+	var mutual []*models.Server
+	for serverID, members := range m.members {
+		if members[userID1] && members[userID2] {
+			if srv, ok := m.servers[serverID]; ok {
+				mutual = append(mutual, srv)
+			}
+		}
+	}
+	return mutual, nil
 }
 func (m *mockChatStore) GetDMOtherParticipantID(context.Context, string, string) (string, error) {
 	return "", nil
@@ -265,6 +282,18 @@ func (m *mockLKClient) ListParticipants(_ context.Context, req *livekit.ListPart
 	return &livekit.ListParticipantsResponse{
 		Participants: m.participants[req.Room],
 	}, nil
+}
+
+func (m *mockLKClient) GetParticipant(_ context.Context, req *livekit.RoomParticipantIdentity) (*livekit.ParticipantInfo, error) {
+	if !m.rooms[req.Room] {
+		return nil, errors.New("room not found")
+	}
+	for _, p := range m.participants[req.Room] {
+		if p.Identity == req.Identity {
+			return p, nil
+		}
+	}
+	return nil, errors.New("participant not found")
 }
 
 func (m *mockLKClient) RemoveParticipant(_ context.Context, req *livekit.RoomParticipantIdentity) (*livekit.RemoveParticipantResponse, error) {

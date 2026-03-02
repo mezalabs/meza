@@ -84,16 +84,19 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 
 	var u models.User
 	var audioPrefsJSON []byte
+	var connectionsJSON []byte
 	err := s.pool.QueryRow(ctx,
 		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		        audio_preferences, dm_privacy,
-		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,'')
+		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
+		        connections
 		 FROM users WHERE id = $1`, userID,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 		&audioPrefsJSON, &u.DMPrivacy,
-		&u.IsFederated, &u.HomeServer, &u.RemoteUserID)
+		&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
+		&connectionsJSON)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
@@ -104,10 +107,13 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 	if len(audioPrefsJSON) > 0 {
 		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
 	}
+	if len(connectionsJSON) > 0 {
+		_ = json.Unmarshal(connectionsJSON, &u.Connections)
+	}
 	return &u, nil
 }
 
-func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string) (*models.User, error) {
+func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -120,8 +126,18 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 		}
 	}
 
+	var connectionsJSON []byte
+	if connections != nil {
+		var err error
+		connectionsJSON, err = json.Marshal(connections)
+		if err != nil {
+			return nil, fmt.Errorf("marshal connections: %w", err)
+		}
+	}
+
 	var u models.User
 	var returnedAudioPrefsJSON []byte
+	var returnedConnectionsJSON []byte
 	err := s.pool.QueryRow(ctx,
 		`UPDATE users
 		 SET display_name = COALESCE($2, display_name),
@@ -135,15 +151,16 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 		     simple_mode = COALESCE($10, simple_mode),
 		     audio_preferences = COALESCE($11, audio_preferences),
 		     dm_privacy = COALESCE($12, dm_privacy),
+		     connections = COALESCE($13, connections),
 		     updated_at = now()
 		 WHERE id = $1
 		 RETURNING id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		           COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
-		           audio_preferences, dm_privacy`,
-		userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefsJSON, dmPrivacy,
+		           audio_preferences, dm_privacy, connections`,
+		userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefsJSON, dmPrivacy, connectionsJSON,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
-		&returnedAudioPrefsJSON, &u.DMPrivacy)
+		&returnedAudioPrefsJSON, &u.DMPrivacy, &returnedConnectionsJSON)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
@@ -153,6 +170,9 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 	u.AudioPreferences = models.DefaultAudioPreferences()
 	if len(returnedAudioPrefsJSON) > 0 {
 		_ = json.Unmarshal(returnedAudioPrefsJSON, &u.AudioPreferences)
+	}
+	if len(returnedConnectionsJSON) > 0 {
+		_ = json.Unmarshal(returnedConnectionsJSON, &u.Connections)
 	}
 	return &u, nil
 }
@@ -164,17 +184,18 @@ func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.U
 	var u models.User
 	var a models.AuthData
 	var audioPrefsJSON []byte
+	var connectionsJSON []byte
 	err := s.pool.QueryRow(ctx,
 		`SELECT u.id, COALESCE(u.email,''), u.username, COALESCE(u.display_name,''), COALESCE(u.avatar_url,''), u.emoji_scale, u.created_at,
 		        COALESCE(u.bio,''), COALESCE(u.pronouns,''), COALESCE(u.banner_url,''), COALESCE(u.theme_color_primary,''), COALESCE(u.theme_color_secondary,''), u.simple_mode,
-		        u.audio_preferences, u.dm_privacy,
+		        u.audio_preferences, u.dm_privacy, u.connections,
 		        a.auth_key_hash, a.salt, a.encrypted_key_bundle, a.key_bundle_iv
 		 FROM users u JOIN user_auth a ON a.user_id = u.id
 		 WHERE u.email = $1`, email,
 	).Scan(
 		&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
-		&audioPrefsJSON, &u.DMPrivacy,
+		&audioPrefsJSON, &u.DMPrivacy, &connectionsJSON,
 		&a.AuthKeyHash, &a.Salt, &a.EncryptedKeyBundle, &a.KeyBundleIV,
 	)
 	if err != nil {
@@ -186,6 +207,9 @@ func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.U
 	u.AudioPreferences = models.DefaultAudioPreferences()
 	if len(audioPrefsJSON) > 0 {
 		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
+	}
+	if len(connectionsJSON) > 0 {
+		_ = json.Unmarshal(connectionsJSON, &u.Connections)
 	}
 	a.UserID = u.ID
 	return &u, &a, nil

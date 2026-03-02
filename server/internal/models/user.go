@@ -19,6 +19,13 @@ func DefaultAudioPreferences() AudioPreferences {
 	}
 }
 
+// UserConnection represents a social link on a user's profile.
+type UserConnection struct {
+	Platform string `json:"platform"` // "github", "twitter", "linkedin", "website", "other"
+	URL      string `json:"url"`
+	Label    string `json:"label"`
+}
+
 // User represents a user record.
 type User struct {
 	ID                  string
@@ -36,7 +43,8 @@ type User struct {
 	SimpleMode          bool
 	AudioPreferences    AudioPreferences
 	DMPrivacy        string // "anyone", "message_requests", "mutual_servers", "nobody"
-	SigningPublicKey []byte // 32-byte Ed25519 verify key for E2EE signature verification
+	SigningPublicKey []byte             // 32-byte Ed25519 verify key for E2EE signature verification
+	Connections     []UserConnection   // Profile social links
 	// Federation fields (populated for shadow users on remote instances)
 	IsFederated  bool
 	HomeServer   string // e.g. "https://home.example.com"

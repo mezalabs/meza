@@ -135,6 +135,9 @@ func (m *mockChatStoreGW) ListPendingDMRequests(_ context.Context, _ string) ([]
 func (m *mockChatStoreGW) ShareAnyServer(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (m *mockChatStoreGW) GetMutualServers(_ context.Context, _, _ string) ([]*models.Server, error) {
+	return nil, nil
+}
 func (m *mockChatStoreGW) GetDMOtherParticipantID(_ context.Context, _, _ string) (string, error) {
 	return "", nil
 }

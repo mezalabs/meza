@@ -375,7 +375,32 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		dmPrivacy = &v
 	}
 
-	user, err := s.store.UpdateUser(ctx, userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefs, dmPrivacy)
+	var connections []models.UserConnection
+	if r.ClearConnections || len(r.Connections) > 0 {
+		if len(r.Connections) > 10 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("max 10 connections allowed"))
+		}
+		validPlatforms := map[string]bool{"github": true, "twitter": true, "linkedin": true, "website": true, "other": true}
+		connections = make([]models.UserConnection, 0, len(r.Connections))
+		for _, c := range r.Connections {
+			if !validPlatforms[c.Platform] {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid platform: %s", c.Platform))
+			}
+			if c.Url == "" {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection url is required"))
+			}
+			if len(c.Label) > 50 {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection label must be at most 50 characters"))
+			}
+			connections = append(connections, models.UserConnection{
+				Platform: c.Platform,
+				URL:      c.Url,
+				Label:    c.Label,
+			})
+		}
+	}
+
+	user, err := s.store.UpdateUser(ctx, userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefs, dmPrivacy, connections)
 	if err != nil {
 		slog.Error("updating profile", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -725,6 +750,13 @@ func userToProto(u *models.User) *v1.User {
 			NoiseCancellationMode: u.AudioPreferences.NoiseCancellationMode,
 		},
 		DmPrivacy: u.DMPrivacy,
+	}
+	for _, c := range u.Connections {
+		proto.Connections = append(proto.Connections, &v1.UserConnection{
+			Platform: c.Platform,
+			Url:      c.URL,
+			Label:    c.Label,
+		})
 	}
 	return proto
 }
