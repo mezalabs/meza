@@ -57,13 +57,18 @@ export function ProfileView({ userId }: ProfileViewProps) {
   const [mutualServers, setMutualServers] = useState<StoredServer[]>([]);
   const [mutualFriends, setMutualFriends] = useState<StoredUser[]>([]);
 
+  const profileFetchIdRef = useRef(0);
+
   const fetchProfile = useCallback(async () => {
+    const id = ++profileFetchIdRef.current;
     setViewState('loading');
     try {
       const p = await getProfile(userId);
+      if (id !== profileFetchIdRef.current) return; // stale
       setProfile(p);
       setViewState('ready');
     } catch (err) {
+      if (id !== profileFetchIdRef.current) return; // stale
       if (err instanceof Error && err.message === 'User not found') {
         setViewState('not-found');
       } else {
@@ -74,6 +79,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
 
   useEffect(() => {
     fetchProfile();
+    return () => { profileFetchIdRef.current++; };
   }, [fetchProfile]);
 
   // Fetch presence for this user
@@ -81,18 +87,22 @@ export function ProfileView({ userId }: ProfileViewProps) {
     getPresence(userId).catch(() => {});
   }, [userId]);
 
-  // Fetch mutual data for other users (skip if blocked)
+  // Fetch mutual data for other users (skip if blocked).
+  // Uses a staleness guard to discard results from a previous userId.
+  const mutualFetchIdRef = useRef(0);
   useEffect(() => {
     if (isOwnProfile || isBlocked) return;
+    const id = ++mutualFetchIdRef.current;
     getUserVoiceActivity(userId)
-      .then(setVoiceActivity)
+      .then((va) => { if (id === mutualFetchIdRef.current) setVoiceActivity(va); })
       .catch(() => {});
     getMutualServers(userId)
-      .then(setMutualServers)
+      .then((ms) => { if (id === mutualFetchIdRef.current) setMutualServers(ms); })
       .catch(() => {});
     getMutualFriends(userId)
-      .then(setMutualFriends)
+      .then((mf) => { if (id === mutualFetchIdRef.current) setMutualFriends(mf); })
       .catch(() => {});
+    return () => { mutualFetchIdRef.current++; };
   }, [userId, isOwnProfile, isBlocked]);
 
   if (viewState === 'loading') {

@@ -18,7 +18,7 @@ import {
 } from '@meza/core';
 import { SpeakerHighIcon, UserIcon } from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { voiceConnect } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
@@ -85,6 +85,7 @@ function ProfileCardContent({
   const [loading, setLoading] = useState(!cachedProfile);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivity[]>([]);
   const [mutualServers, setMutualServers] = useState<StoredServer[]>([]);
+  const [actionError, setActionError] = useState('');
 
   const isOwnProfile = currentUser?.id === userId;
   const isBlocked = useBlockStore((s) => s.isBlocked(userId));
@@ -103,33 +104,43 @@ function ProfileCardContent({
     memberRoleIds.includes(r.id),
   );
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const fetchMutual = !isOwnProfile && !isBlocked;
-      const [p, , va, ms] = await Promise.all([
-        getProfile(userId),
-        getPresence(userId).catch(() => {}),
-        fetchMutual
-          ? getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[])
-          : ([] as VoiceActivity[]),
-        fetchMutual
-          ? getMutualServers(userId).catch(() => [] as StoredServer[])
-          : ([] as StoredServer[]),
-      ]);
-      setProfile(p);
-      setVoiceActivity(va);
-      setMutualServers(ms);
-    } catch {
-      // Profile fetch failed — keep whatever cached data we have
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, isOwnProfile, isBlocked]);
+  // Track the userId that initiated the fetch so we can discard stale results.
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const id = ++fetchIdRef.current;
+    setLoading(true);
+
+    const fetchMutual = !isOwnProfile && !isBlocked;
+    Promise.all([
+      getProfile(userId),
+      getPresence(userId).catch(() => {}),
+      fetchMutual
+        ? getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[])
+        : ([] as VoiceActivity[]),
+      fetchMutual
+        ? getMutualServers(userId).catch(() => [] as StoredServer[])
+        : ([] as StoredServer[]),
+    ])
+      .then(([p, , va, ms]) => {
+        if (id !== fetchIdRef.current) return; // stale — discard
+        setProfile(p);
+        setVoiceActivity(va);
+        setMutualServers(ms);
+      })
+      .catch(() => {
+        // Profile fetch failed — keep whatever cached data we have
+      })
+      .finally(() => {
+        if (id !== fetchIdRef.current) return;
+        setLoading(false);
+      });
+
+    return () => {
+      // Bump the counter so any in-flight fetch is discarded on cleanup.
+      fetchIdRef.current++;
+    };
+  }, [userId, isOwnProfile, isBlocked]);
 
   if (loading && !profile) {
     return <ProfileCardSkeleton />;
@@ -265,6 +276,11 @@ function ProfileCardContent({
           </div>
         )}
 
+        {/* Action error */}
+        {actionError && (
+          <div className="text-xs text-error mt-2">{actionError}</div>
+        )}
+
         {/* Actions */}
         <div className="border-t border-border pt-2 mt-2 flex items-center gap-1.5">
           {isOwnProfile ? (
@@ -288,7 +304,9 @@ function ProfileCardContent({
                     try {
                       await createOrGetDMChannel(userId);
                       onClose();
-                    } catch {}
+                    } catch {
+                      setActionError('Failed to open conversation');
+                    }
                   }}
                 >
                   Message
@@ -302,7 +320,9 @@ function ProfileCardContent({
                   onClick={async () => {
                     try {
                       await sendFriendRequest(userId);
-                    } catch {}
+                    } catch {
+                      setActionError('Failed to send friend request');
+                    }
                   }}
                 >
                   Add Friend
