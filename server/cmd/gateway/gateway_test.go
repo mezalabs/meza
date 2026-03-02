@@ -141,7 +141,10 @@ func (m *mockChatStoreGW) GetDMOtherParticipantID(_ context.Context, _, _ string
 func (m *mockChatStoreGW) ListMemberUserIDs(_ context.Context, _ string) ([]string, error) {
 	return nil, nil
 }
-func (m *mockChatStoreGW) UpdateServer(_ context.Context, _ string, _, _, _, _ *string, _, _, _ *bool) (*models.Server, error) {
+func (m *mockChatStoreGW) GetFirstPublicChannel(_ context.Context, _ string) (*models.Channel, error) {
+	return nil, nil
+}
+func (m *mockChatStoreGW) UpdateServer(_ context.Context, _ string, _, _, _, _ *string, _, _, _ *bool, _ *bool, _, _ *string) (*models.Server, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (m *mockChatStoreGW) AcknowledgeRules(_ context.Context, _, _ string) (time.Time, error) {

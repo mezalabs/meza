@@ -36,6 +36,9 @@ message Server {
   bool onboarding_enabled = 8;
   bool rules_required = 9;
   bool default_channel_privacy = 10;
+  bool join_message_enabled = 11;
+  string join_message_template = 12;
+  optional string join_message_channel_id = 13;
 }
 
 message Channel {
@@ -100,6 +103,7 @@ message Message {
   bool mention_everyone = 12;
   repeated string mentioned_role_ids = 13;
   uint32 key_version = 14;  // Static channel key version used for encryption
+  uint32 message_type = 15; // 0=user (default), 1=system
 }
 
 message LinkEmbed {

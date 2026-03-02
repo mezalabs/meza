@@ -31,12 +31,12 @@ func NewMessageStore(session *gocql.Session) *MessageStore {
 
 func (s *MessageStore) InsertMessage(_ context.Context, msg *models.Message) error {
 	return s.session.Query(
-		`INSERT INTO messages (channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, deleted, key_version)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO messages (channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, deleted, key_version, message_type)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		msg.ChannelID, msg.MessageID, msg.AuthorID,
 		msg.EncryptedContent, msg.AttachmentIDs,
 		msg.ReplyToID, msg.MentionedUserIDs, msg.MentionedRoleIDs, msg.MentionEveryone,
-		msg.CreatedAt, false, msg.KeyVersion,
+		msg.CreatedAt, false, msg.KeyVersion, msg.MessageType,
 	).Consistency(gocql.One).Exec()
 }
 
@@ -45,14 +45,14 @@ func (s *MessageStore) GetMessage(_ context.Context, channelID, messageID string
 	err := s.session.Query(
 		`SELECT channel_id, message_id, author_id, encrypted_content,
 		        attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone,
-		        created_at, edited_at, deleted, key_version
+		        created_at, edited_at, deleted, key_version, message_type
 		 FROM messages WHERE channel_id = ? AND message_id = ?`,
 		channelID, messageID,
 	).Consistency(gocql.One).Scan(
 		&msg.ChannelID, &msg.MessageID, &msg.AuthorID,
 		&msg.EncryptedContent, &msg.AttachmentIDs,
 		&msg.ReplyToID, &msg.MentionedUserIDs, &msg.MentionedRoleIDs, &msg.MentionEveryone,
-		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion,
+		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion, &msg.MessageType,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query message: %w", err)
@@ -118,7 +118,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 		g.Go(func() error {
 			// Messages <= target (native DESC order, includes target)
 			msgs, err := s.scanMessages(gctx,
-				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 				 FROM messages WHERE channel_id = ? AND message_id <= ? LIMIT ?`,
 				channelID, opts.Around, halfLimit+1,
 			)
@@ -132,7 +132,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 		g.Go(func() error {
 			// Messages > target (reverse scan, ASC)
 			msgs, err := s.scanMessages(gctx,
-				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 				 FROM messages WHERE channel_id = ? AND message_id > ? ORDER BY message_id ASC LIMIT ?`,
 				channelID, opts.Around, halfLimit,
 			)
@@ -153,7 +153,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 
 	case opts.Before != "":
 		msgs, err := s.scanMessages(ctx,
-			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 			 FROM messages WHERE channel_id = ? AND message_id < ? LIMIT ?`,
 			channelID, opts.Before, limit,
 		)
@@ -166,7 +166,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 
 	case opts.After != "":
 		msgs, err := s.scanMessages(ctx,
-			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 			 FROM messages WHERE channel_id = ? AND message_id > ? ORDER BY message_id ASC LIMIT ?`,
 			channelID, opts.After, limit,
 		)
@@ -178,7 +178,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 
 	default:
 		msgs, err := s.scanMessages(ctx,
-			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+			`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 			 FROM messages WHERE channel_id = ? LIMIT ?`,
 			channelID, limit,
 		)
@@ -215,7 +215,7 @@ func (s *MessageStore) scanMessages(_ context.Context, cql string, args ...any) 
 		&msg.ChannelID, &msg.MessageID, &msg.AuthorID,
 		&msg.EncryptedContent, &msg.AttachmentIDs,
 		&msg.ReplyToID, &msg.MentionedUserIDs, &msg.MentionedRoleIDs, &msg.MentionEveryone,
-		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion,
+		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion, &msg.MessageType,
 	) {
 		m := msg
 		messages = append(messages, &m)
@@ -374,7 +374,7 @@ func (s *MessageStore) GetMessagesByIDs(_ context.Context, channelID string, mes
 		&msg.ChannelID, &msg.MessageID, &msg.AuthorID,
 		&msg.EncryptedContent, &msg.AttachmentIDs,
 		&msg.ReplyToID, &msg.MentionedUserIDs, &msg.MentionedRoleIDs, &msg.MentionEveryone,
-		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion,
+		&msg.CreatedAt, &msg.EditedAt, &msg.Deleted, &msg.KeyVersion, &msg.MessageType,
 	) {
 		m := msg
 		result[m.MessageID] = &m

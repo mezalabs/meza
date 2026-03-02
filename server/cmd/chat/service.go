@@ -1982,11 +1982,35 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
+	// Validate join message template.
+	if req.Msg.JoinMessageTemplate != nil {
+		tmpl := *req.Msg.JoinMessageTemplate
+		if len(tmpl) > 2000 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("join_message_template exceeds 2000 characters"))
+		}
+		cleaned := tmpl
+		for _, v := range []string{"{username}", "{server_name}", "{member_count}"} {
+			cleaned = strings.ReplaceAll(cleaned, v, "")
+		}
+		if strings.Contains(cleaned, "{") && strings.Contains(cleaned, "}") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("unknown template variable in join_message_template"))
+		}
+	}
+
+	// Validate join_message_channel_id belongs to this server.
+	if req.Msg.JoinMessageChannelId != nil {
+		ch, err := s.chatStore.GetChannel(ctx, *req.Msg.JoinMessageChannelId)
+		if err != nil || ch.ServerID != req.Msg.ServerId {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid join_message_channel_id"))
+		}
+	}
+
 	updated, err := s.chatStore.UpdateServer(ctx, req.Msg.ServerId,
 		req.Msg.Name, req.Msg.IconUrl,
 		req.Msg.WelcomeMessage, req.Msg.Rules,
 		req.Msg.OnboardingEnabled, req.Msg.RulesRequired,
 		req.Msg.DefaultChannelPrivacy,
+		req.Msg.JoinMessageEnabled, req.Msg.JoinMessageTemplate, req.Msg.JoinMessageChannelId,
 	)
 	if err != nil {
 		slog.Error("updating server", "err", err, "user", userID, "server", req.Msg.ServerId)
@@ -2171,6 +2195,11 @@ func (s *chatService) JoinServer(ctx context.Context, req *connect.Request[v1.Jo
 
 	// Signal gateway to refresh channel subscriptions for this user.
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
+
+	// Best-effort welcome message.
+	if srv.JoinMessageEnabled {
+		go s.sendJoinWelcomeMessage(srv, userID, consumed.ServerID)
+	}
 
 	return connect.NewResponse(&v1.JoinServerResponse{
 		Server: serverToProto(srv),
@@ -2599,6 +2628,88 @@ func (s *chatService) StreamEvents(context.Context, *connect.Request[v1.StreamEv
 	return connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
 }
 
+// sendJoinWelcomeMessage sends a welcome message to the configured channel.
+// This is best-effort — failures are logged but do not affect the join.
+func (s *chatService) sendJoinWelcomeMessage(server *models.Server, userID, serverID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Resolve target channel.
+	var channelID string
+	if server.JoinMessageChannelID != nil {
+		channelID = *server.JoinMessageChannelID
+	} else {
+		ch, err := s.chatStore.GetFirstPublicChannel(ctx, serverID)
+		if err != nil || ch == nil {
+			return
+		}
+		channelID = ch.ID
+	}
+
+	// Resolve template variables.
+	user, err := s.authStore.GetUserByID(ctx, userID)
+	if err != nil {
+		slog.Error("welcome message: fetching user", "err", err)
+		return
+	}
+	memberCount, _ := s.chatStore.GetMemberCount(ctx, serverID)
+
+	displayName := user.DisplayName
+	if displayName == "" {
+		displayName = user.Username
+	}
+
+	content := resolveTemplate(server.JoinMessageTemplate, map[string]string{
+		"username":     displayName,
+		"server_name":  server.Name,
+		"member_count": fmt.Sprintf("%d", memberCount),
+	})
+
+	// Insert system message.
+	now := time.Now()
+	msg := &models.Message{
+		ChannelID:        channelID,
+		MessageID:        models.NewID(),
+		AuthorID:         models.SystemUserID,
+		EncryptedContent: []byte(content),
+		CreatedAt:        now,
+		KeyVersion:       0,
+		MessageType:      models.MessageTypeSystem,
+	}
+
+	if err := s.messageStore.InsertMessage(ctx, msg); err != nil {
+		slog.Error("welcome message: inserting", "err", err, "server", serverID)
+		return
+	}
+
+	// Publish MESSAGE_CREATE event.
+	event := &v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_MESSAGE_CREATE,
+		Timestamp: timestamppb.New(now),
+		Payload: &v1.Event_MessageCreate{
+			MessageCreate: messageToProto(msg, nil),
+		},
+	}
+	eventData, err := proto.Marshal(event)
+	if err != nil {
+		slog.Error("welcome message: marshaling event", "err", err)
+		return
+	}
+	if err := s.nc.Publish(subjects.DeliverChannel(channelID), eventData); err != nil {
+		slog.Warn("welcome message: nats publish failed", "err", err)
+	}
+}
+
+// resolveTemplate replaces {key} placeholders with values from the vars map.
+func resolveTemplate(template string, vars map[string]string) string {
+	result := template
+	for key, val := range vars {
+		result = strings.ReplaceAll(result, "{"+key+"}", val)
+	}
+	return result
+}
+
 // Proto conversion helpers.
 
 func serverToProto(s *models.Server) *v1.Server {
@@ -2610,6 +2721,9 @@ func serverToProto(s *models.Server) *v1.Server {
 		OnboardingEnabled:      s.OnboardingEnabled,
 		RulesRequired:          s.RulesRequired,
 		DefaultChannelPrivacy:  s.DefaultChannelPrivacy,
+		JoinMessageEnabled:     s.JoinMessageEnabled,
+		JoinMessageTemplate:    s.JoinMessageTemplate,
+		JoinMessageChannelId:   s.JoinMessageChannelID,
 	}
 	if s.IconURL != nil {
 		srv.IconUrl = *s.IconURL

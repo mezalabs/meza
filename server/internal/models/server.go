@@ -14,4 +14,7 @@ type Server struct {
 	OnboardingEnabled      bool
 	RulesRequired          bool
 	DefaultChannelPrivacy  bool
+	JoinMessageEnabled     bool
+	JoinMessageTemplate    string
+	JoinMessageChannelID   *string
 }

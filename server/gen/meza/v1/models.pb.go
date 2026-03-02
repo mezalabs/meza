@@ -246,6 +246,9 @@ type Server struct {
 	OnboardingEnabled     bool                   `protobuf:"varint,8,opt,name=onboarding_enabled,json=onboardingEnabled,proto3" json:"onboarding_enabled,omitempty"`
 	RulesRequired         bool                   `protobuf:"varint,9,opt,name=rules_required,json=rulesRequired,proto3" json:"rules_required,omitempty"`
 	DefaultChannelPrivacy bool                   `protobuf:"varint,10,opt,name=default_channel_privacy,json=defaultChannelPrivacy,proto3" json:"default_channel_privacy,omitempty"`
+	JoinMessageEnabled    bool                   `protobuf:"varint,11,opt,name=join_message_enabled,json=joinMessageEnabled,proto3" json:"join_message_enabled,omitempty"`
+	JoinMessageTemplate   string                 `protobuf:"bytes,12,opt,name=join_message_template,json=joinMessageTemplate,proto3" json:"join_message_template,omitempty"`
+	JoinMessageChannelId  *string                `protobuf:"bytes,13,opt,name=join_message_channel_id,json=joinMessageChannelId,proto3,oneof" json:"join_message_channel_id,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -348,6 +351,27 @@ func (x *Server) GetDefaultChannelPrivacy() bool {
 		return x.DefaultChannelPrivacy
 	}
 	return false
+}
+
+func (x *Server) GetJoinMessageEnabled() bool {
+	if x != nil {
+		return x.JoinMessageEnabled
+	}
+	return false
+}
+
+func (x *Server) GetJoinMessageTemplate() string {
+	if x != nil {
+		return x.JoinMessageTemplate
+	}
+	return ""
+}
+
+func (x *Server) GetJoinMessageChannelId() string {
+	if x != nil && x.JoinMessageChannelId != nil {
+		return *x.JoinMessageChannelId
+	}
+	return ""
 }
 
 type Channel struct {
@@ -716,7 +740,8 @@ type Message struct {
 	MentionedUserIds []string               `protobuf:"bytes,11,rep,name=mentioned_user_ids,json=mentionedUserIds,proto3" json:"mentioned_user_ids,omitempty"`
 	MentionEveryone  bool                   `protobuf:"varint,12,opt,name=mention_everyone,json=mentionEveryone,proto3" json:"mention_everyone,omitempty"`
 	MentionedRoleIds []string               `protobuf:"bytes,13,rep,name=mentioned_role_ids,json=mentionedRoleIds,proto3" json:"mentioned_role_ids,omitempty"`
-	KeyVersion       uint32                 `protobuf:"varint,14,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"` // Static channel key version used for encryption
+	KeyVersion       uint32                 `protobuf:"varint,14,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"`    // Static channel key version used for encryption
+	MessageType      uint32                 `protobuf:"varint,15,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"` // 0=user (default), 1=system
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -838,6 +863,13 @@ func (x *Message) GetMentionedRoleIds() []string {
 func (x *Message) GetKeyVersion() uint32 {
 	if x != nil {
 		return x.KeyVersion
+	}
+	return 0
+}
+
+func (x *Message) GetMessageType() uint32 {
+	if x != nil {
+		return x.MessageType
 	}
 	return 0
 }
@@ -2089,7 +2121,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
 	"dm_privacy\x18\x0f \x01(\tR\tdmPrivacy\x12,\n" +
 	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKeyB\x14\n" +
-	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"\xea\x02\n" +
+	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"\xa8\x04\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -2102,7 +2134,11 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12onboarding_enabled\x18\b \x01(\bR\x11onboardingEnabled\x12%\n" +
 	"\x0erules_required\x18\t \x01(\bR\rrulesRequired\x126\n" +
 	"\x17default_channel_privacy\x18\n" +
-	" \x01(\bR\x15defaultChannelPrivacy\"\x9b\x04\n" +
+	" \x01(\bR\x15defaultChannelPrivacy\x120\n" +
+	"\x14join_message_enabled\x18\v \x01(\bR\x12joinMessageEnabled\x122\n" +
+	"\x15join_message_template\x18\f \x01(\tR\x13joinMessageTemplate\x12:\n" +
+	"\x17join_message_channel_id\x18\r \x01(\tH\x00R\x14joinMessageChannelId\x88\x01\x01B\x1a\n" +
+	"\x18_join_message_channel_id\"\x9b\x04\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -2142,7 +2178,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\auser_id\x18\x06 \x01(\tR\x06userId\"j\n" +
 	"\tDMChannel\x12*\n" +
 	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\x121\n" +
-	"\fparticipants\x18\x02 \x03(\v2\r.meza.v1.UserR\fparticipants\"\xcc\x04\n" +
+	"\fparticipants\x18\x02 \x03(\v2\r.meza.v1.UserR\fparticipants\"\xef\x04\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2160,7 +2196,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x10mention_everyone\x18\f \x01(\bR\x0fmentionEveryone\x12,\n" +
 	"\x12mentioned_role_ids\x18\r \x03(\tR\x10mentionedRoleIds\x12\x1f\n" +
 	"\vkey_version\x18\x0e \x01(\rR\n" +
-	"keyVersionB\x0e\n" +
+	"keyVersion\x12!\n" +
+	"\fmessage_type\x18\x0f \x01(\rR\vmessageTypeB\x0e\n" +
 	"\f_reply_to_idJ\x04\b\x05\x10\x06R\x0eratchet_header\"\xa5\x02\n" +
 	"\tLinkEmbed\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x14\n" +
@@ -2375,6 +2412,7 @@ func file_meza_v1_models_proto_init() {
 		return
 	}
 	file_meza_v1_models_proto_msgTypes[0].OneofWrappers = []any{}
+	file_meza_v1_models_proto_msgTypes[1].OneofWrappers = []any{}
 	file_meza_v1_models_proto_msgTypes[2].OneofWrappers = []any{}
 	file_meza_v1_models_proto_msgTypes[6].OneofWrappers = []any{}
 	file_meza_v1_models_proto_msgTypes[9].OneofWrappers = []any{}

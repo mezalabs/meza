@@ -379,7 +379,10 @@ func (m *mockChatStore) ListMemberUserIDs(_ context.Context, serverID string) ([
 	}
 	return nil, nil
 }
-func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool) (*models.Server, error) {
+func (m *mockChatStore) GetFirstPublicChannel(_ context.Context, _ string) (*models.Channel, error) {
+	return nil, nil
+}
+func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, joinMessageEnabled *bool, joinMessageTemplate, joinMessageChannelID *string) (*models.Server, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -407,6 +410,15 @@ func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, i
 	}
 	if defaultChannelPrivacy != nil {
 		srv.DefaultChannelPrivacy = *defaultChannelPrivacy
+	}
+	if joinMessageEnabled != nil {
+		srv.JoinMessageEnabled = *joinMessageEnabled
+	}
+	if joinMessageTemplate != nil {
+		srv.JoinMessageTemplate = *joinMessageTemplate
+	}
+	if joinMessageChannelID != nil {
+		srv.JoinMessageChannelID = joinMessageChannelID
 	}
 	return srv, nil
 }

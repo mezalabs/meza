@@ -285,5 +285,6 @@ func messageToProto(msg *models.Message, attachments []*v1.Attachment) *v1.Messa
 	protoMsg.MentionedRoleIds = msg.MentionedRoleIDs
 	protoMsg.MentionEveryone = msg.MentionEveryone
 	protoMsg.KeyVersion = msg.KeyVersion
+	protoMsg.MessageType = msg.MessageType
 	return protoMsg
 }

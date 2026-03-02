@@ -17,7 +17,13 @@ type Message struct {
 	EditedAt         time.Time
 	Deleted          bool
 	KeyVersion       uint32 // Static channel key version (0 = unencrypted)
+	MessageType      uint32 // 0=user, 1=system
 }
+
+const (
+	MessageTypeUser   uint32 = 0
+	MessageTypeSystem uint32 = 1
+)
 
 // ReplyEntry represents a single reply in the message_replies index table.
 type ReplyEntry struct {

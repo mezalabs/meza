@@ -84,6 +84,8 @@ func (s *ChatStore) CreateServer(ctx context.Context, name, ownerID string, icon
 		OwnerID:               ownerID,
 		CreatedAt:             now,
 		DefaultChannelPrivacy: defaultChannelPrivacy,
+		JoinMessageEnabled:    true,
+		JoinMessageTemplate:   "Welcome to {server_name}, {username}!",
 	}, nil
 }
 
@@ -93,10 +95,12 @@ func (s *ChatStore) GetServer(ctx context.Context, serverID string) (*models.Ser
 
 	var srv models.Server
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy
+		`SELECT id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy,
+		        join_message_enabled, join_message_template, join_message_channel_id
 		 FROM servers WHERE id = $1`, serverID,
 	).Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
-		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy)
+		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy,
+		&srv.JoinMessageEnabled, &srv.JoinMessageTemplate, &srv.JoinMessageChannelID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("server not found")
@@ -112,7 +116,8 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 
 	rows, err := s.pool.Query(ctx,
 		`SELECT s.id, s.name, s.icon_url, s.owner_id, s.created_at,
-		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy
+		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy,
+		        s.join_message_enabled, s.join_message_template, s.join_message_channel_id
 		 FROM servers s JOIN members m ON m.server_id = s.id
 		 WHERE m.user_id = $1
 		 ORDER BY s.created_at`, userID,
@@ -126,7 +131,8 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 	for rows.Next() {
 		var srv models.Server
 		if err := rows.Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
-			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy); err != nil {
+			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy,
+			&srv.JoinMessageEnabled, &srv.JoinMessageTemplate, &srv.JoinMessageChannelID); err != nil {
 			return nil, fmt.Errorf("scan server: %w", err)
 		}
 		servers = append(servers, &srv)
@@ -162,6 +168,27 @@ func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, ch
 		return nil, fmt.Errorf("insert channel: %w", err)
 	}
 
+	return &ch, nil
+}
+
+func (s *ChatStore) GetFirstPublicChannel(ctx context.Context, serverID string) (*models.Channel, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var ch models.Channel
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), created_at
+		 FROM channels
+		 WHERE server_id = $1 AND is_private = false AND type = 1
+		 ORDER BY position ASC
+		 LIMIT 1`, serverID,
+	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("query first public channel: %w", err)
+	}
 	return &ch, nil
 }
 
@@ -1149,7 +1176,7 @@ func scanDMChannelsWithParticipants(rows pgx.Rows) ([]*models.DMChannelWithParti
 	return result, rows.Err()
 }
 
-func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool) (*models.Server, error) {
+func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, joinMessageEnabled *bool, joinMessageTemplate, joinMessageChannelID *string) (*models.Server, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -1192,13 +1219,28 @@ func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, ico
 		args = append(args, *defaultChannelPrivacy)
 		argIdx++
 	}
+	if joinMessageEnabled != nil {
+		setClauses = append(setClauses, fmt.Sprintf("join_message_enabled = $%d", argIdx))
+		args = append(args, *joinMessageEnabled)
+		argIdx++
+	}
+	if joinMessageTemplate != nil {
+		setClauses = append(setClauses, fmt.Sprintf("join_message_template = $%d", argIdx))
+		args = append(args, *joinMessageTemplate)
+		argIdx++
+	}
+	if joinMessageChannelID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("join_message_channel_id = $%d", argIdx))
+		args = append(args, *joinMessageChannelID)
+		argIdx++
+	}
 
 	if len(setClauses) == 0 {
 		return s.GetServer(ctx, serverID)
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE servers SET %s WHERE id = $%d RETURNING id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy",
+		"UPDATE servers SET %s WHERE id = $%d RETURNING id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy, join_message_enabled, join_message_template, join_message_channel_id",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -1208,6 +1250,7 @@ func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, ico
 	err := s.pool.QueryRow(ctx, query, args...).Scan(
 		&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
 		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy,
+		&srv.JoinMessageEnabled, &srv.JoinMessageTemplate, &srv.JoinMessageChannelID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1589,6 +1632,8 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		OnboardingEnabled:     params.OnboardingEnabled,
 		RulesRequired:         params.RulesRequired,
 		DefaultChannelPrivacy: params.DefaultChannelPrivacy,
+		JoinMessageEnabled:    true,
+		JoinMessageTemplate:   "Welcome to {server_name}, {username}!",
 	}
 
 	return srv, channels, roles, nil

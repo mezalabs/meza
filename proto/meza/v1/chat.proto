@@ -225,6 +225,9 @@ message UpdateServerRequest {
   optional bool onboarding_enabled = 6;
   optional bool rules_required = 7;
   optional bool default_channel_privacy = 8;
+  optional bool join_message_enabled = 9;
+  optional string join_message_template = 10;
+  optional string join_message_channel_id = 11;
 }
 
 message UpdateServerResponse {
