@@ -293,28 +293,28 @@ client/packages/mobile/src/lib/auth-gate.tsx        (redirect to auth if no sess
 
 **Tasks:**
 
-- [ ] Build tab navigator layout (Channels, DMs, Settings)
-- [ ] Build channel list screen (subscribe to `@meza/core` channel store)
-- [ ] Build channel detail / message view screen
-  - [ ] `FlatList` with inverted scroll for messages (newest at bottom)
-  - [ ] Message bubbles with sender name, timestamp, content
-  - [ ] Decrypt messages using channel key (via `@meza/core` crypto)
-  - [ ] Verify Ed25519 signatures on received messages
-- [ ] Build message composer (text input + send button)
-  - [ ] Encrypt outgoing messages (sign → encrypt via `@meza/core`)
-  - [ ] Send via gateway `OP_SEND_MESSAGE`
-- [ ] Handle real-time events from gateway:
-  - [ ] `message_create` → decrypt + append to list
-  - [ ] `message_update` → re-decrypt + update
-  - [ ] `message_delete` → remove from list
-  - [ ] `typing_start` → show typing indicator
-- [ ] Build DM list and conversation screens (same pattern as channels)
-- [ ] Implement read receipts (`ackMessage` RPC)
-- [ ] Handle channel key fetch on first open (`GetKeyEnvelopes` → unwrap)
-- [ ] Cache channel keys in MMKV blob
-- [ ] Navigation: Zustand store events → Expo Router navigation
-  - [ ] Subscribe to store state with `useEffect`, call `router.push()` imperatively
-- [ ] Test: send from mobile → appears on web (and vice versa), both E2EE
+- [x] Build tab navigator layout (Channels, DMs, Settings) — already built in Phase 1 scaffolding
+- [x] Build channel list screen (subscribe to `@meza/core` channel store)
+- [x] Build channel detail / message view screen
+  - [x] `FlatList` with inverted scroll for messages (newest at bottom)
+  - [x] Message bubbles with sender name, timestamp, content
+  - [x] Decrypt messages using channel key (via `@meza/core` crypto)
+  - [x] Verify Ed25519 signatures on received messages (via `decryptAndUpdateMessage`)
+- [x] Build message composer (text input + send button)
+  - [x] Encrypt outgoing messages (sign → encrypt via `@meza/core`)
+  - [x] Send via `sendMessage` API (RPC, not raw gateway op)
+- [x] Handle real-time events from gateway:
+  - [x] `message_create` → decrypt + append to list (handled by `@meza/core` gateway + store)
+  - [x] `message_update` → re-decrypt + update (handled by `@meza/core` gateway + store)
+  - [x] `message_delete` → remove from list (handled by `@meza/core` gateway + store)
+  - [x] `typing_start` → show typing indicator (TypingIndicator component + typing store)
+- [x] Build DM list and conversation screens (same pattern as channels)
+- [x] Implement read receipts (`ackMessage` RPC) — called on channel open with latest message
+- [x] Handle channel key fetch on first open (`GetKeyEnvelopes` → unwrap) — via useChannelEncryption hook
+- [ ] Cache channel keys in MMKV blob (deferred — in-memory cache from `@meza/core` sufficient for now)
+- [x] Navigation: Zustand store events → Expo Router navigation
+  - [x] Subscribe to store state with `useEffect`, call `router.push()` imperatively
+- [ ] Test: send from mobile → appears on web (and vice versa), both E2EE (requires runtime testing)
 
 **Success criteria:** Bidirectional real-time E2EE messaging between mobile and web. Messages sent on one appear instantly on the other with correct decryption.
 

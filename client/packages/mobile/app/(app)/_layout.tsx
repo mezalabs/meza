@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
-import { View, Text } from 'react-native';
+import { Text } from 'react-native';
+import { useInitialData } from '@/hooks/useInitialData';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
@@ -10,6 +11,9 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function AppLayout() {
+  // Fetch servers, channels, DMs on mount and gateway reconnect
+  useInitialData();
+
   return (
     <Tabs
       screenOptions={{
