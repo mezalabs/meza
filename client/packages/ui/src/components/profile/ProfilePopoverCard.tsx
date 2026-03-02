@@ -21,6 +21,8 @@ import { openProfilePane } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
+const EMPTY_ARR: readonly never[] = [];
+
 interface ProfilePopoverCardProps {
   userId: string;
   serverId?: string;
@@ -80,12 +82,12 @@ function ProfileCardContent({
   const isBlocked = useBlockStore((s) => s.isBlocked(userId));
   const friendRelationship = useFriendStore((s) => s.getRelationship(userId));
 
-  // Get roles for this server
+  // Get roles for this server (stable empty array to avoid infinite re-render)
   const memberRoleIds = useMemberStore(
-    (s) => (serverId ? s.members[serverId]?.[userId]?.roleIds : undefined) ?? [],
+    (s) => (serverId ? s.members?.[serverId]?.[userId]?.roleIds : undefined) ?? EMPTY_ARR,
   );
   const serverRoles = useRoleStore(
-    (s) => (serverId ? s.roles[serverId] : undefined) ?? [],
+    (s) => (serverId ? s.roles?.[serverId] : undefined) ?? EMPTY_ARR,
   );
   const memberRoles = serverRoles.filter((r) =>
     memberRoleIds.includes(r.id),
