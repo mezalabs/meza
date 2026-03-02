@@ -3,7 +3,7 @@
 
 End-to-end encrypted, real-time chat platform. Self-hostable with Docker Compose.
 
-[![CI](https://github.com/meza-chat/meza/actions/workflows/ci.yml/badge.svg)](https://github.com/meza-chat/meza/actions/workflows/ci.yml)
+[![CI](https://github.com/mezalabs/meza/actions/workflows/ci.yml/badge.svg)](https://github.com/mezalabs/meza/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
 [![Node](https://img.shields.io/badge/Node.js-22-339933.svg)](https://nodejs.org/)
