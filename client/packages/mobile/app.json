@@ -28,7 +28,6 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "@livekit/react-native-webrtc",
       [
         "expo-notifications",
         {
