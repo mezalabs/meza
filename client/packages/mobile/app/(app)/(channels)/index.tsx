@@ -1,5 +1,6 @@
 import {
   type Channel,
+  ChannelType,
   type Server,
   useChannelStore,
   useServerStore,
@@ -85,7 +86,8 @@ export default function ChannelListScreen() {
                 className="mx-2 rounded-lg px-3 py-2.5 active:bg-bg-surface"
               >
                 <Text className="text-sm text-text">
-                  # {item.channel.name}
+                  {item.channel.type === ChannelType.VOICE ? '🔊 ' : '# '}
+                  {item.channel.name}
                 </Text>
                 {item.channel.topic ? (
                   <Text

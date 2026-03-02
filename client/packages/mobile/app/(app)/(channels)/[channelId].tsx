@@ -1,5 +1,6 @@
 import {
   ackMessage,
+  ChannelType,
   decryptAndUpdateMessage,
   fetchAndCacheChannelKeys,
   getMessages,
@@ -26,12 +27,30 @@ import { FileAttachment } from '@/components/FileAttachment';
 import { ImageAttachment } from '@/components/ImageAttachment';
 import { MessageComposer } from '@/components/MessageComposer';
 import { TypingIndicator } from '@/components/TypingIndicator';
+import { VoiceChannelView } from '@/components/VoiceChannelView';
 
 export default function ChannelScreen() {
   const { channelId } = useLocalSearchParams<{ channelId: string }>();
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const currentUserId = useAuthStore((s) => s.user?.id);
+
+  // Check if this is a voice channel
+  const channelInfo = useChannelStore((s) => {
+    const serverId = s.channelToServer[channelId ?? ''];
+    if (!serverId) return null;
+    const channels = s.byServer[serverId] ?? [];
+    return channels.find((c) => c.id === channelId) ?? null;
+  });
+
+  if (channelInfo?.type === ChannelType.VOICE) {
+    return (
+      <VoiceChannelView
+        channelId={channelId ?? ''}
+        channelName={channelInfo.name}
+      />
+    );
+  }
   const reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const messages = useMessageStore(
     (s) => s.byChannel[channelId ?? ''] ?? EMPTY_MESSAGES,

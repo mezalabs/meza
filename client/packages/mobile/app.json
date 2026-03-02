@@ -13,7 +13,10 @@
     },
     "ios": {
       "bundleIdentifier": "com.meza.chat",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "package": "com.meza.chat",
@@ -25,6 +28,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "@livekit/react-native-webrtc",
       [
         "expo-notifications",
         {
