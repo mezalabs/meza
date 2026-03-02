@@ -246,6 +246,7 @@ message AudioPreferences {
   bool noise_suppression = 1;
   bool echo_cancellation = 2;
   bool auto_gain_control = 3;
+  string noise_cancellation_mode = 4;  // "off", "standard", "giga" — empty means legacy/unset
 }
 
 // E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.

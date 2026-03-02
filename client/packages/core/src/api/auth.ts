@@ -158,6 +158,7 @@ export async function updateProfile(params: {
     noiseSuppression: boolean;
     echoCancellation: boolean;
     autoGainControl: boolean;
+    noiseCancellationMode?: string;
   };
   dmPrivacy?: string;
 }) {
@@ -193,6 +194,9 @@ export async function getProfile(userId: string): Promise<StoredUser> {
 function hydrateAudioPreferences(prefs: AudioPreferences | undefined) {
   if (prefs) {
     useAudioSettingsStore.getState().hydrateFromProfile({
+      noiseCancellationMode:
+        (prefs.noiseCancellationMode as 'off' | 'standard' | 'giga') ||
+        undefined,
       noiseSuppression: prefs.noiseSuppression,
       echoCancellation: prefs.echoCancellation,
       autoGainControl: prefs.autoGainControl,

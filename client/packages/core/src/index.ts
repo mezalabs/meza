@@ -254,6 +254,7 @@ export { soundManager } from './sound/SoundManager.ts';
 export type {
   AudioSettingsActions,
   AudioSettingsState,
+  NoiseCancellationMode,
 } from './store/audioSettings.ts';
 export { useAudioSettingsStore } from './store/audioSettings.ts';
 export type { AuthActions, AuthState, StoredUser } from './store/auth.ts';
@@ -360,6 +361,7 @@ export * from './tiling/index.ts';
 // Types — Electron API
 export type { ElectronAPI } from './types/electron.d.ts';
 export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
+export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export { getBaseUrl, isElectron } from './utils/platform.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';

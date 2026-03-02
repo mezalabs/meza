@@ -90,12 +90,21 @@ LiveKit simulcast is enabled by default — each publisher sends multiple qualit
 
 ## Audio Processing
 
-For the open-source path, browser-native WebRTC audio processing is used:
-- Echo cancellation
-- Noise suppression
-- Auto gain control
+Three noise cancellation modes are available:
 
-LiveKit also supports Krisp integration for enhanced noise suppression (client-side).
+- **Off** — No noise filtering
+- **Standard** — Browser-native WebRTC `noiseSuppression` constraint
+- **GIGA** — RNNoise WASM (ML-based, `@jitsi/rnnoise-wasm`) via LiveKit `TrackProcessor` + `AudioWorkletNode`
+
+GIGA mode is the default for devices with >= 4 CPU cores and >= 4GB RAM. It processes 480-sample frames (10ms at 48kHz) through a circular buffer in a dedicated AudioWorklet thread. Browser-native `noiseSuppression` is disabled when GIGA is active to avoid double-processing.
+
+Echo cancellation and auto gain control remain browser-native in all modes.
+
+Key files:
+- `packages/ui/src/audio/rnnoise-worklet.ts` — AudioWorkletProcessor with circular buffer + RNNoise WASM
+- `packages/ui/src/audio/rnnoise-processor.ts` — LiveKit TrackProcessor implementation
+- `packages/core/src/store/audioSettings.ts` — `noiseCancellationMode: 'off' | 'standard' | 'giga'`
+- `packages/core/src/utils/hardware.ts` — `canRunGiga()` hardware detection
 
 ---
 

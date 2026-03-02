@@ -4,9 +4,10 @@ import "time"
 
 // AudioPreferences represents a user's audio processing preferences.
 type AudioPreferences struct {
-	NoiseSuppression bool `json:"noise_suppression"`
-	EchoCancellation bool `json:"echo_cancellation"`
-	AutoGainControl  bool `json:"auto_gain_control"`
+	NoiseSuppression      bool   `json:"noise_suppression"`
+	EchoCancellation      bool   `json:"echo_cancellation"`
+	AutoGainControl       bool   `json:"auto_gain_control"`
+	NoiseCancellationMode string `json:"noise_cancellation_mode,omitempty"`
 }
 
 // DefaultAudioPreferences returns audio preferences with all processing enabled.

@@ -14,11 +14,8 @@ vi.mock('./storage.ts', () => ({
   loadChannelKeys: vi.fn().mockResolvedValue(null),
 }));
 
-const {
-  clearChannelKeyCache,
-  createChannelKey,
-  initChannelKeys,
-} = await import('./channel-keys.ts');
+const { clearChannelKeyCache, createChannelKey, initChannelKeys } =
+  await import('./channel-keys.ts');
 
 const alice = generateIdentityKeypair();
 
@@ -93,15 +90,11 @@ describe('decryptAndUpdateMessage', () => {
     createChannelKey('ch1');
     const msg = await seedEncryptedMessage('ch1', 'msg-1', 'hello world');
 
-    const result = await decryptAndUpdateMessage(
-      'ch1',
-      msg,
-      alice.publicKey,
-    );
+    const result = await decryptAndUpdateMessage('ch1', msg, alice.publicKey);
 
     expect(result).toBe(true);
 
-    const stored = useMessageStore.getState().byId['ch1']?.['msg-1'];
+    const stored = useMessageStore.getState().byId.ch1?.['msg-1'];
     expect(stored).toBeDefined();
     expect(stored?.keyVersion).toBe(0);
     const text = new TextDecoder().decode(stored?.encryptedContent);
@@ -154,7 +147,7 @@ describe('concurrent decrypt idempotency', () => {
     // Exactly one should succeed
     expect([r1, r2].filter(Boolean)).toHaveLength(1);
 
-    const stored = useMessageStore.getState().byId['ch1']?.['msg-1'];
+    const stored = useMessageStore.getState().byId.ch1?.['msg-1'];
     expect(stored?.keyVersion).toBe(0);
   });
 
@@ -177,7 +170,9 @@ describe('concurrent decrypt idempotency', () => {
     const msg2 = await seedEncryptedMessage('ch1', 'msg-2', 'second');
 
     // Re-seed both messages since setMessages replaces the array
-    useMessageStore.getState().setMessages('ch1', [msg1 as never, msg2 as never]);
+    useMessageStore
+      .getState()
+      .setMessages('ch1', [msg1 as never, msg2 as never]);
 
     const [r1, r2] = await Promise.all([
       decryptAndUpdateMessage('ch1', msg1, alice.publicKey),
@@ -187,8 +182,8 @@ describe('concurrent decrypt idempotency', () => {
     expect(r1).toBe(true);
     expect(r2).toBe(true);
 
-    expect(useMessageStore.getState().byId['ch1']?.['msg-1']?.keyVersion).toBe(0);
-    expect(useMessageStore.getState().byId['ch1']?.['msg-2']?.keyVersion).toBe(0);
+    expect(useMessageStore.getState().byId.ch1?.['msg-1']?.keyVersion).toBe(0);
+    expect(useMessageStore.getState().byId.ch1?.['msg-2']?.keyVersion).toBe(0);
   });
 });
 
@@ -247,7 +242,7 @@ describe('attachment metadata enrichment', () => {
     const result = await decryptAndUpdateMessage('ch1', msg, alice.publicKey);
     expect(result).toBe(true);
 
-    const stored = useMessageStore.getState().byId['ch1']?.['msg-att'];
+    const stored = useMessageStore.getState().byId.ch1?.['msg-att'];
     expect(stored?.attachments[0].filename).toBe('photo.jpg');
     expect(stored?.attachments[0].contentType).toBe('image/jpeg');
   });
@@ -294,7 +289,7 @@ describe('attachment metadata enrichment', () => {
 
     await decryptAndUpdateMessage('ch1', msg, alice.publicKey);
 
-    const stored = useMessageStore.getState().byId['ch1']?.['msg-noatt'];
+    const stored = useMessageStore.getState().byId.ch1?.['msg-noatt'];
     expect(stored?.attachments[0].filename).toBe('original.pdf');
     expect(stored?.attachments[0].contentType).toBe('application/pdf');
   });

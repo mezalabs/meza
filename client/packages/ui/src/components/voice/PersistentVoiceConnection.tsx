@@ -2,6 +2,7 @@ import {
   LiveKitRoom,
   RoomAudioRenderer,
   useRoomContext,
+  useTracks,
 } from '@livekit/components-react';
 import {
   soundManager,
@@ -12,6 +13,7 @@ import {
   useVoiceStore,
 } from '@meza/core';
 import type {
+  LocalAudioTrack,
   LocalTrackPublication,
   Participant,
   RemoteAudioTrack,
@@ -21,7 +23,8 @@ import type {
   TrackPublication,
 } from 'livekit-client';
 import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
-import { type ReactNode, useEffect, useMemo, useRef } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
+import { RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
@@ -370,15 +373,70 @@ function AudioSettingsSync() {
 
   const inputDeviceId = useAudioSettingsStore((s) => s.inputDeviceId);
   const outputDeviceId = useAudioSettingsStore((s) => s.outputDeviceId);
-  const noiseSuppression = useAudioSettingsStore((s) => s.noiseSuppression);
+  const noiseCancellationMode = useAudioSettingsStore(
+    (s) => s.noiseCancellationMode,
+  );
+  const gigaThreshold = useAudioSettingsStore((s) => s.gigaThreshold);
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
   const _outputVolume = useAudioSettingsStore((s) => s.outputVolume);
   const _perUserVolumes = useAudioSettingsStore((s) => s.perUserVolumes);
   const soundboardVolume = useAudioSettingsStore((s) => s.soundboardVolume);
 
+  // Derive browser-native noiseSuppression from the cancellation mode
+  const noiseSuppression = noiseCancellationMode === 'standard';
+
   // Track first render to avoid switching devices on mount
   const isFirstRender = useRef(true);
+
+  // Track the current processor instance for cleanup
+  const processorRef = useRef<RnnoiseTrackProcessor | null>(null);
+  // Debounce timer for processor pipeline changes
+  const processorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Get local mic track via useTracks for stable references (avoids infinite re-renders)
+  const tracks = useTracks([Track.Source.Microphone], {
+    onlySubscribed: false,
+  });
+  const localMicTrack = tracks.find((t) => t.participant.isLocal)?.publication
+    ?.track as LocalAudioTrack | undefined;
+
+  /** Attach or detach the RNNoise processor based on the current mode. */
+  const syncProcessor = useCallback(
+    async (track: LocalAudioTrack | undefined, mode: string) => {
+      if (mode === 'giga' && track) {
+        // Already attached? Skip.
+        if (
+          processorRef.current &&
+          track.getProcessor() === processorRef.current
+        ) {
+          return;
+        }
+        try {
+          const processor = new RnnoiseTrackProcessor();
+          await track.setProcessor(processor);
+          processor.setThreshold(
+            useAudioSettingsStore.getState().gigaThreshold / 100,
+          );
+          processorRef.current = processor;
+        } catch {
+          // WASM load failed — fall back to Standard
+          useAudioSettingsStore.getState().setNoiseCancellationMode('standard');
+        }
+      } else {
+        // Detach processor if active
+        if (processorRef.current) {
+          try {
+            await localMicTrack?.stopProcessor();
+          } catch {
+            // Track may already be stopped
+          }
+          processorRef.current = null;
+        }
+      }
+    },
+    [localMicTrack],
+  );
 
   // Live input device switching
   useEffect(() => {
@@ -412,6 +470,30 @@ function AudioSettingsSync() {
         .catch(() => {});
     }
   }, [room, noiseSuppression, echoCancellation, autoGainControl]);
+
+  // RNNoise processor lifecycle: attach/detach based on mode and track presence
+  useEffect(() => {
+    // Debounce to handle rapid toggling (300ms)
+    clearTimeout(processorTimerRef.current);
+    processorTimerRef.current = setTimeout(() => {
+      syncProcessor(localMicTrack, noiseCancellationMode);
+    }, 300);
+
+    return () => clearTimeout(processorTimerRef.current);
+  }, [localMicTrack, noiseCancellationMode, syncProcessor]);
+
+  // Sync GIGA threshold to the active processor
+  useEffect(() => {
+    processorRef.current?.setThreshold(gigaThreshold / 100);
+  }, [gigaThreshold]);
+
+  // Cleanup processor on unmount
+  useEffect(() => {
+    return () => {
+      processorRef.current?.destroy();
+      processorRef.current = null;
+    };
+  }, []);
 
   // Apply output volume to all remote participants
   useEffect(() => {
@@ -468,9 +550,15 @@ export function PersistentVoiceConnection({
   const isActive = status !== 'idle' && !!url && !!token;
 
   const inputDeviceId = useAudioSettingsStore((s) => s.inputDeviceId);
-  const noiseSuppression = useAudioSettingsStore((s) => s.noiseSuppression);
+  const noiseCancellationMode = useAudioSettingsStore(
+    (s) => s.noiseCancellationMode,
+  );
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
+
+  // Derive browser-native noiseSuppression from the cancellation mode:
+  // 'standard' uses browser built-in, 'giga' and 'off' disable it
+  const noiseSuppression = noiseCancellationMode === 'standard';
 
   const audioConstraints = useMemo(
     () => ({
