@@ -33,7 +33,6 @@ import {
 import {
   CaretRightIcon,
   CheckIcon,
-  DotsSixVerticalIcon,
   MinusIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -314,11 +313,11 @@ function RoleItem({
   const permCount = countPermissions(role.permissions);
 
   return (
-    <div className="rounded-lg border border-border bg-bg-surface">
+    <div>
       <button
         type="button"
         onClick={canEdit ? onToggle : undefined}
-        className={`flex w-full items-center gap-2 px-3 py-2.5 text-left ${
+        className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-bg-elevated/50 ${
           canEdit ? 'cursor-pointer' : 'cursor-default'
         }`}
       >
@@ -329,15 +328,10 @@ function RoleItem({
             aria-hidden="true"
           />
         )}
-        {role.color !== 0 && (
-          <span
-            className="inline-block h-3 w-3 rounded-full"
-            style={{
-              backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
-            }}
-          />
-        )}
-        <span className="text-sm font-medium text-text">
+        <span
+          className="text-sm font-medium"
+          style={{ color: roleColorHex(role.color) }}
+        >
           {isEveryone ? '@everyone' : role.name}
         </span>
         {isEveryone && (
@@ -416,47 +410,29 @@ function SortableRoleItem({
   const permCount = countPermissions(role.permissions);
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="rounded-lg border border-border bg-bg-surface"
-    >
-      <div className="flex items-center">
-        {/* Drag handle */}
-        <button
-          type="button"
-          className="cursor-grab touch-none py-2.5 pl-2 text-text-muted hover:text-text active:cursor-grabbing"
-          {...attributes}
-          {...listeners}
+    <div ref={setNodeRef} style={style}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full cursor-grab items-center gap-2 rounded-md px-3 py-2 text-left hover:bg-bg-elevated/50 active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
+        <CaretRightIcon
+          size={16}
+          className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+        />
+        <span
+          className="text-sm font-medium"
+          style={{ color: roleColorHex(role.color) }}
         >
-          <DotsSixVerticalIcon size={16} aria-hidden="true" />
-        </button>
-
-        {/* Clickable header */}
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex flex-1 items-center gap-2 px-2 py-2.5 text-left"
-        >
-          <CaretRightIcon
-            size={16}
-            className={`shrink-0 text-text-muted transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-            aria-hidden="true"
-          />
-          {role.color !== 0 && (
-            <span
-              className="inline-block h-3 w-3 rounded-full"
-              style={{
-                backgroundColor: `#${role.color.toString(16).padStart(6, '0')}`,
-              }}
-            />
-          )}
-          <span className="text-sm font-medium text-text">{role.name}</span>
-          <span className="rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent">
-            {permCount} {permCount === 1 ? 'permission' : 'permissions'}
-          </span>
-        </button>
-      </div>
+          {role.name}
+        </span>
+        <span className="rounded bg-accent-subtle px-1.5 py-0.5 text-xs text-accent">
+          {permCount} {permCount === 1 ? 'permission' : 'permissions'}
+        </span>
+      </button>
 
       {isExpanded && (
         <div className="px-3 pb-3">
