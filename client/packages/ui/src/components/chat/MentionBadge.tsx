@@ -64,13 +64,13 @@ export function MentionBadge({ type, userId, serverId }: MentionBadgeProps) {
     <span
       className={`rounded px-0.5 cursor-pointer ${
         isCurrentUser
-          ? 'bg-accent/25 font-medium'
+          ? 'bg-accent/25 text-accent font-medium'
           : mentionColor
             ? 'font-medium'
             : 'bg-accent/15 text-accent'
       }`}
       style={
-        mentionColor
+        !isCurrentUser && mentionColor
           ? { backgroundColor: `${mentionColor}20`, color: mentionColor }
           : undefined
       }

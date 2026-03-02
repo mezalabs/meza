@@ -15,24 +15,25 @@ export function useDisplayColor(
 ): string | undefined {
   // Member's role IDs (server context only)
   const memberRoleIds = useMemberStore((s) => {
-    if (!serverId) return EMPTY_ROLE_IDS;
+    if (!serverId || !userId) return EMPTY_ROLE_IDS;
     return (
       s.byServer[serverId]?.find((m) => m.userId === userId)?.roleIds ??
       EMPTY_ROLE_IDS
     );
   });
 
-  // Highest-positioned role color (server context only)
-  return useRoleStore((s) => {
-    if (!serverId || !memberRoleIds.length) return undefined;
-    const roles = s.byServer[serverId];
-    if (!roles) return undefined;
-    // roles are sorted by position descending — first with color wins
-    for (const role of roles) {
-      if (memberRoleIds.includes(role.id) && role.color) {
-        return roleColorHex(role.color);
-      }
+  // Server roles (sorted by position descending)
+  const roles = useRoleStore((s) =>
+    serverId ? s.byServer[serverId] : undefined,
+  );
+
+  // Derive color in render body — both values are guaranteed fresh,
+  // avoiding stale closures from cross-store selector dependencies.
+  if (!serverId || !memberRoleIds.length || !roles) return undefined;
+  for (const role of roles) {
+    if (memberRoleIds.includes(role.id) && role.color) {
+      return roleColorHex(role.color);
     }
-    return undefined;
-  });
+  }
+  return undefined;
 }
