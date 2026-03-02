@@ -1,10 +1,18 @@
+export type KeybindCategory = 'navigation' | 'tiling' | 'voice' | 'channels';
+
 export interface Keybind {
-  /** Key combo in hotkey format: 'ctrl+shift+v', 'mod+k' */
+  /** Key combo in hotkey format: 'ctrl+shift+v', 'mod+k'. Empty string = unbound. */
   keys: string;
   /** Short label for the help overlay */
   label: string;
+  /** 'press' (default) fires on keydown, 'hold' fires on keydown and releases on keyup */
+  type?: 'press' | 'hold';
+  /** Category for grouping in the settings UI */
+  category?: KeybindCategory;
   /** Hidden in simple mode (single-pane layout) */
   tilingOnly?: boolean;
+  /** Only fires when connected to a voice channel */
+  voiceOnly?: boolean;
   /** Options passed to the key event handler */
   hotkeyOptions?: {
     /** Fire even when a form element (input/textarea/select) is focused */
@@ -15,69 +23,126 @@ export interface Keybind {
 }
 
 export const KEYBINDS = {
+  // --- Tiling ---
   'split-horizontal': {
     keys: 'ctrl+shift+v',
     label: 'Split right',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'split-vertical': {
     keys: 'ctrl+shift+h',
     label: 'Split down',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'close-pane': {
     keys: 'ctrl+shift+w',
     label: 'Close pane',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'move-focus-left': {
     keys: 'ctrl+shift+left',
     label: 'Move focus left',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'move-focus-right': {
     keys: 'ctrl+shift+right',
     label: 'Move focus right',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'move-focus-up': {
     keys: 'ctrl+shift+up',
     label: 'Move focus up',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'move-focus-down': {
     keys: 'ctrl+shift+down',
     label: 'Move focus down',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'cycle-focus': {
     keys: 'ctrl+shift+tab',
     label: 'Cycle focus',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
   'reset-layout': {
     keys: 'ctrl+shift+e',
     label: 'Reset layout',
+    category: 'tiling',
     tilingOnly: true,
     hotkeyOptions: { preventDefault: true },
   },
+  // --- Navigation ---
   search: {
     keys: 'mod+k',
     label: 'Search messages',
+    category: 'navigation',
     hotkeyOptions: { preventDefault: true, enableOnFormTags: true },
   },
   'show-shortcuts': {
     keys: 'shift+/',
     label: 'Show this help',
+    category: 'navigation',
     hotkeyOptions: { preventDefault: true, enableOnFormTags: false },
+  },
+  // --- Voice ---
+  'toggle-mute': {
+    keys: 'ctrl+shift+m',
+    label: 'Toggle mute',
+    category: 'voice',
+    voiceOnly: true,
+    hotkeyOptions: { enableOnFormTags: true, preventDefault: true },
+  },
+  'toggle-deafen': {
+    keys: 'ctrl+shift+d',
+    label: 'Toggle deafen',
+    category: 'voice',
+    voiceOnly: true,
+    hotkeyOptions: { enableOnFormTags: true, preventDefault: true },
+  },
+  'push-to-mute': {
+    keys: '',
+    label: 'Push-to-mute',
+    type: 'hold',
+    category: 'voice',
+    voiceOnly: true,
+    hotkeyOptions: { enableOnFormTags: true, preventDefault: true },
+  },
+  'push-to-deafen': {
+    keys: '',
+    label: 'Push-to-deafen',
+    type: 'hold',
+    category: 'voice',
+    voiceOnly: true,
+    hotkeyOptions: { enableOnFormTags: true, preventDefault: true },
+  },
+  // --- Channels ---
+  'mark-channel-read': {
+    keys: 'escape',
+    label: 'Mark channel read',
+    category: 'channels',
+    hotkeyOptions: { preventDefault: false },
+  },
+  'mark-server-read': {
+    keys: 'shift+escape',
+    label: 'Mark server read',
+    category: 'channels',
+    hotkeyOptions: { preventDefault: true },
   },
 } as const satisfies Record<string, Keybind>;
 
@@ -87,7 +152,8 @@ const IS_MAC =
   typeof navigator !== 'undefined' &&
   /Mac|iPhone|iPad/.test(navigator.userAgent);
 
-function formatDisplayKeys(keys: string): string {
+/** Format a hotkey string into a display-friendly format. */
+export function formatDisplayKeys(keys: string): string {
   return keys
     .split('+')
     .map((k) => {
@@ -102,9 +168,14 @@ function formatDisplayKeys(keys: string): string {
     .join('+');
 }
 
-/** Get display-friendly key string for a keybind. */
+/** Get display-friendly key string for a keybind using its default keys. */
 export function getDisplayKeys(id: KeybindId): string {
   return formatDisplayKeys(KEYBINDS[id].keys);
+}
+
+/** Get display-friendly key string for an arbitrary hotkey string. */
+export function displayKeysFor(keys: string): string {
+  return keys ? formatDisplayKeys(keys) : '';
 }
 
 function isFormElement(target: EventTarget | null): boolean {
@@ -124,6 +195,7 @@ const KEY_MAP: Record<string, string> = {
   up: 'arrowup',
   down: 'arrowdown',
   tab: 'tab',
+  escape: 'escape',
   '/': '/',
 };
 

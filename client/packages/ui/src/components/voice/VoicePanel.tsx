@@ -5,7 +5,6 @@ import {
   useParticipants,
   useRemoteParticipants,
   useTracks,
-  useTrackToggle,
   VideoTrack,
 } from '@livekit/components-react';
 import {
@@ -21,6 +20,7 @@ import {
   useVoiceStore,
 } from '@meza/core';
 import {
+  EarIcon,
   EarSlashIcon,
   MicrophoneIcon,
   MicrophoneSlashIcon,
@@ -46,6 +46,7 @@ import {
   buildCaptureOptions,
   buildPublishOptions,
 } from '../../utils/streamPresets.ts';
+import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 import { SoundboardPanel } from './SoundboardPanel.tsx';
@@ -225,6 +226,7 @@ function ConnectedView({
       <div className="mt-4 flex items-center justify-center">
         <div className="inline-flex items-center rounded-lg bg-bg-surface overflow-hidden divide-x divide-border/50">
           <MuteButton />
+          <DeafenButton />
           {canScreenShare && <ScreenShareButton />}
           <DisconnectButton />
         </div>
@@ -384,29 +386,59 @@ function ParticipantRow({
 }
 
 function MuteButton() {
-  const { toggle, enabled } = useTrackToggle({
-    source: Track.Source.Microphone,
-  });
+  const { localParticipant } = useLocalParticipant();
+  const isMicEnabled = localParticipant.isMicrophoneEnabled;
 
   return (
     <button
       type="button"
       onClick={() => {
-        toggle();
-        const { soundEnabled, enabledSounds } =
-          useNotificationSettingsStore.getState();
-        const type = enabled ? 'mute' : 'unmute';
-        if (soundEnabled && enabledSounds[type]) soundManager.play(type);
+        const newEnabled = toggleMute();
+        if (newEnabled !== null) {
+          const { soundEnabled, enabledSounds } =
+            useNotificationSettingsStore.getState();
+          const type = newEnabled ? 'unmute' : 'mute';
+          if (soundEnabled && enabledSounds[type]) soundManager.play(type);
+        }
       }}
       className={`px-4 py-3 transition-colors hover:bg-bg-elevated ${
-        enabled ? 'text-text-muted' : 'text-text'
+        isMicEnabled ? 'text-text-muted' : 'text-text'
       }`}
-      title={enabled ? 'Mute' : 'Unmute'}
+      title={isMicEnabled ? 'Mute' : 'Unmute'}
     >
-      {enabled ? (
+      {isMicEnabled ? (
         <MicrophoneIcon size={22} aria-hidden="true" />
       ) : (
         <MicrophoneSlashIcon size={22} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+function DeafenButton() {
+  const isDeafened = useVoiceStore((s) => s.isDeafened);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        const newDeafened = toggleDeafen();
+        if (newDeafened !== null) {
+          const { soundEnabled, enabledSounds } =
+            useNotificationSettingsStore.getState();
+          const type = newDeafened ? 'mute' : 'unmute';
+          if (soundEnabled && enabledSounds[type]) soundManager.play(type);
+        }
+      }}
+      className={`px-4 py-3 transition-colors hover:bg-bg-elevated ${
+        isDeafened ? 'text-error' : 'text-text-muted'
+      }`}
+      title={isDeafened ? 'Undeafen' : 'Deafen'}
+    >
+      {isDeafened ? (
+        <EarSlashIcon size={22} aria-hidden="true" />
+      ) : (
+        <EarIcon size={22} aria-hidden="true" />
       )}
     </button>
   );

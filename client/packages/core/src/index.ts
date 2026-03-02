@@ -281,6 +281,11 @@ export type {
 export { useGatewayStore } from './store/gateway.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
+export type {
+  KeybindOverridesActions,
+  KeybindOverridesState,
+} from './store/keybindOverrides.ts';
+export { useKeybindOverridesStore } from './store/keybindOverrides.ts';
 export type { MemberActions, MemberState } from './store/members.ts';
 export { useMemberStore } from './store/members.ts';
 export type { MessageActions, MessageState } from './store/messages.ts';

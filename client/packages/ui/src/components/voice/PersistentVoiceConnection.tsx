@@ -23,6 +23,7 @@ import type {
 import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
+import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
 const encoder = new TextEncoder();
@@ -53,6 +54,12 @@ function applySoundboardVolume(participant: RemoteParticipant) {
 /** Invisible component that listens to LiveKit room events and syncs them to the voice store. */
 function VoiceEventHandler() {
   const room = useRoomContext();
+
+  // Expose the room instance for imperative access (keybind-driven mute/deafen).
+  useEffect(() => {
+    setVoiceRoom(room);
+    return () => setVoiceRoom(null);
+  }, [room]);
 
   useEffect(() => {
     const onReconnecting = () => {
