@@ -7,7 +7,8 @@
       "!gen",
       "!vendor",
       "!e2e/.auth",
-      "!e2e/playwright-report"
+      "!e2e/playwright-report",
+      "!e2e/test-results"
     ]
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },

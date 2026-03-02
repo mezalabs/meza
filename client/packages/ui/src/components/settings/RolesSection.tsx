@@ -30,11 +30,7 @@ import {
   useRoleStore,
   useServerStore,
 } from '@meza/core';
-import {
-  CaretRightIcon,
-  CheckIcon,
-  MinusIcon,
-} from '@phosphor-icons/react';
+import { CaretRightIcon, CheckIcon, MinusIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { roleColorHex } from '../../utils/color.ts';
 
