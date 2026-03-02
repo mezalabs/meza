@@ -1,10 +1,10 @@
 import { createClient } from '@connectrpc/connect';
 import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
-import { VoiceService } from '@meza/gen/meza/v1/voice_pb.ts';
 import type { Server } from '@meza/gen/meza/v1/models_pb.ts';
-import { transport } from './client.ts';
-import { toStoredUser } from './auth.ts';
+import { VoiceService } from '@meza/gen/meza/v1/voice_pb.ts';
 import type { StoredUser } from '../store/auth.ts';
+import { toStoredUser } from './auth.ts';
+import { transport } from './client.ts';
 
 const chatClient = createClient(ChatService, transport);
 const voiceClient = createClient(VoiceService, transport);
@@ -38,9 +38,7 @@ export async function getMutualServers(
   return res.servers.map(toStoredServer);
 }
 
-export async function getMutualFriends(
-  userId: string,
-): Promise<StoredUser[]> {
+export async function getMutualFriends(userId: string): Promise<StoredUser[]> {
   const res = await chatClient.getMutualFriends({ userId });
   return res.users.map(toStoredUser);
 }

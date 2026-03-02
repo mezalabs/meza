@@ -144,6 +144,8 @@ beforeEach(() => {
       themeColorSecondary: '',
       simpleMode: false,
       dmPrivacy: 'message_requests',
+      connections: [],
+      createdAt: '',
     },
   });
 });

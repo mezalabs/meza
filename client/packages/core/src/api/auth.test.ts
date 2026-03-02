@@ -92,6 +92,7 @@ describe('login', () => {
         displayName: 'Alice',
         avatarUrl: '',
         emojiScale: 1.0,
+        connections: [],
       },
     });
 
@@ -139,6 +140,7 @@ describe('register', () => {
         displayName: 'Bob',
         avatarUrl: '',
         emojiScale: 1.0,
+        connections: [],
       },
     });
 
@@ -257,6 +259,8 @@ describe('updateProfile', () => {
         themeColorSecondary: '',
         simpleMode: false,
         dmPrivacy: 'message_requests',
+        connections: [],
+        createdAt: '',
       },
     });
     mockAuthClient.updateProfile.mockResolvedValue({
@@ -265,6 +269,7 @@ describe('updateProfile', () => {
         displayName: 'New Name',
         avatarUrl: '/new',
         emojiScale: 1.5,
+        connections: [],
       },
     });
 
@@ -319,6 +324,8 @@ describe('logout', () => {
         themeColorSecondary: '',
         simpleMode: false,
         dmPrivacy: 'message_requests',
+        connections: [],
+        createdAt: '',
       },
     });
 
