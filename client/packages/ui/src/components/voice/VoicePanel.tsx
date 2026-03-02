@@ -49,6 +49,7 @@ import {
 import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { SoundboardPanel } from './SoundboardPanel.tsx';
 
 /* ——— Main component ——— */
@@ -278,22 +279,24 @@ function ParticipantRow({
         }`}
       >
         {/* Avatar with speaking ring + presence dot */}
-        <div className="relative">
-          <div
-            className={`rounded-full transition-shadow ${
-              isSpeaking
-                ? 'ring-[2.5px] ring-success shadow-[0_0_6px_oklch(0.72_0.19_157/0.4)]'
-                : ''
-            }`}
-          >
-            <Avatar avatarUrl={avatarUrl} displayName={displayName} size="lg" />
-          </div>
-          <PresenceDot
-            userId={userId}
-            size="sm"
-            className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-base"
-          />
-        </div>
+        <ProfilePopoverCard userId={userId} serverId={serverId}>
+          <button type="button" className="relative cursor-pointer">
+            <div
+              className={`rounded-full transition-shadow ${
+                isSpeaking
+                  ? 'ring-[2.5px] ring-success shadow-[0_0_6px_oklch(0.72_0.19_157/0.4)]'
+                  : ''
+              }`}
+            >
+              <Avatar avatarUrl={avatarUrl} displayName={displayName} size="lg" />
+            </div>
+            <PresenceDot
+              userId={userId}
+              size="sm"
+              className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-base"
+            />
+          </button>
+        </ProfilePopoverCard>
 
         {/* Name */}
         <span

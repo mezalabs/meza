@@ -9,6 +9,12 @@ const USER_KEY = 'meza:user';
  * Plain serializable subset of the proto User — avoids storing protobuf
  * Message instances in localStorage (they don't survive JSON round-trips).
  */
+export interface StoredUserConnection {
+  platform: string;
+  url: string;
+  label: string;
+}
+
 export interface StoredUser {
   id: string;
   username: string;
@@ -22,6 +28,8 @@ export interface StoredUser {
   themeColorSecondary: string;
   simpleMode: boolean;
   dmPrivacy: string;
+  connections: StoredUserConnection[];
+  createdAt: string;
 }
 
 export interface AuthState {
@@ -54,6 +62,7 @@ export interface AuthActions {
         | 'themeColorSecondary'
         | 'simpleMode'
         | 'dmPrivacy'
+        | 'connections'
       >
     >,
   ) => void;
