@@ -404,26 +404,26 @@ client/packages/mobile/src/lib/deep-link.ts     (notification tap → navigation
 
 **Tasks:**
 
-- [ ] Integrate `expo-image-picker` for photo/camera capture
-- [ ] Integrate `expo-document-picker` for file selection
-- [ ] Implement file encryption flow:
-  - [ ] Generate per-file AES-256-GCM key
-  - [ ] Encrypt file bytes
-  - [ ] Generate and encrypt thumbnail (images)
-  - [ ] Create upload → PUT to presigned S3 URL → complete upload
-  - [ ] Wrap file key with channel key (ECIES)
-- [ ] Implement file decryption flow:
-  - [ ] Fetch encrypted bytes from presigned download URL
-  - [ ] Unwrap file key → AES-GCM decrypt → display
-- [ ] Build attachment UI in message bubbles:
-  - [ ] Image preview (decrypted, rendered inline)
-  - [ ] File download indicator (name, size, progress)
-  - [ ] Image viewer (pinch-to-zoom, swipe to dismiss)
-- [ ] Handle upload progress indicator
-- [ ] Handle download/decrypt for received attachments
-- [ ] Camera permissions handling (`expo-camera`)
-- [ ] Media library permissions handling (`expo-media-library`)
-- [ ] Test: send photo from mobile → appears on web (decrypted), and vice versa
+- [x] Integrate `expo-image-picker` for photo/camera capture
+- [x] Integrate `expo-document-picker` for file selection
+- [x] Implement file encryption flow:
+  - [x] Generate per-file AES-256-GCM key (via `@meza/core` generateFileKey)
+  - [x] Encrypt file bytes (via `@meza/core` encryptFile)
+  - [ ] Generate and encrypt thumbnail (images) (deferred — server generates thumbnails on CompleteUpload)
+  - [x] Create upload → PUT to presigned S3 URL → complete upload
+  - [x] Wrap file key with channel key (via `@meza/core` wrapFileKey)
+- [x] Implement file decryption flow:
+  - [x] Fetch encrypted bytes from presigned download URL (via `@meza/core` fetchEncryptedMedia)
+  - [x] Unwrap file key → AES-GCM decrypt → display (downloadAndDecryptAttachment)
+- [x] Build attachment UI in message bubbles:
+  - [x] Image preview (rendered inline via media redirect URL)
+  - [x] File download indicator (name, size, type icon)
+  - [x] Image viewer (full-screen modal, tap to dismiss)
+- [x] Handle upload progress indicator
+- [x] Handle download/decrypt for received attachments
+- [x] Camera permissions handling (via `expo-image-picker`)
+- [x] Media library permissions handling (via `expo-image-picker`)
+- [ ] Test: send photo from mobile → appears on web (decrypted), and vice versa (requires runtime testing)
 
 **Success criteria:** Images and files can be sent and received between mobile and web with full E2EE. Thumbnails display inline.
 

@@ -23,6 +23,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { FileAttachment } from '@/components/FileAttachment';
+import { ImageAttachment } from '@/components/ImageAttachment';
 import { MessageComposer } from '@/components/MessageComposer';
 import { TypingIndicator } from '@/components/TypingIndicator';
 
@@ -151,11 +153,35 @@ export default function DMScreen() {
                 Decrypting...
               </Text>
             ) : (
-              <Text
-                className={`text-sm ${isOwn ? 'text-black' : 'text-text'}`}
-              >
-                {text}
-              </Text>
+              <>
+                {text ? (
+                  <Text
+                    className={`text-sm ${isOwn ? 'text-black' : 'text-text'}`}
+                  >
+                    {text}
+                  </Text>
+                ) : null}
+                {msg.attachments.map((att) =>
+                  att.contentType.startsWith('image/') ? (
+                    <ImageAttachment
+                      key={att.id}
+                      attachmentId={att.id}
+                      width={att.width}
+                      height={att.height}
+                      filename={att.filename}
+                      hasThumbnail={att.hasThumbnail}
+                    />
+                  ) : (
+                    <FileAttachment
+                      key={att.id}
+                      attachmentId={att.id}
+                      filename={att.filename}
+                      contentType={att.contentType}
+                      sizeBytes={att.sizeBytes}
+                    />
+                  ),
+                )}
+              </>
             )}
             <Text
               className={`mt-0.5 text-[10px] ${
