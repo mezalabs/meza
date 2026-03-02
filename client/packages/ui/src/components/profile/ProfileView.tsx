@@ -426,10 +426,12 @@ const PLATFORM_LABELS: Record<string, string> = {
   twitter: 'Twitter',
   twitch: 'Twitch',
   youtube: 'YouTube',
+  linkedin: 'LinkedIn',
   website: 'Website',
   steam: 'Steam',
   spotify: 'Spotify',
   reddit: 'Reddit',
+  other: 'Other',
 };
 
 function ConnectionIcon({ platform }: { platform: string }) {
@@ -439,6 +441,7 @@ function ConnectionIcon({ platform }: { platform: string }) {
     twitter: '#1DA1F2',
     twitch: '#9146FF',
     youtube: '#FF0000',
+    linkedin: '#0A66C2',
     website: '#6366f1',
     steam: '#1B2838',
     spotify: '#1DB954',

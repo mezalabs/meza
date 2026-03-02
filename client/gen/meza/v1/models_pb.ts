@@ -117,7 +117,7 @@ export const UserSchema: GenMessage<User> = /*@__PURE__*/
  */
 export type UserConnection = Message$1<"meza.v1.UserConnection"> & {
   /**
-   * "github", "twitter", "linkedin", "website", "other"
+   * "github", "twitter", "twitch", "youtube", "linkedin", "website", "steam", "spotify", "reddit", "other"
    *
    * @generated from field: string platform = 1;
    */

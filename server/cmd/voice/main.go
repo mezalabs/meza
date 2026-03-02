@@ -38,6 +38,7 @@ func main() {
 
 	chatStore := store.NewChatStore(pool)
 	roleStore := store.NewRoleStore(pool)
+	blockStore := store.NewBlockStore(pool)
 	lkClient := lksdk.NewRoomServiceClient(cfg.LiveKitHost, cfg.LiveKitAPIKey, cfg.LiveKitAPISecret)
 
 	lkPublicURL := cfg.LiveKitPublicURL
@@ -48,6 +49,7 @@ func main() {
 	svc := &voiceService{
 		chatStore:   chatStore,
 		roleStore:   roleStore,
+		blockStore:  blockStore,
 		lkClient:    lkClient,
 		lkKey:       cfg.LiveKitAPIKey,
 		lkSecret:    cfg.LiveKitAPISecret,

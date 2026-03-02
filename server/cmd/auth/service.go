@@ -380,7 +380,11 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		if len(r.Connections) > 10 {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("max 10 connections allowed"))
 		}
-		validPlatforms := map[string]bool{"github": true, "twitter": true, "linkedin": true, "website": true, "other": true}
+		validPlatforms := map[string]bool{
+			"github": true, "twitter": true, "twitch": true, "youtube": true,
+			"linkedin": true, "website": true, "steam": true, "spotify": true,
+			"reddit": true, "other": true,
+		}
 		connections = make([]models.UserConnection, 0, len(r.Connections))
 		for _, c := range r.Connections {
 			if !validPlatforms[c.Platform] {
@@ -388,6 +392,12 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 			}
 			if c.Url == "" {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection url is required"))
+			}
+			if len(c.Url) > 2048 {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection url must be at most 2048 characters"))
+			}
+			if !strings.HasPrefix(c.Url, "https://") && !strings.HasPrefix(c.Url, "http://") {
+				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection url must start with https:// or http://"))
 			}
 			if len(c.Label) > 50 {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("connection label must be at most 50 characters"))

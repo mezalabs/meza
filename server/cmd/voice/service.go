@@ -35,6 +35,7 @@ var _ livekitRoomClient = (*lksdk.RoomServiceClient)(nil)
 type voiceService struct {
 	chatStore   store.ChatStorer
 	roleStore   store.RoleStorer
+	blockStore  store.BlockStorer
 	lkClient    livekitRoomClient
 	lkKey       string
 	lkSecret    string

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
 	v1 "github.com/meza-chat/meza/gen/meza/v1"
 	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
@@ -255,6 +256,32 @@ func (m *mockRoleStore) ReorderRoles(context.Context, string, []string, int) ([]
 	panic("not implemented")
 }
 
+// ---------- mock BlockStorer ----------
+
+type mockBlockStore struct {
+	blocked map[string]bool // "userA:userB" -> true
+}
+
+func newMockBlockStore() *mockBlockStore {
+	return &mockBlockStore{blocked: make(map[string]bool)}
+}
+
+func (m *mockBlockStore) BlockUser(_ context.Context, blockerID, blockedID string) error {
+	m.blocked[blockerID+":"+blockedID] = true
+	return nil
+}
+func (m *mockBlockStore) BlockUserTx(_ context.Context, _ pgx.Tx, _, _ string) error {
+	return nil
+}
+func (m *mockBlockStore) UnblockUser(context.Context, string, string) error { return nil }
+func (m *mockBlockStore) IsBlockedEither(_ context.Context, userA, userB string) (bool, error) {
+	return m.blocked[userA+":"+userB] || m.blocked[userB+":"+userA], nil
+}
+func (m *mockBlockStore) ListBlocks(context.Context, string) ([]string, error) { return nil, nil }
+func (m *mockBlockStore) ListBlocksWithUsers(context.Context, string) ([]*models.User, error) {
+	return nil, nil
+}
+
 // ---------- mock LiveKit room client ----------
 
 type mockLKClient struct {
@@ -308,11 +335,13 @@ func setupVoiceTest(t *testing.T) (mezav1connect.VoiceServiceClient, *mockChatSt
 
 	chatStore := newMockChatStore()
 	roleStore := newMockRoleStore()
+	blockStore := newMockBlockStore()
 	lkClient := newMockLKClient()
 
 	svc := &voiceService{
 		chatStore:   chatStore,
 		roleStore:   roleStore,
+		blockStore:  blockStore,
 		lkClient:    lkClient,
 		lkKey:       "test-api-key",
 		lkSecret:    "test-api-secret-that-is-long-enough",

@@ -17,7 +17,6 @@ import {
 } from '@meza/core';
 import * as Popover from '@radix-ui/react-popover';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { useNavigationStore } from '../../stores/navigation.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
@@ -95,21 +94,20 @@ function ProfileCardContent({
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [p] = await Promise.all([
+      const fetchMutual = !isOwnProfile && !isBlocked;
+      const [p, , va, ms] = await Promise.all([
         getProfile(userId),
         getPresence(userId).catch(() => {}),
+        fetchMutual
+          ? getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[])
+          : ([] as VoiceActivity[]),
+        fetchMutual
+          ? getMutualServers(userId).catch(() => [] as StoredServer[])
+          : ([] as StoredServer[]),
       ]);
       setProfile(p);
-
-      // Fetch additional data in parallel (non-blocking)
-      if (!isOwnProfile && !isBlocked) {
-        const [va, ms] = await Promise.all([
-          getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[]),
-          getMutualServers(userId).catch(() => [] as StoredServer[]),
-        ]);
-        setVoiceActivity(va);
-        setMutualServers(ms);
-      }
+      setVoiceActivity(va);
+      setMutualServers(ms);
     } catch {
       // Profile fetch failed — keep whatever cached data we have
     } finally {

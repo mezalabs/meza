@@ -27,7 +27,7 @@ message User {
 }
 
 message UserConnection {
-  string platform = 1;  // "github", "twitter", "linkedin", "website", "other"
+  string platform = 1;  // "github", "twitter", "twitch", "youtube", "linkedin", "website", "steam", "spotify", "reddit", "other"
   string url = 2;
   string label = 3;     // display label (used for "other" type or custom name)
 }

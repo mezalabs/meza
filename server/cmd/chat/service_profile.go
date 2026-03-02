@@ -23,6 +23,14 @@ func (s *chatService) GetMutualServers(ctx context.Context, req *connect.Request
 		return connect.NewResponse(&v1.GetMutualServersResponse{}), nil
 	}
 
+	blocked, err := s.blockStore.IsBlockedEither(ctx, callerID, req.Msg.UserId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if blocked {
+		return connect.NewResponse(&v1.GetMutualServersResponse{}), nil
+	}
+
 	servers, err := s.chatStore.GetMutualServers(ctx, callerID, req.Msg.UserId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -48,6 +56,14 @@ func (s *chatService) GetMutualFriends(ctx context.Context, req *connect.Request
 		return connect.NewResponse(&v1.GetMutualFriendsResponse{}), nil
 	}
 
+	blocked, err := s.blockStore.IsBlockedEither(ctx, callerID, req.Msg.UserId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if blocked {
+		return connect.NewResponse(&v1.GetMutualFriendsResponse{}), nil
+	}
+
 	users, err := s.friendStore.GetMutualFriends(ctx, callerID, req.Msg.UserId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -55,7 +71,10 @@ func (s *chatService) GetMutualFriends(ctx context.Context, req *connect.Request
 
 	resp := &v1.GetMutualFriendsResponse{}
 	for _, u := range users {
-		resp.Users = append(resp.Users, userToProto(u))
+		pu := userToProto(u)
+		// Strip private fields — callers only need identity info for mutual friends.
+		pu.DmPrivacy = ""
+		resp.Users = append(resp.Users, pu)
 	}
 	return connect.NewResponse(resp), nil
 }

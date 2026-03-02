@@ -244,7 +244,7 @@ func (x *User) GetConnections() []*UserConnection {
 
 type UserConnection struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"` // "github", "twitter", "linkedin", "website", "other"
+	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"` // "github", "twitter", "twitch", "youtube", "linkedin", "website", "steam", "spotify", "reddit", "other"
 	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"` // display label (used for "other" type or custom name)
 	unknownFields protoimpl.UnknownFields
