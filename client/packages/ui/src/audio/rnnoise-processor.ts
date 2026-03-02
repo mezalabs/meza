@@ -35,6 +35,7 @@ export class RnnoiseTrackProcessor
   private workletNode?: AudioWorkletNode;
   private destinationNode?: MediaStreamAudioDestinationNode;
   private vadListener?: VadListener;
+  private restartPromise?: Promise<void>;
 
   /** Register a callback that receives smoothed VAD probability (0–1). */
   onVad(listener: VadListener | undefined): void {
@@ -97,17 +98,24 @@ export class RnnoiseTrackProcessor
   }
 
   async restart(opts: AudioProcessorOptions): Promise<void> {
-    // Preserve our AudioContext across restarts if LiveKit doesn't provide one
-    const ctx = this.audioContext;
-    const owns = this.ownsAudioContext;
-    this.ownsAudioContext = false; // prevent destroy() from closing it
-    await this.destroy();
-    if (opts.audioContext || !ctx || ctx.state === 'closed') {
-      await this.init(opts);
-    } else {
-      await this.init({ ...opts, audioContext: ctx });
-      this.ownsAudioContext = owns;
-    }
+    // Serialize concurrent restart calls so they don't interleave.
+    const doRestart = async () => {
+      // Preserve our AudioContext across restarts if LiveKit doesn't provide one
+      const ctx = this.audioContext;
+      const owns = this.ownsAudioContext;
+      this.ownsAudioContext = false; // prevent destroy() from closing it
+      await this.destroy();
+      if (opts.audioContext || !ctx || ctx.state === 'closed') {
+        await this.init(opts);
+      } else {
+        await this.init({ ...opts, audioContext: ctx });
+        this.ownsAudioContext = owns;
+      }
+    };
+
+    const prev = this.restartPromise;
+    this.restartPromise = (prev ?? Promise.resolve()).then(doRestart, doRestart);
+    await this.restartPromise;
   }
 
   async destroy(): Promise<void> {

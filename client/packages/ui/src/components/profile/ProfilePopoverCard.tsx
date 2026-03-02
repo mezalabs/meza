@@ -109,11 +109,19 @@ function ProfileCardContent({
 
   useEffect(() => {
     const id = ++fetchIdRef.current;
-    setLoading(true);
+
+    // If cached profile is fresh (<30s old), skip the network fetch.
+    // Voice activity and mutual servers are always refetched (ephemeral).
+    const fresh = useUsersStore.getState().isProfileFresh(userId, 30_000);
+    const profilePromise = fresh
+      ? Promise.resolve(cachedProfile!)
+      : getProfile(userId);
+
+    if (!fresh) setLoading(true);
 
     const fetchMutual = !isOwnProfile && !isBlocked;
     Promise.all([
-      getProfile(userId),
+      profilePromise,
       getPresence(userId).catch(() => {}),
       fetchMutual
         ? getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[])

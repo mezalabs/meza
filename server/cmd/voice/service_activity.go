@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 
 	"connectrpc.com/connect"
 
@@ -48,52 +49,89 @@ func (s *voiceService) GetUserVoiceActivity(ctx context.Context, req *connect.Re
 		return connect.NewResponse(&v1.GetUserVoiceActivityResponse{}), nil
 	}
 
-	var activities []*v1.UserVoiceActivity
-
-	// Cap at 10 mutual servers to bound the number of LiveKit RPCs.
+	// Cap at 10 mutual servers to bound work.
 	limit := len(mutualServers)
 	if limit > 10 {
 		limit = 10
 	}
 
-outer:
+	// Phase 1: collect all voice channels across mutual servers (DB only, no LiveKit RPCs).
+	type voiceChannel struct {
+		channelID   string
+		channelName string
+		serverID    string
+		serverName  string
+	}
+	var voiceChannels []voiceChannel
+
 	for _, srv := range mutualServers[:limit] {
-		// List channels for this server (passing callerID for potential permission filtering).
 		channels, err := s.chatStore.ListChannels(ctx, srv.ID, callerID)
 		if err != nil {
 			slog.Error("list channels for voice activity", "err", err, "server", srv.ID)
 			continue
 		}
-
 		for _, ch := range channels {
-			if ch.Type != channelTypeVoice {
-				continue
+			if ch.Type == channelTypeVoice {
+				voiceChannels = append(voiceChannels, voiceChannel{
+					channelID: ch.ID, channelName: ch.Name,
+					serverID: srv.ID, serverName: srv.Name,
+				})
 			}
+		}
+	}
 
-			room := roomName(ch.ID)
-			participant, err := s.lkClient.GetParticipant(ctx, &livekit.RoomParticipantIdentity{
+	if len(voiceChannels) == 0 {
+		return connect.NewResponse(&v1.GetUserVoiceActivityResponse{}), nil
+	}
+
+	// Phase 2: check LiveKit rooms in parallel (fan-out, first-hit-wins).
+	// A user can only be in one voice channel, so we cancel remaining goroutines
+	// as soon as the first match is found.
+	type result struct {
+		vc          voiceChannel
+		participant *livekit.ParticipantInfo
+	}
+	resultCh := make(chan result, 1)
+	searchCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	for _, vc := range voiceChannels {
+		wg.Add(1)
+		go func(vc voiceChannel) {
+			defer wg.Done()
+			room := roomName(vc.channelID)
+			participant, err := s.lkClient.GetParticipant(searchCtx, &livekit.RoomParticipantIdentity{
 				Room:     room,
 				Identity: targetUserID,
 			})
 			if err != nil {
-				// Not found means the user isn't in this room — skip.
-				if isNotFound(err) {
-					continue
+				if !isNotFound(err) && searchCtx.Err() == nil {
+					slog.Error("get livekit participant", "err", err, "room", room, "user", targetUserID)
 				}
-				slog.Error("get livekit participant", "err", err, "room", room, "user", targetUserID)
-				continue
+				return
 			}
+			// Non-blocking send — only the first match wins.
+			select {
+			case resultCh <- result{vc: vc, participant: participant}:
+				cancel() // stop other goroutines
+			default:
+			}
+		}(vc)
+	}
 
-			activities = append(activities, &v1.UserVoiceActivity{
-				ChannelId:        ch.ID,
-				ChannelName:      ch.Name,
-				ServerId:         srv.ID,
-				ServerName:       srv.Name,
-				IsStreamingVideo: hasScreenShareTrack(participant),
-			})
-			// Users can only be in one voice channel — stop searching.
-			break outer
-		}
+	// Close channel once all goroutines finish.
+	go func() { wg.Wait(); close(resultCh) }()
+
+	var activities []*v1.UserVoiceActivity
+	if r, ok := <-resultCh; ok {
+		activities = append(activities, &v1.UserVoiceActivity{
+			ChannelId:        r.vc.channelID,
+			ChannelName:      r.vc.channelName,
+			ServerId:         r.vc.serverID,
+			ServerName:       r.vc.serverName,
+			IsStreamingVideo: hasScreenShareTrack(r.participant),
+		})
 	}
 
 	return connect.NewResponse(&v1.GetUserVoiceActivityResponse{
