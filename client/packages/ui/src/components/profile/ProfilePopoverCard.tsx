@@ -42,8 +42,8 @@ export function ProfilePopoverCard({
       <Popover.Portal>
         <Popover.Content
           className="z-50 w-72 rounded-lg border border-border bg-bg-overlay shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
-          side="right"
-          align="start"
+          side="top"
+          align="center"
           sideOffset={8}
           collisionPadding={16}
         >
