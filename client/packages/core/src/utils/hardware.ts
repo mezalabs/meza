@@ -25,6 +25,6 @@ export function canRunGiga(): boolean {
 export function supportsAudioWorklet(): boolean {
   return (
     typeof AudioContext !== 'undefined' &&
-    typeof AudioContext.prototype.audioWorklet !== 'undefined'
+    'audioWorklet' in AudioContext.prototype
   );
 }

@@ -25,12 +25,20 @@ export class RnnoiseTrackProcessor
   processedTrack?: MediaStreamTrack;
 
   private audioContext?: AudioContext;
+  private ownsAudioContext = false;
   private sourceNode?: MediaStreamAudioSourceNode;
   private workletNode?: AudioWorkletNode;
   private destinationNode?: MediaStreamAudioDestinationNode;
 
   async init(opts: AudioProcessorOptions): Promise<void> {
-    this.audioContext = opts.audioContext;
+    // LiveKit may not provide audioContext during unmute/restart flows
+    if (opts.audioContext) {
+      this.audioContext = opts.audioContext;
+      this.ownsAudioContext = false;
+    } else {
+      this.audioContext = new AudioContext();
+      this.ownsAudioContext = true;
+    }
 
     // Register the worklet module once per AudioContext
     if (!registeredContexts.has(this.audioContext)) {
@@ -66,8 +74,17 @@ export class RnnoiseTrackProcessor
   }
 
   async restart(opts: AudioProcessorOptions): Promise<void> {
+    // Preserve our AudioContext across restarts if LiveKit doesn't provide one
+    const ctx = this.audioContext;
+    const owns = this.ownsAudioContext;
+    this.ownsAudioContext = false; // prevent destroy() from closing it
     await this.destroy();
-    await this.init(opts);
+    if (opts.audioContext || !ctx || ctx.state === 'closed') {
+      await this.init(opts);
+    } else {
+      await this.init({ ...opts, audioContext: ctx });
+      this.ownsAudioContext = owns;
+    }
   }
 
   async destroy(): Promise<void> {
@@ -78,6 +95,11 @@ export class RnnoiseTrackProcessor
     this.workletNode = undefined;
     this.destinationNode = undefined;
     this.processedTrack = undefined;
+    if (this.ownsAudioContext && this.audioContext) {
+      await this.audioContext.close();
+    }
+    this.audioContext = undefined;
+    this.ownsAudioContext = false;
   }
 }
 
