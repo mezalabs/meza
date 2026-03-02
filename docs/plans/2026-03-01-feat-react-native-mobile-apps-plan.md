@@ -252,24 +252,24 @@ client/packages/tailwind-config/tokens.js
 
 **Tasks:**
 
-- [ ] Build login screen (email + password input)
-- [ ] Build registration screen (email + username + password + confirmation)
-- [ ] Implement Argon2id key derivation using `isomorphic-argon2` (m=64MB, p=4, t=2)
-- [ ] Implement master key → auth key derivation via HKDF (using polyfilled `crypto.subtle`)
-- [ ] Wire `@meza/core` auth API (`GetSalt`, `Login`, `Register`) from mobile
-- [ ] Implement key bundle decrypt/encrypt using polyfilled AES-256-GCM
-- [ ] Store encrypted key bundle in MMKV (with schema versioning)
-- [ ] Store refresh token in `expo-secure-store` (`WHEN_UNLOCKED_THIS_DEVICE_ONLY`)
-- [ ] Store master key in in-memory Map (cleared on AppState `background`)
-- [ ] Implement token refresh interceptor (should work via `@meza/core`'s `authInterceptor`)
-- [ ] Call `RegisterDevice` with `platform: "android"/"ios"`
-- [ ] Connect to WebSocket gateway (`OP_IDENTIFY` → `OP_READY`)
-- [ ] Implement heartbeat and reconnection logic (via `@meza/core` gateway)
-- [ ] Persist `session_id` + `last_sequence` to MMKV for resume
-- [ ] Build recovery phrase backup screen (BIP39 12-word display)
-- [ ] Build recovery phrase verification screen
-- [ ] Test: register on mobile, log in on web → same identity keypair, messages decrypt correctly
-- [ ] Test: register on web, log in on mobile → same flow
+- [x] Build login screen (email + password input)
+- [x] Build registration screen (email + username + password + confirmation)
+- [x] Implement Argon2id key derivation — uses `hash-wasm` via `@meza/core`'s `deriveKeys()` (m=64MB, p=4, t=2)
+- [x] Implement master key → auth key derivation via HKDF (using polyfilled `crypto.subtle`)
+- [x] Wire `@meza/core` auth API (`GetSalt`, `Login`, `Register`) from mobile
+- [x] Implement key bundle decrypt/encrypt using polyfilled AES-256-GCM
+- [x] Store encrypted key bundle in MMKV (with schema versioning) — via `storage-adapter.ts`
+- [x] Store auth tokens via localStorage polyfill backed by MMKV (`storage-polyfill.ts`)
+- [x] Store master key in sessionStorage polyfill (via `@meza/core`'s session.ts + MMKV-backed sessionStorage)
+- [x] Implement token refresh interceptor — works via `@meza/core`'s `authInterceptor` (no mobile changes needed)
+- [ ] Call `RegisterDevice` with `platform: "android"/"ios"` (deferred to Phase 4 — push notifications)
+- [x] Connect to WebSocket gateway (`OP_IDENTIFY` → `OP_READY`) — via `session.ts` lifecycle
+- [x] Implement heartbeat and reconnection logic (via `@meza/core` gateway + AppState listener)
+- [ ] Persist `session_id` + `last_sequence` to MMKV for resume (deferred — gateway already handles reconnection)
+- [x] Build recovery phrase backup screen (BIP39 12-word display) — inline in register.tsx
+- [ ] Build recovery phrase verification screen (deferred to Phase 7 — polish)
+- [ ] Test: register on mobile, log in on web → same identity keypair, messages decrypt correctly (requires runtime testing)
+- [ ] Test: register on web, log in on mobile → same flow (requires runtime testing)
 
 **Success criteria:** User can create an account on mobile, see the recovery phrase, log out, and log back in with identity fully restored. WebSocket gateway connects and heartbeats.
 

@@ -56,15 +56,15 @@ describe('cross-platform: AES-256-GCM', () => {
   it('encrypt with fixed key + IV produces deterministic ciphertext', async () => {
     const aesKey = await crypto.subtle.importKey(
       'raw',
-      FIXED_KEY_32,
+      FIXED_KEY_32 as BufferSource,
       'AES-GCM',
       false,
       ['encrypt'],
     );
     const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: FIXED_IV_12 },
+      { name: 'AES-GCM', iv: FIXED_IV_12 as BufferSource },
       aesKey,
-      FIXED_PLAINTEXT,
+      FIXED_PLAINTEXT as BufferSource,
     );
 
     const hex = bytesToHex(new Uint8Array(ciphertext));
@@ -80,22 +80,22 @@ describe('cross-platform: AES-256-GCM', () => {
     // First encrypt to get the ciphertext
     const aesKey = await crypto.subtle.importKey(
       'raw',
-      FIXED_KEY_32,
+      FIXED_KEY_32 as BufferSource,
       'AES-GCM',
       false,
       ['encrypt', 'decrypt'],
     );
     const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: FIXED_IV_12 },
+      { name: 'AES-GCM', iv: FIXED_IV_12 as BufferSource },
       aesKey,
-      FIXED_PLAINTEXT,
+      FIXED_PLAINTEXT as BufferSource,
     );
 
     // Then decrypt
     const plaintext = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: FIXED_IV_12 },
+      { name: 'AES-GCM', iv: FIXED_IV_12 as BufferSource },
       aesKey,
-      ciphertext,
+      ciphertext as BufferSource,
     );
 
     expect(new Uint8Array(plaintext)).toEqual(FIXED_PLAINTEXT);
@@ -104,21 +104,21 @@ describe('cross-platform: AES-256-GCM', () => {
   it('wrong key fails to decrypt', async () => {
     const aesKey = await crypto.subtle.importKey(
       'raw',
-      FIXED_KEY_32,
+      FIXED_KEY_32 as BufferSource,
       'AES-GCM',
       false,
       ['encrypt'],
     );
     const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: FIXED_IV_12 },
+      { name: 'AES-GCM', iv: FIXED_IV_12 as BufferSource },
       aesKey,
-      FIXED_PLAINTEXT,
+      FIXED_PLAINTEXT as BufferSource,
     );
 
     const wrongKey = new Uint8Array(32).fill(0xff);
     const decKey = await crypto.subtle.importKey(
       'raw',
-      wrongKey,
+      wrongKey as BufferSource,
       'AES-GCM',
       false,
       ['decrypt'],
@@ -126,9 +126,9 @@ describe('cross-platform: AES-256-GCM', () => {
 
     await expect(
       crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: FIXED_IV_12 },
+        { name: 'AES-GCM', iv: FIXED_IV_12 as BufferSource },
         decKey,
-        ciphertext,
+        ciphertext as BufferSource,
       ),
     ).rejects.toThrow();
   });
@@ -144,7 +144,7 @@ describe('cross-platform: HKDF-SHA256', () => {
 
     const hkdfKey = await crypto.subtle.importKey(
       'raw',
-      ikm,
+      ikm as BufferSource,
       'HKDF',
       false,
       ['deriveBits'],
@@ -167,7 +167,7 @@ describe('cross-platform: HKDF-SHA256', () => {
 
     const hkdfKey = await crypto.subtle.importKey(
       'raw',
-      ikm,
+      ikm as BufferSource,
       'HKDF',
       false,
       ['deriveBits'],
