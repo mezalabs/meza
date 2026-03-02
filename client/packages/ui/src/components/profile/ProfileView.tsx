@@ -28,7 +28,6 @@ import {
   type VoiceActivity,
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
@@ -41,7 +40,6 @@ type ViewState = 'loading' | 'error' | 'not-found' | 'ready';
 
 export function ProfileView({ userId }: ProfileViewProps) {
   const currentUser = useAuthStore((s) => s.user);
-  const displayColor = useDisplayColor(userId, undefined);
   const cachedProfile = useUsersStore((s) => s.profiles[userId]);
   const [profile, setProfile] = useState<StoredUser | null>(
     cachedProfile ?? null,
@@ -187,10 +185,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
           {/* Display name + pronouns */}
           <div>
             <div className="flex items-baseline gap-2">
-              <span
-                className="text-lg font-semibold text-text"
-                style={displayColor ? { color: displayColor } : undefined}
-              >
+              <span className="text-lg font-semibold text-text">
                 {profile.displayName || profile.username}
               </span>
               {profile.pronouns && (

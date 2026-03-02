@@ -1,19 +1,13 @@
-import {
-  useAuthStore,
-  useMemberStore,
-  useRoleStore,
-  useUsersStore,
-} from '@meza/core';
+import { useMemberStore, useRoleStore } from '@meza/core';
 import { roleColorHex } from '../utils/color.ts';
 
 const EMPTY_ROLE_IDS: readonly string[] = [];
 
 /**
- * Resolve the display color for a user in a given context.
+ * Resolve the display color for a user in a server context.
  *
- * - Server context (serverId defined): highest-positioned role with non-zero color
- * - DM context (serverId undefined): user's themeColorPrimary
- * - Fallback: undefined (caller uses default text color)
+ * Returns the highest-positioned role color, or undefined if no serverId
+ * is provided or the user has no colored roles.
  */
 export function useDisplayColor(
   userId: string,
@@ -29,7 +23,7 @@ export function useDisplayColor(
   });
 
   // Highest-positioned role color (server context only)
-  const roleColor = useRoleStore((s) => {
+  return useRoleStore((s) => {
     if (!serverId || !memberRoleIds.length) return undefined;
     const roles = s.byServer[serverId];
     if (!roles) return undefined;
@@ -41,20 +35,4 @@ export function useDisplayColor(
     }
     return undefined;
   });
-
-  // Profile theme color (DM context only)
-  const profileColor = useUsersStore((s) => {
-    if (serverId) return undefined;
-    return s.profiles[userId]?.themeColorPrimary || undefined;
-  });
-
-  const authColor = useAuthStore((s) => {
-    if (serverId) return undefined;
-    if (s.user?.id !== userId) return undefined;
-    return s.user.themeColorPrimary || undefined;
-  });
-
-  if (serverId) return roleColor;
-  const themeColor = profileColor || authColor;
-  return themeColor ? `#${themeColor}` : undefined;
 }
