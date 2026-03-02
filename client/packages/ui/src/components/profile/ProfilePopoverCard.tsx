@@ -16,6 +16,7 @@ import {
   useRoleStore,
   useUsersStore,
 } from '@meza/core';
+import { SpeakerHighIcon, UserIcon } from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { voiceConnect } from '../../hooks/useVoiceConnection.ts';
@@ -25,7 +26,8 @@ import { openProfilePane } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
-const EMPTY_ARR: readonly never[] = [];
+const EMPTY_STRINGS: readonly string[] = [];
+const EMPTY_ROLES: readonly { id: string; name: string; color: number; position: number }[] = [];
 
 interface ProfilePopoverCardProps {
   userId: string;
@@ -90,11 +92,12 @@ function ProfileCardContent({
 
   const memberRoleIds = useMemberStore(
     (s) =>
-      (serverId ? s.members?.[serverId]?.[userId]?.roleIds : undefined) ??
-      EMPTY_ARR,
+      (serverId
+        ? s.byServer[serverId]?.find((m) => m.userId === userId)?.roleIds
+        : undefined) ?? EMPTY_STRINGS,
   );
   const serverRoles = useRoleStore(
-    (s) => (serverId ? s.roles?.[serverId] : undefined) ?? EMPTY_ARR,
+    (s) => (serverId ? s.byServer[serverId] : undefined) ?? EMPTY_ROLES,
   );
   const memberRoles = serverRoles.filter((r) =>
     memberRoleIds.includes(r.id),
@@ -172,21 +175,21 @@ function ProfileCardContent({
         {/* Name + pronouns */}
         <div className="mb-1">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-sm font-semibold text-text truncate">
+            <span className="text-base font-semibold text-text truncate">
               {profile.displayName || profile.username}
             </span>
             {profile.pronouns && (
-              <span className="text-xs text-text-muted flex-shrink-0">
+              <span className="text-sm text-text-muted flex-shrink-0">
                 {profile.pronouns}
               </span>
             )}
           </div>
-          <div className="text-xs text-text-subtle">@{profile.username}</div>
+          <div className="text-sm text-text-subtle">@{profile.username}</div>
         </div>
 
         {/* Roles — inline text, no pills */}
         {memberRoles.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-text-muted mb-2">
+          <div className="flex items-center gap-1.5 text-sm text-text-muted mb-2">
             {memberRoles.map((role, i) => (
               <span key={role.id} className="flex items-center gap-1">
                 <span
@@ -216,24 +219,20 @@ function ProfileCardContent({
                 className="flex items-center gap-1.5 w-full text-left rounded px-1 py-1 -mx-1 hover:bg-bg-surface transition-colors"
                 onClick={() => joinVoiceChannel(va)}
               >
-                <svg
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5 text-success flex-shrink-0"
-                >
-                  <path d="M11.536 14.01A8.47 8.47 0 0 0 14.026 8a8.47 8.47 0 0 0-2.49-6.01l-.708.707A7.48 7.48 0 0 1 13.026 8c0 2.071-.84 3.946-2.198 5.303l.708.707z" />
-                  <path d="M10.121 12.596A6.48 6.48 0 0 0 12.026 8a6.48 6.48 0 0 0-1.905-4.596l-.707.707A5.48 5.48 0 0 1 11.026 8a5.48 5.48 0 0 1-1.612 3.889l.707.707z" />
-                  <path d="M8.707 11.182A4.49 4.49 0 0 0 10.026 8a4.49 4.49 0 0 0-1.319-3.182l-.707.707A3.49 3.49 0 0 1 9.026 8a3.49 3.49 0 0 1-1.026 2.475l.707.707z" />
-                  <circle cx="4.026" cy="8" r="2" />
-                </svg>
-                <span className="text-xs text-text truncate">
+                <SpeakerHighIcon
+                  size={14}
+                  weight="fill"
+                  className="text-success flex-shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="text-sm text-text truncate">
                   {va.channelName}
                 </span>
-                <span className="text-xs text-text-subtle truncate">
+                <span className="text-sm text-text-subtle truncate">
                   in {va.serverName}
                 </span>
                 {va.isStreamingVideo && (
-                  <span className="ml-auto text-[10px] font-medium text-accent flex-shrink-0">
+                  <span className="ml-auto text-xs font-medium text-accent flex-shrink-0">
                     LIVE
                   </span>
                 )}
@@ -245,7 +244,7 @@ function ProfileCardContent({
         {/* Mutual servers — clickable list */}
         {!isOwnProfile && mutualServers.length > 0 && (
           <div className="border-t border-border pt-2 mt-2">
-            <div className="text-[10px] uppercase tracking-wider text-text-subtle mb-1">
+            <div className="text-xs uppercase tracking-wider text-text-subtle mb-1">
               {mutualServers.length} Mutual Server
               {mutualServers.length !== 1 ? 's' : ''}
             </div>
@@ -258,7 +257,7 @@ function ProfileCardContent({
                 />
               ))}
               {mutualServers.length > 5 && (
-                <span className="text-[10px] text-text-subtle px-1 pt-0.5">
+                <span className="text-xs text-text-subtle px-1 pt-0.5">
                   +{mutualServers.length - 5} more
                 </span>
               )}
@@ -271,7 +270,7 @@ function ProfileCardContent({
           {isOwnProfile ? (
             <button
               type="button"
-              className="flex-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-black hover:bg-accent-hover transition-colors"
+              className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
               onClick={() => {
                 onClose();
                 openProfilePane(userId);
@@ -284,7 +283,7 @@ function ProfileCardContent({
               {!isBlocked && (
                 <button
                   type="button"
-                  className="flex-1 rounded-md bg-bg-surface px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text transition-colors"
+                  className="flex-1 rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
                   onClick={async () => {
                     try {
                       await createOrGetDMChannel(userId);
@@ -299,7 +298,7 @@ function ProfileCardContent({
               {!isBlocked && friendRelationship === 'none' && (
                 <button
                   type="button"
-                  className="flex-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-black hover:bg-accent-hover transition-colors"
+                  className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
                   onClick={async () => {
                     try {
                       await sendFriendRequest(userId);
@@ -310,12 +309,12 @@ function ProfileCardContent({
                 </button>
               )}
               {!isBlocked && friendRelationship === 'friends' && (
-                <span className="flex-1 text-center text-xs text-text-subtle py-1.5">
+                <span className="flex-1 text-center text-sm text-text-subtle py-1.5">
                   Friends
                 </span>
               )}
               {!isBlocked && friendRelationship === 'outgoing' && (
-                <span className="flex-1 text-center text-xs text-text-subtle py-1.5">
+                <span className="flex-1 text-center text-sm text-text-subtle py-1.5">
                   Request Sent
                 </span>
               )}
@@ -324,7 +323,7 @@ function ProfileCardContent({
 
           <button
             type="button"
-            className="rounded-md bg-bg-surface px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text transition-colors"
+            className="rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
             onClick={() => {
               onClose();
               openProfilePane(userId);
@@ -359,23 +358,17 @@ function MutualServerRow({
         <img
           src={getMediaURL(server.iconUrl.replace(/^\/media\//, ''), false)}
           alt=""
-          className="h-4 w-4 rounded-full object-cover flex-shrink-0"
+          className="h-5 w-5 rounded-full object-cover flex-shrink-0"
         />
       ) : (
-        <div className="flex h-4 w-4 items-center justify-center rounded-full bg-bg-elevated text-[8px] font-medium text-text-muted flex-shrink-0">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-bg-elevated text-[9px] font-medium text-text-muted flex-shrink-0">
           {server.name.charAt(0).toUpperCase()}
         </div>
       )}
-      <span className="text-xs text-text truncate">{server.name}</span>
+      <span className="text-sm text-text truncate">{server.name}</span>
       {memberCount > 0 && (
-        <span className="flex items-center gap-0.5 text-[10px] text-text-subtle ml-auto flex-shrink-0">
-          <svg
-            viewBox="0 0 16 16"
-            fill="currentColor"
-            className="h-2.5 w-2.5"
-          >
-            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664h10z" />
-          </svg>
+        <span className="flex items-center gap-0.5 text-xs text-text-subtle ml-auto flex-shrink-0">
+          <UserIcon size={12} aria-hidden="true" />
           {memberCount}
         </span>
       )}
