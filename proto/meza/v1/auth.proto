@@ -122,6 +122,8 @@ message UpdateProfileRequest {
   optional bool simple_mode = 9;
   optional AudioPreferences audio_preferences = 10;
   optional string dm_privacy = 11;  // "anyone", "message_requests", "mutual_servers", "nobody"
+  repeated UserConnection connections = 12;
+  bool clear_connections = 13;  // when true, replace all connections (empty list = clear)
 }
 
 message UpdateProfileResponse {

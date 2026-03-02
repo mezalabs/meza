@@ -56,6 +56,7 @@ import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
+import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
@@ -1071,22 +1072,25 @@ const MessageItem = memo(function MessageItem({
           </div>
 
           <div className="flex items-start gap-2">
-            <div className="mt-0.5 flex-shrink-0">
-              <Avatar
-                avatarUrl={authorAvatar}
-                displayName={authorLabel}
-                size="md"
-              />
-            </div>
+            <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
+              <button type="button" className="mt-0.5 flex-shrink-0 cursor-pointer">
+                <Avatar
+                  avatarUrl={authorAvatar}
+                  displayName={authorLabel}
+                  size="md"
+                />
+              </button>
+            </ProfilePopoverCard>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-2">
-                <button
-                  type="button"
-                  className={`text-sm font-medium cursor-pointer hover:underline ${isOwn ? 'text-accent' : 'text-text'}`}
-                  onClick={() => openProfilePane(msg.authorId)}
-                >
-                  {authorLabel}
-                </button>
+                <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
+                  <button
+                    type="button"
+                    className={`text-sm font-medium cursor-pointer hover:underline ${isOwn ? 'text-accent' : 'text-text'}`}
+                  >
+                    {authorLabel}
+                  </button>
+                </ProfilePopoverCard>
                 {time && (
                   <span
                     className="text-xs text-text-subtle"

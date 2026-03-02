@@ -147,6 +147,14 @@ export {
   setStatusOverride,
   updatePresence,
 } from './api/presence.ts';
+// API — profile
+export {
+  getMutualFriends,
+  getMutualServers,
+  getUserVoiceActivity,
+  type StoredServer,
+  type VoiceActivity,
+} from './api/profile.ts';
 // API — voice
 export {
   getVoiceChannelState,
@@ -257,7 +265,12 @@ export type {
   NoiseCancellationMode,
 } from './store/audioSettings.ts';
 export { useAudioSettingsStore } from './store/audioSettings.ts';
-export type { AuthActions, AuthState, StoredUser } from './store/auth.ts';
+export type {
+  AuthActions,
+  AuthState,
+  StoredUser,
+  StoredUserConnection,
+} from './store/auth.ts';
 export { useAuthStore } from './store/auth.ts';
 export type { BlockActions, BlockState } from './store/blocks.ts';
 export { useBlockStore } from './store/blocks.ts';

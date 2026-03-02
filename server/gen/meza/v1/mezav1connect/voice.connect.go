@@ -42,6 +42,9 @@ const (
 	// VoiceServiceGetVoiceChannelStateProcedure is the fully-qualified name of the VoiceService's
 	// GetVoiceChannelState RPC.
 	VoiceServiceGetVoiceChannelStateProcedure = "/meza.v1.VoiceService/GetVoiceChannelState"
+	// VoiceServiceGetUserVoiceActivityProcedure is the fully-qualified name of the VoiceService's
+	// GetUserVoiceActivity RPC.
+	VoiceServiceGetUserVoiceActivityProcedure = "/meza.v1.VoiceService/GetUserVoiceActivity"
 )
 
 // VoiceServiceClient is a client for the meza.v1.VoiceService service.
@@ -49,6 +52,7 @@ type VoiceServiceClient interface {
 	JoinVoiceChannel(context.Context, *connect.Request[v1.JoinVoiceChannelRequest]) (*connect.Response[v1.JoinVoiceChannelResponse], error)
 	LeaveVoiceChannel(context.Context, *connect.Request[v1.LeaveVoiceChannelRequest]) (*connect.Response[v1.LeaveVoiceChannelResponse], error)
 	GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error)
+	GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error)
 }
 
 // NewVoiceServiceClient constructs a client for the meza.v1.VoiceService service. By default, it
@@ -80,6 +84,12 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("GetVoiceChannelState")),
 			connect.WithClientOptions(opts...),
 		),
+		getUserVoiceActivity: connect.NewClient[v1.GetUserVoiceActivityRequest, v1.GetUserVoiceActivityResponse](
+			httpClient,
+			baseURL+VoiceServiceGetUserVoiceActivityProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("GetUserVoiceActivity")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -88,6 +98,7 @@ type voiceServiceClient struct {
 	joinVoiceChannel     *connect.Client[v1.JoinVoiceChannelRequest, v1.JoinVoiceChannelResponse]
 	leaveVoiceChannel    *connect.Client[v1.LeaveVoiceChannelRequest, v1.LeaveVoiceChannelResponse]
 	getVoiceChannelState *connect.Client[v1.GetVoiceChannelStateRequest, v1.GetVoiceChannelStateResponse]
+	getUserVoiceActivity *connect.Client[v1.GetUserVoiceActivityRequest, v1.GetUserVoiceActivityResponse]
 }
 
 // JoinVoiceChannel calls meza.v1.VoiceService.JoinVoiceChannel.
@@ -105,11 +116,17 @@ func (c *voiceServiceClient) GetVoiceChannelState(ctx context.Context, req *conn
 	return c.getVoiceChannelState.CallUnary(ctx, req)
 }
 
+// GetUserVoiceActivity calls meza.v1.VoiceService.GetUserVoiceActivity.
+func (c *voiceServiceClient) GetUserVoiceActivity(ctx context.Context, req *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error) {
+	return c.getUserVoiceActivity.CallUnary(ctx, req)
+}
+
 // VoiceServiceHandler is an implementation of the meza.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	JoinVoiceChannel(context.Context, *connect.Request[v1.JoinVoiceChannelRequest]) (*connect.Response[v1.JoinVoiceChannelResponse], error)
 	LeaveVoiceChannel(context.Context, *connect.Request[v1.LeaveVoiceChannelRequest]) (*connect.Response[v1.LeaveVoiceChannelResponse], error)
 	GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error)
+	GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error)
 }
 
 // NewVoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -137,6 +154,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("GetVoiceChannelState")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceGetUserVoiceActivityHandler := connect.NewUnaryHandler(
+		VoiceServiceGetUserVoiceActivityProcedure,
+		svc.GetUserVoiceActivity,
+		connect.WithSchema(voiceServiceMethods.ByName("GetUserVoiceActivity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VoiceServiceJoinVoiceChannelProcedure:
@@ -145,6 +168,8 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceLeaveVoiceChannelHandler.ServeHTTP(w, r)
 		case VoiceServiceGetVoiceChannelStateProcedure:
 			voiceServiceGetVoiceChannelStateHandler.ServeHTTP(w, r)
+		case VoiceServiceGetUserVoiceActivityProcedure:
+			voiceServiceGetUserVoiceActivityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -164,4 +189,8 @@ func (UnimplementedVoiceServiceHandler) LeaveVoiceChannel(context.Context, *conn
 
 func (UnimplementedVoiceServiceHandler) GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.VoiceService.GetVoiceChannelState is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.VoiceService.GetUserVoiceActivity is not implemented"))
 }

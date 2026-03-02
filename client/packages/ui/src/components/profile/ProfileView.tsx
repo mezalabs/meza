@@ -5,13 +5,19 @@ import {
   declineFriendRequest,
   type FriendRequestEntry,
   getMediaURL,
+  getMutualFriends,
+  getMutualServers,
   getPresence,
   getProfile,
+  getUserVoiceActivity,
   removeFriend,
+  type StoredServer,
   type StoredUser,
+  type StoredUserConnection,
   sendFriendRequest,
   UploadPurpose,
   type User,
+  type VoiceActivity,
   unblockUser,
   updateProfile,
   uploadFile,
@@ -47,14 +53,22 @@ export function ProfileView({ userId }: ProfileViewProps) {
   const [blockLoading, setBlockLoading] = useState(false);
   const friendRelationship = useFriendStore((s) => s.getRelationship(userId));
   const [friendLoading, setFriendLoading] = useState(false);
+  const [voiceActivity, setVoiceActivity] = useState<VoiceActivity[]>([]);
+  const [mutualServers, setMutualServers] = useState<StoredServer[]>([]);
+  const [mutualFriends, setMutualFriends] = useState<StoredUser[]>([]);
+
+  const profileFetchIdRef = useRef(0);
 
   const fetchProfile = useCallback(async () => {
+    const id = ++profileFetchIdRef.current;
     setViewState('loading');
     try {
       const p = await getProfile(userId);
+      if (id !== profileFetchIdRef.current) return; // stale
       setProfile(p);
       setViewState('ready');
     } catch (err) {
+      if (id !== profileFetchIdRef.current) return; // stale
       if (err instanceof Error && err.message === 'User not found') {
         setViewState('not-found');
       } else {
@@ -65,12 +79,31 @@ export function ProfileView({ userId }: ProfileViewProps) {
 
   useEffect(() => {
     fetchProfile();
+    return () => { profileFetchIdRef.current++; };
   }, [fetchProfile]);
 
   // Fetch presence for this user
   useEffect(() => {
     getPresence(userId).catch(() => {});
   }, [userId]);
+
+  // Fetch mutual data for other users (skip if blocked).
+  // Uses a staleness guard to discard results from a previous userId.
+  const mutualFetchIdRef = useRef(0);
+  useEffect(() => {
+    if (isOwnProfile || isBlocked) return;
+    const id = ++mutualFetchIdRef.current;
+    getUserVoiceActivity(userId)
+      .then((va) => { if (id === mutualFetchIdRef.current) setVoiceActivity(va); })
+      .catch(() => {});
+    getMutualServers(userId)
+      .then((ms) => { if (id === mutualFetchIdRef.current) setMutualServers(ms); })
+      .catch(() => {});
+    getMutualFriends(userId)
+      .then((mf) => { if (id === mutualFetchIdRef.current) setMutualFriends(mf); })
+      .catch(() => {});
+    return () => { mutualFetchIdRef.current++; };
+  }, [userId, isOwnProfile, isBlocked]);
 
   if (viewState === 'loading') {
     return <ProfileSkeleton />;
@@ -162,6 +195,136 @@ export function ProfileView({ userId }: ProfileViewProps) {
               <MarkdownRenderer content={profile.bio} variant="full" />
             </div>
           )}
+
+          {/* Connections */}
+          {profile.connections.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-1">
+                Connections
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.connections.map((c, i) => (
+                  <a
+                    key={i}
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-bg-surface px-2.5 py-1 text-xs text-text-muted hover:text-text transition-colors"
+                  >
+                    <ConnectionIcon platform={c.platform} />
+                    {c.label || c.platform}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Voice activity */}
+          {voiceActivity.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-1">
+                Currently In Voice
+              </h3>
+              <div className="space-y-1">
+                {voiceActivity.map((va) => (
+                  <div
+                    key={va.channelId}
+                    className="flex items-center gap-1.5 rounded-md bg-bg-surface px-2.5 py-1.5"
+                  >
+                    <span className="text-xs text-success">&#9679;</span>
+                    <span className="text-xs text-text truncate">
+                      {va.channelName}
+                    </span>
+                    <span className="text-xs text-text-subtle">
+                      in {va.serverName}
+                    </span>
+                    {va.isStreamingVideo && (
+                      <span className="ml-auto text-[10px] font-medium text-accent bg-accent-subtle rounded px-1 py-0.5">
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mutual servers */}
+          {!isOwnProfile && mutualServers.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-1">
+                Mutual Servers &mdash; {mutualServers.length}
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {mutualServers.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-1.5 rounded-md bg-bg-surface px-2 py-1"
+                  >
+                    {s.iconUrl ? (
+                      <img
+                        src={getMediaURL(s.iconUrl.replace(/^\/media\//, ''), false)}
+                        alt=""
+                        className="h-4 w-4 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-4 w-4 items-center justify-center rounded-full bg-bg-elevated text-[8px] font-medium text-text-muted">
+                        {s.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-xs text-text truncate max-w-[120px]">
+                      {s.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mutual friends */}
+          {!isOwnProfile && mutualFriends.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-1">
+                Mutual Friends &mdash; {mutualFriends.length}
+              </h3>
+              <div className="flex flex-wrap gap-1.5">
+                {mutualFriends.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-1.5 rounded-md bg-bg-surface px-2 py-1"
+                  >
+                    <Avatar
+                      avatarUrl={f.avatarUrl}
+                      displayName={f.displayName || f.username}
+                      size="xs"
+                    />
+                    <span className="text-xs text-text truncate max-w-[100px]">
+                      {f.displayName || f.username}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Member since */}
+          {profile.createdAt && (
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle mb-1">
+                Member Since
+              </h3>
+              <span className="text-xs text-text-muted">
+                {new Date(profile.createdAt).toLocaleDateString(undefined, {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+            </div>
+          )}
+
+          {/* Divider before actions */}
+          <div className="h-px bg-border" />
 
           {/* Edit button */}
           {isOwnProfile && (
@@ -265,6 +428,40 @@ export function ProfileView({ userId }: ProfileViewProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+const PLATFORM_LABELS: Record<string, string> = {
+  github: 'GitHub',
+  twitter: 'Twitter',
+  twitch: 'Twitch',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  website: 'Website',
+  steam: 'Steam',
+  spotify: 'Spotify',
+  reddit: 'Reddit',
+  other: 'Other',
+};
+
+function ConnectionIcon({ platform }: { platform: string }) {
+  // Simple colored dot per platform — keeps bundle small, no icon library needed
+  const colors: Record<string, string> = {
+    github: '#333',
+    twitter: '#1DA1F2',
+    twitch: '#9146FF',
+    youtube: '#FF0000',
+    linkedin: '#0A66C2',
+    website: '#6366f1',
+    steam: '#1B2838',
+    spotify: '#1DB954',
+    reddit: '#FF4500',
+  };
+  return (
+    <span
+      className="h-2 w-2 rounded-full flex-shrink-0"
+      style={{ backgroundColor: colors[platform] || '#6B7280' }}
+    />
   );
 }
 
@@ -399,6 +596,9 @@ function ProfileEditMode({
   const [themeColorSecondary, setThemeColorSecondary] = useState(
     profile.themeColorSecondary || '',
   );
+  const [connections, setConnections] = useState<StoredUserConnection[]>(
+    profile.connections ?? [],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -406,12 +606,16 @@ function ProfileEditMode({
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
+  const connectionsChanged =
+    JSON.stringify(connections) !== JSON.stringify(profile.connections ?? []);
+
   const isDirty =
     displayName.trim() !== (profile.displayName || '') ||
     bio.trim() !== (profile.bio || '') ||
     pronouns.trim() !== (profile.pronouns || '') ||
     themeColorPrimary !== (profile.themeColorPrimary || '') ||
-    themeColorSecondary !== (profile.themeColorSecondary || '');
+    themeColorSecondary !== (profile.themeColorSecondary || '') ||
+    connectionsChanged;
 
   async function handleAvatarUpload(file: File) {
     setUploadProgress(0);
@@ -457,7 +661,7 @@ function ProfileEditMode({
     setSaving(true);
     setError('');
     try {
-      const params: Record<string, string | undefined> = {};
+      const params: Parameters<typeof updateProfile>[0] = {};
       if (displayName.trim() !== (profile.displayName || '')) {
         params.displayName = displayName.trim();
       }
@@ -472,6 +676,13 @@ function ProfileEditMode({
       }
       if (themeColorSecondary !== (profile.themeColorSecondary || '')) {
         params.themeColorSecondary = themeColorSecondary;
+      }
+      if (connectionsChanged) {
+        if (connections.length === 0) {
+          params.clearConnections = true;
+        } else {
+          params.connections = connections;
+        }
       }
       await updateProfile(params);
       const updated = await getProfile(profile.id);
@@ -645,6 +856,78 @@ function ProfileEditMode({
                 />
               </label>
             </div>
+          </div>
+
+          {/* Connections editor */}
+          <div className="space-y-2">
+            <span className="block text-sm font-medium text-text">
+              Connections
+            </span>
+            {connections.map((conn, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <select
+                  className="rounded-md border border-border bg-bg-surface px-2 py-1.5 text-xs text-text focus:border-accent focus:outline-none"
+                  value={conn.platform}
+                  onChange={(e) => {
+                    const next = [...connections];
+                    next[idx] = { ...conn, platform: e.target.value };
+                    setConnections(next);
+                  }}
+                >
+                  {Object.entries(PLATFORM_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="url"
+                  placeholder="URL"
+                  className="flex-1 rounded-md border border-border bg-bg-surface px-2 py-1.5 text-xs text-text focus:border-accent focus:outline-none"
+                  value={conn.url}
+                  onChange={(e) => {
+                    const next = [...connections];
+                    next[idx] = { ...conn, url: e.target.value };
+                    setConnections(next);
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Label"
+                  className="w-24 rounded-md border border-border bg-bg-surface px-2 py-1.5 text-xs text-text focus:border-accent focus:outline-none"
+                  value={conn.label}
+                  maxLength={32}
+                  onChange={(e) => {
+                    const next = [...connections];
+                    next[idx] = { ...conn, label: e.target.value };
+                    setConnections(next);
+                  }}
+                />
+                <button
+                  type="button"
+                  className="text-text-subtle hover:text-error text-sm"
+                  onClick={() =>
+                    setConnections(connections.filter((_, i) => i !== idx))
+                  }
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+            {connections.length < 10 && (
+              <button
+                type="button"
+                className="text-xs text-accent hover:text-accent-hover"
+                onClick={() =>
+                  setConnections([
+                    ...connections,
+                    { platform: 'website', url: '', label: '' },
+                  ])
+                }
+              >
+                + Add Connection
+              </button>
+            )}
           </div>
 
           {/* Error */}

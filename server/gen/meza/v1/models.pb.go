@@ -95,6 +95,7 @@ type User struct {
 	AudioPreferences    *AudioPreferences `protobuf:"bytes,14,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
 	DmPrivacy           string            `protobuf:"bytes,15,opt,name=dm_privacy,json=dmPrivacy,proto3" json:"dm_privacy,omitempty"`                        // "anyone", "message_requests", "mutual_servers", "nobody"
 	SigningPublicKey    []byte            `protobuf:"bytes,16,opt,name=signing_public_key,json=signingPublicKey,proto3" json:"signing_public_key,omitempty"` // 32-byte Ed25519 verify key for E2EE signature verification
+	Connections         []*UserConnection `protobuf:"bytes,17,rep,name=connections,proto3" json:"connections,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -234,6 +235,73 @@ func (x *User) GetSigningPublicKey() []byte {
 	return nil
 }
 
+func (x *User) GetConnections() []*UserConnection {
+	if x != nil {
+		return x.Connections
+	}
+	return nil
+}
+
+type UserConnection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"` // "github", "twitter", "twitch", "youtube", "linkedin", "website", "steam", "spotify", "reddit", "other"
+	Url           string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
+	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"` // display label (used for "other" type or custom name)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserConnection) Reset() {
+	*x = UserConnection{}
+	mi := &file_meza_v1_models_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserConnection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserConnection) ProtoMessage() {}
+
+func (x *UserConnection) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserConnection.ProtoReflect.Descriptor instead.
+func (*UserConnection) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *UserConnection) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *UserConnection) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *UserConnection) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
 type Server struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -252,7 +320,7 @@ type Server struct {
 
 func (x *Server) Reset() {
 	*x = Server{}
-	mi := &file_meza_v1_models_proto_msgTypes[1]
+	mi := &file_meza_v1_models_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -264,7 +332,7 @@ func (x *Server) String() string {
 func (*Server) ProtoMessage() {}
 
 func (x *Server) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[1]
+	mi := &file_meza_v1_models_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -277,7 +345,7 @@ func (x *Server) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Server.ProtoReflect.Descriptor instead.
 func (*Server) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{1}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Server) GetId() string {
@@ -371,7 +439,7 @@ type Channel struct {
 
 func (x *Channel) Reset() {
 	*x = Channel{}
-	mi := &file_meza_v1_models_proto_msgTypes[2]
+	mi := &file_meza_v1_models_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +451,7 @@ func (x *Channel) String() string {
 func (*Channel) ProtoMessage() {}
 
 func (x *Channel) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[2]
+	mi := &file_meza_v1_models_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +464,7 @@ func (x *Channel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Channel.ProtoReflect.Descriptor instead.
 func (*Channel) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{2}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Channel) GetId() string {
@@ -503,7 +571,7 @@ type ChannelGroup struct {
 
 func (x *ChannelGroup) Reset() {
 	*x = ChannelGroup{}
-	mi := &file_meza_v1_models_proto_msgTypes[3]
+	mi := &file_meza_v1_models_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -515,7 +583,7 @@ func (x *ChannelGroup) String() string {
 func (*ChannelGroup) ProtoMessage() {}
 
 func (x *ChannelGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[3]
+	mi := &file_meza_v1_models_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -528,7 +596,7 @@ func (x *ChannelGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelGroup.ProtoReflect.Descriptor instead.
 func (*ChannelGroup) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{3}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ChannelGroup) GetId() string {
@@ -580,7 +648,7 @@ type PermissionOverride struct {
 
 func (x *PermissionOverride) Reset() {
 	*x = PermissionOverride{}
-	mi := &file_meza_v1_models_proto_msgTypes[4]
+	mi := &file_meza_v1_models_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -592,7 +660,7 @@ func (x *PermissionOverride) String() string {
 func (*PermissionOverride) ProtoMessage() {}
 
 func (x *PermissionOverride) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[4]
+	mi := &file_meza_v1_models_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -605,7 +673,7 @@ func (x *PermissionOverride) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PermissionOverride.ProtoReflect.Descriptor instead.
 func (*PermissionOverride) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{4}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PermissionOverride) GetId() string {
@@ -660,7 +728,7 @@ type DMChannel struct {
 
 func (x *DMChannel) Reset() {
 	*x = DMChannel{}
-	mi := &file_meza_v1_models_proto_msgTypes[5]
+	mi := &file_meza_v1_models_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -672,7 +740,7 @@ func (x *DMChannel) String() string {
 func (*DMChannel) ProtoMessage() {}
 
 func (x *DMChannel) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[5]
+	mi := &file_meza_v1_models_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -685,7 +753,7 @@ func (x *DMChannel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DMChannel.ProtoReflect.Descriptor instead.
 func (*DMChannel) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{5}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DMChannel) GetChannel() *Channel {
@@ -723,7 +791,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_meza_v1_models_proto_msgTypes[6]
+	mi := &file_meza_v1_models_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +803,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[6]
+	mi := &file_meza_v1_models_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +816,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{6}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Message) GetId() string {
@@ -860,7 +928,7 @@ type LinkEmbed struct {
 
 func (x *LinkEmbed) Reset() {
 	*x = LinkEmbed{}
-	mi := &file_meza_v1_models_proto_msgTypes[7]
+	mi := &file_meza_v1_models_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -872,7 +940,7 @@ func (x *LinkEmbed) String() string {
 func (*LinkEmbed) ProtoMessage() {}
 
 func (x *LinkEmbed) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[7]
+	mi := &file_meza_v1_models_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +953,7 @@ func (x *LinkEmbed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkEmbed.ProtoReflect.Descriptor instead.
 func (*LinkEmbed) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{7}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *LinkEmbed) GetUrl() string {
@@ -976,7 +1044,7 @@ type Attachment struct {
 
 func (x *Attachment) Reset() {
 	*x = Attachment{}
-	mi := &file_meza_v1_models_proto_msgTypes[8]
+	mi := &file_meza_v1_models_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1056,7 @@ func (x *Attachment) String() string {
 func (*Attachment) ProtoMessage() {}
 
 func (x *Attachment) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[8]
+	mi := &file_meza_v1_models_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +1069,7 @@ func (x *Attachment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Attachment.ProtoReflect.Descriptor instead.
 func (*Attachment) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{8}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Attachment) GetId() string {
@@ -1095,7 +1163,7 @@ type Member struct {
 
 func (x *Member) Reset() {
 	*x = Member{}
-	mi := &file_meza_v1_models_proto_msgTypes[9]
+	mi := &file_meza_v1_models_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1107,7 +1175,7 @@ func (x *Member) String() string {
 func (*Member) ProtoMessage() {}
 
 func (x *Member) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[9]
+	mi := &file_meza_v1_models_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1120,7 +1188,7 @@ func (x *Member) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Member.ProtoReflect.Descriptor instead.
 func (*Member) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{9}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Member) GetUserId() string {
@@ -1208,7 +1276,7 @@ type Role struct {
 
 func (x *Role) Reset() {
 	*x = Role{}
-	mi := &file_meza_v1_models_proto_msgTypes[10]
+	mi := &file_meza_v1_models_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1220,7 +1288,7 @@ func (x *Role) String() string {
 func (*Role) ProtoMessage() {}
 
 func (x *Role) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[10]
+	mi := &file_meza_v1_models_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1233,7 +1301,7 @@ func (x *Role) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Role.ProtoReflect.Descriptor instead.
 func (*Role) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{10}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Role) GetId() string {
@@ -1298,7 +1366,7 @@ type Ban struct {
 
 func (x *Ban) Reset() {
 	*x = Ban{}
-	mi := &file_meza_v1_models_proto_msgTypes[11]
+	mi := &file_meza_v1_models_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1310,7 +1378,7 @@ func (x *Ban) String() string {
 func (*Ban) ProtoMessage() {}
 
 func (x *Ban) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[11]
+	mi := &file_meza_v1_models_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1323,7 +1391,7 @@ func (x *Ban) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ban.ProtoReflect.Descriptor instead.
 func (*Ban) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{11}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Ban) GetServerId() string {
@@ -1377,7 +1445,7 @@ type Invite struct {
 
 func (x *Invite) Reset() {
 	*x = Invite{}
-	mi := &file_meza_v1_models_proto_msgTypes[12]
+	mi := &file_meza_v1_models_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1389,7 +1457,7 @@ func (x *Invite) String() string {
 func (*Invite) ProtoMessage() {}
 
 func (x *Invite) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[12]
+	mi := &file_meza_v1_models_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1402,7 +1470,7 @@ func (x *Invite) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Invite.ProtoReflect.Descriptor instead.
 func (*Invite) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{12}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Invite) GetCode() string {
@@ -1472,7 +1540,7 @@ type PinnedMessage struct {
 
 func (x *PinnedMessage) Reset() {
 	*x = PinnedMessage{}
-	mi := &file_meza_v1_models_proto_msgTypes[13]
+	mi := &file_meza_v1_models_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1484,7 +1552,7 @@ func (x *PinnedMessage) String() string {
 func (*PinnedMessage) ProtoMessage() {}
 
 func (x *PinnedMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[13]
+	mi := &file_meza_v1_models_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1497,7 +1565,7 @@ func (x *PinnedMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinnedMessage.ProtoReflect.Descriptor instead.
 func (*PinnedMessage) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{13}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PinnedMessage) GetMessage() *Message {
@@ -1537,7 +1605,7 @@ type CustomEmoji struct {
 
 func (x *CustomEmoji) Reset() {
 	*x = CustomEmoji{}
-	mi := &file_meza_v1_models_proto_msgTypes[14]
+	mi := &file_meza_v1_models_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1549,7 +1617,7 @@ func (x *CustomEmoji) String() string {
 func (*CustomEmoji) ProtoMessage() {}
 
 func (x *CustomEmoji) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[14]
+	mi := &file_meza_v1_models_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1562,7 +1630,7 @@ func (x *CustomEmoji) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CustomEmoji.ProtoReflect.Descriptor instead.
 func (*CustomEmoji) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{14}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CustomEmoji) GetId() string {
@@ -1635,7 +1703,7 @@ type SoundboardSound struct {
 
 func (x *SoundboardSound) Reset() {
 	*x = SoundboardSound{}
-	mi := &file_meza_v1_models_proto_msgTypes[15]
+	mi := &file_meza_v1_models_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1647,7 +1715,7 @@ func (x *SoundboardSound) String() string {
 func (*SoundboardSound) ProtoMessage() {}
 
 func (x *SoundboardSound) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[15]
+	mi := &file_meza_v1_models_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1660,7 +1728,7 @@ func (x *SoundboardSound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SoundboardSound.ProtoReflect.Descriptor instead.
 func (*SoundboardSound) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{15}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *SoundboardSound) GetId() string {
@@ -1721,7 +1789,7 @@ type AuditLogEntry struct {
 
 func (x *AuditLogEntry) Reset() {
 	*x = AuditLogEntry{}
-	mi := &file_meza_v1_models_proto_msgTypes[16]
+	mi := &file_meza_v1_models_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1733,7 +1801,7 @@ func (x *AuditLogEntry) String() string {
 func (*AuditLogEntry) ProtoMessage() {}
 
 func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[16]
+	mi := &file_meza_v1_models_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1746,7 +1814,7 @@ func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditLogEntry.ProtoReflect.Descriptor instead.
 func (*AuditLogEntry) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{16}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *AuditLogEntry) GetId() string {
@@ -1818,7 +1886,7 @@ type Reaction struct {
 
 func (x *Reaction) Reset() {
 	*x = Reaction{}
-	mi := &file_meza_v1_models_proto_msgTypes[17]
+	mi := &file_meza_v1_models_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1830,7 +1898,7 @@ func (x *Reaction) String() string {
 func (*Reaction) ProtoMessage() {}
 
 func (x *Reaction) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[17]
+	mi := &file_meza_v1_models_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1843,7 +1911,7 @@ func (x *Reaction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Reaction.ProtoReflect.Descriptor instead.
 func (*Reaction) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{17}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Reaction) GetChannelId() string {
@@ -1892,7 +1960,7 @@ type ReactionGroup struct {
 
 func (x *ReactionGroup) Reset() {
 	*x = ReactionGroup{}
-	mi := &file_meza_v1_models_proto_msgTypes[18]
+	mi := &file_meza_v1_models_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1904,7 +1972,7 @@ func (x *ReactionGroup) String() string {
 func (*ReactionGroup) ProtoMessage() {}
 
 func (x *ReactionGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[18]
+	mi := &file_meza_v1_models_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1917,7 +1985,7 @@ func (x *ReactionGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReactionGroup.ProtoReflect.Descriptor instead.
 func (*ReactionGroup) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{18}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ReactionGroup) GetEmoji() string {
@@ -1952,7 +2020,7 @@ type ReadState struct {
 
 func (x *ReadState) Reset() {
 	*x = ReadState{}
-	mi := &file_meza_v1_models_proto_msgTypes[19]
+	mi := &file_meza_v1_models_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1964,7 +2032,7 @@ func (x *ReadState) String() string {
 func (*ReadState) ProtoMessage() {}
 
 func (x *ReadState) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[19]
+	mi := &file_meza_v1_models_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1977,7 +2045,7 @@ func (x *ReadState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadState.ProtoReflect.Descriptor instead.
 func (*ReadState) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{19}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ReadState) GetChannelId() string {
@@ -2013,7 +2081,7 @@ type AudioPreferences struct {
 
 func (x *AudioPreferences) Reset() {
 	*x = AudioPreferences{}
-	mi := &file_meza_v1_models_proto_msgTypes[20]
+	mi := &file_meza_v1_models_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2025,7 +2093,7 @@ func (x *AudioPreferences) String() string {
 func (*AudioPreferences) ProtoMessage() {}
 
 func (x *AudioPreferences) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_models_proto_msgTypes[20]
+	mi := &file_meza_v1_models_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2038,7 +2106,7 @@ func (x *AudioPreferences) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AudioPreferences.ProtoReflect.Descriptor instead.
 func (*AudioPreferences) Descriptor() ([]byte, []int) {
-	return file_meza_v1_models_proto_rawDescGZIP(), []int{20}
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *AudioPreferences) GetNoiseSuppression() bool {
@@ -2073,7 +2141,7 @@ var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
-	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd8\x04\n" +
+	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x05\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -2096,8 +2164,13 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x11audio_preferences\x18\x0e \x01(\v2\x19.meza.v1.AudioPreferencesH\x00R\x10audioPreferences\x88\x01\x01\x12\x1d\n" +
 	"\n" +
 	"dm_privacy\x18\x0f \x01(\tR\tdmPrivacy\x12,\n" +
-	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKeyB\x14\n" +
-	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"\xea\x02\n" +
+	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKey\x129\n" +
+	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnectionsB\x14\n" +
+	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"T\n" +
+	"\x0eUserConnection\x12\x1a\n" +
+	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\"\xea\x02\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -2318,63 +2391,65 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_meza_v1_models_proto_goTypes = []any{
 	(ChannelType)(0),              // 0: meza.v1.ChannelType
 	(*User)(nil),                  // 1: meza.v1.User
-	(*Server)(nil),                // 2: meza.v1.Server
-	(*Channel)(nil),               // 3: meza.v1.Channel
-	(*ChannelGroup)(nil),          // 4: meza.v1.ChannelGroup
-	(*PermissionOverride)(nil),    // 5: meza.v1.PermissionOverride
-	(*DMChannel)(nil),             // 6: meza.v1.DMChannel
-	(*Message)(nil),               // 7: meza.v1.Message
-	(*LinkEmbed)(nil),             // 8: meza.v1.LinkEmbed
-	(*Attachment)(nil),            // 9: meza.v1.Attachment
-	(*Member)(nil),                // 10: meza.v1.Member
-	(*Role)(nil),                  // 11: meza.v1.Role
-	(*Ban)(nil),                   // 12: meza.v1.Ban
-	(*Invite)(nil),                // 13: meza.v1.Invite
-	(*PinnedMessage)(nil),         // 14: meza.v1.PinnedMessage
-	(*CustomEmoji)(nil),           // 15: meza.v1.CustomEmoji
-	(*SoundboardSound)(nil),       // 16: meza.v1.SoundboardSound
-	(*AuditLogEntry)(nil),         // 17: meza.v1.AuditLogEntry
-	(*Reaction)(nil),              // 18: meza.v1.Reaction
-	(*ReactionGroup)(nil),         // 19: meza.v1.ReactionGroup
-	(*ReadState)(nil),             // 20: meza.v1.ReadState
-	(*AudioPreferences)(nil),      // 21: meza.v1.AudioPreferences
-	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
+	(*UserConnection)(nil),        // 2: meza.v1.UserConnection
+	(*Server)(nil),                // 3: meza.v1.Server
+	(*Channel)(nil),               // 4: meza.v1.Channel
+	(*ChannelGroup)(nil),          // 5: meza.v1.ChannelGroup
+	(*PermissionOverride)(nil),    // 6: meza.v1.PermissionOverride
+	(*DMChannel)(nil),             // 7: meza.v1.DMChannel
+	(*Message)(nil),               // 8: meza.v1.Message
+	(*LinkEmbed)(nil),             // 9: meza.v1.LinkEmbed
+	(*Attachment)(nil),            // 10: meza.v1.Attachment
+	(*Member)(nil),                // 11: meza.v1.Member
+	(*Role)(nil),                  // 12: meza.v1.Role
+	(*Ban)(nil),                   // 13: meza.v1.Ban
+	(*Invite)(nil),                // 14: meza.v1.Invite
+	(*PinnedMessage)(nil),         // 15: meza.v1.PinnedMessage
+	(*CustomEmoji)(nil),           // 16: meza.v1.CustomEmoji
+	(*SoundboardSound)(nil),       // 17: meza.v1.SoundboardSound
+	(*AuditLogEntry)(nil),         // 18: meza.v1.AuditLogEntry
+	(*Reaction)(nil),              // 19: meza.v1.Reaction
+	(*ReactionGroup)(nil),         // 20: meza.v1.ReactionGroup
+	(*ReadState)(nil),             // 21: meza.v1.ReadState
+	(*AudioPreferences)(nil),      // 22: meza.v1.AudioPreferences
+	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	22, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	21, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
-	22, // 2: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
-	0,  // 3: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	22, // 4: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	22, // 5: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 6: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
-	1,  // 7: meza.v1.DMChannel.participants:type_name -> meza.v1.User
-	9,  // 8: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	22, // 9: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	22, // 10: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
-	8,  // 11: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
-	22, // 12: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	22, // 13: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	22, // 14: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	22, // 15: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	22, // 16: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	22, // 17: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	22, // 18: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
-	7,  // 19: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	22, // 20: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	22, // 21: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	22, // 22: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	22, // 23: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	22, // 24: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
-	25, // [25:25] is the sub-list for method output_type
-	25, // [25:25] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	23, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	22, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
+	2,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
+	23, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
+	23, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	23, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	4,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
+	1,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
+	10, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
+	23, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	23, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	9,  // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
+	23, // 13: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	23, // 14: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	23, // 15: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	23, // 16: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	23, // 17: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	23, // 18: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	23, // 19: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	8,  // 20: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
+	23, // 21: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	23, // 22: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	23, // 23: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	23, // 24: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	23, // 25: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	26, // [26:26] is the sub-list for method output_type
+	26, // [26:26] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_models_proto_init() }
@@ -2383,16 +2458,16 @@ func file_meza_v1_models_proto_init() {
 		return
 	}
 	file_meza_v1_models_proto_msgTypes[0].OneofWrappers = []any{}
-	file_meza_v1_models_proto_msgTypes[2].OneofWrappers = []any{}
-	file_meza_v1_models_proto_msgTypes[6].OneofWrappers = []any{}
-	file_meza_v1_models_proto_msgTypes[9].OneofWrappers = []any{}
+	file_meza_v1_models_proto_msgTypes[3].OneofWrappers = []any{}
+	file_meza_v1_models_proto_msgTypes[7].OneofWrappers = []any{}
+	file_meza_v1_models_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

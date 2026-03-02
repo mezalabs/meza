@@ -89,7 +89,7 @@ func (m *mockAuthStore) GetUserByID(_ context.Context, userID string) (*models.U
 	return u, nil
 }
 
-func (m *mockAuthStore) UpdateUser(_ context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, _ *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string) (*models.User, error) {
+func (m *mockAuthStore) UpdateUser(_ context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, _ *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -126,6 +126,9 @@ func (m *mockAuthStore) UpdateUser(_ context.Context, userID string, displayName
 	}
 	if dmPrivacy != nil {
 		u.DMPrivacy = *dmPrivacy
+	}
+	if connections != nil {
+		u.Connections = connections
 	}
 	return u, nil
 }

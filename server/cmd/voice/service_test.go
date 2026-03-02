@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5"
 	v1 "github.com/meza-chat/meza/gen/meza/v1"
 	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
@@ -79,8 +80,14 @@ func (m *mockChatStore) CreateChannel(context.Context, string, string, int, bool
 func (m *mockChatStore) GetChannel(context.Context, string) (*models.Channel, error) {
 	panic("not implemented")
 }
-func (m *mockChatStore) ListChannels(context.Context, string, string) ([]*models.Channel, error) {
-	panic("not implemented")
+func (m *mockChatStore) ListChannels(_ context.Context, serverID, _ string) ([]*models.Channel, error) {
+	var channels []*models.Channel
+	for _, ch := range m.channels {
+		if ch.ServerID == serverID {
+			channels = append(channels, ch)
+		}
+	}
+	return channels, nil
 }
 func (m *mockChatStore) UpdateChannel(context.Context, string, *string, *string, *int, *bool, *int, *bool, *string) (*models.Channel, error) {
 	panic("not implemented")
@@ -149,6 +156,17 @@ func (m *mockChatStore) ListPendingDMRequests(context.Context, string) ([]*model
 }
 func (m *mockChatStore) ShareAnyServer(context.Context, string, string) (bool, error) {
 	return false, nil
+}
+func (m *mockChatStore) GetMutualServers(_ context.Context, userID1, userID2 string) ([]*models.Server, error) {
+	var mutual []*models.Server
+	for serverID, members := range m.members {
+		if members[userID1] && members[userID2] {
+			if srv, ok := m.servers[serverID]; ok {
+				mutual = append(mutual, srv)
+			}
+		}
+	}
+	return mutual, nil
 }
 func (m *mockChatStore) GetDMOtherParticipantID(context.Context, string, string) (string, error) {
 	return "", nil
@@ -238,6 +256,32 @@ func (m *mockRoleStore) ReorderRoles(context.Context, string, []string, int) ([]
 	panic("not implemented")
 }
 
+// ---------- mock BlockStorer ----------
+
+type mockBlockStore struct {
+	blocked map[string]bool // "userA:userB" -> true
+}
+
+func newMockBlockStore() *mockBlockStore {
+	return &mockBlockStore{blocked: make(map[string]bool)}
+}
+
+func (m *mockBlockStore) BlockUser(_ context.Context, blockerID, blockedID string) error {
+	m.blocked[blockerID+":"+blockedID] = true
+	return nil
+}
+func (m *mockBlockStore) BlockUserTx(_ context.Context, _ pgx.Tx, _, _ string) error {
+	return nil
+}
+func (m *mockBlockStore) UnblockUser(context.Context, string, string) error { return nil }
+func (m *mockBlockStore) IsBlockedEither(_ context.Context, userA, userB string) (bool, error) {
+	return m.blocked[userA+":"+userB] || m.blocked[userB+":"+userA], nil
+}
+func (m *mockBlockStore) ListBlocks(context.Context, string) ([]string, error) { return nil, nil }
+func (m *mockBlockStore) ListBlocksWithUsers(context.Context, string) ([]*models.User, error) {
+	return nil, nil
+}
+
 // ---------- mock LiveKit room client ----------
 
 type mockLKClient struct {
@@ -267,6 +311,18 @@ func (m *mockLKClient) ListParticipants(_ context.Context, req *livekit.ListPart
 	}, nil
 }
 
+func (m *mockLKClient) GetParticipant(_ context.Context, req *livekit.RoomParticipantIdentity) (*livekit.ParticipantInfo, error) {
+	if !m.rooms[req.Room] {
+		return nil, errors.New("room not found")
+	}
+	for _, p := range m.participants[req.Room] {
+		if p.Identity == req.Identity {
+			return p, nil
+		}
+	}
+	return nil, errors.New("participant not found")
+}
+
 func (m *mockLKClient) RemoveParticipant(_ context.Context, req *livekit.RoomParticipantIdentity) (*livekit.RemoveParticipantResponse, error) {
 	m.removed = append(m.removed, req)
 	return &livekit.RemoveParticipantResponse{}, nil
@@ -279,11 +335,13 @@ func setupVoiceTest(t *testing.T) (mezav1connect.VoiceServiceClient, *mockChatSt
 
 	chatStore := newMockChatStore()
 	roleStore := newMockRoleStore()
+	blockStore := newMockBlockStore()
 	lkClient := newMockLKClient()
 
 	svc := &voiceService{
 		chatStore:   chatStore,
 		roleStore:   roleStore,
+		blockStore:  blockStore,
 		lkClient:    lkClient,
 		lkKey:       "test-api-key",
 		lkSecret:    "test-api-secret-that-is-long-enough",

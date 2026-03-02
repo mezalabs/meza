@@ -230,6 +230,10 @@ func (s *idorMockFriendStore) RemoveFriendshipsByUserTx(_ context.Context, _ pgx
 	panic("not implemented")
 }
 
+func (s *idorMockFriendStore) GetMutualFriends(context.Context, string, string) ([]*models.User, error) {
+	return nil, nil
+}
+
 // idorMockBlockStore implements store.BlockStorer for IDOR testing.
 type idorMockBlockStore struct{}
 
@@ -338,7 +342,7 @@ func (s *idorMockAuthStore) GetUserByID(_ context.Context, userID string) (*mode
 func (s *idorMockAuthStore) CreateUser(context.Context, *models.User, string, []byte, models.EncryptedBundle) (*models.User, error) {
 	panic("not implemented")
 }
-func (s *idorMockAuthStore) UpdateUser(context.Context, string, *string, *string, *float32, *string, *string, *string, *string, *string, *bool, *models.AudioPreferences, *string) (*models.User, error) {
+func (s *idorMockAuthStore) UpdateUser(context.Context, string, *string, *string, *float32, *string, *string, *string, *string, *string, *bool, *models.AudioPreferences, *string, []models.UserConnection) (*models.User, error) {
 	panic("not implemented")
 }
 func (s *idorMockAuthStore) GetUserByEmail(context.Context, string) (*models.User, *models.AuthData, error) {

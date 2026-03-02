@@ -12,7 +12,7 @@ import type { Message as Message$1 } from "@bufbuild/protobuf";
  * Describes the file meza/v1/models.proto.
  */
 export const file_meza_v1_models: GenFile = /*@__PURE__*/
-  fileDesc("ChRtZXphL3YxL21vZGVscy5wcm90bxIHbWV6YS52MSKeAwoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKYXZhdGFyX3VybBgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgtlbW9qaV9zY2FsZRgHIAEoAhILCgNiaW8YCCABKAkSEAoIcHJvbm91bnMYCSABKAkSEgoKYmFubmVyX3VybBgKIAEoCRIbChN0aGVtZV9jb2xvcl9wcmltYXJ5GAsgASgJEh0KFXRoZW1lX2NvbG9yX3NlY29uZGFyeRgMIAEoCRITCgtzaW1wbGVfbW9kZRgNIAEoCBI5ChFhdWRpb19wcmVmZXJlbmNlcxgOIAEoCzIZLm1lemEudjEuQXVkaW9QcmVmZXJlbmNlc0gAiAEBEhIKCmRtX3ByaXZhY3kYDyABKAkSGgoSc2lnbmluZ19wdWJsaWNfa2V5GBAgASgMQhQKEl9hdWRpb19wcmVmZXJlbmNlc0oECAYQByLzAQoGU2VydmVyEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIaWNvbl91cmwYAyABKAkSEAoIb3duZXJfaWQYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFwoPd2VsY29tZV9tZXNzYWdlGAYgASgJEg0KBXJ1bGVzGAcgASgJEhoKEm9uYm9hcmRpbmdfZW5hYmxlZBgIIAEoCBIWCg5ydWxlc19yZXF1aXJlZBgJIAEoCBIfChdkZWZhdWx0X2NoYW5uZWxfcHJpdmFjeRgKIAEoCCKVAwoHQ2hhbm5lbBIKCgJpZBgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRIiCgR0eXBlGAQgASgOMhQubWV6YS52MS5DaGFubmVsVHlwZRIQCghwb3NpdGlvbhgFIAEoBRINCgV0b3BpYxgGIAEoCRIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgppc19wcml2YXRlGAggASgIEh4KEXNsb3dfbW9kZV9zZWNvbmRzGAkgASgFSACIAQESEgoKaXNfZGVmYXVsdBgKIAEoCBIdChBjaGFubmVsX2dyb3VwX2lkGAsgASgJSAGIAQESFgoJZG1fc3RhdHVzGAwgASgJSAKIAQESHAoPZG1faW5pdGlhdG9yX2lkGA0gASgJSAOIAQFCFAoSX3Nsb3dfbW9kZV9zZWNvbmRzQhMKEV9jaGFubmVsX2dyb3VwX2lkQgwKCl9kbV9zdGF0dXNCEgoQX2RtX2luaXRpYXRvcl9pZCJ9CgxDaGFubmVsR3JvdXASCgoCaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEAoIcG9zaXRpb24YBCABKAUSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAicgoSUGVybWlzc2lvbk92ZXJyaWRlEgoKAmlkGAEgASgJEhEKCXRhcmdldF9pZBgCIAEoCRIPCgdyb2xlX2lkGAMgASgJEg0KBWFsbG93GAQgASgDEgwKBGRlbnkYBSABKAMSDwoHdXNlcl9pZBgGIAEoCSJTCglETUNoYW5uZWwSIQoHY2hhbm5lbBgBIAEoCzIQLm1lemEudjEuQ2hhbm5lbBIjCgxwYXJ0aWNpcGFudHMYAiADKAsyDS5tZXphLnYxLlVzZXIiqwMKB01lc3NhZ2USCgoCaWQYASABKAkSEgoKY2hhbm5lbF9pZBgCIAEoCRIRCglhdXRob3JfaWQYAyABKAkSGQoRZW5jcnlwdGVkX2NvbnRlbnQYBCABKAwSKAoLYXR0YWNobWVudHMYBiADKAsyEy5tZXphLnYxLkF0dGFjaG1lbnQSLgoKY3JlYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJZWRpdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIYCgtyZXBseV90b19pZBgJIAEoCUgAiAEBEiIKBmVtYmVkcxgKIAMoCzISLm1lemEudjEuTGlua0VtYmVkEhoKEm1lbnRpb25lZF91c2VyX2lkcxgLIAMoCRIYChBtZW50aW9uX2V2ZXJ5b25lGAwgASgIEhoKEm1lbnRpb25lZF9yb2xlX2lkcxgNIAMoCRITCgtrZXlfdmVyc2lvbhgOIAEoDUIOCgxfcmVwbHlfdG9faWRKBAgFEAZSDnJhdGNoZXRfaGVhZGVyIsMBCglMaW5rRW1iZWQSCwoDdXJsGAEgASgJEg0KBXRpdGxlGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEhEKCXNpdGVfbmFtZRgEIAEoCRIRCglpbWFnZV91cmwYBSABKAkSEwoLaW1hZ2Vfd2lkdGgYBiABKAUSFAoMaW1hZ2VfaGVpZ2h0GAcgASgFEhMKC2Zhdmljb25fdXJsGAggASgJEg8KB29nX3R5cGUYCSABKAkSDgoGZG9tYWluGAogASgJIscBCgpBdHRhY2htZW50EgoKAmlkGAEgASgJEhAKCGZpbGVuYW1lGAIgASgJEhQKDGNvbnRlbnRfdHlwZRgDIAEoCRISCgpzaXplX2J5dGVzGAQgASgDEgsKA3VybBgFIAEoCRIVCg1lbmNyeXB0ZWRfa2V5GAYgASgMEg0KBXdpZHRoGAcgASgFEg4KBmhlaWdodBgIIAEoBRIVCg1oYXNfdGh1bWJuYWlsGAkgASgIEhcKD21pY3JvX3RodW1ibmFpbBgKIAEoDCK0AwoGTWVtYmVyEg8KB3VzZXJfaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEhAKCHJvbGVfaWRzGAMgAygJEhAKCG5pY2tuYW1lGAQgASgJEi0KCWpvaW5lZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASOAoPdGltZWRfb3V0X3VudGlsGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgAiAEBEkAKF29uYm9hcmRpbmdfY29tcGxldGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgBiAEBEj4KFXJ1bGVzX2Fja25vd2xlZGdlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAogBARIUCgxob21lX3VzZXJfaWQYCSABKAkSFwoPaW52aXRlcl91c2VyX2lkGAogASgJQhIKEF90aW1lZF9vdXRfdW50aWxCGgoYX29uYm9hcmRpbmdfY29tcGxldGVkX2F0QhgKFl9ydWxlc19hY2tub3dsZWRnZWRfYXQihQEKBFJvbGUSCgoCaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEwoLcGVybWlzc2lvbnMYBCABKAMSDQoFY29sb3IYBSABKAUSEAoIcG9zaXRpb24YBiABKAUSGgoSaXNfc2VsZl9hc3NpZ25hYmxlGAcgASgIInwKA0JhbhIRCglzZXJ2ZXJfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIOCgZyZWFzb24YAyABKAkSEQoJYmFubmVkX2J5GAQgASgJEi4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wItMBCgZJbnZpdGUSDAoEY29kZRgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSEgoKY3JlYXRvcl9pZBgDIAEoCRIQCghtYXhfdXNlcxgEIAEoBRIRCgl1c2VfY291bnQYBSABKAUSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHcmV2b2tlZBgHIAEoCBIuCgpjcmVhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJ0Cg1QaW5uZWRNZXNzYWdlEiEKB21lc3NhZ2UYASABKAsyEC5tZXphLnYxLk1lc3NhZ2USEQoJcGlubmVkX2J5GAIgASgJEi0KCXBpbm5lZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAitAEKC0N1c3RvbUVtb2ppEgoKAmlkGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhEKCWltYWdlX3VybBgEIAEoCRIQCghhbmltYXRlZBgFIAEoCBISCgpjcmVhdG9yX2lkGAYgASgJEi4KCmNyZWF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg8KB3VzZXJfaWQYCCABKAkikgEKD1NvdW5kYm9hcmRTb3VuZBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhEKCXNlcnZlcl9pZBgDIAEoCRIMCgRuYW1lGAQgASgJEhEKCWF1ZGlvX3VybBgFIAEoCRIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK6AQoNQXVkaXRMb2dFbnRyeRIKCgJpZBgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSDgoGYWN0aW9uGAMgASgJEhAKCGFjdG9yX2lkGAQgASgJEhEKCXRhcmdldF9pZBgFIAEoCRITCgt0YXJnZXRfdHlwZRgGIAEoCRIQCghtZXRhZGF0YRgHIAEoCRIuCgpjcmVhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKCAQoIUmVhY3Rpb24SEgoKY2hhbm5lbF9pZBgBIAEoCRISCgptZXNzYWdlX2lkGAIgASgJEg8KB3VzZXJfaWQYAyABKAkSDQoFZW1vamkYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiPAoNUmVhY3Rpb25Hcm91cBINCgVlbW9qaRgBIAEoCRIKCgJtZRgCIAEoCBIQCgh1c2VyX2lkcxgDIAMoCSJTCglSZWFkU3RhdGUSEgoKY2hhbm5lbF9pZBgBIAEoCRIcChRsYXN0X3JlYWRfbWVzc2FnZV9pZBgCIAEoCRIUCgx1bnJlYWRfY291bnQYAyABKAUihAEKEEF1ZGlvUHJlZmVyZW5jZXMSGQoRbm9pc2Vfc3VwcHJlc3Npb24YASABKAgSGQoRZWNob19jYW5jZWxsYXRpb24YAiABKAgSGQoRYXV0b19nYWluX2NvbnRyb2wYAyABKAgSHwoXbm9pc2VfY2FuY2VsbGF0aW9uX21vZGUYBCABKAkqigEKC0NoYW5uZWxUeXBlEhwKGENIQU5ORUxfVFlQRV9VTlNQRUNJRklFRBAAEhUKEUNIQU5ORUxfVFlQRV9URVhUEAESFgoSQ0hBTk5FTF9UWVBFX1ZPSUNFEAISEwoPQ0hBTk5FTF9UWVBFX0RNEAMSGQoVQ0hBTk5FTF9UWVBFX0dST1VQX0RNEARiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("ChRtZXphL3YxL21vZGVscy5wcm90bxIHbWV6YS52MSLMAwoEVXNlchIKCgJpZBgBIAEoCRIQCgh1c2VybmFtZRgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEgoKYXZhdGFyX3VybBgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgtlbW9qaV9zY2FsZRgHIAEoAhILCgNiaW8YCCABKAkSEAoIcHJvbm91bnMYCSABKAkSEgoKYmFubmVyX3VybBgKIAEoCRIbChN0aGVtZV9jb2xvcl9wcmltYXJ5GAsgASgJEh0KFXRoZW1lX2NvbG9yX3NlY29uZGFyeRgMIAEoCRITCgtzaW1wbGVfbW9kZRgNIAEoCBI5ChFhdWRpb19wcmVmZXJlbmNlcxgOIAEoCzIZLm1lemEudjEuQXVkaW9QcmVmZXJlbmNlc0gAiAEBEhIKCmRtX3ByaXZhY3kYDyABKAkSGgoSc2lnbmluZ19wdWJsaWNfa2V5GBAgASgMEiwKC2Nvbm5lY3Rpb25zGBEgAygLMhcubWV6YS52MS5Vc2VyQ29ubmVjdGlvbkIUChJfYXVkaW9fcHJlZmVyZW5jZXNKBAgGEAciPgoOVXNlckNvbm5lY3Rpb24SEAoIcGxhdGZvcm0YASABKAkSCwoDdXJsGAIgASgJEg0KBWxhYmVsGAMgASgJIvMBCgZTZXJ2ZXISCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghpY29uX3VybBgDIAEoCRIQCghvd25lcl9pZBgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg93ZWxjb21lX21lc3NhZ2UYBiABKAkSDQoFcnVsZXMYByABKAkSGgoSb25ib2FyZGluZ19lbmFibGVkGAggASgIEhYKDnJ1bGVzX3JlcXVpcmVkGAkgASgIEh8KF2RlZmF1bHRfY2hhbm5lbF9wcml2YWN5GAogASgIIpUDCgdDaGFubmVsEgoKAmlkGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEiIKBHR5cGUYBCABKA4yFC5tZXphLnYxLkNoYW5uZWxUeXBlEhAKCHBvc2l0aW9uGAUgASgFEg0KBXRvcGljGAYgASgJEi4KCmNyZWF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmlzX3ByaXZhdGUYCCABKAgSHgoRc2xvd19tb2RlX3NlY29uZHMYCSABKAVIAIgBARISCgppc19kZWZhdWx0GAogASgIEh0KEGNoYW5uZWxfZ3JvdXBfaWQYCyABKAlIAYgBARIWCglkbV9zdGF0dXMYDCABKAlIAogBARIcCg9kbV9pbml0aWF0b3JfaWQYDSABKAlIA4gBAUIUChJfc2xvd19tb2RlX3NlY29uZHNCEwoRX2NoYW5uZWxfZ3JvdXBfaWRCDAoKX2RtX3N0YXR1c0ISChBfZG1faW5pdGlhdG9yX2lkIn0KDENoYW5uZWxHcm91cBIKCgJpZBgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRIQCghwb3NpdGlvbhgEIAEoBRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJyChJQZXJtaXNzaW9uT3ZlcnJpZGUSCgoCaWQYASABKAkSEQoJdGFyZ2V0X2lkGAIgASgJEg8KB3JvbGVfaWQYAyABKAkSDQoFYWxsb3cYBCABKAMSDAoEZGVueRgFIAEoAxIPCgd1c2VyX2lkGAYgASgJIlMKCURNQ2hhbm5lbBIhCgdjaGFubmVsGAEgASgLMhAubWV6YS52MS5DaGFubmVsEiMKDHBhcnRpY2lwYW50cxgCIAMoCzINLm1lemEudjEuVXNlciKrAwoHTWVzc2FnZRIKCgJpZBgBIAEoCRISCgpjaGFubmVsX2lkGAIgASgJEhEKCWF1dGhvcl9pZBgDIAEoCRIZChFlbmNyeXB0ZWRfY29udGVudBgEIAEoDBIoCgthdHRhY2htZW50cxgGIAMoCzITLm1lemEudjEuQXR0YWNobWVudBIuCgpjcmVhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCgllZGl0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhgKC3JlcGx5X3RvX2lkGAkgASgJSACIAQESIgoGZW1iZWRzGAogAygLMhIubWV6YS52MS5MaW5rRW1iZWQSGgoSbWVudGlvbmVkX3VzZXJfaWRzGAsgAygJEhgKEG1lbnRpb25fZXZlcnlvbmUYDCABKAgSGgoSbWVudGlvbmVkX3JvbGVfaWRzGA0gAygJEhMKC2tleV92ZXJzaW9uGA4gASgNQg4KDF9yZXBseV90b19pZEoECAUQBlIOcmF0Y2hldF9oZWFkZXIiwwEKCUxpbmtFbWJlZBILCgN1cmwYASABKAkSDQoFdGl0bGUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEQoJc2l0ZV9uYW1lGAQgASgJEhEKCWltYWdlX3VybBgFIAEoCRITCgtpbWFnZV93aWR0aBgGIAEoBRIUCgxpbWFnZV9oZWlnaHQYByABKAUSEwoLZmF2aWNvbl91cmwYCCABKAkSDwoHb2dfdHlwZRgJIAEoCRIOCgZkb21haW4YCiABKAkixwEKCkF0dGFjaG1lbnQSCgoCaWQYASABKAkSEAoIZmlsZW5hbWUYAiABKAkSFAoMY29udGVudF90eXBlGAMgASgJEhIKCnNpemVfYnl0ZXMYBCABKAMSCwoDdXJsGAUgASgJEhUKDWVuY3J5cHRlZF9rZXkYBiABKAwSDQoFd2lkdGgYByABKAUSDgoGaGVpZ2h0GAggASgFEhUKDWhhc190aHVtYm5haWwYCSABKAgSFwoPbWljcm9fdGh1bWJuYWlsGAogASgMIrQDCgZNZW1iZXISDwoHdXNlcl9pZBgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSEAoIcm9sZV9pZHMYAyADKAkSEAoIbmlja25hbWUYBCABKAkSLQoJam9pbmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI4Cg90aW1lZF9vdXRfdW50aWwYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESQAoXb25ib2FyZGluZ19jb21wbGV0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAGIAQESPgoVcnVsZXNfYWNrbm93bGVkZ2VkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgCiAEBEhQKDGhvbWVfdXNlcl9pZBgJIAEoCRIXCg9pbnZpdGVyX3VzZXJfaWQYCiABKAlCEgoQX3RpbWVkX291dF91bnRpbEIaChhfb25ib2FyZGluZ19jb21wbGV0ZWRfYXRCGAoWX3J1bGVzX2Fja25vd2xlZGdlZF9hdCKFAQoEUm9sZRIKCgJpZBgBIAEoCRIRCglzZXJ2ZXJfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtwZXJtaXNzaW9ucxgEIAEoAxINCgVjb2xvchgFIAEoBRIQCghwb3NpdGlvbhgGIAEoBRIaChJpc19zZWxmX2Fzc2lnbmFibGUYByABKAgifAoDQmFuEhEKCXNlcnZlcl9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEg4KBnJlYXNvbhgDIAEoCRIRCgliYW5uZWRfYnkYBCABKAkSLgoKY3JlYXRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi0wEKBkludml0ZRIMCgRjb2RlGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRISCgpjcmVhdG9yX2lkGAMgASgJEhAKCG1heF91c2VzGAQgASgFEhEKCXVzZV9jb3VudBgFIAEoBRIuCgpleHBpcmVzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIPCgdyZXZva2VkGAcgASgIEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wInQKDVBpbm5lZE1lc3NhZ2USIQoHbWVzc2FnZRgBIAEoCzIQLm1lemEudjEuTWVzc2FnZRIRCglwaW5uZWRfYnkYAiABKAkSLQoJcGlubmVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK0AQoLQ3VzdG9tRW1vamkSCgoCaWQYASABKAkSEQoJc2VydmVyX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJaW1hZ2VfdXJsGAQgASgJEhAKCGFuaW1hdGVkGAUgASgIEhIKCmNyZWF0b3JfaWQYBiABKAkSLgoKY3JlYXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDwoHdXNlcl9pZBgIIAEoCSKSAQoPU291bmRib2FyZFNvdW5kEgoKAmlkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSEQoJc2VydmVyX2lkGAMgASgJEgwKBG5hbWUYBCABKAkSEQoJYXVkaW9fdXJsGAUgASgJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIroBCg1BdWRpdExvZ0VudHJ5EgoKAmlkGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRIOCgZhY3Rpb24YAyABKAkSEAoIYWN0b3JfaWQYBCABKAkSEQoJdGFyZ2V0X2lkGAUgASgJEhMKC3RhcmdldF90eXBlGAYgASgJEhAKCG1ldGFkYXRhGAcgASgJEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIoIBCghSZWFjdGlvbhISCgpjaGFubmVsX2lkGAEgASgJEhIKCm1lc3NhZ2VfaWQYAiABKAkSDwoHdXNlcl9pZBgDIAEoCRINCgVlbW9qaRgEIAEoCRIuCgpjcmVhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI8Cg1SZWFjdGlvbkdyb3VwEg0KBWVtb2ppGAEgASgJEgoKAm1lGAIgASgIEhAKCHVzZXJfaWRzGAMgAygJIlMKCVJlYWRTdGF0ZRISCgpjaGFubmVsX2lkGAEgASgJEhwKFGxhc3RfcmVhZF9tZXNzYWdlX2lkGAIgASgJEhQKDHVucmVhZF9jb3VudBgDIAEoBSKEAQoQQXVkaW9QcmVmZXJlbmNlcxIZChFub2lzZV9zdXBwcmVzc2lvbhgBIAEoCBIZChFlY2hvX2NhbmNlbGxhdGlvbhgCIAEoCBIZChFhdXRvX2dhaW5fY29udHJvbBgDIAEoCBIfChdub2lzZV9jYW5jZWxsYXRpb25fbW9kZRgEIAEoCSqKAQoLQ2hhbm5lbFR5cGUSHAoYQ0hBTk5FTF9UWVBFX1VOU1BFQ0lGSUVEEAASFQoRQ0hBTk5FTF9UWVBFX1RFWFQQARIWChJDSEFOTkVMX1RZUEVfVk9JQ0UQAhITCg9DSEFOTkVMX1RZUEVfRE0QAxIZChVDSEFOTkVMX1RZUEVfR1JPVVBfRE0QBGIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message meza.v1.User
@@ -98,6 +98,11 @@ export type User = Message$1<"meza.v1.User"> & {
    * @generated from field: bytes signing_public_key = 16;
    */
   signingPublicKey: Uint8Array;
+
+  /**
+   * @generated from field: repeated meza.v1.UserConnection connections = 17;
+   */
+  connections: UserConnection[];
 };
 
 /**
@@ -106,6 +111,37 @@ export type User = Message$1<"meza.v1.User"> & {
  */
 export const UserSchema: GenMessage<User> = /*@__PURE__*/
   messageDesc(file_meza_v1_models, 0);
+
+/**
+ * @generated from message meza.v1.UserConnection
+ */
+export type UserConnection = Message$1<"meza.v1.UserConnection"> & {
+  /**
+   * "github", "twitter", "twitch", "youtube", "linkedin", "website", "steam", "spotify", "reddit", "other"
+   *
+   * @generated from field: string platform = 1;
+   */
+  platform: string;
+
+  /**
+   * @generated from field: string url = 2;
+   */
+  url: string;
+
+  /**
+   * display label (used for "other" type or custom name)
+   *
+   * @generated from field: string label = 3;
+   */
+  label: string;
+};
+
+/**
+ * Describes the message meza.v1.UserConnection.
+ * Use `create(UserConnectionSchema)` to create a new message.
+ */
+export const UserConnectionSchema: GenMessage<UserConnection> = /*@__PURE__*/
+  messageDesc(file_meza_v1_models, 1);
 
 /**
  * @generated from message meza.v1.Server
@@ -167,7 +203,7 @@ export type Server = Message$1<"meza.v1.Server"> & {
  * Use `create(ServerSchema)` to create a new message.
  */
 export const ServerSchema: GenMessage<Server> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 1);
+  messageDesc(file_meza_v1_models, 2);
 
 /**
  * @generated from message meza.v1.Channel
@@ -250,7 +286,7 @@ export type Channel = Message$1<"meza.v1.Channel"> & {
  * Use `create(ChannelSchema)` to create a new message.
  */
 export const ChannelSchema: GenMessage<Channel> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 2);
+  messageDesc(file_meza_v1_models, 3);
 
 /**
  * @generated from message meza.v1.ChannelGroup
@@ -287,7 +323,7 @@ export type ChannelGroup = Message$1<"meza.v1.ChannelGroup"> & {
  * Use `create(ChannelGroupSchema)` to create a new message.
  */
 export const ChannelGroupSchema: GenMessage<ChannelGroup> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 3);
+  messageDesc(file_meza_v1_models, 4);
 
 /**
  * @generated from message meza.v1.PermissionOverride
@@ -335,7 +371,7 @@ export type PermissionOverride = Message$1<"meza.v1.PermissionOverride"> & {
  * Use `create(PermissionOverrideSchema)` to create a new message.
  */
 export const PermissionOverrideSchema: GenMessage<PermissionOverride> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 4);
+  messageDesc(file_meza_v1_models, 5);
 
 /**
  * @generated from message meza.v1.DMChannel
@@ -357,7 +393,7 @@ export type DMChannel = Message$1<"meza.v1.DMChannel"> & {
  * Use `create(DMChannelSchema)` to create a new message.
  */
 export const DMChannelSchema: GenMessage<DMChannel> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 5);
+  messageDesc(file_meza_v1_models, 6);
 
 /**
  * @generated from message meza.v1.Message
@@ -436,7 +472,7 @@ export type Message = Message$1<"meza.v1.Message"> & {
  * Use `create(MessageSchema)` to create a new message.
  */
 export const MessageSchema: GenMessage<Message> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 6);
+  messageDesc(file_meza_v1_models, 7);
 
 /**
  * @generated from message meza.v1.LinkEmbed
@@ -504,7 +540,7 @@ export type LinkEmbed = Message$1<"meza.v1.LinkEmbed"> & {
  * Use `create(LinkEmbedSchema)` to create a new message.
  */
 export const LinkEmbedSchema: GenMessage<LinkEmbed> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 7);
+  messageDesc(file_meza_v1_models, 8);
 
 /**
  * @generated from message meza.v1.Attachment
@@ -566,7 +602,7 @@ export type Attachment = Message$1<"meza.v1.Attachment"> & {
  * Use `create(AttachmentSchema)` to create a new message.
  */
 export const AttachmentSchema: GenMessage<Attachment> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 8);
+  messageDesc(file_meza_v1_models, 9);
 
 /**
  * @generated from message meza.v1.Member
@@ -633,7 +669,7 @@ export type Member = Message$1<"meza.v1.Member"> & {
  * Use `create(MemberSchema)` to create a new message.
  */
 export const MemberSchema: GenMessage<Member> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 9);
+  messageDesc(file_meza_v1_models, 10);
 
 /**
  * @generated from message meza.v1.Role
@@ -680,7 +716,7 @@ export type Role = Message$1<"meza.v1.Role"> & {
  * Use `create(RoleSchema)` to create a new message.
  */
 export const RoleSchema: GenMessage<Role> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 10);
+  messageDesc(file_meza_v1_models, 11);
 
 /**
  * @generated from message meza.v1.Ban
@@ -717,7 +753,7 @@ export type Ban = Message$1<"meza.v1.Ban"> & {
  * Use `create(BanSchema)` to create a new message.
  */
 export const BanSchema: GenMessage<Ban> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 11);
+  messageDesc(file_meza_v1_models, 12);
 
 /**
  * @generated from message meza.v1.Invite
@@ -769,7 +805,7 @@ export type Invite = Message$1<"meza.v1.Invite"> & {
  * Use `create(InviteSchema)` to create a new message.
  */
 export const InviteSchema: GenMessage<Invite> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 12);
+  messageDesc(file_meza_v1_models, 13);
 
 /**
  * @generated from message meza.v1.PinnedMessage
@@ -798,7 +834,7 @@ export type PinnedMessage = Message$1<"meza.v1.PinnedMessage"> & {
  * Use `create(PinnedMessageSchema)` to create a new message.
  */
 export const PinnedMessageSchema: GenMessage<PinnedMessage> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 13);
+  messageDesc(file_meza_v1_models, 14);
 
 /**
  * @generated from message meza.v1.CustomEmoji
@@ -852,7 +888,7 @@ export type CustomEmoji = Message$1<"meza.v1.CustomEmoji"> & {
  * Use `create(CustomEmojiSchema)` to create a new message.
  */
 export const CustomEmojiSchema: GenMessage<CustomEmoji> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 14);
+  messageDesc(file_meza_v1_models, 15);
 
 /**
  * @generated from message meza.v1.SoundboardSound
@@ -898,7 +934,7 @@ export type SoundboardSound = Message$1<"meza.v1.SoundboardSound"> & {
  * Use `create(SoundboardSoundSchema)` to create a new message.
  */
 export const SoundboardSoundSchema: GenMessage<SoundboardSound> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 15);
+  messageDesc(file_meza_v1_models, 16);
 
 /**
  * @generated from message meza.v1.AuditLogEntry
@@ -952,7 +988,7 @@ export type AuditLogEntry = Message$1<"meza.v1.AuditLogEntry"> & {
  * Use `create(AuditLogEntrySchema)` to create a new message.
  */
 export const AuditLogEntrySchema: GenMessage<AuditLogEntry> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 16);
+  messageDesc(file_meza_v1_models, 17);
 
 /**
  * @generated from message meza.v1.Reaction
@@ -989,7 +1025,7 @@ export type Reaction = Message$1<"meza.v1.Reaction"> & {
  * Use `create(ReactionSchema)` to create a new message.
  */
 export const ReactionSchema: GenMessage<Reaction> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 17);
+  messageDesc(file_meza_v1_models, 18);
 
 /**
  * @generated from message meza.v1.ReactionGroup
@@ -1016,7 +1052,7 @@ export type ReactionGroup = Message$1<"meza.v1.ReactionGroup"> & {
  * Use `create(ReactionGroupSchema)` to create a new message.
  */
 export const ReactionGroupSchema: GenMessage<ReactionGroup> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 18);
+  messageDesc(file_meza_v1_models, 19);
 
 /**
  * @generated from message meza.v1.ReadState
@@ -1043,7 +1079,7 @@ export type ReadState = Message$1<"meza.v1.ReadState"> & {
  * Use `create(ReadStateSchema)` to create a new message.
  */
 export const ReadStateSchema: GenMessage<ReadState> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 19);
+  messageDesc(file_meza_v1_models, 20);
 
 /**
  * @generated from message meza.v1.AudioPreferences
@@ -1077,7 +1113,7 @@ export type AudioPreferences = Message$1<"meza.v1.AudioPreferences"> & {
  * Use `create(AudioPreferencesSchema)` to create a new message.
  */
 export const AudioPreferencesSchema: GenMessage<AudioPreferences> = /*@__PURE__*/
-  messageDesc(file_meza_v1_models, 20);
+  messageDesc(file_meza_v1_models, 21);
 
 /**
  * @generated from enum meza.v1.ChannelType

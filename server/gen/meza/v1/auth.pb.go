@@ -913,6 +913,8 @@ type UpdateProfileRequest struct {
 	SimpleMode          *bool                  `protobuf:"varint,9,opt,name=simple_mode,json=simpleMode,proto3,oneof" json:"simple_mode,omitempty"`
 	AudioPreferences    *AudioPreferences      `protobuf:"bytes,10,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
 	DmPrivacy           *string                `protobuf:"bytes,11,opt,name=dm_privacy,json=dmPrivacy,proto3,oneof" json:"dm_privacy,omitempty"` // "anyone", "message_requests", "mutual_servers", "nobody"
+	Connections         []*UserConnection      `protobuf:"bytes,12,rep,name=connections,proto3" json:"connections,omitempty"`
+	ClearConnections    bool                   `protobuf:"varint,13,opt,name=clear_connections,json=clearConnections,proto3" json:"clear_connections,omitempty"` // when true, replace all connections (empty list = clear)
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -1022,6 +1024,20 @@ func (x *UpdateProfileRequest) GetDmPrivacy() string {
 		return *x.DmPrivacy
 	}
 	return ""
+}
+
+func (x *UpdateProfileRequest) GetConnections() []*UserConnection {
+	if x != nil {
+		return x.Connections
+	}
+	return nil
+}
+
+func (x *UpdateProfileRequest) GetClearConnections() bool {
+	if x != nil {
+		return x.ClearConnections
+	}
+	return false
 }
 
 type UpdateProfileResponse struct {
@@ -1700,7 +1716,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"is_current\x18\x05 \x01(\bR\tisCurrent\x12\x1a\n" +
 	"\bplatform\x18\x06 \x01(\tR\bplatform\x12!\n" +
-	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\xa4\x05\n" +
+	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\x8c\x06\n" +
 	"\x14UpdateProfileRequest\x12&\n" +
 	"\fdisplay_name\x18\x01 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -1719,7 +1735,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	" \x01(\v2\x19.meza.v1.AudioPreferencesH\tR\x10audioPreferences\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"dm_privacy\x18\v \x01(\tH\n" +
-	"R\tdmPrivacy\x88\x01\x01B\x0f\n" +
+	"R\tdmPrivacy\x88\x01\x01\x129\n" +
+	"\vconnections\x18\f \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x12+\n" +
+	"\x11clear_connections\x18\r \x01(\bR\x10clearConnectionsB\x0f\n" +
 	"\r_display_nameB\r\n" +
 	"\v_avatar_urlB\x0e\n" +
 	"\f_emoji_scaleB\x06\n" +
@@ -1832,6 +1850,7 @@ var file_meza_v1_auth_proto_goTypes = []any{
 	(*User)(nil),                      // 27: meza.v1.User
 	(*timestamppb.Timestamp)(nil),     // 28: google.protobuf.Timestamp
 	(*AudioPreferences)(nil),          // 29: meza.v1.AudioPreferences
+	(*UserConnection)(nil),            // 30: meza.v1.UserConnection
 }
 var file_meza_v1_auth_proto_depIdxs = []int32{
 	27, // 0: meza.v1.RegisterResponse.user:type_name -> meza.v1.User
@@ -1840,40 +1859,41 @@ var file_meza_v1_auth_proto_depIdxs = []int32{
 	28, // 3: meza.v1.Device.created_at:type_name -> google.protobuf.Timestamp
 	28, // 4: meza.v1.Device.last_seen_at:type_name -> google.protobuf.Timestamp
 	29, // 5: meza.v1.UpdateProfileRequest.audio_preferences:type_name -> meza.v1.AudioPreferences
-	27, // 6: meza.v1.UpdateProfileResponse.user:type_name -> meza.v1.User
-	27, // 7: meza.v1.GetProfileResponse.user:type_name -> meza.v1.User
-	27, // 8: meza.v1.RecoverAccountResponse.user:type_name -> meza.v1.User
-	0,  // 9: meza.v1.AuthService.Register:input_type -> meza.v1.RegisterRequest
-	2,  // 10: meza.v1.AuthService.Login:input_type -> meza.v1.LoginRequest
-	4,  // 11: meza.v1.AuthService.GetSalt:input_type -> meza.v1.GetSaltRequest
-	6,  // 12: meza.v1.AuthService.RefreshToken:input_type -> meza.v1.RefreshTokenRequest
-	8,  // 13: meza.v1.AuthService.RegisterDevice:input_type -> meza.v1.RegisterDeviceRequest
-	10, // 14: meza.v1.AuthService.RevokeDevice:input_type -> meza.v1.RevokeDeviceRequest
-	12, // 15: meza.v1.AuthService.ListDevices:input_type -> meza.v1.ListDevicesRequest
-	15, // 16: meza.v1.AuthService.UpdateProfile:input_type -> meza.v1.UpdateProfileRequest
-	17, // 17: meza.v1.AuthService.ChangePassword:input_type -> meza.v1.ChangePasswordRequest
-	19, // 18: meza.v1.AuthService.GetKeyBundle:input_type -> meza.v1.GetKeyBundleRequest
-	21, // 19: meza.v1.AuthService.GetProfile:input_type -> meza.v1.GetProfileRequest
-	23, // 20: meza.v1.AuthService.GetRecoveryBundle:input_type -> meza.v1.GetRecoveryBundleRequest
-	25, // 21: meza.v1.AuthService.RecoverAccount:input_type -> meza.v1.RecoverAccountRequest
-	1,  // 22: meza.v1.AuthService.Register:output_type -> meza.v1.RegisterResponse
-	3,  // 23: meza.v1.AuthService.Login:output_type -> meza.v1.LoginResponse
-	5,  // 24: meza.v1.AuthService.GetSalt:output_type -> meza.v1.GetSaltResponse
-	7,  // 25: meza.v1.AuthService.RefreshToken:output_type -> meza.v1.RefreshTokenResponse
-	9,  // 26: meza.v1.AuthService.RegisterDevice:output_type -> meza.v1.RegisterDeviceResponse
-	11, // 27: meza.v1.AuthService.RevokeDevice:output_type -> meza.v1.RevokeDeviceResponse
-	13, // 28: meza.v1.AuthService.ListDevices:output_type -> meza.v1.ListDevicesResponse
-	16, // 29: meza.v1.AuthService.UpdateProfile:output_type -> meza.v1.UpdateProfileResponse
-	18, // 30: meza.v1.AuthService.ChangePassword:output_type -> meza.v1.ChangePasswordResponse
-	20, // 31: meza.v1.AuthService.GetKeyBundle:output_type -> meza.v1.GetKeyBundleResponse
-	22, // 32: meza.v1.AuthService.GetProfile:output_type -> meza.v1.GetProfileResponse
-	24, // 33: meza.v1.AuthService.GetRecoveryBundle:output_type -> meza.v1.GetRecoveryBundleResponse
-	26, // 34: meza.v1.AuthService.RecoverAccount:output_type -> meza.v1.RecoverAccountResponse
-	22, // [22:35] is the sub-list for method output_type
-	9,  // [9:22] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	30, // 6: meza.v1.UpdateProfileRequest.connections:type_name -> meza.v1.UserConnection
+	27, // 7: meza.v1.UpdateProfileResponse.user:type_name -> meza.v1.User
+	27, // 8: meza.v1.GetProfileResponse.user:type_name -> meza.v1.User
+	27, // 9: meza.v1.RecoverAccountResponse.user:type_name -> meza.v1.User
+	0,  // 10: meza.v1.AuthService.Register:input_type -> meza.v1.RegisterRequest
+	2,  // 11: meza.v1.AuthService.Login:input_type -> meza.v1.LoginRequest
+	4,  // 12: meza.v1.AuthService.GetSalt:input_type -> meza.v1.GetSaltRequest
+	6,  // 13: meza.v1.AuthService.RefreshToken:input_type -> meza.v1.RefreshTokenRequest
+	8,  // 14: meza.v1.AuthService.RegisterDevice:input_type -> meza.v1.RegisterDeviceRequest
+	10, // 15: meza.v1.AuthService.RevokeDevice:input_type -> meza.v1.RevokeDeviceRequest
+	12, // 16: meza.v1.AuthService.ListDevices:input_type -> meza.v1.ListDevicesRequest
+	15, // 17: meza.v1.AuthService.UpdateProfile:input_type -> meza.v1.UpdateProfileRequest
+	17, // 18: meza.v1.AuthService.ChangePassword:input_type -> meza.v1.ChangePasswordRequest
+	19, // 19: meza.v1.AuthService.GetKeyBundle:input_type -> meza.v1.GetKeyBundleRequest
+	21, // 20: meza.v1.AuthService.GetProfile:input_type -> meza.v1.GetProfileRequest
+	23, // 21: meza.v1.AuthService.GetRecoveryBundle:input_type -> meza.v1.GetRecoveryBundleRequest
+	25, // 22: meza.v1.AuthService.RecoverAccount:input_type -> meza.v1.RecoverAccountRequest
+	1,  // 23: meza.v1.AuthService.Register:output_type -> meza.v1.RegisterResponse
+	3,  // 24: meza.v1.AuthService.Login:output_type -> meza.v1.LoginResponse
+	5,  // 25: meza.v1.AuthService.GetSalt:output_type -> meza.v1.GetSaltResponse
+	7,  // 26: meza.v1.AuthService.RefreshToken:output_type -> meza.v1.RefreshTokenResponse
+	9,  // 27: meza.v1.AuthService.RegisterDevice:output_type -> meza.v1.RegisterDeviceResponse
+	11, // 28: meza.v1.AuthService.RevokeDevice:output_type -> meza.v1.RevokeDeviceResponse
+	13, // 29: meza.v1.AuthService.ListDevices:output_type -> meza.v1.ListDevicesResponse
+	16, // 30: meza.v1.AuthService.UpdateProfile:output_type -> meza.v1.UpdateProfileResponse
+	18, // 31: meza.v1.AuthService.ChangePassword:output_type -> meza.v1.ChangePasswordResponse
+	20, // 32: meza.v1.AuthService.GetKeyBundle:output_type -> meza.v1.GetKeyBundleResponse
+	22, // 33: meza.v1.AuthService.GetProfile:output_type -> meza.v1.GetProfileResponse
+	24, // 34: meza.v1.AuthService.GetRecoveryBundle:output_type -> meza.v1.GetRecoveryBundleResponse
+	26, // 35: meza.v1.AuthService.RecoverAccount:output_type -> meza.v1.RecoverAccountResponse
+	23, // [23:36] is the sub-list for method output_type
+	10, // [10:23] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_auth_proto_init() }

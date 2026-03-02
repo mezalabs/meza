@@ -374,3 +374,39 @@ func (s *FriendStore) RemoveFriendshipsByUserTx(ctx context.Context, tx pgx.Tx, 
 	}
 	return nil
 }
+
+// GetMutualFriends returns users who are friends with both userID1 and userID2.
+func (s *FriendStore) GetMutualFriends(ctx context.Context, userID1, userID2 string) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		fmt.Sprintf(`SELECT %s
+		 FROM users u
+		 JOIN friendships f1 ON (
+			(f1.requester_id = $1 AND f1.addressee_id = u.id) OR
+			(f1.addressee_id = $1 AND f1.requester_id = u.id)
+		 ) AND f1.status = 'accepted'
+		 JOIN friendships f2 ON (
+			(f2.requester_id = $2 AND f2.addressee_id = u.id) OR
+			(f2.addressee_id = $2 AND f2.requester_id = u.id)
+		 ) AND f2.status = 'accepted'
+		 ORDER BY u.username
+		 LIMIT 50`, userColumns),
+		userID1, userID2,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query mutual friends: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		u, err := scanUserFromRows(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan mutual friend: %w", err)
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
