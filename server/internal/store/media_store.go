@@ -23,13 +23,14 @@ func NewMediaStore(pool *pgxpool.Pool) *MediaStore {
 }
 
 // attachmentColumns is the canonical column list for attachment queries.
-const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, created_at, updated_at, completed_at, expires_at`
+const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, created_at, updated_at, completed_at, expires_at, linked_at`
 
 func scanAttachment(row interface{ Scan(dest ...any) error }, a *models.Attachment) error {
 	return row.Scan(
 		&a.ID, &a.UploaderID, &a.UploadPurpose, &a.ObjectKey, &a.ThumbnailKey,
 		&a.Filename, &a.ContentType, &a.OriginalContentType, &a.SizeBytes, &a.Width, &a.Height,
 		&a.Status, &a.MicroThumbnailData, &a.EncryptedKey, &a.CreatedAt, &a.UpdatedAt, &a.CompletedAt, &a.ExpiresAt,
+		&a.LinkedAt,
 	)
 }
 
@@ -179,6 +180,54 @@ func (s *MediaStore) ResetAttachmentToPending(ctx context.Context, id string) er
 		return fmt.Errorf("reset attachment to pending: %w", err)
 	}
 	return nil
+}
+
+func (s *MediaStore) LinkAttachments(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	_, err := s.pool.Exec(ctx,
+		`UPDATE attachments SET linked_at = now() WHERE id = ANY($1) AND status = 'completed'`,
+		ids,
+	)
+	if err != nil {
+		return fmt.Errorf("link attachments: %w", err)
+	}
+	return nil
+}
+
+func (s *MediaStore) FindUnlinkedAttachments(ctx context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT `+attachmentColumns+`
+		 FROM attachments
+		 WHERE status = 'completed' AND linked_at IS NULL AND upload_purpose = 'chat_attachment'
+		   AND completed_at IS NOT NULL AND completed_at < $1
+		 ORDER BY completed_at LIMIT $2`,
+		olderThan, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query unlinked attachments: %w", err)
+	}
+	defer rows.Close()
+
+	var attachments []*models.Attachment
+	for rows.Next() {
+		var a models.Attachment
+		if err := scanAttachment(rows, &a); err != nil {
+			return nil, fmt.Errorf("scan unlinked attachment: %w", err)
+		}
+		attachments = append(attachments, &a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate unlinked attachments: %w", err)
+	}
+	return attachments, nil
 }
 
 func (s *MediaStore) FindOrphanedUploads(ctx context.Context, before time.Time, limit int) ([]*models.Attachment, error) {

@@ -595,13 +595,23 @@ func startCleanup(ctx context.Context, st store.MediaStorer, s3Client *s3.Client
 	}()
 }
 
+// unlinkedGracePeriod is how long a completed attachment can remain unlinked
+// (not referenced by any message) before cleanup considers it abandoned.
+const unlinkedGracePeriod = 24 * time.Hour
+
 func cleanupOrphans(ctx context.Context, st store.MediaStorer, s3Client *s3.Client) {
-	// TODO(future): Also clean up completed attachments that are no longer referenced
-	// by any message. Currently only pending/processing uploads are cleaned up.
 	orphans, err := st.FindOrphanedUploads(ctx, time.Now(), cleanupBatchSize)
 	if err != nil {
 		slog.Error("finding orphaned uploads", "err", err)
 		return
+	}
+
+	// Also find completed chat attachments that were never linked to a message.
+	unlinked, err := st.FindUnlinkedAttachments(ctx, time.Now().Add(-unlinkedGracePeriod), cleanupBatchSize)
+	if err != nil {
+		slog.Error("finding unlinked attachments", "err", err)
+	} else {
+		orphans = append(orphans, unlinked...)
 	}
 
 	for _, a := range orphans {

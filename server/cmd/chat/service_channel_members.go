@@ -237,8 +237,12 @@ func (s *chatService) publishChannelMemberEvent(ch *models.Channel, targetID, ac
 		// DM/group DM: publish directly to the channel delivery subject.
 		s.nc.Publish(subjects.DeliverChannel(ch.ID), eventData)
 	} else {
-		// Server channel: publish to the server channel subject with channel encoding.
-		s.nc.Publish(subjects.ServerChannel(ch.ServerID), subjects.EncodeServerChannelEvent(eventData, ch.ID))
+		// Server channel: publish to the server channel subject with privacy prefix.
+		privateChID := ""
+		if ch.IsPrivate {
+			privateChID = ch.ID
+		}
+		s.nc.Publish(subjects.ServerChannel(ch.ServerID), subjects.EncodeServerChannelEvent(eventData, privateChID))
 	}
 
 	// Signal gateway to refresh channel subscriptions for the affected user.
