@@ -114,7 +114,10 @@ export class RnnoiseTrackProcessor
     };
 
     const prev = this.restartPromise;
-    this.restartPromise = (prev ?? Promise.resolve()).then(doRestart, doRestart);
+    this.restartPromise = (prev ?? Promise.resolve()).then(
+      doRestart,
+      doRestart,
+    );
     await this.restartPromise;
   }
 

@@ -1,4 +1,8 @@
-import { type ComponentPropsWithoutRef, type ReactNode, forwardRef } from 'react';
+import {
+  type ComponentPropsWithoutRef,
+  forwardRef,
+  type ReactNode,
+} from 'react';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 
 interface UserProfileTriggerProps extends ComponentPropsWithoutRef<'div'> {

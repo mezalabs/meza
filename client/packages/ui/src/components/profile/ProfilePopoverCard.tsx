@@ -118,9 +118,10 @@ function ProfileCardContent({
     // If cached profile is fresh (<30s old), skip the network fetch.
     // Voice activity and mutual servers are always refetched (ephemeral).
     const fresh = useUsersStore.getState().isProfileFresh(userId, 30_000);
-    const profilePromise = fresh
-      ? Promise.resolve(cachedProfile!)
-      : getProfile(userId);
+    const profilePromise =
+      fresh && cachedProfile
+        ? Promise.resolve(cachedProfile)
+        : getProfile(userId);
 
     if (!fresh) setLoading(true);
 
@@ -153,7 +154,7 @@ function ProfileCardContent({
       // Bump the counter so any in-flight fetch is discarded on cleanup.
       fetchIdRef.current++;
     };
-  }, [userId, isOwnProfile, isBlocked]);
+  }, [userId, isOwnProfile, isBlocked, cachedProfile]);
 
   if (loading && !profile) {
     return <ProfileCardSkeleton />;
