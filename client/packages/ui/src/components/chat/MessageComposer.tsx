@@ -270,8 +270,10 @@ export function MessageComposer({
       return;
     }
     const query = before.slice(colonIndex + 1);
-    // Need at least 1 char to trigger, and no spaces allowed
-    if (query.length === 0 || query.includes(' ')) {
+    // Need at least 1 char, no spaces, and only valid emoji-name chars
+    // (letters, digits, _, -, +). This avoids false triggers on URLs
+    // like https://… where the colon is part of the scheme.
+    if (query.length === 0 || !/^[a-zA-Z0-9_+-]+$/.test(query)) {
       setEmojiQuery(null);
       return;
     }
