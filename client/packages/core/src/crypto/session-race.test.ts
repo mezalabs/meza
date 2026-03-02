@@ -43,12 +43,9 @@ vi.stubGlobal('sessionStorage', {
 const { bootstrapSession, teardownSession, getIdentity, onSessionReady } =
   await import('./session.ts');
 
-const {
-  clearChannelKeyCache,
-  createChannelKey,
-  fetchAndCacheChannelKeys,
-  initChannelKeys,
-} = await import('./channel-keys.ts');
+const { createChannelKey, fetchAndCacheChannelKeys } = await import(
+  './channel-keys.ts'
+);
 
 const { encryptMessage } = await import('./messages.ts');
 const { unwrapFileKey, wrapFileKey, generateFileKey } = await import(
@@ -96,7 +93,6 @@ describe('race: waiting for session ready before operations', () => {
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     vi.mocked(restoreIdentity).mockResolvedValue(alice);
 
-    let unwrapResult: Uint8Array | undefined;
     let resolvedInCallback = false;
 
     // Register a callback that performs crypto operations after session ready
@@ -114,7 +110,7 @@ describe('race: waiting for session ready before operations', () => {
     // Verify the key is usable
     const fileKey = generateFileKey();
     const envelope = await wrapFileKey('ch-ready', fileKey);
-    unwrapResult = await unwrapFileKey('ch-ready', envelope);
+    const unwrapResult = await unwrapFileKey('ch-ready', envelope);
     expect(unwrapResult).toEqual(fileKey);
   });
 

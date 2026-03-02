@@ -15,6 +15,8 @@ const mockUser: StoredUser = {
   themeColorSecondary: '',
   simpleMode: false,
   dmPrivacy: 'message_requests',
+  connections: [],
+  createdAt: '',
 };
 
 const mockStorage = new Map<string, string>();

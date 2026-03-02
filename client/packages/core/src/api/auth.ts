@@ -6,7 +6,11 @@ import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
-import { type ConnectionPlatform, type StoredUser, useAuthStore } from '../store/auth.ts';
+import {
+  type ConnectionPlatform,
+  type StoredUser,
+  useAuthStore,
+} from '../store/auth.ts';
 import { useBlockStore } from '../store/blocks.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useFriendStore } from '../store/friends.ts';

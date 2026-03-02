@@ -47,9 +47,9 @@ import {
   buildPublishOptions,
 } from '../../utils/streamPresets.ts';
 import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
+import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
-import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { SoundboardPanel } from './SoundboardPanel.tsx';
 
 /* ——— Main component ——— */
@@ -288,7 +288,11 @@ function ParticipantRow({
                   : ''
               }`}
             >
-              <Avatar avatarUrl={avatarUrl} displayName={displayName} size="lg" />
+              <Avatar
+                avatarUrl={avatarUrl}
+                displayName={displayName}
+                size="lg"
+              />
             </div>
             <PresenceDot
               userId={userId}

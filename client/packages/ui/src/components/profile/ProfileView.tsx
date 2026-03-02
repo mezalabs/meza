@@ -214,9 +214,9 @@ export function ProfileView({ userId }: ProfileViewProps) {
                 Connections
               </h3>
               <div className="flex flex-wrap gap-1.5">
-                {profile.connections.map((c, i) => (
+                {profile.connections.map((c) => (
                   <a
-                    key={i}
+                    key={`${c.platform}-${c.url}`}
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -869,6 +869,7 @@ function ProfileEditMode({
               Connections
             </span>
             {connections.map((conn, idx) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: form items keyed by position
               <div key={idx} className="flex items-center gap-2">
                 <select
                   className="rounded-md border border-border bg-bg-surface px-2 py-1.5 text-xs text-text focus:border-accent focus:outline-none"
