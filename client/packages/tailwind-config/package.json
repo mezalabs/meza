@@ -1,0 +1,9 @@
+{
+  "name": "@meza/tailwind-config",
+  "version": "0.0.1",
+  "private": true,
+  "main": "tokens.js",
+  "exports": {
+    ".": "./tokens.js"
+  }
+}

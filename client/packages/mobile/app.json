@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Meza",
+    "slug": "meza",
+    "version": "0.0.1",
+    "scheme": "meza",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#2e2e2e"
+    },
+    "ios": {
+      "bundleIdentifier": "com.meza.chat",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.meza.chat",
+      "adaptiveIcon": {
+        "backgroundColor": "#2e2e2e"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
