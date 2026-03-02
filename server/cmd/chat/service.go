@@ -834,7 +834,6 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 		slog.Error("marshaling event", "err", err)
 		// Don't return error - the DB mutation succeeded, event broadcast is best-effort
 	} else {
-		// Encode privacy prefix to avoid full deserialization in gateway (TODO 270).
 		privateChID := ""
 		if ch.IsPrivate {
 			privateChID = ch.ID
@@ -1081,6 +1080,13 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 			}
 		}
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Mark attachments as linked so unlinked-attachment cleanup skips them.
+	if len(req.Msg.AttachmentIds) > 0 {
+		if lErr := s.mediaStore.LinkAttachments(ctx, req.Msg.AttachmentIds); lErr != nil {
+			slog.Error("linking attachments", "err", lErr, "message", msgID)
+		}
 	}
 
 	// Insert reply index entry (best-effort).
@@ -1844,7 +1850,6 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		slog.Error("marshaling event", "err", err)
 		// Don't return error - the DB mutation succeeded, event broadcast is best-effort
 	} else {
-		// Encode privacy prefix to avoid full deserialization in gateway (TODO 270).
 		privateChID := ""
 		if updated.IsPrivate {
 			privateChID = updated.ID
@@ -1903,7 +1908,7 @@ func (s *chatService) DeleteChannel(ctx context.Context, req *connect.Request[v1
 		slog.Error("marshaling event", "err", err)
 		// Don't return error - the DB mutation succeeded, event broadcast is best-effort
 	} else {
-		// Delete events always broadcast to all server members (TODO 270).
+		// Delete events always broadcast to all server members.
 		s.nc.Publish(subjects.ServerChannel(ch.ServerID), subjects.EncodeServerChannelEvent(eventData, ""))
 	}
 

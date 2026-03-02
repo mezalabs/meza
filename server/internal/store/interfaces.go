@@ -345,4 +345,6 @@ type MediaStorer interface {
 	DeleteAttachment(ctx context.Context, id string) error
 	FindOrphanedUploads(ctx context.Context, before time.Time, limit int) ([]*models.Attachment, error)
 	ResetAttachmentToPending(ctx context.Context, id string) error
+	LinkAttachments(ctx context.Context, ids []string) error
+	FindUnlinkedAttachments(ctx context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error)
 }

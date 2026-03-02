@@ -1,0 +1,6 @@
+ALTER TABLE attachments ADD COLUMN linked_at TIMESTAMPTZ;
+
+-- Index for cleanup: find completed chat attachments never linked to a message.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_attachments_unlinked_cleanup
+    ON attachments (completed_at)
+    WHERE status = 'completed' AND linked_at IS NULL AND upload_purpose = 'chat_attachment';

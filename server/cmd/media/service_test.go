@@ -116,6 +116,35 @@ func (m *mockMediaStore) ResetAttachmentToPending(_ context.Context, _ string) e
 	return nil
 }
 
+func (m *mockMediaStore) LinkAttachments(_ context.Context, ids []string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now()
+	for _, id := range ids {
+		if a, ok := m.attachments[id]; ok {
+			a.LinkedAt = &now
+		}
+	}
+	return nil
+}
+
+func (m *mockMediaStore) FindUnlinkedAttachments(_ context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var unlinked []*models.Attachment
+	for _, a := range m.attachments {
+		if a.Status == models.AttachmentStatusCompleted && a.LinkedAt == nil &&
+			a.UploadPurpose == "chat_attachment" &&
+			a.CompletedAt != nil && a.CompletedAt.Before(olderThan) {
+			unlinked = append(unlinked, a)
+			if len(unlinked) >= limit {
+				break
+			}
+		}
+	}
+	return unlinked, nil
+}
+
 func (m *mockMediaStore) FindOrphanedUploads(_ context.Context, before time.Time, limit int) ([]*models.Attachment, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -22,6 +22,7 @@ type Attachment struct {
 	UpdatedAt           time.Time
 	CompletedAt         *time.Time
 	ExpiresAt           *time.Time
+	LinkedAt            *time.Time
 }
 
 const (
