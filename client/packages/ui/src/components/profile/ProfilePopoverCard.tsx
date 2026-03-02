@@ -102,7 +102,7 @@ function ProfileCardContent({
       setProfile(p);
 
       // Fetch additional data in parallel (non-blocking)
-      if (!isOwnProfile) {
+      if (!isOwnProfile && !isBlocked) {
         const [va, ms] = await Promise.all([
           getUserVoiceActivity(userId).catch(() => [] as VoiceActivity[]),
           getMutualServers(userId).catch(() => [] as StoredServer[]),
@@ -115,7 +115,7 @@ function ProfileCardContent({
     } finally {
       setLoading(false);
     }
-  }, [userId, isOwnProfile]);
+  }, [userId, isOwnProfile, isBlocked]);
 
   useEffect(() => {
     fetchData();
