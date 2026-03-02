@@ -369,6 +369,170 @@ func (x *VoiceParticipant) GetIsStreamingVideo() bool {
 	return false
 }
 
+type GetUserVoiceActivityRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserVoiceActivityRequest) Reset() {
+	*x = GetUserVoiceActivityRequest{}
+	mi := &file_meza_v1_voice_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserVoiceActivityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserVoiceActivityRequest) ProtoMessage() {}
+
+func (x *GetUserVoiceActivityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_voice_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserVoiceActivityRequest.ProtoReflect.Descriptor instead.
+func (*GetUserVoiceActivityRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_voice_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetUserVoiceActivityRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type UserVoiceActivity struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId        string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	ChannelName      string                 `protobuf:"bytes,2,opt,name=channel_name,json=channelName,proto3" json:"channel_name,omitempty"`
+	ServerId         string                 `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ServerName       string                 `protobuf:"bytes,4,opt,name=server_name,json=serverName,proto3" json:"server_name,omitempty"`
+	IsStreamingVideo bool                   `protobuf:"varint,5,opt,name=is_streaming_video,json=isStreamingVideo,proto3" json:"is_streaming_video,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *UserVoiceActivity) Reset() {
+	*x = UserVoiceActivity{}
+	mi := &file_meza_v1_voice_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserVoiceActivity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserVoiceActivity) ProtoMessage() {}
+
+func (x *UserVoiceActivity) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_voice_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserVoiceActivity.ProtoReflect.Descriptor instead.
+func (*UserVoiceActivity) Descriptor() ([]byte, []int) {
+	return file_meza_v1_voice_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UserVoiceActivity) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *UserVoiceActivity) GetChannelName() string {
+	if x != nil {
+		return x.ChannelName
+	}
+	return ""
+}
+
+func (x *UserVoiceActivity) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *UserVoiceActivity) GetServerName() string {
+	if x != nil {
+		return x.ServerName
+	}
+	return ""
+}
+
+func (x *UserVoiceActivity) GetIsStreamingVideo() bool {
+	if x != nil {
+		return x.IsStreamingVideo
+	}
+	return false
+}
+
+type GetUserVoiceActivityResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Activities    []*UserVoiceActivity   `protobuf:"bytes,1,rep,name=activities,proto3" json:"activities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserVoiceActivityResponse) Reset() {
+	*x = GetUserVoiceActivityResponse{}
+	mi := &file_meza_v1_voice_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserVoiceActivityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserVoiceActivityResponse) ProtoMessage() {}
+
+func (x *GetUserVoiceActivityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_voice_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserVoiceActivityResponse.ProtoReflect.Descriptor instead.
+func (*GetUserVoiceActivityResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_voice_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetUserVoiceActivityResponse) GetActivities() []*UserVoiceActivity {
+	if x != nil {
+		return x.Activities
+	}
+	return nil
+}
+
 var File_meza_v1_voice_proto protoreflect.FileDescriptor
 
 const file_meza_v1_voice_proto_rawDesc = "" +
@@ -397,11 +561,26 @@ const file_meza_v1_voice_proto_rawDesc = "" +
 	"\bis_muted\x18\x02 \x01(\bR\aisMuted\x12\x1f\n" +
 	"\vis_deafened\x18\x03 \x01(\bR\n" +
 	"isDeafened\x12,\n" +
-	"\x12is_streaming_video\x18\x04 \x01(\bR\x10isStreamingVideo2\xa8\x02\n" +
+	"\x12is_streaming_video\x18\x04 \x01(\bR\x10isStreamingVideo\"6\n" +
+	"\x1bGetUserVoiceActivityRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"\xc1\x01\n" +
+	"\x11UserVoiceActivity\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\x12!\n" +
+	"\fchannel_name\x18\x02 \x01(\tR\vchannelName\x12\x1b\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12\x1f\n" +
+	"\vserver_name\x18\x04 \x01(\tR\n" +
+	"serverName\x12,\n" +
+	"\x12is_streaming_video\x18\x05 \x01(\bR\x10isStreamingVideo\"Z\n" +
+	"\x1cGetUserVoiceActivityResponse\x12:\n" +
+	"\n" +
+	"activities\x18\x01 \x03(\v2\x1a.meza.v1.UserVoiceActivityR\n" +
+	"activities2\x8d\x03\n" +
 	"\fVoiceService\x12W\n" +
 	"\x10JoinVoiceChannel\x12 .meza.v1.JoinVoiceChannelRequest\x1a!.meza.v1.JoinVoiceChannelResponse\x12Z\n" +
 	"\x11LeaveVoiceChannel\x12!.meza.v1.LeaveVoiceChannelRequest\x1a\".meza.v1.LeaveVoiceChannelResponse\x12c\n" +
-	"\x14GetVoiceChannelState\x12$.meza.v1.GetVoiceChannelStateRequest\x1a%.meza.v1.GetVoiceChannelStateResponseB\x84\x01\n" +
+	"\x14GetVoiceChannelState\x12$.meza.v1.GetVoiceChannelStateRequest\x1a%.meza.v1.GetVoiceChannelStateResponse\x12c\n" +
+	"\x14GetUserVoiceActivity\x12$.meza.v1.GetUserVoiceActivityRequest\x1a%.meza.v1.GetUserVoiceActivityResponseB\x84\x01\n" +
 	"\vcom.meza.v1B\n" +
 	"VoiceProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
@@ -417,7 +596,7 @@ func file_meza_v1_voice_proto_rawDescGZIP() []byte {
 	return file_meza_v1_voice_proto_rawDescData
 }
 
-var file_meza_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_meza_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_meza_v1_voice_proto_goTypes = []any{
 	(*JoinVoiceChannelRequest)(nil),      // 0: meza.v1.JoinVoiceChannelRequest
 	(*JoinVoiceChannelResponse)(nil),     // 1: meza.v1.JoinVoiceChannelResponse
@@ -426,20 +605,26 @@ var file_meza_v1_voice_proto_goTypes = []any{
 	(*GetVoiceChannelStateRequest)(nil),  // 4: meza.v1.GetVoiceChannelStateRequest
 	(*GetVoiceChannelStateResponse)(nil), // 5: meza.v1.GetVoiceChannelStateResponse
 	(*VoiceParticipant)(nil),             // 6: meza.v1.VoiceParticipant
+	(*GetUserVoiceActivityRequest)(nil),  // 7: meza.v1.GetUserVoiceActivityRequest
+	(*UserVoiceActivity)(nil),            // 8: meza.v1.UserVoiceActivity
+	(*GetUserVoiceActivityResponse)(nil), // 9: meza.v1.GetUserVoiceActivityResponse
 }
 var file_meza_v1_voice_proto_depIdxs = []int32{
 	6, // 0: meza.v1.GetVoiceChannelStateResponse.participants:type_name -> meza.v1.VoiceParticipant
-	0, // 1: meza.v1.VoiceService.JoinVoiceChannel:input_type -> meza.v1.JoinVoiceChannelRequest
-	2, // 2: meza.v1.VoiceService.LeaveVoiceChannel:input_type -> meza.v1.LeaveVoiceChannelRequest
-	4, // 3: meza.v1.VoiceService.GetVoiceChannelState:input_type -> meza.v1.GetVoiceChannelStateRequest
-	1, // 4: meza.v1.VoiceService.JoinVoiceChannel:output_type -> meza.v1.JoinVoiceChannelResponse
-	3, // 5: meza.v1.VoiceService.LeaveVoiceChannel:output_type -> meza.v1.LeaveVoiceChannelResponse
-	5, // 6: meza.v1.VoiceService.GetVoiceChannelState:output_type -> meza.v1.GetVoiceChannelStateResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	8, // 1: meza.v1.GetUserVoiceActivityResponse.activities:type_name -> meza.v1.UserVoiceActivity
+	0, // 2: meza.v1.VoiceService.JoinVoiceChannel:input_type -> meza.v1.JoinVoiceChannelRequest
+	2, // 3: meza.v1.VoiceService.LeaveVoiceChannel:input_type -> meza.v1.LeaveVoiceChannelRequest
+	4, // 4: meza.v1.VoiceService.GetVoiceChannelState:input_type -> meza.v1.GetVoiceChannelStateRequest
+	7, // 5: meza.v1.VoiceService.GetUserVoiceActivity:input_type -> meza.v1.GetUserVoiceActivityRequest
+	1, // 6: meza.v1.VoiceService.JoinVoiceChannel:output_type -> meza.v1.JoinVoiceChannelResponse
+	3, // 7: meza.v1.VoiceService.LeaveVoiceChannel:output_type -> meza.v1.LeaveVoiceChannelResponse
+	5, // 8: meza.v1.VoiceService.GetVoiceChannelState:output_type -> meza.v1.GetVoiceChannelStateResponse
+	9, // 9: meza.v1.VoiceService.GetUserVoiceActivity:output_type -> meza.v1.GetUserVoiceActivityResponse
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_voice_proto_init() }
@@ -453,7 +638,7 @@ func file_meza_v1_voice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_voice_proto_rawDesc), len(file_meza_v1_voice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

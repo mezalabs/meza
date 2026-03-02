@@ -5,6 +5,7 @@ service VoiceService {
   rpc JoinVoiceChannel(JoinVoiceChannelRequest) returns (JoinVoiceChannelResponse);
   rpc LeaveVoiceChannel(LeaveVoiceChannelRequest) returns (LeaveVoiceChannelResponse);
   rpc GetVoiceChannelState(GetVoiceChannelStateRequest) returns (GetVoiceChannelStateResponse);
+  rpc GetUserVoiceActivity(GetUserVoiceActivityRequest) returns (GetUserVoiceActivityResponse);
 }
 
 message JoinVoiceChannelRequest {
@@ -37,4 +38,20 @@ message VoiceParticipant {
   bool is_muted = 2;
   bool is_deafened = 3;
   bool is_streaming_video = 4;
+}
+
+message GetUserVoiceActivityRequest {
+  string user_id = 1;
+}
+
+message UserVoiceActivity {
+  string channel_id = 1;
+  string channel_name = 2;
+  string server_id = 3;
+  string server_name = 4;
+  bool is_streaming_video = 5;
+}
+
+message GetUserVoiceActivityResponse {
+  repeated UserVoiceActivity activities = 1;
 }

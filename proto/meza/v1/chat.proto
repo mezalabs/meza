@@ -3,6 +3,7 @@ package meza.v1;
 
 import "meza/v1/models.proto";
 import "meza/v1/presence.proto";
+import "meza/v1/voice.proto";
 import "google/protobuf/timestamp.proto";
 
 service ChatService {
@@ -94,6 +95,8 @@ service ChatService {
   rpc CreateServerFromTemplate(CreateServerFromTemplateRequest) returns (CreateServerFromTemplateResponse);
   rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream Event);
+  rpc GetMutualServers(GetMutualServersRequest) returns (GetMutualServersResponse);
+  rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
 }
 
 // Messages
@@ -471,6 +474,7 @@ message Event {
     FriendEvent friend_request_cancelled = 55;
     GetPresenceResponse presence_update = 57;
     RolesReorderedEvent roles_reordered = 58;
+    VoiceActivityUpdateEvent voice_activity_update = 59;
   }
 }
 
@@ -525,6 +529,7 @@ enum EventType {
   EVENT_TYPE_FRIEND_REQUEST_CANCELLED = 47;
   // 48 reserved (was EVENT_TYPE_MLS_GROUP_MESSAGE)
   EVENT_TYPE_ROLES_REORDERED = 49;
+  EVENT_TYPE_VOICE_ACTIVITY_UPDATE = 50;
 }
 
 message MessageDeleteEvent {
@@ -1199,4 +1204,31 @@ message EmbedFetchJob {
   string channel_id = 1;
   string message_id = 2;
   repeated string urls = 3;
+}
+
+// Mutual data
+
+// Voice Activity Events
+
+message VoiceActivityUpdateEvent {
+  string user_id = 1;
+  repeated UserVoiceActivity activities = 2;
+}
+
+// Mutual data
+
+message GetMutualServersRequest {
+  string user_id = 1;
+}
+
+message GetMutualServersResponse {
+  repeated Server servers = 1;
+}
+
+message GetMutualFriendsRequest {
+  string user_id = 1;
+}
+
+message GetMutualFriendsResponse {
+  repeated User users = 1;
 }
