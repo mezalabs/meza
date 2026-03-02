@@ -363,6 +363,20 @@ func (m *mockChatStore) ListPendingDMRequests(_ context.Context, _ string) ([]*m
 func (m *mockChatStore) ShareAnyServer(_ context.Context, _, _ string) (bool, error) {
 	return false, nil
 }
+func (m *mockChatStore) GetMutualServers(_ context.Context, userID1, userID2 string) ([]*models.Server, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var mutual []*models.Server
+	for serverID, members := range m.members {
+		if members[userID1] && members[userID2] {
+			if srv, ok := m.servers[serverID]; ok {
+				mutual = append(mutual, srv)
+			}
+		}
+	}
+	return mutual, nil
+}
 func (m *mockChatStore) GetDMOtherParticipantID(_ context.Context, _, _ string) (string, error) {
 	return "", nil
 }

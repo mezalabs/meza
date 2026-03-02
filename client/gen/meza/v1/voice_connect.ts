@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetVoiceChannelStateRequest, GetVoiceChannelStateResponse, JoinVoiceChannelRequest, JoinVoiceChannelResponse, LeaveVoiceChannelRequest, LeaveVoiceChannelResponse } from "./voice_pb.js";
+import { GetUserVoiceActivityRequest, GetUserVoiceActivityResponse, GetVoiceChannelStateRequest, GetVoiceChannelStateResponse, JoinVoiceChannelRequest, JoinVoiceChannelResponse, LeaveVoiceChannelRequest, LeaveVoiceChannelResponse } from "./voice_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -37,6 +37,15 @@ export const VoiceService = {
       name: "GetVoiceChannelState",
       I: GetVoiceChannelStateRequest,
       O: GetVoiceChannelStateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.VoiceService.GetUserVoiceActivity
+     */
+    getUserVoiceActivity: {
+      name: "GetUserVoiceActivity",
+      I: GetUserVoiceActivityRequest,
+      O: GetUserVoiceActivityResponse,
       kind: MethodKind.Unary,
     },
   }

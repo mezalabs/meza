@@ -25,6 +25,7 @@ const channelTypeVoice = 2
 type livekitRoomClient interface {
 	CreateRoom(ctx context.Context, req *livekit.CreateRoomRequest) (*livekit.Room, error)
 	ListParticipants(ctx context.Context, req *livekit.ListParticipantsRequest) (*livekit.ListParticipantsResponse, error)
+	GetParticipant(ctx context.Context, req *livekit.RoomParticipantIdentity) (*livekit.ParticipantInfo, error)
 	RemoveParticipant(ctx context.Context, req *livekit.RoomParticipantIdentity) (*livekit.RemoveParticipantResponse, error)
 }
 
@@ -34,6 +35,7 @@ var _ livekitRoomClient = (*lksdk.RoomServiceClient)(nil)
 type voiceService struct {
 	chatStore   store.ChatStorer
 	roleStore   store.RoleStorer
+	blockStore  store.BlockStorer
 	lkClient    livekitRoomClient
 	lkKey       string
 	lkSecret    string
@@ -277,4 +279,5 @@ var _ = (interface {
 	JoinVoiceChannel(context.Context, *connect.Request[v1.JoinVoiceChannelRequest]) (*connect.Response[v1.JoinVoiceChannelResponse], error)
 	LeaveVoiceChannel(context.Context, *connect.Request[v1.LeaveVoiceChannelRequest]) (*connect.Response[v1.LeaveVoiceChannelResponse], error)
 	GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error)
+	GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error)
 })((*voiceService)(nil))

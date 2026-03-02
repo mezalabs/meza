@@ -35,6 +35,14 @@ export function toStoredUser(user: User): StoredUser {
     themeColorSecondary: user.themeColorSecondary,
     simpleMode: user.simpleMode,
     dmPrivacy: user.dmPrivacy || 'message_requests',
+    connections: user.connections.map((c) => ({
+      platform: c.platform,
+      url: c.url,
+      label: c.label,
+    })),
+    createdAt: user.createdAt
+      ? new Date(Number(user.createdAt.seconds) * 1000).toISOString()
+      : '',
   };
 }
 
@@ -161,6 +169,8 @@ export async function updateProfile(params: {
     noiseCancellationMode?: string;
   };
   dmPrivacy?: string;
+  connections?: { platform: string; url: string; label: string }[];
+  clearConnections?: boolean;
 }) {
   const store = useAuthStore.getState();
   try {

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meza/v1/voice.proto.
  */
 export const file_meza_v1_voice: GenFile = /*@__PURE__*/
-  fileDesc("ChNtZXphL3YxL3ZvaWNlLnByb3RvEgdtZXphLnYxIi0KF0pvaW5Wb2ljZUNoYW5uZWxSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAkicwoYSm9pblZvaWNlQ2hhbm5lbFJlc3BvbnNlEhMKC2xpdmVraXRfdXJsGAEgASgJEhUKDWxpdmVraXRfdG9rZW4YAiABKAkSEQoJcm9vbV9uYW1lGAMgASgJEhgKEGNhbl9zY3JlZW5fc2hhcmUYBCABKAgiLgoYTGVhdmVWb2ljZUNoYW5uZWxSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAkiGwoZTGVhdmVWb2ljZUNoYW5uZWxSZXNwb25zZSIxChtHZXRWb2ljZUNoYW5uZWxTdGF0ZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoCSJPChxHZXRWb2ljZUNoYW5uZWxTdGF0ZVJlc3BvbnNlEi8KDHBhcnRpY2lwYW50cxgBIAMoCzIZLm1lemEudjEuVm9pY2VQYXJ0aWNpcGFudCJmChBWb2ljZVBhcnRpY2lwYW50Eg8KB3VzZXJfaWQYASABKAkSEAoIaXNfbXV0ZWQYAiABKAgSEwoLaXNfZGVhZmVuZWQYAyABKAgSGgoSaXNfc3RyZWFtaW5nX3ZpZGVvGAQgASgIMqgCCgxWb2ljZVNlcnZpY2USVwoQSm9pblZvaWNlQ2hhbm5lbBIgLm1lemEudjEuSm9pblZvaWNlQ2hhbm5lbFJlcXVlc3QaIS5tZXphLnYxLkpvaW5Wb2ljZUNoYW5uZWxSZXNwb25zZRJaChFMZWF2ZVZvaWNlQ2hhbm5lbBIhLm1lemEudjEuTGVhdmVWb2ljZUNoYW5uZWxSZXF1ZXN0GiIubWV6YS52MS5MZWF2ZVZvaWNlQ2hhbm5lbFJlc3BvbnNlEmMKFEdldFZvaWNlQ2hhbm5lbFN0YXRlEiQubWV6YS52MS5HZXRWb2ljZUNoYW5uZWxTdGF0ZVJlcXVlc3QaJS5tZXphLnYxLkdldFZvaWNlQ2hhbm5lbFN0YXRlUmVzcG9uc2ViBnByb3RvMw");
+  fileDesc("ChNtZXphL3YxL3ZvaWNlLnByb3RvEgdtZXphLnYxIi0KF0pvaW5Wb2ljZUNoYW5uZWxSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAkicwoYSm9pblZvaWNlQ2hhbm5lbFJlc3BvbnNlEhMKC2xpdmVraXRfdXJsGAEgASgJEhUKDWxpdmVraXRfdG9rZW4YAiABKAkSEQoJcm9vbV9uYW1lGAMgASgJEhgKEGNhbl9zY3JlZW5fc2hhcmUYBCABKAgiLgoYTGVhdmVWb2ljZUNoYW5uZWxSZXF1ZXN0EhIKCmNoYW5uZWxfaWQYASABKAkiGwoZTGVhdmVWb2ljZUNoYW5uZWxSZXNwb25zZSIxChtHZXRWb2ljZUNoYW5uZWxTdGF0ZVJlcXVlc3QSEgoKY2hhbm5lbF9pZBgBIAEoCSJPChxHZXRWb2ljZUNoYW5uZWxTdGF0ZVJlc3BvbnNlEi8KDHBhcnRpY2lwYW50cxgBIAMoCzIZLm1lemEudjEuVm9pY2VQYXJ0aWNpcGFudCJmChBWb2ljZVBhcnRpY2lwYW50Eg8KB3VzZXJfaWQYASABKAkSEAoIaXNfbXV0ZWQYAiABKAgSEwoLaXNfZGVhZmVuZWQYAyABKAgSGgoSaXNfc3RyZWFtaW5nX3ZpZGVvGAQgASgIIi4KG0dldFVzZXJWb2ljZUFjdGl2aXR5UmVxdWVzdBIPCgd1c2VyX2lkGAEgASgJIoEBChFVc2VyVm9pY2VBY3Rpdml0eRISCgpjaGFubmVsX2lkGAEgASgJEhQKDGNoYW5uZWxfbmFtZRgCIAEoCRIRCglzZXJ2ZXJfaWQYAyABKAkSEwoLc2VydmVyX25hbWUYBCABKAkSGgoSaXNfc3RyZWFtaW5nX3ZpZGVvGAUgASgIIk4KHEdldFVzZXJWb2ljZUFjdGl2aXR5UmVzcG9uc2USLgoKYWN0aXZpdGllcxgBIAMoCzIaLm1lemEudjEuVXNlclZvaWNlQWN0aXZpdHkyjQMKDFZvaWNlU2VydmljZRJXChBKb2luVm9pY2VDaGFubmVsEiAubWV6YS52MS5Kb2luVm9pY2VDaGFubmVsUmVxdWVzdBohLm1lemEudjEuSm9pblZvaWNlQ2hhbm5lbFJlc3BvbnNlEloKEUxlYXZlVm9pY2VDaGFubmVsEiEubWV6YS52MS5MZWF2ZVZvaWNlQ2hhbm5lbFJlcXVlc3QaIi5tZXphLnYxLkxlYXZlVm9pY2VDaGFubmVsUmVzcG9uc2USYwoUR2V0Vm9pY2VDaGFubmVsU3RhdGUSJC5tZXphLnYxLkdldFZvaWNlQ2hhbm5lbFN0YXRlUmVxdWVzdBolLm1lemEudjEuR2V0Vm9pY2VDaGFubmVsU3RhdGVSZXNwb25zZRJjChRHZXRVc2VyVm9pY2VBY3Rpdml0eRIkLm1lemEudjEuR2V0VXNlclZvaWNlQWN0aXZpdHlSZXF1ZXN0GiUubWV6YS52MS5HZXRVc2VyVm9pY2VBY3Rpdml0eVJlc3BvbnNlYgZwcm90bzM");
 
 /**
  * @generated from message meza.v1.JoinVoiceChannelRequest
@@ -158,6 +158,77 @@ export const VoiceParticipantSchema: GenMessage<VoiceParticipant> = /*@__PURE__*
   messageDesc(file_meza_v1_voice, 6);
 
 /**
+ * @generated from message meza.v1.GetUserVoiceActivityRequest
+ */
+export type GetUserVoiceActivityRequest = Message<"meza.v1.GetUserVoiceActivityRequest"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+};
+
+/**
+ * Describes the message meza.v1.GetUserVoiceActivityRequest.
+ * Use `create(GetUserVoiceActivityRequestSchema)` to create a new message.
+ */
+export const GetUserVoiceActivityRequestSchema: GenMessage<GetUserVoiceActivityRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_voice, 7);
+
+/**
+ * @generated from message meza.v1.UserVoiceActivity
+ */
+export type UserVoiceActivity = Message<"meza.v1.UserVoiceActivity"> & {
+  /**
+   * @generated from field: string channel_id = 1;
+   */
+  channelId: string;
+
+  /**
+   * @generated from field: string channel_name = 2;
+   */
+  channelName: string;
+
+  /**
+   * @generated from field: string server_id = 3;
+   */
+  serverId: string;
+
+  /**
+   * @generated from field: string server_name = 4;
+   */
+  serverName: string;
+
+  /**
+   * @generated from field: bool is_streaming_video = 5;
+   */
+  isStreamingVideo: boolean;
+};
+
+/**
+ * Describes the message meza.v1.UserVoiceActivity.
+ * Use `create(UserVoiceActivitySchema)` to create a new message.
+ */
+export const UserVoiceActivitySchema: GenMessage<UserVoiceActivity> = /*@__PURE__*/
+  messageDesc(file_meza_v1_voice, 8);
+
+/**
+ * @generated from message meza.v1.GetUserVoiceActivityResponse
+ */
+export type GetUserVoiceActivityResponse = Message<"meza.v1.GetUserVoiceActivityResponse"> & {
+  /**
+   * @generated from field: repeated meza.v1.UserVoiceActivity activities = 1;
+   */
+  activities: UserVoiceActivity[];
+};
+
+/**
+ * Describes the message meza.v1.GetUserVoiceActivityResponse.
+ * Use `create(GetUserVoiceActivityResponseSchema)` to create a new message.
+ */
+export const GetUserVoiceActivityResponseSchema: GenMessage<GetUserVoiceActivityResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_voice, 9);
+
+/**
  * @generated from service meza.v1.VoiceService
  */
 export const VoiceService: GenService<{
@@ -184,6 +255,14 @@ export const VoiceService: GenService<{
     methodKind: "unary";
     input: typeof GetVoiceChannelStateRequestSchema;
     output: typeof GetVoiceChannelStateResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.VoiceService.GetUserVoiceActivity
+   */
+  getUserVoiceActivity: {
+    methodKind: "unary";
+    input: typeof GetUserVoiceActivityRequestSchema;
+    output: typeof GetUserVoiceActivityResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_meza_v1_voice, 0);

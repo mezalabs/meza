@@ -94,6 +94,8 @@ service ChatService {
   rpc CreateServerFromTemplate(CreateServerFromTemplateRequest) returns (CreateServerFromTemplateResponse);
   rpc SearchMessages(SearchMessagesRequest) returns (SearchMessagesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream Event);
+  rpc GetMutualServers(GetMutualServersRequest) returns (GetMutualServersResponse);
+  rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
 }
 
 // Messages
@@ -471,6 +473,7 @@ message Event {
     FriendEvent friend_request_cancelled = 55;
     GetPresenceResponse presence_update = 57;
     RolesReorderedEvent roles_reordered = 58;
+    // 59 reserved for future voice activity update event
   }
 }
 
@@ -525,6 +528,7 @@ enum EventType {
   EVENT_TYPE_FRIEND_REQUEST_CANCELLED = 47;
   // 48 reserved (was EVENT_TYPE_MLS_GROUP_MESSAGE)
   EVENT_TYPE_ROLES_REORDERED = 49;
+  // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
 }
 
 message MessageDeleteEvent {
@@ -1199,4 +1203,22 @@ message EmbedFetchJob {
   string channel_id = 1;
   string message_id = 2;
   repeated string urls = 3;
+}
+
+// Mutual data
+
+message GetMutualServersRequest {
+  string user_id = 1;
+}
+
+message GetMutualServersResponse {
+  repeated Server servers = 1;
+}
+
+message GetMutualFriendsRequest {
+  string user_id = 1;
+}
+
+message GetMutualFriendsResponse {
+  repeated User users = 1;
 }

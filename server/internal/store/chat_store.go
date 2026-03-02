@@ -1066,6 +1066,35 @@ func (s *ChatStore) ShareAnyServer(ctx context.Context, userID1, userID2 string)
 	return exists, nil
 }
 
+func (s *ChatStore) GetMutualServers(ctx context.Context, userID1, userID2 string) ([]*models.Server, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT s.id, s.name, COALESCE(s.icon_url,''), s.owner_id, s.created_at
+		 FROM servers s
+		 JOIN members m1 ON m1.server_id = s.id AND m1.user_id = $1
+		 JOIN members m2 ON m2.server_id = s.id AND m2.user_id = $2
+		 ORDER BY s.name
+		 LIMIT 50`,
+		userID1, userID2,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query mutual servers: %w", err)
+	}
+	defer rows.Close()
+
+	var servers []*models.Server
+	for rows.Next() {
+		var srv models.Server
+		if err := rows.Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan server: %w", err)
+		}
+		servers = append(servers, &srv)
+	}
+	return servers, rows.Err()
+}
+
 func (s *ChatStore) GetDMOtherParticipantID(ctx context.Context, channelID, userID string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

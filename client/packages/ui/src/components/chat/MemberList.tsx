@@ -10,6 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { UserProfileTrigger } from '../shared/UserProfileTrigger.tsx';
 import { MemberContextMenu } from './MemberContextMenu.tsx';
 
 const EMPTY_MEMBERS: never[] = [];
@@ -117,23 +118,25 @@ export function MemberList({ serverId }: MemberListProps) {
               userId={m.userId}
               displayName={m.displayName}
             >
-              <div className="flex cursor-default items-center gap-2 rounded-md px-2 py-1 hover:bg-bg-surface">
-                <div className="relative">
-                  <Avatar
-                    avatarUrl={m.avatarUrl}
-                    displayName={m.displayName}
-                    size="md"
-                  />
-                  <PresenceDot
-                    userId={m.userId}
-                    size="sm"
-                    className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-overlay"
-                  />
+              <UserProfileTrigger userId={m.userId} serverId={serverId}>
+                <div className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-bg-surface">
+                  <div className="relative">
+                    <Avatar
+                      avatarUrl={m.avatarUrl}
+                      displayName={m.displayName}
+                      size="md"
+                    />
+                    <PresenceDot
+                      userId={m.userId}
+                      size="sm"
+                      className="absolute -bottom-0.5 -right-0.5 ring-2 ring-bg-overlay"
+                    />
+                  </div>
+                  <span className="truncate text-sm text-text">
+                    {m.displayName}
+                  </span>
                 </div>
-                <span className="truncate text-sm text-text">
-                  {m.displayName}
-                </span>
-              </div>
+              </UserProfileTrigger>
             </MemberContextMenu>
           ))}
         </div>

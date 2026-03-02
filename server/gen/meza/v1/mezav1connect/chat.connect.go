@@ -264,6 +264,12 @@ const (
 	// ChatServiceStreamEventsProcedure is the fully-qualified name of the ChatService's StreamEvents
 	// RPC.
 	ChatServiceStreamEventsProcedure = "/meza.v1.ChatService/StreamEvents"
+	// ChatServiceGetMutualServersProcedure is the fully-qualified name of the ChatService's
+	// GetMutualServers RPC.
+	ChatServiceGetMutualServersProcedure = "/meza.v1.ChatService/GetMutualServers"
+	// ChatServiceGetMutualFriendsProcedure is the fully-qualified name of the ChatService's
+	// GetMutualFriends RPC.
+	ChatServiceGetMutualFriendsProcedure = "/meza.v1.ChatService/GetMutualFriends"
 )
 
 // ChatServiceClient is a client for the meza.v1.ChatService service.
@@ -356,6 +362,8 @@ type ChatServiceClient interface {
 	CreateServerFromTemplate(context.Context, *connect.Request[v1.CreateServerFromTemplateRequest]) (*connect.Response[v1.CreateServerFromTemplateResponse], error)
 	SearchMessages(context.Context, *connect.Request[v1.SearchMessagesRequest]) (*connect.Response[v1.SearchMessagesResponse], error)
 	StreamEvents(context.Context, *connect.Request[v1.StreamEventsRequest]) (*connect.ServerStreamForClient[v1.Event], error)
+	GetMutualServers(context.Context, *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error)
+	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the meza.v1.ChatService service. By default, it uses
@@ -897,6 +905,18 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("StreamEvents")),
 			connect.WithClientOptions(opts...),
 		),
+		getMutualServers: connect.NewClient[v1.GetMutualServersRequest, v1.GetMutualServersResponse](
+			httpClient,
+			baseURL+ChatServiceGetMutualServersProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetMutualServers")),
+			connect.WithClientOptions(opts...),
+		),
+		getMutualFriends: connect.NewClient[v1.GetMutualFriendsRequest, v1.GetMutualFriendsResponse](
+			httpClient,
+			baseURL+ChatServiceGetMutualFriendsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetMutualFriends")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -990,6 +1010,8 @@ type chatServiceClient struct {
 	createServerFromTemplate *connect.Client[v1.CreateServerFromTemplateRequest, v1.CreateServerFromTemplateResponse]
 	searchMessages           *connect.Client[v1.SearchMessagesRequest, v1.SearchMessagesResponse]
 	streamEvents             *connect.Client[v1.StreamEventsRequest, v1.Event]
+	getMutualServers         *connect.Client[v1.GetMutualServersRequest, v1.GetMutualServersResponse]
+	getMutualFriends         *connect.Client[v1.GetMutualFriendsRequest, v1.GetMutualFriendsResponse]
 }
 
 // SendMessage calls meza.v1.ChatService.SendMessage.
@@ -1432,6 +1454,16 @@ func (c *chatServiceClient) StreamEvents(ctx context.Context, req *connect.Reque
 	return c.streamEvents.CallServerStream(ctx, req)
 }
 
+// GetMutualServers calls meza.v1.ChatService.GetMutualServers.
+func (c *chatServiceClient) GetMutualServers(ctx context.Context, req *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error) {
+	return c.getMutualServers.CallUnary(ctx, req)
+}
+
+// GetMutualFriends calls meza.v1.ChatService.GetMutualFriends.
+func (c *chatServiceClient) GetMutualFriends(ctx context.Context, req *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error) {
+	return c.getMutualFriends.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the meza.v1.ChatService service.
 type ChatServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
@@ -1522,6 +1554,8 @@ type ChatServiceHandler interface {
 	CreateServerFromTemplate(context.Context, *connect.Request[v1.CreateServerFromTemplateRequest]) (*connect.Response[v1.CreateServerFromTemplateResponse], error)
 	SearchMessages(context.Context, *connect.Request[v1.SearchMessagesRequest]) (*connect.Response[v1.SearchMessagesResponse], error)
 	StreamEvents(context.Context, *connect.Request[v1.StreamEventsRequest], *connect.ServerStream[v1.Event]) error
+	GetMutualServers(context.Context, *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error)
+	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -2059,6 +2093,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("StreamEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceGetMutualServersHandler := connect.NewUnaryHandler(
+		ChatServiceGetMutualServersProcedure,
+		svc.GetMutualServers,
+		connect.WithSchema(chatServiceMethods.ByName("GetMutualServers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetMutualFriendsHandler := connect.NewUnaryHandler(
+		ChatServiceGetMutualFriendsProcedure,
+		svc.GetMutualFriends,
+		connect.WithSchema(chatServiceMethods.ByName("GetMutualFriends")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceSendMessageProcedure:
@@ -2237,6 +2283,10 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceSearchMessagesHandler.ServeHTTP(w, r)
 		case ChatServiceStreamEventsProcedure:
 			chatServiceStreamEventsHandler.ServeHTTP(w, r)
+		case ChatServiceGetMutualServersProcedure:
+			chatServiceGetMutualServersHandler.ServeHTTP(w, r)
+		case ChatServiceGetMutualFriendsProcedure:
+			chatServiceGetMutualFriendsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2596,4 +2646,12 @@ func (UnimplementedChatServiceHandler) SearchMessages(context.Context, *connect.
 
 func (UnimplementedChatServiceHandler) StreamEvents(context.Context, *connect.Request[v1.StreamEventsRequest], *connect.ServerStream[v1.Event]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.StreamEvents is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetMutualServers(context.Context, *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.GetMutualServers is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.GetMutualFriends is not implemented"))
 }
