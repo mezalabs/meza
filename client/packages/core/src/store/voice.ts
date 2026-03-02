@@ -15,6 +15,10 @@ export interface VoiceState {
   channelName: string | null;
   canScreenShare: boolean;
   error: string | null;
+  /** Whether the local user is self-deafened (client-side state). */
+  isDeafened: boolean;
+  /** Mute state before deafening, so undeafen can restore it. */
+  preDeafenMuteState: boolean;
 }
 
 export interface VoiceActions {
@@ -23,6 +27,8 @@ export interface VoiceActions {
   setReconnecting: () => void;
   disconnect: () => void;
   setError: (error: string | null) => void;
+  setDeafened: (deafened: boolean) => void;
+  setPreDeafenMuteState: (muted: boolean) => void;
 }
 
 const initialState: VoiceState = {
@@ -33,6 +39,8 @@ const initialState: VoiceState = {
   channelName: null,
   canScreenShare: false,
   error: null,
+  isDeafened: false,
+  preDeafenMuteState: false,
 };
 
 export const useVoiceStore = create<VoiceState & VoiceActions>()(
@@ -71,6 +79,18 @@ export const useVoiceStore = create<VoiceState & VoiceActions>()(
 
     setError: (error) => {
       set(() => ({ ...initialState, error }));
+    },
+
+    setDeafened: (deafened) => {
+      set((state) => {
+        state.isDeafened = deafened;
+      });
+    },
+
+    setPreDeafenMuteState: (muted) => {
+      set((state) => {
+        state.preDeafenMuteState = muted;
+      });
     },
   })),
 );

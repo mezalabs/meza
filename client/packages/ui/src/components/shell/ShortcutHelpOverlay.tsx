@@ -1,8 +1,10 @@
 import {
-  getDisplayKeys,
+  displayKeysFor,
   KEYBINDS,
   type Keybind,
+  type KeybindCategory,
   type KeybindId,
+  useKeybindOverridesStore,
 } from '@meza/core';
 import { XIcon } from '@phosphor-icons/react';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -17,27 +19,69 @@ const MOVE_FOCUS_IDS = new Set<string>([
   'move-focus-down',
 ]);
 
+const CATEGORY_LABELS: Record<KeybindCategory, string> = {
+  navigation: 'Navigation',
+  tiling: 'Tiling',
+  voice: 'Voice',
+  channels: 'Channels',
+};
+
+const CATEGORY_ORDER: KeybindCategory[] = [
+  'navigation',
+  'tiling',
+  'voice',
+  'channels',
+];
+
+interface OverlayEntry {
+  displayKeys: string;
+  label: string;
+}
+
 function getOverlayEntries(simpleMode: boolean) {
   const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
   const filtered = simpleMode
     ? entries.filter(([, def]) => !def.tilingOnly)
     : entries;
 
-  const result: { displayKeys: string; label: string }[] = [];
+  const grouped: Record<string, OverlayEntry[]> = {};
   let addedMoveFocus = false;
 
   for (const [id, def] of filtered) {
+    const category = def.category ?? 'navigation';
+    if (!grouped[category]) grouped[category] = [];
+
+    const effectiveKeys = useKeybindOverridesStore
+      .getState()
+      .getEffectiveKeys(id);
+
     if (MOVE_FOCUS_IDS.has(id)) {
       if (!addedMoveFocus) {
-        result.push({ displayKeys: 'Ctrl+Shift+Arrow', label: 'Move focus' });
+        // For move-focus, check if any are overridden
+        const allDefault = [
+          'move-focus-left',
+          'move-focus-right',
+          'move-focus-up',
+          'move-focus-down',
+        ].every(
+          (mfId) =>
+            !useKeybindOverridesStore.getState().overrides[mfId as KeybindId],
+        );
+        const displayKeys = allDefault
+          ? 'Ctrl+Shift+Arrow'
+          : displayKeysFor(effectiveKeys);
+        grouped[category].push({ displayKeys, label: 'Move focus' });
         addedMoveFocus = true;
       }
     } else {
-      result.push({ displayKeys: getDisplayKeys(id), label: def.label });
+      grouped[category].push({
+        displayKeys: effectiveKeys ? displayKeysFor(effectiveKeys) : 'Not set',
+        label: def.label,
+      });
     }
   }
 
-  return result;
+  return grouped;
 }
 
 interface ShortcutHelpOverlayProps {
@@ -50,7 +94,12 @@ export function ShortcutHelpOverlay({
   onOpenChange,
 }: ShortcutHelpOverlayProps) {
   const simpleMode = useSimpleMode();
-  const shortcuts = useMemo(() => getOverlayEntries(simpleMode), [simpleMode]);
+  const overrides = useKeybindOverridesStore((s) => s.overrides);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: overrides triggers re-render when keybinds change
+  const grouped = useMemo(
+    () => getOverlayEntries(simpleMode),
+    [simpleMode, overrides],
+  );
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -60,18 +109,39 @@ export function ShortcutHelpOverlay({
           <Dialog.Title className="mb-4 text-lg font-semibold text-text">
             Keyboard Shortcuts
           </Dialog.Title>
-          <div className="flex flex-col gap-2">
-            {shortcuts.map((s) => (
-              <div
-                key={s.displayKeys}
-                className="flex items-center justify-between"
-              >
-                <span className="text-sm text-text-muted">{s.label}</span>
-                <kbd className="rounded-md bg-bg-surface px-2 py-0.5 font-mono text-xs text-text-subtle">
-                  {s.displayKeys}
-                </kbd>
-              </div>
-            ))}
+          <div className="flex flex-col gap-4">
+            {CATEGORY_ORDER.map((category) => {
+              const entries = grouped[category];
+              if (!entries || entries.length === 0) return null;
+              return (
+                <div key={category}>
+                  <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                    {CATEGORY_LABELS[category]}
+                  </h3>
+                  <div className="flex flex-col gap-1.5">
+                    {entries.map((s) => (
+                      <div
+                        key={s.label}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-sm text-text-muted">
+                          {s.label}
+                        </span>
+                        <kbd
+                          className={`rounded-md px-2 py-0.5 font-mono text-xs ${
+                            s.displayKeys === 'Not set'
+                              ? 'text-text-subtle italic'
+                              : 'bg-bg-surface text-text-subtle'
+                          }`}
+                        >
+                          {s.displayKeys}
+                        </kbd>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <Dialog.Close className="absolute right-4 top-4 rounded-sm p-1 text-text-subtle hover:bg-bg-surface hover:text-text">
             <XIcon weight="regular" size={14} aria-hidden="true" />

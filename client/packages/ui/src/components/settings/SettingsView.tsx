@@ -6,6 +6,7 @@ import { AccountSection } from './AccountSection.tsx';
 import { AppearanceSection } from './AppearanceSection.tsx';
 import { DevicesSection } from './DevicesSection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
+import { KeybindsSection } from './KeybindsSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
 import { PrivacySection } from './PrivacySection.tsx';
 import { SoundsSection } from './SoundsSection.tsx';
@@ -15,6 +16,7 @@ import { VoiceAudioSection } from './VoiceAudioSection.tsx';
 const SETTINGS_SECTIONS = [
   { id: 'account', label: 'Account & Profile' },
   { id: 'appearance', label: 'Appearance' },
+  { id: 'keybinds', label: 'Keybinds' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy' },
   { id: 'devices', label: 'Devices' },
@@ -152,6 +154,8 @@ function renderSettingsContent(section: SectionId | null) {
       return <AccountSection />;
     case 'appearance':
       return <AppearanceSection />;
+    case 'keybinds':
+      return <KeybindsSection />;
     case 'notifications':
       return <NotificationsSection />;
     case 'privacy':
