@@ -189,6 +189,33 @@ describe('audioSettings store', () => {
     });
   });
 
+  describe('gigaThreshold', () => {
+    it('defaults to 50', () => {
+      expect(useAudioSettingsStore.getState().gigaThreshold).toBe(50);
+    });
+
+    it('sets and clamps threshold', () => {
+      useAudioSettingsStore.getState().setGigaThreshold(75);
+      expect(useAudioSettingsStore.getState().gigaThreshold).toBe(75);
+
+      useAudioSettingsStore.getState().setGigaThreshold(-10);
+      expect(useAudioSettingsStore.getState().gigaThreshold).toBe(0);
+
+      useAudioSettingsStore.getState().setGigaThreshold(200);
+      expect(useAudioSettingsStore.getState().gigaThreshold).toBe(100);
+    });
+
+    it('persists and loads from localStorage', async () => {
+      storage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ gigaThreshold: 30 }),
+      );
+      vi.resetModules();
+      const mod = await import('../audioSettings.ts');
+      expect(mod.useAudioSettingsStore.getState().gigaThreshold).toBe(30);
+    });
+  });
+
   describe('reset', () => {
     it('resets to initial state', () => {
       useAudioSettingsStore.getState().setNoiseCancellationMode('off');

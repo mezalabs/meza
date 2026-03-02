@@ -376,6 +376,7 @@ function AudioSettingsSync() {
   const noiseCancellationMode = useAudioSettingsStore(
     (s) => s.noiseCancellationMode,
   );
+  const gigaThreshold = useAudioSettingsStore((s) => s.gigaThreshold);
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
   const _outputVolume = useAudioSettingsStore((s) => s.outputVolume);
@@ -411,6 +412,9 @@ function AudioSettingsSync() {
         try {
           const processor = new RnnoiseTrackProcessor();
           await track.setProcessor(processor);
+          processor.setThreshold(
+            useAudioSettingsStore.getState().gigaThreshold / 100,
+          );
           processorRef.current = processor;
         } catch {
           // WASM load failed — fall back to Standard
@@ -474,6 +478,11 @@ function AudioSettingsSync() {
 
     return () => clearTimeout(processorTimerRef.current);
   }, [localMicTrack, noiseCancellationMode, syncProcessor]);
+
+  // Sync GIGA threshold to the active processor
+  useEffect(() => {
+    processorRef.current?.setThreshold(gigaThreshold / 100);
+  }, [gigaThreshold]);
 
   // Cleanup processor on unmount
   useEffect(() => {

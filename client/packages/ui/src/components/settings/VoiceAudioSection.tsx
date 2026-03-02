@@ -7,6 +7,7 @@ import {
 } from '@meza/core';
 import type { NoiseCancellationMode } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
 import { useMediaDevices } from '../../hooks/useMediaDevices.ts';
 
 const supportsOutputDeviceSelection =
@@ -33,6 +34,7 @@ export function VoiceAudioSection() {
   const noiseCancellationMode = useAudioSettingsStore(
     (s) => s.noiseCancellationMode,
   );
+  const gigaThreshold = useAudioSettingsStore((s) => s.gigaThreshold);
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
   const voiceStatus = useVoiceStore((s) => s.status);
@@ -280,10 +282,16 @@ export function VoiceAudioSection() {
             {noiseCancellationMode === 'giga' &&
               'AI-powered noise suppression (RNNoise).'}
           </p>
-          <p className="text-xs text-text-subtle">
-            Noise cancellation is applied during voice calls.
-          </p>
         </div>
+
+        {/* GIGA threshold + VAD meter — only visible in GIGA mode */}
+        {noiseCancellationMode === 'giga' && (
+          <GigaThresholdControl
+            threshold={gigaThreshold}
+            inputDeviceId={inputDeviceId}
+            disabled={isInCall || !hasPermission}
+          />
+        )}
 
         <ToggleSwitch
           id="audio-echo-cancellation"
@@ -371,6 +379,174 @@ export function VoiceAudioSection() {
         >
           {feedback.message}
         </output>
+      )}
+    </div>
+  );
+}
+
+/**
+ * GIGA threshold slider with live VAD probability meter.
+ *
+ * Runs its own mic stream + RNNoise processor to show real-time VAD
+ * probability. The threshold slider controls the noise gate cutoff.
+ */
+function GigaThresholdControl({
+  threshold,
+  inputDeviceId,
+  disabled,
+}: {
+  threshold: number;
+  inputDeviceId: string | null;
+  disabled: boolean;
+}) {
+  const [vadProbability, setVadProbability] = useState(0);
+  const [isListening, setIsListening] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<RnnoiseTrackProcessor | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const stopListening = useCallback(() => {
+    processorRef.current?.onVad(undefined);
+    processorRef.current?.destroy();
+    processorRef.current = null;
+    if (streamRef.current) {
+      for (const track of streamRef.current.getTracks()) track.stop();
+      streamRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    setIsListening(false);
+    setVadProbability(0);
+  }, []);
+
+  const startListening = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: inputDeviceId ? { deviceId: { ideal: inputDeviceId } } : true,
+      });
+      streamRef.current = stream;
+
+      const ctx = new AudioContext();
+      audioCtxRef.current = ctx;
+
+      const processor = new RnnoiseTrackProcessor();
+      processorRef.current = processor;
+
+      processor.onVad((prob) => setVadProbability(prob));
+
+      const track = stream.getAudioTracks()[0];
+      await processor.init({
+        kind: 'audio',
+        track,
+        audioContext: ctx,
+      } as Parameters<typeof processor.init>[0]);
+
+      // Send current threshold
+      processor.setThreshold(threshold / 100);
+
+      setIsListening(true);
+    } catch {
+      stopListening();
+    }
+  }, [inputDeviceId, threshold, stopListening]);
+
+  // Update threshold on the processor when slider changes
+  useEffect(() => {
+    processorRef.current?.setThreshold(threshold / 100);
+  }, [threshold]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => stopListening();
+  }, [stopListening]);
+
+  const vadPercent = Math.round(vadProbability * 100);
+  const isAboveThreshold = vadPercent >= threshold;
+
+  return (
+    <div className="space-y-2 rounded-md border border-border bg-bg-surface p-3">
+      <div className="flex items-center justify-between">
+        <label
+          htmlFor="giga-threshold"
+          className="text-sm text-text-muted"
+        >
+          Noise Gate Threshold
+        </label>
+        <span className="text-xs tabular-nums text-text-subtle">
+          {threshold}%
+        </span>
+      </div>
+
+      {/* VAD meter + threshold slider overlay */}
+      <div className="relative">
+        {/* VAD probability bar (background) */}
+        <div className="absolute inset-0 flex items-center pointer-events-none">
+          <div className="relative h-2 w-full rounded-full bg-bg-elevated overflow-hidden">
+            <div
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-100 ${
+                isAboveThreshold ? 'bg-success/60' : 'bg-warning/40'
+              }`}
+              style={{ width: `${vadPercent}%` }}
+            />
+            {/* Threshold line */}
+            <div
+              className="absolute inset-y-0 w-0.5 bg-text-muted/50"
+              style={{ left: `${threshold}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Slider (interactive, overlays the meter) */}
+        <input
+          id="giga-threshold"
+          type="range"
+          min={0}
+          max={95}
+          step={1}
+          value={threshold}
+          onChange={(e) =>
+            useAudioSettingsStore
+              .getState()
+              .setGigaThreshold(Number(e.target.value))
+          }
+          className="relative z-10 w-full opacity-0 cursor-pointer h-6"
+          aria-valuemin={0}
+          aria-valuemax={95}
+          aria-valuenow={threshold}
+          aria-label="GIGA noise gate threshold"
+        />
+      </div>
+
+      <p className="text-xs text-text-subtle">
+        Audio below this voice confidence level is silenced. Lower = less
+        aggressive gating.
+      </p>
+
+      {/* Live preview toggle */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={isListening ? stopListening : startListening}
+        className="rounded-md bg-bg-elevated px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-border disabled:opacity-50"
+        title={disabled ? 'Leave voice channel first' : undefined}
+      >
+        {isListening ? 'Stop Preview' : 'Preview Threshold'}
+      </button>
+
+      {isListening && (
+        <div className="flex items-center gap-2">
+          <div
+            className={`h-2 w-2 rounded-full ${
+              isAboveThreshold ? 'bg-success animate-pulse' : 'bg-text-subtle'
+            }`}
+          />
+          <span className="text-xs tabular-nums text-text-muted">
+            Voice: {vadPercent}%
+            {isAboveThreshold ? ' — passing' : ' — gated'}
+          </span>
+        </div>
       )}
     </div>
   );

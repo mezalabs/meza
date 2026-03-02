@@ -16,6 +16,10 @@ export interface AudioSettingsState {
   soundboardVolume: number; // 0.0–2.0, default 1.0 (incoming soundboard volume)
   hearOwnSoundboard: boolean; // play your own soundboard sounds locally
 
+  // GIGA noise gate threshold (0–100). Frames with VAD probability below
+  // this percentage are silenced. 0 = no gating (RNNoise output only).
+  gigaThreshold: number;
+
   // Server-synced
   noiseCancellationMode: NoiseCancellationMode;
   echoCancellation: boolean;
@@ -30,6 +34,7 @@ export interface AudioSettingsActions {
   setPerUserVolume: (userId: string, volume: number) => void;
   setSoundboardVolume: (volume: number) => void;
   setHearOwnSoundboard: (enabled: boolean) => void;
+  setGigaThreshold: (threshold: number) => void;
   setNoiseCancellationMode: (mode: NoiseCancellationMode) => void;
   setEchoCancellation: (enabled: boolean) => void;
   setAutoGainControl: (enabled: boolean) => void;
@@ -57,6 +62,7 @@ const initialState: AudioSettingsState = {
   perUserVolumes: {},
   soundboardVolume: 1.0,
   hearOwnSoundboard: true,
+  gigaThreshold: 50,
   noiseCancellationMode: defaultNoiseCancellationMode(),
   echoCancellation: true,
   autoGainControl: true,
@@ -99,6 +105,11 @@ function loadFromStorage(): Partial<AudioSettingsState> {
       );
     if (typeof parsed.hearOwnSoundboard === 'boolean')
       result.hearOwnSoundboard = parsed.hearOwnSoundboard;
+    if (
+      typeof parsed.gigaThreshold === 'number' &&
+      Number.isFinite(parsed.gigaThreshold)
+    )
+      result.gigaThreshold = Math.max(0, Math.min(100, parsed.gigaThreshold));
 
     // New field: noiseCancellationMode
     if (
@@ -190,6 +201,13 @@ export const useAudioSettingsStore = create<
     setHearOwnSoundboard: (enabled) => {
       set((s) => {
         s.hearOwnSoundboard = enabled;
+      });
+      debouncedSave(get);
+    },
+
+    setGigaThreshold: (threshold) => {
+      set((s) => {
+        s.gigaThreshold = Math.max(0, Math.min(100, threshold));
       });
       debouncedSave(get);
     },

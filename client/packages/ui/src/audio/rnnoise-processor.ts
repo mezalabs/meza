@@ -18,6 +18,8 @@ import rnnoiseWorkletUrl from './rnnoise-worklet.ts?url';
 /** Singleton: whether the worklet module has been registered on an AudioContext. */
 const registeredContexts = new WeakSet<AudioContext>();
 
+export type VadListener = (probability: number) => void;
+
 export class RnnoiseTrackProcessor
   implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions>
 {
@@ -29,6 +31,17 @@ export class RnnoiseTrackProcessor
   private sourceNode?: MediaStreamAudioSourceNode;
   private workletNode?: AudioWorkletNode;
   private destinationNode?: MediaStreamAudioDestinationNode;
+  private vadListener?: VadListener;
+
+  /** Register a callback that receives smoothed VAD probability (0–1). */
+  onVad(listener: VadListener | undefined): void {
+    this.vadListener = listener;
+  }
+
+  /** Send threshold (0–1) to the worklet. Frames below this are silenced. */
+  setThreshold(value: number): void {
+    this.workletNode?.port.postMessage({ type: 'threshold', value });
+  }
 
   async init(opts: AudioProcessorOptions): Promise<void> {
     // LiveKit may not provide audioContext during unmute/restart flows
@@ -62,6 +75,13 @@ export class RnnoiseTrackProcessor
       },
     );
 
+    // Listen for VAD probability messages from the worklet
+    this.workletNode.port.onmessage = (e: MessageEvent) => {
+      if (e.data?.type === 'vad' && this.vadListener) {
+        this.vadListener(e.data.value);
+      }
+    };
+
     // Create destination to capture the processed audio
     this.destinationNode = this.audioContext.createMediaStreamDestination();
 
@@ -88,6 +108,9 @@ export class RnnoiseTrackProcessor
   }
 
   async destroy(): Promise<void> {
+    if (this.workletNode) {
+      this.workletNode.port.onmessage = null;
+    }
     this.sourceNode?.disconnect();
     this.workletNode?.disconnect();
     this.destinationNode?.disconnect();

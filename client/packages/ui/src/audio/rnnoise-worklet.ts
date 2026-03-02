@@ -7,6 +7,12 @@
  *
  * The WASM binary is inlined (base64) in rnnoise-sync.js so it compiles
  * synchronously inside the AudioWorkletGlobalScope (no async fetch).
+ *
+ * Messages from main thread:
+ *   { type: 'threshold', value: number }  — VAD gate threshold (0–1)
+ *
+ * Messages to main thread:
+ *   { type: 'vad', value: number }  — smoothed VAD probability (0–1)
  */
 
 // @ts-expect-error — rnnoise-sync.js has no type declarations
@@ -23,6 +29,12 @@ const BUFFER_SIZE = 1920;
 
 /** Scale factor for float32 <-> int16 conversion (RNNoise expects ~int16 range). */
 const PCM_SCALE = 0x7fff;
+
+/** How often to send VAD probability to main thread (in process() calls ≈ every ~85ms). */
+const VAD_REPORT_INTERVAL = 32;
+
+/** EMA smoothing factor for VAD probability (lower = smoother). */
+const VAD_SMOOTH_ALPHA = 0.3;
 
 interface RnnoiseModule {
   _rnnoise_create: () => number;
@@ -51,6 +63,18 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
   /** Read cursor: how many denoised samples have been output. */
   private denoisedBufferIndex = 0;
 
+  /** VAD gate threshold (0–1). Frames below this probability are silenced. 0 = no gating. */
+  private threshold = 0;
+
+  /** Smoothed VAD probability for reporting. */
+  private smoothedVad = 0;
+
+  /** Latest raw VAD probability from RNNoise. */
+  private lastVadProb = 0;
+
+  /** Counter for throttled VAD reporting. */
+  private vadReportCounter = 0;
+
   constructor() {
     super();
 
@@ -66,6 +90,13 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
     this.outputPtr = this.module._malloc(frameBytes);
 
     this.circularBuffer = new Float32Array(BUFFER_SIZE);
+
+    // Listen for threshold updates from main thread
+    this.port.onmessage = (e: MessageEvent) => {
+      if (e.data?.type === 'threshold') {
+        this.threshold = Math.max(0, Math.min(1, e.data.value));
+      }
+    };
   }
 
   process(
@@ -99,19 +130,26 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
           this.circularBuffer[(denoiseStart + i) % bufLen] * PCM_SCALE;
       }
 
-      // Process frame through RNNoise
-      this.module._rnnoise_process_frame(
+      // Process frame through RNNoise — returns VAD probability (0–1)
+      const vadProb = this.module._rnnoise_process_frame(
         this.statePtr,
         this.outputPtr,
         this.inputPtr,
       );
+      this.lastVadProb = vadProb;
+      this.smoothedVad += VAD_SMOOTH_ALPHA * (vadProb - this.smoothedVad);
 
       // Write denoised samples back into the circular buffer (in-place),
       // converting back from int16 range to float32 [-1,1]
       const outHeapOffset = this.outputPtr / Float32Array.BYTES_PER_ELEMENT;
+
+      // Apply VAD gate: if below threshold, output silence for this frame
+      const gated = this.threshold > 0 && vadProb < this.threshold;
+
       for (let i = 0; i < DENOISE_SAMPLE_SIZE; i++) {
-        this.circularBuffer[(denoiseStart + i) % bufLen] =
-          this.module.HEAPF32[outHeapOffset + i] / PCM_SCALE;
+        this.circularBuffer[(denoiseStart + i) % bufLen] = gated
+          ? 0
+          : this.module.HEAPF32[outHeapOffset + i] / PCM_SCALE;
       }
 
       this.denoisedBufferLength += DENOISE_SAMPLE_SIZE;
@@ -141,6 +179,13 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
       this.denoisedBufferIndex -= bufLen;
       this.denoisedBufferLength -= bufLen;
       this.inputBufferLength -= bufLen;
+    }
+
+    // 4. Periodically report VAD probability to main thread
+    this.vadReportCounter++;
+    if (this.vadReportCounter >= VAD_REPORT_INTERVAL) {
+      this.vadReportCounter = 0;
+      this.port.postMessage({ type: 'vad', value: this.smoothedVad });
     }
 
     return true;
