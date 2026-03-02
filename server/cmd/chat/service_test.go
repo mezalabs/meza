@@ -1085,6 +1085,20 @@ func (s *mockMediaStore) FindOrphanedUploads(context.Context, time.Time, int) ([
 func (m *mockMediaStore) ResetAttachmentToPending(_ context.Context, _ string) error {
 	return nil
 }
+func (m *mockMediaStore) LinkAttachments(_ context.Context, ids []string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now()
+	for _, id := range ids {
+		if a, ok := m.attachments[id]; ok {
+			a.LinkedAt = &now
+		}
+	}
+	return nil
+}
+func (m *mockMediaStore) FindUnlinkedAttachments(context.Context, time.Time, int) ([]*models.Attachment, error) {
+	return nil, nil
+}
 
 func setupChatTestServer(t *testing.T) (mezav1connect.ChatServiceClient, *mockChatStore, *mockMessageStore, *mockInviteStore) {
 	t.Helper()
