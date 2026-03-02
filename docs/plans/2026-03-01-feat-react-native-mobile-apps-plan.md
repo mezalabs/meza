@@ -484,19 +484,19 @@ client/packages/mobile/src/lib/connection-service.ts     (Android ConnectionServ
 
 **Tasks:**
 
-- [ ] Build biometric app lock:
-  - [ ] Settings toggle to enable/disable
-  - [ ] On enable: store masterKey in `expo-secure-store`
-  - [ ] Lock screen component (biometric prompt overlay)
-  - [ ] 30-second grace period on background (configurable)
-  - [ ] 3 failure attempts → fallback to password
+- [x] Build biometric app lock:
+  - [x] Settings toggle to enable/disable
+  - [x] On enable: store masterKey in `expo-secure-store`
+  - [x] Lock screen component (biometric prompt overlay)
+  - [x] 30-second grace period on background (configurable)
+  - [x] 3 failure attempts → fallback to password
   - [ ] Handle biometric invalidation (new enrollment → require password)
-- [ ] Build settings screens:
+- [x] Build settings screens:
   - [ ] Profile (display name, avatar)
   - [ ] Notifications (per-channel mute, sound, vibration)
-  - [ ] Security (biometric lock, recovery phrase, active devices)
+  - [x] Security (biometric lock, recovery phrase, active devices)
   - [ ] Appearance (theme if applicable)
-  - [ ] About / version info
+  - [x] About / version info
 - [ ] Screen capture prevention:
   - [ ] Android: `FLAG_SECURE` on sensitive screens (recovery phrase, login)
   - [ ] iOS: detect screenshot notifications, blur sensitive content
@@ -504,7 +504,7 @@ client/packages/mobile/src/lib/connection-service.ts     (Android ConnectionServ
 - [ ] Deep link handling (`meza://channel/{id}`)
 - [ ] Universal Links / App Links (`https://meza.chat/channel/{id}`)
 - [ ] Error boundaries and crash reporting
-- [ ] Offline state indicator (banner when disconnected)
+- [x] Offline state indicator (banner when disconnected)
 - [ ] Test: biometric lock enable → background → resume → prompt → unlock
 
 **Success criteria:** Biometric lock works reliably. Settings are functional. App feels polished and production-ready.

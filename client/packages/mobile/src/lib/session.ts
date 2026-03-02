@@ -20,6 +20,7 @@ import {
   setupNotificationResponseHandler,
   setupTokenRefreshHandler,
 } from './push';
+import { initBiometricLock } from './biometric-lock';
 
 let initialized = false;
 
@@ -41,6 +42,10 @@ export function initSessionLifecycle() {
     });
     registerForPushNotifications().catch((err) => {
       console.warn('[Mobile] push registration failed on startup:', err);
+    });
+    // Initialize biometric lock (will lock on cold start if enabled)
+    initBiometricLock().catch((err) => {
+      console.warn('[Mobile] biometric lock init failed:', err);
     });
   }
 
