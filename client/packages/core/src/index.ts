@@ -268,10 +268,11 @@ export { useAudioSettingsStore } from './store/audioSettings.ts';
 export type {
   AuthActions,
   AuthState,
+  ConnectionPlatform,
   StoredUser,
   StoredUserConnection,
 } from './store/auth.ts';
-export { useAuthStore } from './store/auth.ts';
+export { PLATFORM_LABELS, useAuthStore } from './store/auth.ts';
 export type { BlockActions, BlockState } from './store/blocks.ts';
 export { useBlockStore } from './store/blocks.ts';
 export type {

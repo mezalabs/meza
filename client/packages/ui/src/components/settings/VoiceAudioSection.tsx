@@ -404,8 +404,10 @@ function GigaThresholdControl({
   const streamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<RnnoiseTrackProcessor | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const busyRef = useRef(false);
 
   const stopListening = useCallback(() => {
+    busyRef.current = false;
     processorRef.current?.onVad(undefined);
     processorRef.current?.destroy();
     processorRef.current = null;
@@ -422,10 +424,17 @@ function GigaThresholdControl({
   }, []);
 
   const startListening = useCallback(async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: inputDeviceId ? { deviceId: { ideal: inputDeviceId } } : true,
       });
+      // If stopListening was called while we were awaiting, clean up and bail.
+      if (!busyRef.current) {
+        for (const track of stream.getTracks()) track.stop();
+        return;
+      }
       streamRef.current = stream;
 
       const ctx = new AudioContext();
@@ -442,6 +451,14 @@ function GigaThresholdControl({
         track,
         audioContext: ctx,
       } as Parameters<typeof processor.init>[0]);
+
+      if (!busyRef.current) {
+        // stopListening was called during init — clean up
+        processor.destroy();
+        for (const t of stream.getTracks()) t.stop();
+        ctx.close();
+        return;
+      }
 
       // Send current threshold
       processor.setThreshold(threshold / 100);
