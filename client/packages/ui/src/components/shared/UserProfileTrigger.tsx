@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import { type ComponentPropsWithoutRef, type ReactNode, forwardRef } from 'react';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 
-interface UserProfileTriggerProps {
+interface UserProfileTriggerProps extends ComponentPropsWithoutRef<'div'> {
   userId: string;
   serverId?: string;
   children: ReactNode;
@@ -9,18 +9,20 @@ interface UserProfileTriggerProps {
 
 /**
  * Wraps any avatar or username with a profile popover card.
- * Left-click opens the popover; right-click still opens the context menu.
+ * Left-click opens the popover; right-click passes through to outer context menus.
+ *
+ * Forwards ref and spreads extra props so Radix `asChild` parents
+ * (e.g. ContextMenu.Trigger) can attach handlers to the underlying DOM element.
  */
-export function UserProfileTrigger({
-  userId,
-  serverId,
-  children,
-}: UserProfileTriggerProps) {
+export const UserProfileTrigger = forwardRef<
+  HTMLDivElement,
+  UserProfileTriggerProps
+>(function UserProfileTrigger({ userId, serverId, children, ...rest }, ref) {
   return (
     <ProfilePopoverCard userId={userId} serverId={serverId}>
-      <button type="button" className="cursor-pointer">
+      <div ref={ref} className="cursor-pointer" {...rest}>
         {children}
-      </button>
+      </div>
     </ProfilePopoverCard>
   );
-}
+});
