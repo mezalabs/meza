@@ -2002,12 +2002,13 @@ func (x *ReadState) GetUnreadCount() int32 {
 }
 
 type AudioPreferences struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	NoiseSuppression bool                   `protobuf:"varint,1,opt,name=noise_suppression,json=noiseSuppression,proto3" json:"noise_suppression,omitempty"`
-	EchoCancellation bool                   `protobuf:"varint,2,opt,name=echo_cancellation,json=echoCancellation,proto3" json:"echo_cancellation,omitempty"`
-	AutoGainControl  bool                   `protobuf:"varint,3,opt,name=auto_gain_control,json=autoGainControl,proto3" json:"auto_gain_control,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	NoiseSuppression      bool                   `protobuf:"varint,1,opt,name=noise_suppression,json=noiseSuppression,proto3" json:"noise_suppression,omitempty"`
+	EchoCancellation      bool                   `protobuf:"varint,2,opt,name=echo_cancellation,json=echoCancellation,proto3" json:"echo_cancellation,omitempty"`
+	AutoGainControl       bool                   `protobuf:"varint,3,opt,name=auto_gain_control,json=autoGainControl,proto3" json:"auto_gain_control,omitempty"`
+	NoiseCancellationMode string                 `protobuf:"bytes,4,opt,name=noise_cancellation_mode,json=noiseCancellationMode,proto3" json:"noise_cancellation_mode,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *AudioPreferences) Reset() {
@@ -2059,6 +2060,13 @@ func (x *AudioPreferences) GetAutoGainControl() bool {
 		return x.AutoGainControl
 	}
 	return false
+}
+
+func (x *AudioPreferences) GetNoiseCancellationMode() string {
+	if x != nil {
+		return x.NoiseCancellationMode
+	}
+	return ""
 }
 
 var File_meza_v1_models_proto protoreflect.FileDescriptor

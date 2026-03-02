@@ -1,14 +1,19 @@
 import {
+  canRunGiga,
+  supportsAudioWorklet,
   updateProfile,
   useAudioSettingsStore,
   useVoiceStore,
 } from '@meza/core';
+import type { NoiseCancellationMode } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMediaDevices } from '../../hooks/useMediaDevices.ts';
 
 const supportsOutputDeviceSelection =
   typeof HTMLMediaElement !== 'undefined' &&
   'setSinkId' in HTMLMediaElement.prototype;
+
+const gigaCapable = supportsAudioWorklet() && canRunGiga();
 
 export function VoiceAudioSection() {
   const {
@@ -25,7 +30,9 @@ export function VoiceAudioSection() {
   const outputVolume = useAudioSettingsStore((s) => s.outputVolume);
   const soundboardVolume = useAudioSettingsStore((s) => s.soundboardVolume);
   const hearOwnSoundboard = useAudioSettingsStore((s) => s.hearOwnSoundboard);
-  const noiseSuppression = useAudioSettingsStore((s) => s.noiseSuppression);
+  const noiseCancellationMode = useAudioSettingsStore(
+    (s) => s.noiseCancellationMode,
+  );
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
   const voiceStatus = useVoiceStore((s) => s.status);
@@ -65,13 +72,14 @@ export function VoiceAudioSection() {
     }
   }, [outputDeviceId, audioOutputs]);
 
-  // Debounced server sync for processing toggles
+  // Debounced server sync for processing settings
   const syncTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const syncToServer = useCallback(
     (prefs: {
       noiseSuppression: boolean;
       echoCancellation: boolean;
       autoGainControl: boolean;
+      noiseCancellationMode: string;
     }) => {
       clearTimeout(syncTimerRef.current);
       syncTimerRef.current = setTimeout(async () => {
@@ -90,25 +98,35 @@ export function VoiceAudioSection() {
     return () => clearTimeout(syncTimerRef.current);
   }, []);
 
-  function handleToggle(
-    field: 'noiseSuppression' | 'echoCancellation' | 'autoGainControl',
-  ) {
+  function handleNoiseCancellationChange(mode: NoiseCancellationMode) {
+    const store = useAudioSettingsStore.getState();
+    store.setNoiseCancellationMode(mode);
+    setFeedback(null);
+    syncToServer({
+      // Keep noiseSuppression in sync for backward compat with old clients
+      noiseSuppression: mode === 'standard',
+      echoCancellation: store.echoCancellation,
+      autoGainControl: store.autoGainControl,
+      noiseCancellationMode: mode,
+    });
+  }
+
+  function handleToggle(field: 'echoCancellation' | 'autoGainControl') {
     const store = useAudioSettingsStore.getState();
     const newValue = !store[field];
     const setter = {
-      noiseSuppression: store.setNoiseSuppression,
       echoCancellation: store.setEchoCancellation,
       autoGainControl: store.setAutoGainControl,
     }[field];
     setter(newValue);
     setFeedback(null);
     syncToServer({
-      noiseSuppression:
-        field === 'noiseSuppression' ? newValue : store.noiseSuppression,
+      noiseSuppression: store.noiseCancellationMode === 'standard',
       echoCancellation:
         field === 'echoCancellation' ? newValue : store.echoCancellation,
       autoGainControl:
         field === 'autoGainControl' ? newValue : store.autoGainControl,
+      noiseCancellationMode: store.noiseCancellationMode,
     });
   }
 
@@ -245,12 +263,28 @@ export function VoiceAudioSection() {
           Audio Processing
         </span>
 
-        <ToggleSwitch
-          id="audio-noise-suppression"
-          label="Noise Suppression"
-          checked={noiseSuppression}
-          onToggle={() => handleToggle('noiseSuppression')}
-        />
+        {/* Noise Cancellation Mode — segmented control */}
+        <div className="space-y-1.5">
+          <span className="block text-sm text-text-muted">
+            Noise Cancellation
+          </span>
+          <NoiseCancellationSelector
+            value={noiseCancellationMode}
+            onChange={handleNoiseCancellationChange}
+            gigaCapable={gigaCapable}
+          />
+          <p className="text-xs text-text-subtle">
+            {noiseCancellationMode === 'off' && 'No noise filtering applied.'}
+            {noiseCancellationMode === 'standard' &&
+              'Browser built-in noise suppression.'}
+            {noiseCancellationMode === 'giga' &&
+              'AI-powered noise suppression (RNNoise).'}
+          </p>
+          <p className="text-xs text-text-subtle">
+            Noise cancellation is applied during voice calls.
+          </p>
+        </div>
+
         <ToggleSwitch
           id="audio-echo-cancellation"
           label="Echo Cancellation"
@@ -338,6 +372,63 @@ export function VoiceAudioSection() {
           {feedback.message}
         </output>
       )}
+    </div>
+  );
+}
+
+/** Segmented control for Off / Standard / GIGA noise cancellation modes. */
+function NoiseCancellationSelector({
+  value,
+  onChange,
+  gigaCapable,
+}: {
+  value: NoiseCancellationMode;
+  onChange: (mode: NoiseCancellationMode) => void;
+  gigaCapable: boolean;
+}) {
+  const options: { mode: NoiseCancellationMode; label: string }[] = [
+    { mode: 'off', label: 'Off' },
+    { mode: 'standard', label: 'Standard' },
+    { mode: 'giga', label: 'GIGA' },
+  ];
+
+  return (
+    <div
+      className="inline-flex rounded-md border border-border bg-bg-surface"
+      role="radiogroup"
+      aria-label="Noise cancellation mode"
+    >
+      {options.map(({ mode, label }) => {
+        const isSelected = value === mode;
+        const showWarning = mode === 'giga' && !gigaCapable;
+
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            onClick={() => onChange(mode)}
+            className={`relative px-4 py-1.5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${
+              isSelected
+                ? 'bg-accent text-white'
+                : 'text-text-muted hover:text-text hover:bg-bg-elevated'
+            }`}
+            title={
+              showWarning
+                ? 'Your device may experience performance issues'
+                : undefined
+            }
+          >
+            {label}
+            {showWarning && (
+              <span className="ml-1 text-xs text-warning" aria-hidden="true">
+                !
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

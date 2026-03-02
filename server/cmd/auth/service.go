@@ -357,9 +357,10 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 	var audioPrefs *models.AudioPreferences
 	if r.AudioPreferences != nil {
 		audioPrefs = &models.AudioPreferences{
-			NoiseSuppression: r.AudioPreferences.NoiseSuppression,
-			EchoCancellation: r.AudioPreferences.EchoCancellation,
-			AutoGainControl:  r.AudioPreferences.AutoGainControl,
+			NoiseSuppression:      r.AudioPreferences.NoiseSuppression,
+			EchoCancellation:      r.AudioPreferences.EchoCancellation,
+			AutoGainControl:       r.AudioPreferences.AutoGainControl,
+			NoiseCancellationMode: r.AudioPreferences.NoiseCancellationMode,
 		}
 	}
 
@@ -718,9 +719,10 @@ func userToProto(u *models.User) *v1.User {
 		ThemeColorSecondary: u.ThemeColorSecondary,
 		SimpleMode:          u.SimpleMode,
 		AudioPreferences: &v1.AudioPreferences{
-			NoiseSuppression: u.AudioPreferences.NoiseSuppression,
-			EchoCancellation: u.AudioPreferences.EchoCancellation,
-			AutoGainControl:  u.AudioPreferences.AutoGainControl,
+			NoiseSuppression:      u.AudioPreferences.NoiseSuppression,
+			EchoCancellation:      u.AudioPreferences.EchoCancellation,
+			AutoGainControl:       u.AudioPreferences.AutoGainControl,
+			NoiseCancellationMode: u.AudioPreferences.NoiseCancellationMode,
 		},
 		DmPrivacy: u.DMPrivacy,
 	}
