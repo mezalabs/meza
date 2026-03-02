@@ -6,7 +6,7 @@ import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
-import { type StoredUser, useAuthStore } from '../store/auth.ts';
+import { type ConnectionPlatform, type StoredUser, useAuthStore } from '../store/auth.ts';
 import { useBlockStore } from '../store/blocks.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useFriendStore } from '../store/friends.ts';
@@ -36,7 +36,7 @@ export function toStoredUser(user: User): StoredUser {
     simpleMode: user.simpleMode,
     dmPrivacy: user.dmPrivacy || 'message_requests',
     connections: user.connections.map((c) => ({
-      platform: c.platform,
+      platform: c.platform as ConnectionPlatform,
       url: c.url,
       label: c.label,
     })),
@@ -169,7 +169,7 @@ export async function updateProfile(params: {
     noiseCancellationMode?: string;
   };
   dmPrivacy?: string;
-  connections?: { platform: string; url: string; label: string }[];
+  connections?: { platform: ConnectionPlatform; url: string; label: string }[];
   clearConnections?: boolean;
 }) {
   const store = useAuthStore.getState();

@@ -5,12 +5,39 @@ const ACCESS_TOKEN_KEY = 'meza:access_token';
 const REFRESH_TOKEN_KEY = 'meza:refresh_token';
 const USER_KEY = 'meza:user';
 
+/** Known social platform identifiers, matching the proto comment on UserConnection.platform. */
+export type ConnectionPlatform =
+  | 'github'
+  | 'twitter'
+  | 'twitch'
+  | 'youtube'
+  | 'linkedin'
+  | 'website'
+  | 'steam'
+  | 'spotify'
+  | 'reddit'
+  | 'other';
+
+/** Display labels for each platform. */
+export const PLATFORM_LABELS: Record<ConnectionPlatform, string> = {
+  github: 'GitHub',
+  twitter: 'Twitter',
+  twitch: 'Twitch',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  website: 'Website',
+  steam: 'Steam',
+  spotify: 'Spotify',
+  reddit: 'Reddit',
+  other: 'Other',
+};
+
 /**
  * Plain serializable subset of the proto User — avoids storing protobuf
  * Message instances in localStorage (they don't survive JSON round-trips).
  */
 export interface StoredUserConnection {
-  platform: string;
+  platform: ConnectionPlatform;
   url: string;
   label: string;
 }

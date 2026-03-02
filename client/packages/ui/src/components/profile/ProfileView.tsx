@@ -10,6 +10,7 @@ import {
   getPresence,
   getProfile,
   getUserVoiceActivity,
+  PLATFORM_LABELS,
   removeFriend,
   type StoredServer,
   type StoredUser,
@@ -431,20 +432,8 @@ export function ProfileView({ userId }: ProfileViewProps) {
   );
 }
 
-const PLATFORM_LABELS: Record<string, string> = {
-  github: 'GitHub',
-  twitter: 'Twitter',
-  twitch: 'Twitch',
-  youtube: 'YouTube',
-  linkedin: 'LinkedIn',
-  website: 'Website',
-  steam: 'Steam',
-  spotify: 'Spotify',
-  reddit: 'Reddit',
-  other: 'Other',
-};
 
-function ConnectionIcon({ platform }: { platform: string }) {
+function ConnectionIcon({ platform }: { platform: StoredUserConnection['platform'] }) {
   // Simple colored dot per platform — keeps bundle small, no icon library needed
   const colors: Record<string, string> = {
     github: '#333',
@@ -870,7 +859,7 @@ function ProfileEditMode({
                   value={conn.platform}
                   onChange={(e) => {
                     const next = [...connections];
-                    next[idx] = { ...conn, platform: e.target.value };
+                    next[idx] = { ...conn, platform: e.target.value as StoredUserConnection['platform'] };
                     setConnections(next);
                   }}
                 >
