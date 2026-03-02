@@ -24,8 +24,8 @@ import type {
 } from 'livekit-client';
 import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
+import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
@@ -398,15 +398,18 @@ function AudioSettingsSync() {
   const tracks = useTracks([Track.Source.Microphone], {
     onlySubscribed: false,
   });
-  const localMicTrack = tracks.find((t) => t.participant.isLocal)
-    ?.publication?.track as LocalAudioTrack | undefined;
+  const localMicTrack = tracks.find((t) => t.participant.isLocal)?.publication
+    ?.track as LocalAudioTrack | undefined;
 
   /** Attach or detach the RNNoise processor based on the current mode. */
   const syncProcessor = useCallback(
     async (track: LocalAudioTrack | undefined, mode: string) => {
       if (mode === 'giga' && track) {
         // Already attached? Skip.
-        if (processorRef.current && track.getProcessor() === processorRef.current) {
+        if (
+          processorRef.current &&
+          track.getProcessor() === processorRef.current
+        ) {
           return;
         }
         try {

@@ -367,9 +367,7 @@ describe('fetch deduplication', () => {
     const channelKey = generateChannelKey();
     const envelope = await wrapChannelKey(channelKey, alice.publicKey);
 
-    vi.mocked(getKeyEnvelopes).mockResolvedValue([
-      { keyVersion: 1, envelope },
-    ]);
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([{ keyVersion: 1, envelope }]);
 
     // Fire two concurrent fetches for the same channel
     const [r1, r2] = await Promise.all([
@@ -387,9 +385,7 @@ describe('fetch deduplication', () => {
     const channelKey = generateChannelKey();
     const envelope = await wrapChannelKey(channelKey, alice.publicKey);
 
-    vi.mocked(getKeyEnvelopes).mockResolvedValue([
-      { keyVersion: 1, envelope },
-    ]);
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([{ keyVersion: 1, envelope }]);
 
     await fetchAndCacheChannelKeys('ch1');
     expect(getKeyEnvelopes).toHaveBeenCalledTimes(1);

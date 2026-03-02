@@ -40,12 +40,8 @@ vi.stubGlobal('sessionStorage', {
 });
 
 // Dynamic imports after mocks
-const {
-  bootstrapSession,
-  teardownSession,
-  getIdentity,
-  onSessionReady,
-} = await import('./session.ts');
+const { bootstrapSession, teardownSession, getIdentity, onSessionReady } =
+  await import('./session.ts');
 
 const {
   clearChannelKeyCache,

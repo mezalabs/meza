@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canRunGiga, supportsAudioWorklet } from '../hardware.ts';
 
 describe('canRunGiga', () => {
@@ -54,7 +54,9 @@ describe('canRunGiga', () => {
 describe('supportsAudioWorklet', () => {
   it('returns true when AudioContext with audioWorklet is available', () => {
     function MockAudioContext() {}
-    MockAudioContext.prototype = { audioWorklet: {} } as unknown as AudioContext;
+    MockAudioContext.prototype = {
+      audioWorklet: {},
+    } as unknown as AudioContext;
     vi.stubGlobal('AudioContext', MockAudioContext);
     expect(supportsAudioWorklet()).toBe(true);
   });

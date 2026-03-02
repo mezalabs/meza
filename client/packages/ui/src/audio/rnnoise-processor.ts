@@ -9,8 +9,11 @@
  * routing: source -> worklet -> destination, and exposes the denoised
  * MediaStreamTrack as `processedTrack` for LiveKit to use.
  */
-import type { AudioProcessorOptions, TrackProcessor } from 'livekit-client';
-import { Track } from 'livekit-client';
+import type {
+  AudioProcessorOptions,
+  Track,
+  TrackProcessor,
+} from 'livekit-client';
 
 // Resolve worklet URL at build time via Vite's ?url import
 import rnnoiseWorkletUrl from './rnnoise-worklet.ts?url';

@@ -1,3 +1,4 @@
+import type { NoiseCancellationMode } from '@meza/core';
 import {
   canRunGiga,
   supportsAudioWorklet,
@@ -5,7 +6,6 @@ import {
   useAudioSettingsStore,
   useVoiceStore,
 } from '@meza/core';
-import type { NoiseCancellationMode } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
 import { useMediaDevices } from '../../hooks/useMediaDevices.ts';
@@ -468,10 +468,7 @@ function GigaThresholdControl({
   return (
     <div className="space-y-2 rounded-md border border-border bg-bg-surface p-3">
       <div className="flex items-center justify-between">
-        <label
-          htmlFor="giga-threshold"
-          className="text-sm text-text-muted"
-        >
+        <label htmlFor="giga-threshold" className="text-sm text-text-muted">
           Noise Gate Threshold
         </label>
         <span className="text-xs tabular-nums text-text-subtle">
@@ -543,8 +540,7 @@ function GigaThresholdControl({
             }`}
           />
           <span className="text-xs tabular-nums text-text-muted">
-            Voice: {vadPercent}%
-            {isAboveThreshold ? ' — passing' : ' — gated'}
+            Voice: {vadPercent}%{isAboveThreshold ? ' — passing' : ' — gated'}
           </span>
         </div>
       )}
@@ -579,6 +575,7 @@ function NoiseCancellationSelector({
         const showWarning = mode === 'giga' && !gigaCapable;
 
         return (
+          // biome-ignore lint/a11y/useSemanticElements: segmented control requires custom radio buttons
           <button
             key={mode}
             type="button"

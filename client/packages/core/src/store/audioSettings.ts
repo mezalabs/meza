@@ -243,9 +243,7 @@ export const useAudioSettingsStore = create<
           s.noiseCancellationMode = prefs.noiseCancellationMode;
         } else if (prefs.noiseSuppression !== undefined) {
           // Legacy migration: existing user with old boolean
-          s.noiseCancellationMode = prefs.noiseSuppression
-            ? 'standard'
-            : 'off';
+          s.noiseCancellationMode = prefs.noiseSuppression ? 'standard' : 'off';
         }
         // If neither is present, keep the current value (smart default for new users)
 

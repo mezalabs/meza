@@ -79,10 +79,7 @@ describe('audioSettings store', () => {
 
   describe('localStorage migration', () => {
     it('migrates old noiseSuppression: true to standard', async () => {
-      storage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ noiseSuppression: true }),
-      );
+      storage.setItem(STORAGE_KEY, JSON.stringify({ noiseSuppression: true }));
       vi.resetModules();
       const mod = await import('../audioSettings.ts');
       expect(mod.useAudioSettingsStore.getState().noiseCancellationMode).toBe(
@@ -91,10 +88,7 @@ describe('audioSettings store', () => {
     });
 
     it('migrates old noiseSuppression: false to off', async () => {
-      storage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ noiseSuppression: false }),
-      );
+      storage.setItem(STORAGE_KEY, JSON.stringify({ noiseSuppression: false }));
       vi.resetModules();
       const mod = await import('../audioSettings.ts');
       expect(mod.useAudioSettingsStore.getState().noiseCancellationMode).toBe(
@@ -206,10 +200,7 @@ describe('audioSettings store', () => {
     });
 
     it('persists and loads from localStorage', async () => {
-      storage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ gigaThreshold: 30 }),
-      );
+      storage.setItem(STORAGE_KEY, JSON.stringify({ gigaThreshold: 30 }));
       vi.resetModules();
       const mod = await import('../audioSettings.ts');
       expect(mod.useAudioSettingsStore.getState().gigaThreshold).toBe(30);

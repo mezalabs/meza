@@ -39,7 +39,11 @@ const VAD_SMOOTH_ALPHA = 0.3;
 interface RnnoiseModule {
   _rnnoise_create: () => number;
   _rnnoise_destroy: (ptr: number) => void;
-  _rnnoise_process_frame: (ptr: number, inputPtr: number, outputPtr: number) => number;
+  _rnnoise_process_frame: (
+    ptr: number,
+    inputPtr: number,
+    outputPtr: number,
+  ) => number;
   _malloc: (bytes: number) => number;
   _free: (ptr: number) => void;
   HEAPF32: Float32Array;
@@ -68,9 +72,6 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
 
   /** Smoothed VAD probability for reporting. */
   private smoothedVad = 0;
-
-  /** Latest raw VAD probability from RNNoise. */
-  private lastVadProb = 0;
 
   /** Counter for throttled VAD reporting. */
   private vadReportCounter = 0;
@@ -136,7 +137,6 @@ class RnnoiseWorkletProcessor extends AudioWorkletProcessor {
         this.outputPtr,
         this.inputPtr,
       );
-      this.lastVadProb = vadProb;
       this.smoothedVad += VAD_SMOOTH_ALPHA * (vadProb - this.smoothedVad);
 
       // Write denoised samples back into the circular buffer (in-place),
