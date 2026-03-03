@@ -1,4 +1,4 @@
-import type { MessageState, ReplyEntry } from '@meza/core';
+import type { Attachment, MessageState, ReplyEntry } from '@meza/core';
 import {
   ackMessage,
   addReaction,
@@ -688,6 +688,61 @@ function useAuthorName(authorId: string, serverId: string | undefined) {
   return useDisplayName(authorId, serverId);
 }
 
+// --- Encrypted attachment placeholder (reserves layout space before decrypt) ---
+
+function EncryptedAttachmentPlaceholder({
+  attachment,
+}: {
+  attachment: Attachment;
+}) {
+  const isImage = attachment.contentType.startsWith('image/');
+  const isVideo = attachment.contentType.startsWith('video/');
+  const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
+
+  if (isImage || isVideo) {
+    return (
+      <div
+        className="rounded-md bg-bg-surface overflow-hidden"
+        style={
+          hasAspectRatio
+            ? {
+                aspectRatio: `${attachment.width}/${attachment.height}`,
+                maxWidth: Math.min(400, attachment.width),
+                maxHeight: 300,
+              }
+            : { width: 200, height: 120 }
+        }
+      >
+        {attachment.microThumbnail.length > 0 && (
+          <img
+            src={microThumbDataURI(attachment.microThumbnail)}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full object-cover blur-xl scale-110"
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Non-media file: small fixed-height placeholder
+  return (
+    <div className="flex h-12 w-60 items-center gap-2 rounded-md border border-border bg-bg-surface px-3">
+      <div className="h-4 w-4 rounded bg-bg-elevated" />
+      <div className="h-3 flex-1 rounded bg-bg-elevated" />
+    </div>
+  );
+}
+
+/** Convert raw bytes to a base64 data URI for inline display. */
+function microThumbDataURI(data: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return `data:image/webp;base64,${btoa(binary)}`;
+}
+
 // --- Scrambling "decrypting" placeholder (à la charmbracelet/mods) ---
 
 const CIPHER =
@@ -1148,14 +1203,24 @@ const MessageItem = memo(function MessageItem({
                     </span>
                   </div>
                 </div>
+              ) : isStillEncrypted ? (
+                <>
+                  <DecryptingText />
+                  {msg.attachments.length > 0 && (
+                    <div className="mt-1 flex flex-col gap-2">
+                      {msg.attachments.map((att) => (
+                        <EncryptedAttachmentPlaceholder
+                          key={att.id}
+                          attachment={att}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
-                  {isStillEncrypted ? (
-                    <DecryptingText />
-                  ) : (
-                    text && (
-                      <MarkdownRenderer content={text} serverId={serverId} />
-                    )
+                  {text && (
+                    <MarkdownRenderer content={text} serverId={serverId} />
                   )}
                   {msg.embeds.length > 0 && (
                     <div className="flex flex-col gap-1">
