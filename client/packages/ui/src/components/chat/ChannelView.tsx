@@ -4,7 +4,7 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
-  decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
   fetchAndCacheChannelKeys,
@@ -285,7 +285,6 @@ export function ChannelView({
             } catch {}
           }
           if (hasChannelKey(channelId)) {
-            // Collect unique author IDs for bulk key fetch
             const encrypted = res.messages.filter(
               (m: { keyVersion: number }) => m.keyVersion > 0,
             );
@@ -299,21 +298,8 @@ export function ChannelView({
             try {
               pubKeys = await getPublicKeys(authorIds);
             } catch {}
-
-            // Decrypt newest messages first so the bottom of the chat
-            // (where the user is looking) resolves before older messages.
-            for (const msg of [...encrypted].reverse()) {
-              if (ignore) break;
-              const pk = pubKeys[msg.authorId];
-              if (!pk) continue;
-              try {
-                await decryptAndUpdateMessage(channelId, msg, pk);
-              } catch (err) {
-                console.error(
-                  `[E2EE] historical decrypt failed for ${msg.id}:`,
-                  err,
-                );
-              }
+            if (!ignore) {
+              await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
             }
           }
         }
@@ -331,11 +317,7 @@ export function ChannelView({
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
   // (e.g., key distribution from channel creator hadn't completed yet).
-  //
-  // The gateway's `decryptInBackground` may also be decrypting these same
-  // messages concurrently via real-time delivery. This is safe because
-  // `decryptAndUpdateMessage` uses a keyVersion > 0 idempotency guard,
-  // ensuring only the first path to finish writes the plaintext.
+  // Uses batched update to avoid per-message re-renders.
   useEffect(() => {
     if (!keysAvailable || !needsEncryption || !channelId) return;
     const messages = useMessageStore.getState().byChannel[channelId] ?? [];
@@ -355,16 +337,8 @@ export function ChannelView({
       } catch {
         return;
       }
-      // Decrypt newest messages first so the bottom of the chat resolves first.
-      for (const msg of [...encrypted].reverse()) {
-        if (cancelled) break;
-        const pk = pubKeys[msg.authorId];
-        if (!pk) continue;
-        try {
-          await decryptAndUpdateMessage(channelId, msg, pk);
-        } catch (err) {
-          console.error(`[E2EE] deferred decrypt failed for ${msg.id}:`, err);
-        }
+      if (!cancelled) {
+        await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
       }
     })();
     return () => {
@@ -767,11 +741,9 @@ function DecryptingText() {
   return (
     <output
       className="inline-block font-mono text-sm text-text-muted/50 select-none"
-      aria-label="Decrypting message"
+      aria-label="Encrypted message"
     >
-      <span className="text-text-muted/70">[Decrypting: </span>
       {display.join('')}
-      <span className="text-text-muted/70">]</span>
     </output>
   );
 }

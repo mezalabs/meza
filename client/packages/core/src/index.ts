@@ -181,6 +181,7 @@ export {
   createInviteKeyBundle,
   type DerivedKeys,
   decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
   decryptFile,
   decryptMessage,
   decryptPayload,

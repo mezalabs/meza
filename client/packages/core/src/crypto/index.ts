@@ -36,7 +36,10 @@ export {
   registerPublicKey,
   restoreIdentity,
 } from './credentials.ts';
-export { decryptAndUpdateMessage } from './decrypt-store.ts';
+export {
+  decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
+} from './decrypt-store.ts';
 export {
   decryptFile,
   encryptFile,
