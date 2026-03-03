@@ -116,7 +116,9 @@ func (s *InviteStore) ConsumeInvite(ctx context.Context, code string) (*models.I
 	var inv models.Invite
 	err := s.pool.QueryRow(ctx,
 		`UPDATE invites
-		 SET use_count = use_count + 1
+		 SET use_count = use_count + 1,
+		     encrypted_channel_keys = CASE WHEN max_uses > 0 AND use_count + 1 >= max_uses THEN NULL ELSE encrypted_channel_keys END,
+		     channel_keys_iv = CASE WHEN max_uses > 0 AND use_count + 1 >= max_uses THEN NULL ELSE channel_keys_iv END
 		 WHERE code = $1
 		   AND revoked = false
 		   AND (expires_at IS NULL OR expires_at > now())
@@ -138,12 +140,31 @@ func (s *InviteStore) RevokeInvite(ctx context.Context, code string) error {
 	defer cancel()
 
 	_, err := s.pool.Exec(ctx,
-		`UPDATE invites SET revoked = true WHERE code = $1`, code,
+		`UPDATE invites SET revoked = true, encrypted_channel_keys = NULL, channel_keys_iv = NULL WHERE code = $1`, code,
 	)
 	if err != nil {
 		return fmt.Errorf("revoke invite: %w", err)
 	}
 	return nil
+}
+
+// CleanExpiredKeyBundles nulls the key bundle columns on invites that have
+// expired or been revoked, reducing data-at-rest exposure. Safe to call
+// periodically (e.g., on startup or via a background ticker).
+func (s *InviteStore) CleanExpiredKeyBundles(ctx context.Context) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE invites
+		 SET encrypted_channel_keys = NULL, channel_keys_iv = NULL
+		 WHERE encrypted_channel_keys IS NOT NULL
+		   AND (revoked = true OR (expires_at IS NOT NULL AND expires_at <= now()))`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("clean expired key bundles: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (s *InviteStore) ListInvites(ctx context.Context, serverID string) ([]*models.Invite, error) {
