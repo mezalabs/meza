@@ -150,7 +150,7 @@ export function ChannelView({
   const wasNearBottomRef = useRef(true);
   const lastAckedIdRef = useRef<string | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const _reconnectCount = useGatewayStore((s) => s.reconnectCount);
+  const reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const needsEncryption = true; // Universal E2EE: all channels encrypted
   const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
   const hasEmojis = useEmojiStore((s) =>
@@ -265,6 +265,7 @@ export function ChannelView({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [newActivityAnchor, editingMessageId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated) return;
     let ignore = false;
@@ -325,7 +326,7 @@ export function ChannelView({
     return () => {
       ignore = true;
     };
-  }, [channelId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps -- reconnectCount is an intentional trigger
+  }, [channelId, isAuthenticated, reconnectCount]);
 
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
