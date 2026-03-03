@@ -58,7 +58,9 @@ export function InviteDialog({
 
         if (isSessionReady()) {
           const channels = useChannelStore.getState().byServer[serverId] ?? [];
-          const channelIds = channels.map((ch) => ch.id);
+          const channelIds = channels
+            .filter((ch) => !ch.isPrivate)
+            .map((ch) => ch.id);
           if (channelIds.length > 0) {
             inviteSecret = crypto.getRandomValues(new Uint8Array(32));
             const { ciphertext, iv } = await createInviteKeyBundle(
