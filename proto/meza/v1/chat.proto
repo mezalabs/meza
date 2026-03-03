@@ -259,6 +259,8 @@ message JoinServerRequest {
 
 message JoinServerResponse {
   Server server = 1;
+  bytes encrypted_channel_keys = 2;  // AES-256-GCM encrypted key bundle (if invite had one)
+  bytes channel_keys_iv = 3;         // 12-byte IV for decryption
 }
 
 message LeaveServerRequest {
@@ -362,6 +364,8 @@ message CreateInviteRequest {
   string server_id = 1;
   int32 max_uses = 2;
   int32 max_age_seconds = 3;
+  bytes encrypted_channel_keys = 4;  // AES-256-GCM encrypted key bundle (optional)
+  bytes channel_keys_iv = 5;         // 12-byte IV for decryption (optional)
 }
 
 message CreateInviteResponse {

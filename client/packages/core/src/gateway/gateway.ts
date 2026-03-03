@@ -563,60 +563,64 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       } else if (event.payload.case === 'memberJoin' && event.payload.value) {
         const joinedMember = event.payload.value;
         useMemberStore.getState().addMember(joinedMember);
-        // E2EE: if we are the inviter, distribute channel keys to the new member
+        // E2EE: any online member distributes channel keys to the new member.
+        // The inviter distributes immediately; other members delay 3-8s as backup
+        // in case the inviter is offline. UPSERT semantics make duplicates harmless.
         if (
-          joinedMember.inviterUserId === currentUserId &&
           joinedMember.userId !== currentUserId &&
           joinedMember.serverId &&
           isSessionReady()
         ) {
           const serverId = joinedMember.serverId;
           const newUserId = joinedMember.userId;
-          // Distribute keys asynchronously with retry — the new user may
-          // still be bootstrapping their identity keys.
+          const isInviter = joinedMember.inviterUserId === currentUserId;
+          const jitterMs = isInviter ? 0 : 3000 + Math.random() * 5000;
           const gen = generation;
-          (async () => {
-            try {
-              const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
-              if (!maybePk || gen !== generation) return;
-              const pk: Uint8Array = maybePk;
-              // Get all non-private channels in this server.
-              // Skip private channels — the new member won't have
-              // ViewChannel on them (@everyone deny). They'll lazy-init
-              // if they're later granted access.
-              // distributeKeyToMember handles cache misses via server fetch,
-              // so we don't need to pre-filter by hasChannelKey.
-              const channels =
-                useChannelStore.getState().byServer[serverId] ?? [];
-              const CONCURRENCY = 5;
-              const queue = channels.filter((ch) => !ch.isPrivate);
-              async function distributeWorker() {
-                while (queue.length > 0) {
-                  const ch = queue.shift();
-                  if (!ch) break;
-                  try {
-                    await distributeKeyToMember(ch.id, newUserId, pk);
-                  } catch (err) {
-                    console.error(
-                      `[E2EE] key distribution to ${newUserId} for ${ch.id}:`,
-                      err,
-                    );
+          setTimeout(() => {
+            if (gen !== generation) return;
+            (async () => {
+              try {
+                const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
+                if (!maybePk || gen !== generation) return;
+                const pk: Uint8Array = maybePk;
+                // Get all non-private channels in this server.
+                // Skip private channels — the new member won't have
+                // ViewChannel on them (@everyone deny). They'll lazy-init
+                // if they're later granted access.
+                // distributeKeyToMember handles cache misses via server fetch,
+                // so we don't need to pre-filter by hasChannelKey.
+                const channels =
+                  useChannelStore.getState().byServer[serverId] ?? [];
+                const CONCURRENCY = 5;
+                const queue = channels.filter((ch) => !ch.isPrivate);
+                async function distributeWorker() {
+                  while (queue.length > 0) {
+                    const ch = queue.shift();
+                    if (!ch) break;
+                    try {
+                      await distributeKeyToMember(ch.id, newUserId, pk);
+                    } catch (err) {
+                      console.error(
+                        `[E2EE] key distribution to ${newUserId} for ${ch.id}:`,
+                        err,
+                      );
+                    }
                   }
                 }
+                await Promise.all(
+                  Array.from(
+                    { length: Math.min(CONCURRENCY, queue.length) },
+                    () => distributeWorker(),
+                  ),
+                );
+              } catch (err) {
+                console.error(
+                  `[E2EE] failed to distribute keys to new member ${newUserId}:`,
+                  err,
+                );
               }
-              await Promise.all(
-                Array.from(
-                  { length: Math.min(CONCURRENCY, queue.length) },
-                  () => distributeWorker(),
-                ),
-              );
-            } catch (err) {
-              console.error(
-                `[E2EE] failed to distribute keys to new member ${newUserId}:`,
-                err,
-              );
-            }
-          })();
+            })();
+          }, jitterMs);
         }
       } else if (event.payload.case === 'memberUpdate' && event.payload.value) {
         useMemberStore.getState().updateMember(event.payload.value);

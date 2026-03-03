@@ -523,6 +523,42 @@ export function getCachedChannelIds(): string[] {
   return [...channelKeyCache.keys()];
 }
 
+/**
+ * Get cached channel keys for a set of channel IDs.
+ * Returns a map of channelId → (version → base64-encoded key).
+ * Used by invite key bundles to pre-share keys with joining members.
+ */
+export function getChannelKeysForServer(
+  channelIds: string[],
+): Record<string, Record<string, string>> {
+  const result: Record<string, Record<string, string>> = {};
+  for (const channelId of channelIds) {
+    const versionMap = channelKeyCache.get(channelId);
+    if (!versionMap || versionMap.size === 0) continue;
+    const versions: Record<string, string> = {};
+    for (const [version, key] of versionMap) {
+      versions[String(version)] = bytesToBase64(key);
+    }
+    result[channelId] = versions;
+  }
+  return result;
+}
+
+/**
+ * Import channel keys from an external source (e.g., invite key bundle).
+ * Sets keys in cache and triggers persist to IndexedDB.
+ */
+export function importChannelKeys(
+  keys: Record<string, Record<string, string>>,
+): void {
+  for (const [channelId, versions] of Object.entries(keys)) {
+    for (const [version, keyB64] of Object.entries(versions)) {
+      setCachedKey(channelId, Number(version), base64ToBytes(keyB64));
+    }
+  }
+  schedulePersist();
+}
+
 // Flush pending persist when tab becomes hidden or page unloads to prevent data loss.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {

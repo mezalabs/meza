@@ -23,6 +23,7 @@ import { useChannelStore } from '../store/channels.ts';
 import { useDMStore } from '../store/dms.ts';
 import { useEmojiStore } from '../store/emojis.ts';
 import { useFriendStore } from '../store/friends.ts';
+import { useInviteStore } from '../store/invite.ts';
 import { useMemberStore } from '../store/members.ts';
 import { useMessageStore } from '../store/messages.ts';
 import { Permissions } from '../store/permissions.ts';
@@ -37,6 +38,13 @@ import { transport } from './client.ts';
 import { getPublicKeys, storeKeyEnvelopes } from './keys.ts';
 
 const chatClient = createClient(ChatService, transport);
+
+/** Decode a base64url string (no padding) to bytes. */
+function base64UrlToBytes(b64url: string): Uint8Array {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
+  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+}
 
 /**
  * Provision the initial encryption key for a newly created encrypted channel.
@@ -211,12 +219,17 @@ export async function getMessages(
   }
 }
 
-export async function createInvite(serverId: string) {
+export async function createInvite(
+  serverId: string,
+  keyBundle?: { encryptedChannelKeys: Uint8Array; channelKeysIv: Uint8Array },
+) {
   try {
     const res = await chatClient.createInvite({
       serverId,
       maxUses: 0,
       maxAgeSeconds: 86400 * 7,
+      encryptedChannelKeys: keyBundle?.encryptedChannelKeys ?? new Uint8Array(),
+      channelKeysIv: keyBundle?.channelKeysIv ?? new Uint8Array(),
     });
     return res.invite;
   } catch (err) {
@@ -238,6 +251,31 @@ export async function joinServer(inviteCode: string) {
     if (res.server) {
       useServerStore.getState().addServer(res.server);
     }
+
+    // Import E2EE key bundle if the invite included one and we have the secret
+    const { inviteSecret, setInviteSecret } = useInviteStore.getState();
+    if (
+      inviteSecret &&
+      res.encryptedChannelKeys.length > 0 &&
+      res.channelKeysIv.length > 0
+    ) {
+      try {
+        const { importInviteKeyBundle } = await import(
+          '../crypto/invite-keys.ts'
+        );
+        const secretBytes = base64UrlToBytes(inviteSecret);
+        await importInviteKeyBundle(
+          secretBytes,
+          res.encryptedChannelKeys,
+          res.channelKeysIv,
+        );
+      } catch (err) {
+        // Non-fatal: keys will be distributed by online members as fallback
+        console.warn('[E2EE] Failed to import invite key bundle:', err);
+      }
+      setInviteSecret(null);
+    }
+
     return res.server;
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });

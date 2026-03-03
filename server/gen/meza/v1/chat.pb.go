@@ -1845,10 +1845,12 @@ func (x *JoinServerRequest) GetInviteCode() string {
 }
 
 type JoinServerResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Server        *Server                `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Server               *Server                `protobuf:"bytes,1,opt,name=server,proto3" json:"server,omitempty"`
+	EncryptedChannelKeys []byte                 `protobuf:"bytes,2,opt,name=encrypted_channel_keys,json=encryptedChannelKeys,proto3" json:"encrypted_channel_keys,omitempty"` // AES-256-GCM encrypted key bundle (if invite had one)
+	ChannelKeysIv        []byte                 `protobuf:"bytes,3,opt,name=channel_keys_iv,json=channelKeysIv,proto3" json:"channel_keys_iv,omitempty"`                      // 12-byte IV for decryption
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *JoinServerResponse) Reset() {
@@ -1884,6 +1886,20 @@ func (*JoinServerResponse) Descriptor() ([]byte, []int) {
 func (x *JoinServerResponse) GetServer() *Server {
 	if x != nil {
 		return x.Server
+	}
+	return nil
+}
+
+func (x *JoinServerResponse) GetEncryptedChannelKeys() []byte {
+	if x != nil {
+		return x.EncryptedChannelKeys
+	}
+	return nil
+}
+
+func (x *JoinServerResponse) GetChannelKeysIv() []byte {
+	if x != nil {
+		return x.ChannelKeysIv
 	}
 	return nil
 }
@@ -2873,12 +2889,14 @@ func (*ReorderRolesResponse) Descriptor() ([]byte, []int) {
 }
 
 type CreateInviteRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ServerId      string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	MaxUses       int32                  `protobuf:"varint,2,opt,name=max_uses,json=maxUses,proto3" json:"max_uses,omitempty"`
-	MaxAgeSeconds int32                  `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ServerId             string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	MaxUses              int32                  `protobuf:"varint,2,opt,name=max_uses,json=maxUses,proto3" json:"max_uses,omitempty"`
+	MaxAgeSeconds        int32                  `protobuf:"varint,3,opt,name=max_age_seconds,json=maxAgeSeconds,proto3" json:"max_age_seconds,omitempty"`
+	EncryptedChannelKeys []byte                 `protobuf:"bytes,4,opt,name=encrypted_channel_keys,json=encryptedChannelKeys,proto3" json:"encrypted_channel_keys,omitempty"` // AES-256-GCM encrypted key bundle (optional)
+	ChannelKeysIv        []byte                 `protobuf:"bytes,5,opt,name=channel_keys_iv,json=channelKeysIv,proto3" json:"channel_keys_iv,omitempty"`                      // 12-byte IV for decryption (optional)
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateInviteRequest) Reset() {
@@ -2930,6 +2948,20 @@ func (x *CreateInviteRequest) GetMaxAgeSeconds() int32 {
 		return x.MaxAgeSeconds
 	}
 	return 0
+}
+
+func (x *CreateInviteRequest) GetEncryptedChannelKeys() []byte {
+	if x != nil {
+		return x.EncryptedChannelKeys
+	}
+	return nil
+}
+
+func (x *CreateInviteRequest) GetChannelKeysIv() []byte {
+	if x != nil {
+		return x.ChannelKeysIv
+	}
+	return nil
 }
 
 type CreateInviteResponse struct {
@@ -11418,9 +11450,11 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\aservers\x18\x01 \x03(\v2\x0f.meza.v1.ServerR\aservers\"4\n" +
 	"\x11JoinServerRequest\x12\x1f\n" +
 	"\vinvite_code\x18\x01 \x01(\tR\n" +
-	"inviteCode\"=\n" +
+	"inviteCode\"\x9b\x01\n" +
 	"\x12JoinServerResponse\x12'\n" +
-	"\x06server\x18\x01 \x01(\v2\x0f.meza.v1.ServerR\x06server\"1\n" +
+	"\x06server\x18\x01 \x01(\v2\x0f.meza.v1.ServerR\x06server\x124\n" +
+	"\x16encrypted_channel_keys\x18\x02 \x01(\fR\x14encryptedChannelKeys\x12&\n" +
+	"\x0fchannel_keys_iv\x18\x03 \x01(\fR\rchannelKeysIv\"1\n" +
 	"\x12LeaveServerRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\"\x15\n" +
 	"\x13LeaveServerResponse\"]\n" +
@@ -11479,11 +11513,13 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x13ReorderRolesRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x19\n" +
 	"\brole_ids\x18\x02 \x03(\tR\aroleIds\"\x16\n" +
-	"\x14ReorderRolesResponse\"u\n" +
+	"\x14ReorderRolesResponse\"\xd3\x01\n" +
 	"\x13CreateInviteRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x19\n" +
 	"\bmax_uses\x18\x02 \x01(\x05R\amaxUses\x12&\n" +
-	"\x0fmax_age_seconds\x18\x03 \x01(\x05R\rmaxAgeSeconds\"?\n" +
+	"\x0fmax_age_seconds\x18\x03 \x01(\x05R\rmaxAgeSeconds\x124\n" +
+	"\x16encrypted_channel_keys\x18\x04 \x01(\fR\x14encryptedChannelKeys\x12&\n" +
+	"\x0fchannel_keys_iv\x18\x05 \x01(\fR\rchannelKeysIv\"?\n" +
 	"\x14CreateInviteResponse\x12'\n" +
 	"\x06invite\x18\x01 \x01(\v2\x0f.meza.v1.InviteR\x06invite\"*\n" +
 	"\x14ResolveInviteRequest\x12\x12\n" +
