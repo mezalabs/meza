@@ -38,6 +38,10 @@ export interface ChannelEncryption {
  *  key distribution while keeping total wait under 5s. */
 const KEY_RETRY_DELAYS_MS = [500, 1_000, 1_500, 2_000];
 
+/** Slow poll interval after fast retries are exhausted. Keeps checking for
+ *  keys that may arrive via reconnect-triggered redistribution. */
+const SLOW_POLL_MS = 10_000;
+
 /** Minimum interval between manual retries to prevent rapid clicking. */
 const RETRY_COOLDOWN_MS = 3_000;
 
@@ -165,8 +169,20 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
         }
       }
 
-      // Truly no keys available — mark ready so composer shows unavailable state
+      // Fast retries exhausted — start slow poll. Keys may arrive when
+      // another member reconnects and redistributes.
       if (!cancelled) setReady(true);
+      while (!cancelled) {
+        await new Promise((r) => setTimeout(r, SLOW_POLL_MS));
+        if (cancelled) return;
+        if (await tryFetchKeys()) {
+          if (!cancelled) {
+            setIsEncrypted(true);
+            setReady(true);
+          }
+          return;
+        }
+      }
     }
 
     init();

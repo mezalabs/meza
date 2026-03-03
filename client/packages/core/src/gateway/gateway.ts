@@ -23,7 +23,9 @@ import {
 import {
   distributeKeyToMember,
   fetchAndCacheChannelKeys,
+  getCachedChannelIds,
   hasChannelKey,
+  redistributeChannelKeys,
 } from '../crypto/channel-keys.ts';
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
 import { isSessionReady } from '../crypto/session.ts';
@@ -449,6 +451,20 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           useGatewayStore.getState().incrementReconnectCount();
           useTypingStore.getState().reset();
           usePresenceStore.getState().reset();
+          // E2EE: redistribute cached channel keys to all members.
+          // Covers the case where a new member joined while we were offline
+          // and missed the memberJoin event. UPSERT semantics make this safe.
+          if (isSessionReady()) {
+            const channelIds = getCachedChannelIds();
+            if (channelIds.length > 0) {
+              redistributeChannelKeys(channelIds).catch((err) =>
+                console.error(
+                  '[E2EE] reconnect key redistribution failed:',
+                  err,
+                ),
+              );
+            }
+          }
         }
         hasConnectedBefore = true;
         // Suppress notification sounds for 3s after connect/reconnect
