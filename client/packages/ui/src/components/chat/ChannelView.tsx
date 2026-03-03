@@ -604,7 +604,7 @@ export function ChannelView({
                 {"You're almost there! "}
               </span>
               {isSessionReady()
-                ? 'Waiting for encryption keys — an online member will share them with you shortly.'
+                ? 'Waiting for encryption keys — when a member of the channel comes online, keys will be shared with you.'
                 : 'Loading your encryption keys — this only takes a moment.'}
             </p>
           </div>
