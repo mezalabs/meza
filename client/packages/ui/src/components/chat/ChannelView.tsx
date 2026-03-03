@@ -1088,7 +1088,7 @@ const MessageItem = memo(function MessageItem({
                 />
               </button>
             </ProfilePopoverCard>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 select-text">
               <div className="flex items-baseline gap-2">
                 <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
                   <button
