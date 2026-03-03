@@ -265,6 +265,7 @@ export function ChannelView({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [newActivityAnchor, editingMessageId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated) return;
     let ignore = false;
@@ -325,7 +326,7 @@ export function ChannelView({
     return () => {
       ignore = true;
     };
-  }, [channelId, isAuthenticated, reconnectCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [channelId, isAuthenticated, reconnectCount]);
 
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
