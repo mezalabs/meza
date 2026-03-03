@@ -80,6 +80,8 @@ export function InviteDialog({
           ? `${base}#${bytesToBase64Url(inviteSecret)}`
           : base;
         setInviteUrl(url);
+        // Zero out the secret from memory now that the URL is built
+        inviteSecret?.fill(0);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to create invite',

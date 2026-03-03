@@ -264,11 +264,15 @@ export async function joinServer(inviteCode: string) {
           '../crypto/invite-keys.ts'
         );
         const secretBytes = base64UrlToBytes(inviteSecret);
-        await importInviteKeyBundle(
-          secretBytes,
-          res.encryptedChannelKeys,
-          res.channelKeysIv,
-        );
+        try {
+          await importInviteKeyBundle(
+            secretBytes,
+            res.encryptedChannelKeys,
+            res.channelKeysIv,
+          );
+        } finally {
+          secretBytes.fill(0);
+        }
       } catch (err) {
         // Non-fatal: keys will be distributed by online members as fallback
         console.warn('[E2EE] Failed to import invite key bundle:', err);

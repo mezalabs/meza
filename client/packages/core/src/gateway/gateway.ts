@@ -104,6 +104,8 @@ let reconnectAttempts = 0;
 let generation = 0;
 let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
+let lastRedistributeTime = 0;
+const REDISTRIBUTE_COOLDOWN_MS = 60_000; // 1 minute between reconnect redistributions
 let isOnline =
   typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
 
@@ -453,10 +455,15 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           usePresenceStore.getState().reset();
           // E2EE: redistribute cached channel keys to all members.
           // Covers the case where a new member joined while we were offline
-          // and missed the memberJoin event. UPSERT semantics make this safe.
-          if (isSessionReady()) {
+          // and missed the memberJoin event. Cooldown prevents flooding on
+          // flapping connections. UPSERT semantics make duplicates safe.
+          if (
+            isSessionReady() &&
+            Date.now() - lastRedistributeTime > REDISTRIBUTE_COOLDOWN_MS
+          ) {
             const channelIds = getCachedChannelIds();
             if (channelIds.length > 0) {
+              lastRedistributeTime = Date.now();
               redistributeChannelKeys(channelIds).catch((err) =>
                 console.error(
                   '[E2EE] reconnect key redistribution failed:',

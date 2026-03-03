@@ -42,6 +42,9 @@ const KEY_RETRY_DELAYS_MS = [500, 1_000, 1_500, 2_000];
  *  keys that may arrive via reconnect-triggered redistribution. */
 const SLOW_POLL_MS = 10_000;
 
+/** Maximum number of slow polls before giving up (10s * 30 = 5 minutes). */
+const MAX_SLOW_POLLS = 30;
+
 /** Minimum interval between manual retries to prevent rapid clicking. */
 const RETRY_COOLDOWN_MS = 3_000;
 
@@ -170,9 +173,9 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
       }
 
       // Fast retries exhausted — start slow poll. Keys may arrive when
-      // another member reconnects and redistributes.
+      // another member reconnects and redistributes. Cap at 5 minutes.
       if (!cancelled) setReady(true);
-      while (!cancelled) {
+      for (let poll = 0; poll < MAX_SLOW_POLLS && !cancelled; poll++) {
         await new Promise((r) => setTimeout(r, SLOW_POLL_MS));
         if (cancelled) return;
         if (await tryFetchKeys()) {

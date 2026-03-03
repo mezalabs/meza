@@ -2263,6 +2263,12 @@ func (s *chatService) CreateInvite(ctx context.Context, req *connect.Request[v1.
 	if req.Msg.MaxUses < 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("max_uses must be non-negative"))
 	}
+	if len(req.Msg.EncryptedChannelKeys) > 64*1024 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_channel_keys too large"))
+	}
+	if len(req.Msg.ChannelKeysIv) > 0 && len(req.Msg.ChannelKeysIv) != 12 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_keys_iv must be 12 bytes"))
+	}
 
 	var expiresAt *time.Time
 	if req.Msg.MaxAgeSeconds > 0 {
