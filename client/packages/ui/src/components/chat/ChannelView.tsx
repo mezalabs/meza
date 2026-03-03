@@ -710,8 +710,14 @@ function scramble(len: number): string[] {
   return arr;
 }
 
-/** Placeholder with cycling Braille characters, mimicking a cipher being decoded. */
-function DecryptingText() {
+/** Placeholder with cycling characters, mimicking a cipher being decoded. */
+function DecryptingText({
+  channelId,
+  keyVersion,
+}: {
+  channelId: string;
+  keyVersion: number;
+}) {
   // Stable per-instance "shape": random word-lengths with spaces between them.
   const [layout] = useState(() => {
     const totalLen = 10 + Math.floor(Math.random() * 18);
@@ -745,15 +751,38 @@ function DecryptingText() {
 
   const display = chars.map((c, i) => (layout.spaces.has(i) ? '\u2004' : c));
 
+  const hasKey = hasChannelKey(channelId);
+  const sessionOk = isSessionReady();
+
+  let status: string;
+  let detail: string;
+  if (!sessionOk) {
+    status = 'Initializing encryption session';
+    detail = 'Your encryption keys are being loaded.';
+  } else if (!hasKey) {
+    status = 'Waiting for channel key';
+    detail =
+      'An online server member will distribute the key, or it will be fetched from the server shortly.';
+  } else {
+    status = 'Decrypting message';
+    detail = `Key v${keyVersion} — decryption in progress.`;
+  }
+
   return (
-    <output
-      className="inline-block font-mono text-sm text-text-muted/50 select-none"
-      aria-label="Decrypting message"
-    >
-      <span className="text-text-muted/70">[Decrypting: </span>
-      {display.join('')}
-      <span className="text-text-muted/70">]</span>
-    </output>
+    <span className="group/decrypt relative inline-block">
+      <output
+        className="inline-block font-mono text-sm text-text-muted/50 select-none cursor-help"
+        aria-label={status}
+      >
+        <span className="text-text-muted/70">[Decrypting: </span>
+        {display.join('')}
+        <span className="text-text-muted/70">]</span>
+      </output>
+      <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-64 rounded-md border border-border bg-bg-elevated px-3 py-2 shadow-lg group-hover/decrypt:block">
+        <span className="block text-xs font-medium text-text">{status}</span>
+        <span className="mt-0.5 block text-xs text-text-muted">{detail}</span>
+      </span>
+    </span>
   );
 }
 
@@ -1160,7 +1189,10 @@ const MessageItem = memo(function MessageItem({
               ) : (
                 <>
                   {isStillEncrypted ? (
-                    <DecryptingText />
+                    <DecryptingText
+                      channelId={channelId}
+                      keyVersion={msg.keyVersion}
+                    />
                   ) : (
                     text && (
                       <MarkdownRenderer content={text} serverId={serverId} />
