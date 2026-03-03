@@ -55,6 +55,8 @@ import {
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useLongPress } from '../../hooks/useLongPress.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -67,7 +69,9 @@ import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
+import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
+import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
@@ -853,12 +857,20 @@ const MessageItem = memo(function MessageItem({
     }
   }
 
+  const isMobile = useMobile();
   const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [quickReactionAnchor, setQuickReactionAnchor] = useState<DOMRect | null>(null);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
+
+  const longPressHandlers = useLongPress(
+    useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
+  );
 
   // Initialize edit text when isEditing transitions to true (handles both
   // direct clicks and discard-dialog switches from ChannelView).
@@ -960,24 +972,12 @@ const MessageItem = memo(function MessageItem({
     }
   }, [isEditing]);
 
-  return (
-    <>
-      <MessageContextMenu
-        encryptedContent={msg.encryptedContent}
-        isOwn={isOwn}
-        isPinned={isPinned}
-        canPin
-        onReply={onReply}
-        onEdit={onStartEdit}
-        onDelete={() => setDeleteDialogOpen(true)}
-        onPin={() => pinMessage(msg.channelId, msg.id)}
-        onUnpin={() => unpinMessage(msg.channelId, msg.id)}
-        onViewProfile={() => openProfilePane(msg.authorId)}
-      >
-        <div
-          className="group relative rounded-md px-2 py-1 hover:bg-bg-surface/50 transition-colors"
-          data-message-id={msg.id}
-        >
+  const messageBody = (
+    <div
+      className="group relative rounded-md px-2 py-1 hover:bg-bg-surface/50 transition-colors"
+      data-message-id={msg.id}
+      {...(isMobile ? longPressHandlers : {})}
+    >
           {/* Reply preview bar (shown above message content when this is a reply) */}
           {msg.replyToId && (
             <ReplyPreviewBar
@@ -991,78 +991,57 @@ const MessageItem = memo(function MessageItem({
             />
           )}
 
-          {/* Hover action buttons */}
-          <div
-            className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-          >
-            <button
-              type="button"
-              className="p-1 text-xs text-text-muted hover:text-text rounded"
-              onClick={onReply}
-              title="Reply"
+          {/* Hover action buttons (desktop only) */}
+          {!isMobile && (
+            <div
+              className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             >
-              &#x21A9;
-            </button>
-            <Popover.Root
-              open={reactionPickerOpen}
-              onOpenChange={setReactionPickerOpen}
-            >
-              <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  title="Add reaction"
-                >
-                  <SmileyIcon size={14} aria-hidden="true" />
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
-                  side="top"
-                  align="end"
-                  sideOffset={8}
-                  collisionPadding={16}
-                >
-                  <EmojiPicker
-                    onEmojiSelect={handleReactionSelect}
-                    serverId={serverId}
-                  />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-            {isOwn ? (
-              <>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  onClick={onStartEdit}
-                  title="Edit"
-                >
-                  &#x270E;
-                </button>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-error rounded"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  title="Delete"
-                >
-                  &#x1F5D1;
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  onClick={() => {
-                    navigator.clipboard.writeText(text);
-                  }}
-                  title="Copy"
-                >
-                  &#x1F4CB;
-                </button>
-                {canManageMessages && (
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                onClick={onReply}
+                title="Reply"
+              >
+                &#x21A9;
+              </button>
+              <Popover.Root
+                open={reactionPickerOpen}
+                onOpenChange={setReactionPickerOpen}
+              >
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="p-1 text-xs text-text-muted hover:text-text rounded"
+                    title="Add reaction"
+                  >
+                    <SmileyIcon size={14} aria-hidden="true" />
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
+                    side="top"
+                    align="end"
+                    sideOffset={8}
+                    collisionPadding={16}
+                  >
+                    <EmojiPicker
+                      onEmojiSelect={handleReactionSelect}
+                      serverId={serverId}
+                    />
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+              {isOwn ? (
+                <>
+                  <button
+                    type="button"
+                    className="p-1 text-xs text-text-muted hover:text-text rounded"
+                    onClick={onStartEdit}
+                    title="Edit"
+                  >
+                    &#x270E;
+                  </button>
                   <button
                     type="button"
                     className="p-1 text-xs text-text-muted hover:text-error rounded"
@@ -1071,10 +1050,33 @@ const MessageItem = memo(function MessageItem({
                   >
                     &#x1F5D1;
                   </button>
-                )}
-              </>
-            )}
-          </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="p-1 text-xs text-text-muted hover:text-text rounded"
+                    onClick={() => {
+                      navigator.clipboard.writeText(text);
+                    }}
+                    title="Copy"
+                  >
+                    &#x1F4CB;
+                  </button>
+                  {canManageMessages && (
+                    <button
+                      type="button"
+                      className="p-1 text-xs text-text-muted hover:text-error rounded"
+                      onClick={() => setDeleteDialogOpen(true)}
+                      title="Delete"
+                    >
+                      &#x1F5D1;
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div className="flex items-start gap-2">
             <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
@@ -1231,7 +1233,82 @@ const MessageItem = memo(function MessageItem({
           </div>
           {/* end avatar + content row */}
         </div>
-      </MessageContextMenu>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        messageBody
+      ) : (
+        <MessageContextMenu
+          encryptedContent={msg.encryptedContent}
+          isOwn={isOwn}
+          isPinned={isPinned}
+          canPin
+          onReply={onReply}
+          onEdit={onStartEdit}
+          onDelete={() => setDeleteDialogOpen(true)}
+          onPin={() => pinMessage(msg.channelId, msg.id)}
+          onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onViewProfile={() => openProfilePane(msg.authorId)}
+        >
+          {messageBody}
+        </MessageContextMenu>
+      )}
+
+      {/* Mobile quick reaction bar */}
+      {quickReactionAnchor && (
+        <QuickReactionBar
+          messageId={msg.id}
+          channelId={msg.channelId}
+          serverId={serverId}
+          anchorRect={quickReactionAnchor}
+          onClose={() => setQuickReactionAnchor(null)}
+          onOpenContextMenu={() => setMobileActionsOpen(true)}
+          onOpenFullPicker={() => setMobileEmojiPickerOpen(true)}
+        />
+      )}
+
+      {/* Mobile message actions bottom sheet */}
+      {mobileActionsOpen && (
+        <MobileMessageActions
+          isOwn={isOwn}
+          isPinned={isPinned}
+          canPin
+          canManageMessages={canManageMessages}
+          encryptedContent={msg.encryptedContent}
+          onClose={() => setMobileActionsOpen(false)}
+          onReply={onReply}
+          onEdit={onStartEdit}
+          onDelete={() => setDeleteDialogOpen(true)}
+          onPin={() => pinMessage(msg.channelId, msg.id)}
+          onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onViewProfile={() => openProfilePane(msg.authorId)}
+        />
+      )}
+
+      {/* Mobile full emoji picker (bottom sheet style) */}
+      {mobileEmojiPickerOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/30"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              setMobileEmojiPickerOpen(false);
+            }}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up">
+            <div className="mx-auto mt-2 mb-1 h-1 w-8 rounded-full bg-border" />
+            <EmojiPicker
+              onEmojiSelect={(emoji) => {
+                handleReactionSelect(emoji);
+                setMobileEmojiPickerOpen(false);
+              }}
+              serverId={serverId}
+            />
+          </div>
+        </>
+      )}
 
       <DeleteMessageDialog
         channelId={msg.channelId}
