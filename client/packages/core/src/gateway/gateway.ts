@@ -482,15 +482,24 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       if (event.payload.case === 'messageCreate' && event.payload.value) {
         const msg = event.payload.value;
 
-        // Own encrypted messages: skip adding the gateway echo to avoid a
-        // brief flash of scrambled text. The optimistic path in sendMessage
-        // already added the plaintext version with keyVersion=0. If the echo
-        // arrives before the optimistic add, we simply wait — addMessage
-        // dedupes by ID, so the optimistic plaintext version wins either way.
-        const skipOwnEcho =
-          msg.authorId === currentUserId && msg.keyVersion > 0;
-        if (!skipOwnEcho) {
-          useMessageStore.getState().addMessage(msg.channelId, msg);
+        // Own encrypted messages: the optimistic path in sendMessage already
+        // added the plaintext version (keyVersion=0). The gateway echo has
+        // encrypted text but also carries server-enriched attachment metadata
+        // (e.g., encryptedKey for file decryption). Merge the attachment data
+        // without overwriting the plaintext content.
+        const store = useMessageStore.getState();
+        const existingOwn =
+          msg.authorId === currentUserId && msg.keyVersion > 0
+            ? store.byId[msg.channelId]?.[msg.id]
+            : undefined;
+        if (existingOwn) {
+          // Keep plaintext content + keyVersion=0, but update attachments
+          store.updateMessage(msg.channelId, {
+            ...existingOwn,
+            attachments: msg.attachments,
+          });
+        } else {
+          store.addMessage(msg.channelId, msg);
           if (msg.keyVersion > 0 && isSessionReady()) {
             decryptInBackground(msg.channelId, msg, generation);
           }

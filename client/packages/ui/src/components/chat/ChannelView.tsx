@@ -690,46 +690,98 @@ function useAuthorName(authorId: string, serverId: string | undefined) {
 
 // --- Encrypted attachment placeholder (reserves layout space before decrypt) ---
 
+/** Mirrors the ImageGrid + AttachmentRenderer layout with skeleton placeholders. */
 function EncryptedAttachmentPlaceholder({
-  attachment,
+  attachments,
 }: {
-  attachment: Attachment;
+  attachments: Attachment[];
 }) {
-  const isImage = attachment.contentType.startsWith('image/');
-  const isVideo = attachment.contentType.startsWith('video/');
-  const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
+  const images = attachments.filter((a) => a.contentType.startsWith('image/'));
+  const nonImages = attachments.filter(
+    (a) => !a.contentType.startsWith('image/'),
+  );
 
-  if (isImage || isVideo) {
-    return (
-      <div
-        className="rounded-md bg-bg-surface overflow-hidden"
-        style={
-          hasAspectRatio
-            ? {
-                aspectRatio: `${attachment.width}/${attachment.height}`,
-                maxWidth: Math.min(400, attachment.width),
-                maxHeight: 300,
-              }
-            : { width: 200, height: 120 }
-        }
-      >
-        {attachment.microThumbnail.length > 0 && (
-          <img
-            src={microThumbDataURI(attachment.microThumbnail)}
-            alt=""
-            aria-hidden="true"
-            className="h-full w-full object-cover blur-xl scale-110"
-          />
-        )}
-      </div>
-    );
-  }
-
-  // Non-media file: small fixed-height placeholder
   return (
-    <div className="flex h-12 w-60 items-center gap-2 rounded-md border border-border bg-bg-surface px-3">
-      <div className="h-4 w-4 rounded bg-bg-elevated" />
-      <div className="h-3 flex-1 rounded bg-bg-elevated" />
+    <div className="mt-1 flex flex-col gap-2">
+      {images.length === 1 && <SingleImagePlaceholder attachment={images[0]} />}
+      {images.length > 1 && <ImageGridPlaceholder images={images} />}
+      {nonImages.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {nonImages.map((att) =>
+            att.contentType.startsWith('video/') ? (
+              <SingleImagePlaceholder key={att.id} attachment={att} />
+            ) : (
+              <div
+                key={att.id}
+                className="flex h-12 w-60 items-center gap-2 rounded-md border border-border bg-bg-surface px-3"
+              >
+                <div className="h-4 w-4 rounded bg-bg-elevated" />
+                <div className="h-3 flex-1 rounded bg-bg-elevated" />
+              </div>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Single image/video: constrained aspect ratio, same as ImageAttachment. */
+function SingleImagePlaceholder({ attachment }: { attachment: Attachment }) {
+  const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
+  return (
+    <div
+      className="rounded-md bg-bg-surface overflow-hidden"
+      style={
+        hasAspectRatio
+          ? {
+              aspectRatio: `${attachment.width}/${attachment.height}`,
+              maxWidth: Math.min(400, attachment.width),
+              maxHeight: 300,
+            }
+          : { maxWidth: 400, maxHeight: 300, aspectRatio: '4/3' }
+      }
+    >
+      {attachment.microThumbnail.length > 0 && (
+        <img
+          src={microThumbDataURI(attachment.microThumbnail)}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover blur-xl scale-110"
+        />
+      )}
+    </div>
+  );
+}
+
+/** Multi-image grid: mirrors ImageGrid layout with square cells. */
+function ImageGridPlaceholder({ images }: { images: Attachment[] }) {
+  const count = images.length;
+  const gridClass =
+    count === 2
+      ? 'grid grid-cols-2 gap-1'
+      : count === 3
+        ? 'grid grid-cols-2 grid-rows-2 gap-1'
+        : 'grid grid-cols-2 gap-1';
+
+  return (
+    <div className={`${gridClass} max-w-[400px] rounded-md overflow-hidden`}>
+      {images.map((img, i) => (
+        <div
+          key={img.id}
+          className={`relative bg-bg-surface overflow-hidden ${count === 3 && i === 0 ? 'row-span-2' : ''}`}
+          style={{ aspectRatio: count === 3 && i === 0 ? '1/2' : '1/1' }}
+        >
+          {img.microThumbnail.length > 0 && (
+            <img
+              src={microThumbDataURI(img.microThumbnail)}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover blur-xl scale-110"
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1207,14 +1259,9 @@ const MessageItem = memo(function MessageItem({
                 <>
                   <DecryptingText />
                   {msg.attachments.length > 0 && (
-                    <div className="mt-1 flex flex-col gap-2">
-                      {msg.attachments.map((att) => (
-                        <EncryptedAttachmentPlaceholder
-                          key={att.id}
-                          attachment={att}
-                        />
-                      ))}
-                    </div>
+                    <EncryptedAttachmentPlaceholder
+                      attachments={msg.attachments}
+                    />
                   )}
                 </>
               ) : (
