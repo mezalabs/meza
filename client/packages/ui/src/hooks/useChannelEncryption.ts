@@ -39,7 +39,7 @@ export interface ChannelEncryption {
 const KEY_RETRY_DELAYS_MS = [500, 1_000, 1_500, 2_000];
 
 /** Minimum interval between manual retries to prevent rapid clicking. */
-const RETRY_COOLDOWN_MS = 10_000;
+const RETRY_COOLDOWN_MS = 3_000;
 
 /**
  * Manages channel key state for an encrypted channel.

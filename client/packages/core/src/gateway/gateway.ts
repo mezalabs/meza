@@ -580,17 +580,16 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
               const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
               if (!maybePk || gen !== generation) return;
               const pk: Uint8Array = maybePk;
-              // Get all channels in this server that we have keys for,
-              // but skip private channels — the new member won't have
+              // Get all non-private channels in this server.
+              // Skip private channels — the new member won't have
               // ViewChannel on them (@everyone deny). They'll lazy-init
               // if they're later granted access.
+              // distributeKeyToMember handles cache misses via server fetch,
+              // so we don't need to pre-filter by hasChannelKey.
               const channels =
                 useChannelStore.getState().byServer[serverId] ?? [];
-              // Limit concurrency to avoid bursting hundreds of RPCs
               const CONCURRENCY = 5;
-              const queue = channels.filter(
-                (ch) => !ch.isPrivate && hasChannelKey(ch.id),
-              );
+              const queue = channels.filter((ch) => !ch.isPrivate);
               async function distributeWorker() {
                 while (queue.length > 0) {
                   const ch = queue.shift();
@@ -706,22 +705,21 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         if (!serverId && chId) {
           fetchDMChannels().catch(() => {});
         }
-        // If a new member was added and we have the channel key, distribute it
+        // If a new member was added, distribute the channel key to them
         // with retry — the new user may still be bootstrapping.
+        // distributeKeyToMember handles cache misses via server fetch.
         if (userId !== currentUserId && chId && isSessionReady()) {
-          if (hasChannelKey(chId)) {
-            const gen = generation;
-            fetchPublicKeyWithRetry(userId, gen).then((pk) => {
-              if (pk && gen === generation) {
-                distributeKeyToMember(chId, userId, pk).catch((err) =>
-                  console.error(
-                    `[E2EE] distributeKeyToMember failed for ${userId} in ${chId}:`,
-                    err,
-                  ),
-                );
-              }
-            });
-          }
+          const gen = generation;
+          fetchPublicKeyWithRetry(userId, gen).then((pk) => {
+            if (pk && gen === generation) {
+              distributeKeyToMember(chId, userId, pk).catch((err) =>
+                console.error(
+                  `[E2EE] distributeKeyToMember failed for ${userId} in ${chId}:`,
+                  err,
+                ),
+              );
+            }
+          });
         }
       } else if (
         event.payload.case === 'channelMemberRemove' &&
