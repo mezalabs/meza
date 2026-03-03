@@ -574,7 +574,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           const serverId = joinedMember.serverId;
           const newUserId = joinedMember.userId;
           const isInviter = joinedMember.inviterUserId === currentUserId;
-          const jitterMs = isInviter ? 0 : 3000 + Math.random() * 5000;
+          const jitterMs = isInviter ? 0 : 1000 + Math.random() * 2000;
           const gen = generation;
           setTimeout(() => {
             if (gen !== generation) return;

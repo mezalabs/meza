@@ -750,7 +750,9 @@ function DecryptingText() {
       className="inline-block font-mono text-sm text-text-muted/50 select-none"
       aria-label="Decrypting message"
     >
+      <span className="text-text-muted/70">[Decrypting: </span>
       {display.join('')}
+      <span className="text-text-muted/70">]</span>
     </output>
   );
 }
