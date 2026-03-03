@@ -600,7 +600,7 @@ export function ChannelView({
               aria-hidden="true"
             />
             <p className="text-sm text-text-muted">
-              <span className="font-medium text-text">
+              <span className="font-medium text-accent">
                 {"You're almost there! "}
               </span>
               {isSessionReady()
