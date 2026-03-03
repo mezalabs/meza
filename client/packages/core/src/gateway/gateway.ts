@@ -482,11 +482,18 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       if (event.payload.case === 'messageCreate' && event.payload.value) {
         const msg = event.payload.value;
 
-        // Add message to store immediately. If encrypted (keyVersion > 0),
-        // fire off background decryption that updates the store once done.
-        useMessageStore.getState().addMessage(msg.channelId, msg);
-        if (msg.keyVersion > 0 && isSessionReady()) {
-          decryptInBackground(msg.channelId, msg, generation);
+        // Own encrypted messages: skip adding the gateway echo to avoid a
+        // brief flash of scrambled text. The optimistic path in sendMessage
+        // already added the plaintext version with keyVersion=0. If the echo
+        // arrives before the optimistic add, we simply wait — addMessage
+        // dedupes by ID, so the optimistic plaintext version wins either way.
+        const skipOwnEcho =
+          msg.authorId === currentUserId && msg.keyVersion > 0;
+        if (!skipOwnEcho) {
+          useMessageStore.getState().addMessage(msg.channelId, msg);
+          if (msg.keyVersion > 0 && isSessionReady()) {
+            decryptInBackground(msg.channelId, msg, generation);
+          }
         }
         useTypingStore.getState().clearUser(msg.channelId, msg.authorId);
         // Increment unread count for messages from other users, but only if
