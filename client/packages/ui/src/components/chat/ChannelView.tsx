@@ -38,7 +38,8 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import {
@@ -616,12 +617,30 @@ export function ChannelView({
           </div>
         )}
 
-        {/* Message input */}
-        <MessageComposer
-          channelId={channelId}
-          serverId={serverId}
-          disabled={viewMode === 'historical'}
-        />
+        {/* Message input — replaced with key status bar when keys unavailable */}
+        {needsEncryption && !keysAvailable ? (
+          <div className="flex flex-shrink-0 items-center gap-3 border-t border-border px-4 py-3">
+            <LockKeyIcon
+              size={18}
+              className="flex-shrink-0 text-text-muted"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-text-muted">
+              <span className="font-medium text-text">
+                {"You're almost there! "}
+              </span>
+              {isSessionReady()
+                ? 'Waiting for encryption keys — an online member will share them with you shortly.'
+                : 'Loading your encryption keys — this only takes a moment.'}
+            </p>
+          </div>
+        ) : (
+          <MessageComposer
+            channelId={channelId}
+            serverId={serverId}
+            disabled={viewMode === 'historical'}
+          />
+        )}
       </div>
 
       {/* Pinned messages sidebar */}
@@ -711,13 +730,7 @@ function scramble(len: number): string[] {
 }
 
 /** Placeholder with cycling characters, mimicking a cipher being decoded. */
-function DecryptingText({
-  channelId,
-  keyVersion,
-}: {
-  channelId: string;
-  keyVersion: number;
-}) {
+function DecryptingText() {
   // Stable per-instance "shape": random word-lengths with spaces between them.
   const [layout] = useState(() => {
     const totalLen = 10 + Math.floor(Math.random() * 18);
@@ -751,38 +764,15 @@ function DecryptingText({
 
   const display = chars.map((c, i) => (layout.spaces.has(i) ? '\u2004' : c));
 
-  const hasKey = hasChannelKey(channelId);
-  const sessionOk = isSessionReady();
-
-  let status: string;
-  let detail: string;
-  if (!sessionOk) {
-    status = 'Initializing encryption session';
-    detail = 'Your encryption keys are being loaded.';
-  } else if (!hasKey) {
-    status = 'Waiting for channel key';
-    detail =
-      'An online server member will distribute the key, or it will be fetched from the server shortly.';
-  } else {
-    status = 'Decrypting message';
-    detail = `Key v${keyVersion} — decryption in progress.`;
-  }
-
   return (
-    <span className="group/decrypt relative inline-block">
-      <output
-        className="inline-block font-mono text-sm text-text-muted/50 select-none cursor-help"
-        aria-label={status}
-      >
-        <span className="text-text-muted/70">[Decrypting: </span>
-        {display.join('')}
-        <span className="text-text-muted/70">]</span>
-      </output>
-      <span className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-64 rounded-md border border-border bg-bg-elevated px-3 py-2 shadow-lg group-hover/decrypt:block">
-        <span className="block text-xs font-medium text-text">{status}</span>
-        <span className="mt-0.5 block text-xs text-text-muted">{detail}</span>
-      </span>
-    </span>
+    <output
+      className="inline-block font-mono text-sm text-text-muted/50 select-none"
+      aria-label="Decrypting message"
+    >
+      <span className="text-text-muted/70">[Decrypting: </span>
+      {display.join('')}
+      <span className="text-text-muted/70">]</span>
+    </output>
   );
 }
 
@@ -1189,10 +1179,7 @@ const MessageItem = memo(function MessageItem({
               ) : (
                 <>
                   {isStillEncrypted ? (
-                    <DecryptingText
-                      channelId={channelId}
-                      keyVersion={msg.keyVersion}
-                    />
+                    <DecryptingText />
                   ) : (
                     text && (
                       <MarkdownRenderer content={text} serverId={serverId} />
