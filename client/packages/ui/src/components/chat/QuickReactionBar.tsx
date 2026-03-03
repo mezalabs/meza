@@ -1,8 +1,4 @@
-import {
-  addReaction,
-  useAuthStore,
-  useReactionStore,
-} from '@meza/core';
+import { addReaction, useAuthStore, useReactionStore } from '@meza/core';
 import { DotsThreeIcon, PlusIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 
@@ -11,7 +7,6 @@ const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 interface QuickReactionBarProps {
   messageId: string;
   channelId: string;
-  serverId?: string;
   anchorRect: DOMRect;
   onClose: () => void;
   onOpenContextMenu: () => void;
@@ -21,7 +16,6 @@ interface QuickReactionBarProps {
 export const QuickReactionBar = memo(function QuickReactionBar({
   messageId,
   channelId,
-  serverId,
   anchorRect,
   onClose,
   onOpenContextMenu,

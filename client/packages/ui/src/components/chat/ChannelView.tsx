@@ -863,7 +863,8 @@ const MessageItem = memo(function MessageItem({
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
-  const [quickReactionAnchor, setQuickReactionAnchor] = useState<DOMRect | null>(null);
+  const [quickReactionAnchor, setQuickReactionAnchor] =
+    useState<DOMRect | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
@@ -978,261 +979,251 @@ const MessageItem = memo(function MessageItem({
       data-message-id={msg.id}
       {...(isMobile ? longPressHandlers : {})}
     >
-          {/* Reply preview bar (shown above message content when this is a reply) */}
-          {msg.replyToId && (
-            <ReplyPreviewBar
-              parentMessage={parentMessage}
-              parentAuthorName={parentAuthorName}
-              parentAuthorId={parentMessage?.authorId}
-              serverId={serverId}
-              onJump={() => {
-                if (msg.replyToId) onJumpToMessage(msg.replyToId);
-              }}
-            />
-          )}
+      {/* Reply preview bar (shown above message content when this is a reply) */}
+      {msg.replyToId && (
+        <ReplyPreviewBar
+          parentMessage={parentMessage}
+          parentAuthorName={parentAuthorName}
+          parentAuthorId={parentMessage?.authorId}
+          serverId={serverId}
+          onJump={() => {
+            if (msg.replyToId) onJumpToMessage(msg.replyToId);
+          }}
+        />
+      )}
 
-          {/* Hover action buttons (desktop only) */}
-          {!isMobile && (
-            <div
-              className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-            >
+      {/* Hover action buttons (desktop only) */}
+      {!isMobile && (
+        <div
+          className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        >
+          <button
+            type="button"
+            className="p-1 text-xs text-text-muted hover:text-text rounded"
+            onClick={onReply}
+            title="Reply"
+          >
+            &#x21A9;
+          </button>
+          <Popover.Root
+            open={reactionPickerOpen}
+            onOpenChange={setReactionPickerOpen}
+          >
+            <Popover.Trigger asChild>
               <button
                 type="button"
                 className="p-1 text-xs text-text-muted hover:text-text rounded"
-                onClick={onReply}
-                title="Reply"
+                title="Add reaction"
               >
-                &#x21A9;
+                <SmileyIcon size={14} aria-hidden="true" />
               </button>
-              <Popover.Root
-                open={reactionPickerOpen}
-                onOpenChange={setReactionPickerOpen}
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
+                side="top"
+                align="end"
+                sideOffset={8}
+                collisionPadding={16}
               >
-                <Popover.Trigger asChild>
-                  <button
-                    type="button"
-                    className="p-1 text-xs text-text-muted hover:text-text rounded"
-                    title="Add reaction"
-                  >
-                    <SmileyIcon size={14} aria-hidden="true" />
-                  </button>
-                </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Content
-                    className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
-                    side="top"
-                    align="end"
-                    sideOffset={8}
-                    collisionPadding={16}
-                  >
-                    <EmojiPicker
-                      onEmojiSelect={handleReactionSelect}
-                      serverId={serverId}
-                    />
-                  </Popover.Content>
-                </Popover.Portal>
-              </Popover.Root>
-              {isOwn ? (
-                <>
-                  <button
-                    type="button"
-                    className="p-1 text-xs text-text-muted hover:text-text rounded"
-                    onClick={onStartEdit}
-                    title="Edit"
-                  >
-                    &#x270E;
-                  </button>
-                  <button
-                    type="button"
-                    className="p-1 text-xs text-text-muted hover:text-error rounded"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    title="Delete"
-                  >
-                    &#x1F5D1;
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="p-1 text-xs text-text-muted hover:text-text rounded"
-                    onClick={() => {
-                      navigator.clipboard.writeText(text);
-                    }}
-                    title="Copy"
-                  >
-                    &#x1F4CB;
-                  </button>
-                  {canManageMessages && (
-                    <button
-                      type="button"
-                      className="p-1 text-xs text-text-muted hover:text-error rounded"
-                      onClick={() => setDeleteDialogOpen(true)}
-                      title="Delete"
-                    >
-                      &#x1F5D1;
-                    </button>
-                  )}
-                </>
+                <EmojiPicker
+                  onEmojiSelect={handleReactionSelect}
+                  serverId={serverId}
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+          {isOwn ? (
+            <>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                onClick={onStartEdit}
+                title="Edit"
+              >
+                &#x270E;
+              </button>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-error rounded"
+                onClick={() => setDeleteDialogOpen(true)}
+                title="Delete"
+              >
+                &#x1F5D1;
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                onClick={() => {
+                  navigator.clipboard.writeText(text);
+                }}
+                title="Copy"
+              >
+                &#x1F4CB;
+              </button>
+              {canManageMessages && (
+                <button
+                  type="button"
+                  className="p-1 text-xs text-text-muted hover:text-error rounded"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  title="Delete"
+                >
+                  &#x1F5D1;
+                </button>
               )}
-            </div>
+            </>
           )}
+        </div>
+      )}
 
-          <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2">
+        <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
+          <button type="button" className="mt-0.5 flex-shrink-0 cursor-pointer">
+            <Avatar
+              avatarUrl={authorAvatar}
+              displayName={authorLabel}
+              size="md"
+            />
+          </button>
+        </ProfilePopoverCard>
+        <div className="min-w-0 flex-1 select-text">
+          <div className="flex items-baseline gap-2">
             <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
               <button
                 type="button"
-                className="mt-0.5 flex-shrink-0 cursor-pointer"
+                className="text-sm font-medium cursor-pointer hover:underline text-text"
+                style={authorColor ? { color: authorColor } : undefined}
               >
-                <Avatar
-                  avatarUrl={authorAvatar}
-                  displayName={authorLabel}
-                  size="md"
-                />
+                {authorLabel}
               </button>
             </ProfilePopoverCard>
-            <div className="min-w-0 flex-1 select-text">
-              <div className="flex items-baseline gap-2">
-                <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
-                  <button
-                    type="button"
-                    className="text-sm font-medium cursor-pointer hover:underline text-text"
-                    style={authorColor ? { color: authorColor } : undefined}
-                  >
-                    {authorLabel}
-                  </button>
-                </ProfilePopoverCard>
-                {time && (
-                  <span
-                    className="text-xs text-text-subtle"
-                    title={toISO(time)}
-                  >
-                    {formatRelativeTime(time)}
-                  </span>
-                )}
-                {isPinned && (
-                  <PushPinIcon
-                    size={12}
-                    className="text-text-muted inline"
-                    aria-label="Pinned"
-                  />
-                )}
-                {msg.editedAt && (
-                  <span className="text-xs text-text-subtle">(edited)</span>
-                )}
-              </div>
-
-              {isEditing ? (
-                <div className="mt-1">
-                  <textarea
-                    ref={editRef}
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    onKeyDown={handleEditKeyDown}
-                    disabled={isSaving}
-                    rows={1}
-                    className="w-full resize-none rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
-                  />
-                  {editError && (
-                    <p className="text-xs text-error mt-1">{editError}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      disabled={isSaving}
-                      className="text-xs text-text-muted hover:text-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveEdit}
-                      disabled={isSaving}
-                      className="text-xs text-accent hover:text-accent-hover font-medium"
-                    >
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </button>
-                    <span className="text-xs text-text-subtle">
-                      escape to cancel &middot; enter to save
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {isStillEncrypted ? (
-                    <DecryptingText />
-                  ) : (
-                    text && (
-                      <MarkdownRenderer content={text} serverId={serverId} />
-                    )
-                  )}
-                  {msg.embeds.length > 0 && (
-                    <div className="flex flex-col gap-1">
-                      {msg.embeds.map((embed, i) => (
-                        <LinkPreviewCard key={embed.url || i} embed={embed} />
-                      ))}
-                    </div>
-                  )}
-                  {msg.attachments.length > 0 && (
-                    <AttachmentRenderer
-                      attachments={msg.attachments}
-                      channelId={channelId}
-                    />
-                  )}
-                </>
-              )}
-
-              <ReactionBar
-                channelId={msg.channelId}
-                messageId={msg.id}
-                serverId={serverId}
+            {time && (
+              <span className="text-xs text-text-subtle" title={toISO(time)}>
+                {formatRelativeTime(time)}
+              </span>
+            )}
+            {isPinned && (
+              <PushPinIcon
+                size={12}
+                className="text-text-muted inline"
+                aria-label="Pinned"
               />
+            )}
+            {msg.editedAt && (
+              <span className="text-xs text-text-subtle">(edited)</span>
+            )}
+          </div>
 
-              {/* Replies accordion */}
-              {hasLocalReplies && (
-                <div className="mt-1">
-                  <button
-                    type="button"
-                    className="text-xs text-accent hover:text-accent-hover font-medium"
-                    onClick={handleAccordionToggle}
-                  >
-                    {accordionOpen
-                      ? `Hide replies${replyTotalCount ? ` (${replyTotalCount})` : ''}`
-                      : 'Replies'}
-                  </button>
-                  {accordionOpen && (
-                    <div className="mt-1 ml-2 border-l-2 border-border pl-2 space-y-0.5">
-                      {replyEntries ? (
-                        <>
-                          <div className="text-xs text-text-muted mb-1">
-                            {replyTotalCount}{' '}
-                            {replyTotalCount === 1 ? 'reply' : 'replies'}
-                          </div>
-                          {replyEntries.map((entry) => (
-                            <ReplyAccordionEntry
-                              key={entry.messageId}
-                              entry={entry}
-                              channelId={channelId}
-                              serverId={serverId}
-                              onJump={() => onJumpToMessage(entry.messageId)}
-                            />
-                          ))}
-                        </>
-                      ) : (
-                        <span className="text-xs text-text-subtle">
-                          Loading…
-                        </span>
-                      )}
-                    </div>
+          {isEditing ? (
+            <div className="mt-1">
+              <textarea
+                ref={editRef}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                disabled={isSaving}
+                rows={1}
+                className="w-full resize-none rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
+              />
+              {editError && (
+                <p className="text-xs text-error mt-1">{editError}</p>
+              )}
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={isSaving}
+                  className="text-xs text-text-muted hover:text-text"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={isSaving}
+                  className="text-xs text-accent hover:text-accent-hover font-medium"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+                <span className="text-xs text-text-subtle">
+                  escape to cancel &middot; enter to save
+                </span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {isStillEncrypted ? (
+                <DecryptingText />
+              ) : (
+                text && <MarkdownRenderer content={text} serverId={serverId} />
+              )}
+              {msg.embeds.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {msg.embeds.map((embed, i) => (
+                    <LinkPreviewCard key={embed.url || i} embed={embed} />
+                  ))}
+                </div>
+              )}
+              {msg.attachments.length > 0 && (
+                <AttachmentRenderer
+                  attachments={msg.attachments}
+                  channelId={channelId}
+                />
+              )}
+            </>
+          )}
+
+          <ReactionBar
+            channelId={msg.channelId}
+            messageId={msg.id}
+            serverId={serverId}
+          />
+
+          {/* Replies accordion */}
+          {hasLocalReplies && (
+            <div className="mt-1">
+              <button
+                type="button"
+                className="text-xs text-accent hover:text-accent-hover font-medium"
+                onClick={handleAccordionToggle}
+              >
+                {accordionOpen
+                  ? `Hide replies${replyTotalCount ? ` (${replyTotalCount})` : ''}`
+                  : 'Replies'}
+              </button>
+              {accordionOpen && (
+                <div className="mt-1 ml-2 border-l-2 border-border pl-2 space-y-0.5">
+                  {replyEntries ? (
+                    <>
+                      <div className="text-xs text-text-muted mb-1">
+                        {replyTotalCount}{' '}
+                        {replyTotalCount === 1 ? 'reply' : 'replies'}
+                      </div>
+                      {replyEntries.map((entry) => (
+                        <ReplyAccordionEntry
+                          key={entry.messageId}
+                          entry={entry}
+                          channelId={channelId}
+                          serverId={serverId}
+                          onJump={() => onJumpToMessage(entry.messageId)}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <span className="text-xs text-text-subtle">Loading…</span>
                   )}
                 </div>
               )}
             </div>
-            {/* end content column */}
-          </div>
-          {/* end avatar + content row */}
+          )}
         </div>
+        {/* end content column */}
+      </div>
+      {/* end avatar + content row */}
+    </div>
   );
 
   return (
@@ -1261,7 +1252,6 @@ const MessageItem = memo(function MessageItem({
         <QuickReactionBar
           messageId={msg.id}
           channelId={msg.channelId}
-          serverId={serverId}
           anchorRect={quickReactionAnchor}
           onClose={() => setQuickReactionAnchor(null)}
           onOpenContextMenu={() => setMobileActionsOpen(true)}
