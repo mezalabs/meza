@@ -197,7 +197,9 @@ describe('distributeKeyToMember', () => {
     expect(unwrapped).toEqual(originalKey);
   });
 
-  it('does nothing if no key exists for channel', async () => {
+  it('does nothing if no key exists for channel (even after server fetch)', async () => {
+    // Server returns no envelopes for this channel
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([]);
     await distributeKeyToMember('ch1', 'bob', bob.publicKey);
     expect(storeKeyEnvelopes).not.toHaveBeenCalled();
   });
@@ -397,6 +399,8 @@ describe('fetch deduplication', () => {
 
 describe('lazyInitChannelKey', () => {
   it('creates new key and stores self-envelope when no key exists', async () => {
+    // Fetch-first returns nothing — no existing keys
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([]);
     vi.mocked(rotateChannelKeyRpc).mockResolvedValue(1);
     vi.mocked(listMembersWithViewChannel).mockResolvedValue({
       members: [],
@@ -425,21 +429,23 @@ describe('lazyInitChannelKey', () => {
       new Error('version conflict'),
     );
 
-    // The re-fetch should return a valid key
+    // First fetch-first returns nothing, then re-fetch after conflict returns winner
     const winnerKey = generateChannelKey();
     const winnerEnvelope = await wrapChannelKey(winnerKey, alice.publicKey);
-    vi.mocked(getKeyEnvelopes).mockResolvedValue([
-      { keyVersion: 1, envelope: winnerEnvelope },
-    ]);
+    vi.mocked(getKeyEnvelopes)
+      .mockResolvedValueOnce([]) // fetch-first: no keys yet
+      .mockResolvedValueOnce([{ keyVersion: 1, envelope: winnerEnvelope }]); // re-fetch after conflict
 
     const result = await lazyInitChannelKey('ch-conflict', 'alice');
 
     expect(result).toBe(true);
-    expect(getKeyEnvelopes).toHaveBeenCalledWith('ch-conflict');
+    expect(getKeyEnvelopes).toHaveBeenCalledTimes(2);
     expect(hasChannelKey('ch-conflict')).toBe(true);
   });
 
   it('deduplicates concurrent lazy init calls', async () => {
+    // Fetch-first returns nothing — no existing keys
+    vi.mocked(getKeyEnvelopes).mockResolvedValue([]);
     vi.mocked(rotateChannelKeyRpc).mockResolvedValue(1);
     vi.mocked(listMembersWithViewChannel).mockResolvedValue({
       members: [],

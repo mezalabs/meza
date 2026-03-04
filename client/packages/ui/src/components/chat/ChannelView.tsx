@@ -1,10 +1,10 @@
-import type { MessageState, ReplyEntry } from '@meza/core';
+import type { Attachment, MessageState, ReplyEntry } from '@meza/core';
 import {
   ackMessage,
   addReaction,
   backfillChannel,
   buildMessageContent,
-  decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
   fetchAndCacheChannelKeys,
@@ -38,7 +38,8 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import {
@@ -289,7 +290,6 @@ export function ChannelView({
             } catch {}
           }
           if (hasChannelKey(channelId)) {
-            // Collect unique author IDs for bulk key fetch
             const encrypted = res.messages.filter(
               (m: { keyVersion: number }) => m.keyVersion > 0,
             );
@@ -303,21 +303,8 @@ export function ChannelView({
             try {
               pubKeys = await getPublicKeys(authorIds);
             } catch {}
-
-            // Decrypt newest messages first so the bottom of the chat
-            // (where the user is looking) resolves before older messages.
-            for (const msg of [...encrypted].reverse()) {
-              if (ignore) break;
-              const pk = pubKeys[msg.authorId];
-              if (!pk) continue;
-              try {
-                await decryptAndUpdateMessage(channelId, msg, pk);
-              } catch (err) {
-                console.error(
-                  `[E2EE] historical decrypt failed for ${msg.id}:`,
-                  err,
-                );
-              }
+            if (!ignore) {
+              await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
             }
           }
         }
@@ -335,11 +322,7 @@ export function ChannelView({
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
   // (e.g., key distribution from channel creator hadn't completed yet).
-  //
-  // The gateway's `decryptInBackground` may also be decrypting these same
-  // messages concurrently via real-time delivery. This is safe because
-  // `decryptAndUpdateMessage` uses a keyVersion > 0 idempotency guard,
-  // ensuring only the first path to finish writes the plaintext.
+  // Uses batched update to avoid per-message re-renders.
   useEffect(() => {
     if (!keysAvailable || !needsEncryption || !channelId) return;
     const messages = useMessageStore.getState().byChannel[channelId] ?? [];
@@ -359,16 +342,8 @@ export function ChannelView({
       } catch {
         return;
       }
-      // Decrypt newest messages first so the bottom of the chat resolves first.
-      for (const msg of [...encrypted].reverse()) {
-        if (cancelled) break;
-        const pk = pubKeys[msg.authorId];
-        if (!pk) continue;
-        try {
-          await decryptAndUpdateMessage(channelId, msg, pk);
-        } catch (err) {
-          console.error(`[E2EE] deferred decrypt failed for ${msg.id}:`, err);
-        }
+      if (!cancelled) {
+        await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
       }
     })();
     return () => {
@@ -621,12 +596,30 @@ export function ChannelView({
           </div>
         )}
 
-        {/* Message input */}
-        <MessageComposer
-          channelId={channelId}
-          serverId={serverId}
-          disabled={viewMode === 'historical'}
-        />
+        {/* Message input — replaced with key status bar when keys unavailable */}
+        {needsEncryption && !keysAvailable ? (
+          <div className="flex flex-shrink-0 items-center gap-3 border-t border-border px-4 py-3">
+            <LockKeyIcon
+              size={18}
+              className="flex-shrink-0 text-text-muted"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-text-muted">
+              <span className="font-medium text-accent">
+                {"You're almost there! "}
+              </span>
+              {isSessionReady()
+                ? 'Waiting for encryption keys — when a member of the channel comes online, keys will be shared with you.'
+                : 'Loading your encryption keys — this only takes a moment.'}
+            </p>
+          </div>
+        ) : (
+          <MessageComposer
+            channelId={channelId}
+            serverId={serverId}
+            disabled={viewMode === 'historical'}
+          />
+        )}
       </div>
 
       {/* Pinned messages sidebar */}
@@ -700,6 +693,113 @@ function useAuthorName(authorId: string, serverId: string | undefined) {
   return useDisplayName(authorId, serverId);
 }
 
+// --- Encrypted attachment placeholder (reserves layout space before decrypt) ---
+
+/** Mirrors the ImageGrid + AttachmentRenderer layout with skeleton placeholders. */
+function EncryptedAttachmentPlaceholder({
+  attachments,
+}: {
+  attachments: Attachment[];
+}) {
+  const images = attachments.filter((a) => a.contentType.startsWith('image/'));
+  const nonImages = attachments.filter(
+    (a) => !a.contentType.startsWith('image/'),
+  );
+
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      {images.length === 1 && <SingleImagePlaceholder attachment={images[0]} />}
+      {images.length > 1 && <ImageGridPlaceholder images={images} />}
+      {nonImages.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {nonImages.map((att) =>
+            att.contentType.startsWith('video/') ? (
+              <SingleImagePlaceholder key={att.id} attachment={att} />
+            ) : (
+              <div
+                key={att.id}
+                className="flex h-12 w-60 items-center gap-2 rounded-md border border-border bg-bg-surface px-3"
+              >
+                <div className="h-4 w-4 rounded bg-bg-elevated" />
+                <div className="h-3 flex-1 rounded bg-bg-elevated" />
+              </div>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Single image/video: constrained aspect ratio, same as ImageAttachment. */
+function SingleImagePlaceholder({ attachment }: { attachment: Attachment }) {
+  const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
+  return (
+    <div
+      className="rounded-md bg-bg-surface overflow-hidden"
+      style={
+        hasAspectRatio
+          ? {
+              aspectRatio: `${attachment.width}/${attachment.height}`,
+              maxWidth: Math.min(400, attachment.width),
+              maxHeight: 300,
+            }
+          : { maxWidth: 400, maxHeight: 300, aspectRatio: '4/3' }
+      }
+    >
+      {attachment.microThumbnail.length > 0 && (
+        <img
+          src={microThumbDataURI(attachment.microThumbnail)}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover blur-xl scale-110"
+        />
+      )}
+    </div>
+  );
+}
+
+/** Multi-image grid: mirrors ImageGrid layout with square cells. */
+function ImageGridPlaceholder({ images }: { images: Attachment[] }) {
+  const count = images.length;
+  const gridClass =
+    count === 2
+      ? 'grid grid-cols-2 gap-1'
+      : count === 3
+        ? 'grid grid-cols-2 grid-rows-2 gap-1'
+        : 'grid grid-cols-2 gap-1';
+
+  return (
+    <div className={`${gridClass} max-w-[400px] rounded-md overflow-hidden`}>
+      {images.map((img, i) => (
+        <div
+          key={img.id}
+          className={`relative bg-bg-surface overflow-hidden ${count === 3 && i === 0 ? 'row-span-2' : ''}`}
+          style={{ aspectRatio: count === 3 && i === 0 ? '1/2' : '1/1' }}
+        >
+          {img.microThumbnail.length > 0 && (
+            <img
+              src={microThumbDataURI(img.microThumbnail)}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover blur-xl scale-110"
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Convert raw bytes to a base64 data URI for inline display. */
+function microThumbDataURI(data: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return `data:image/webp;base64,${btoa(binary)}`;
+}
+
 // --- Scrambling "decrypting" placeholder (à la charmbracelet/mods) ---
 
 const CIPHER =
@@ -715,7 +815,7 @@ function scramble(len: number): string[] {
   return arr;
 }
 
-/** Placeholder with cycling Braille characters, mimicking a cipher being decoded. */
+/** Placeholder with cycling characters, mimicking a cipher being decoded. */
 function DecryptingText() {
   // Stable per-instance "shape": random word-lengths with spaces between them.
   const [layout] = useState(() => {
@@ -753,7 +853,7 @@ function DecryptingText() {
   return (
     <output
       className="inline-block font-mono text-sm text-text-muted/50 select-none"
-      aria-label="Decrypting message"
+      aria-label="Encrypted message"
     >
       {display.join('')}
     </output>
@@ -1153,12 +1253,19 @@ const MessageItem = memo(function MessageItem({
                 </span>
               </div>
             </div>
+          ) : isStillEncrypted ? (
+            <>
+              <DecryptingText />
+              {msg.attachments.length > 0 && (
+                <EncryptedAttachmentPlaceholder
+                  attachments={msg.attachments}
+                />
+              )}
+            </>
           ) : (
             <>
-              {isStillEncrypted ? (
-                <DecryptingText />
-              ) : (
-                text && <MarkdownRenderer content={text} serverId={serverId} />
+              {text && (
+                <MarkdownRenderer content={text} serverId={serverId} />
               )}
               {msg.embeds.length > 0 && (
                 <div className="flex flex-col gap-1">

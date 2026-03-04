@@ -126,7 +126,7 @@ export {
   updateSound,
 } from './api/chat.ts';
 // API — key distribution
-export { getPublicKeys } from './api/keys.ts';
+export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
 export {
   completeUpload,
@@ -178,8 +178,10 @@ export {
   clearCryptoStorage,
   createChannelKey,
   createIdentity,
+  createInviteKeyBundle,
   type DerivedKeys,
   decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
   decryptFile,
   decryptMessage,
   decryptPayload,
@@ -205,10 +207,13 @@ export {
   generateVideoThumbnail,
   getCachedChannelIds,
   getChannelKey,
+  getChannelKeysForServer,
   getIdentity,
   getLatestKeyVersion,
   hasChannelKey,
   type IdentityKeypair,
+  importChannelKeys,
+  importInviteKeyBundle,
   initChannelKeys,
   isSessionReady,
   lazyInitChannelKey,

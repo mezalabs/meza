@@ -22,6 +22,7 @@ export interface MessageActions {
   prependMessages: (channelId: string, messages: Message[]) => void;
   addMessage: (channelId: string, message: Message) => void;
   updateMessage: (channelId: string, message: Message) => void;
+  bulkUpdateMessages: (channelId: string, messages: Message[]) => void;
   removeMessage: (channelId: string, messageId: string) => void;
   removeMessages: (channelId: string, messageIds: string[]) => void;
   setHasMore: (channelId: string, hasMore: boolean) => void;
@@ -132,6 +133,23 @@ export const useMessageStore = create<MessageState & MessageActions>()(
         state.byChannel[channelId][idx] = message;
         if (state.byId[channelId]) {
           state.byId[channelId][message.id] = message;
+        }
+      });
+    },
+
+    bulkUpdateMessages: (channelId, updates) => {
+      set((state) => {
+        const messages = state.byChannel[channelId];
+        if (!messages) return;
+        const updateMap = new Map(updates.map((m) => [m.id, m]));
+        for (let i = 0; i < messages.length; i++) {
+          const updated = updateMap.get(messages[i].id);
+          if (updated) {
+            state.byChannel[channelId][i] = updated;
+            if (state.byId[channelId]) {
+              state.byId[channelId][updated.id] = updated;
+            }
+          }
         }
       });
     },

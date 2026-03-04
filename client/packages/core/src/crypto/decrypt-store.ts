@@ -57,6 +57,56 @@ export async function decryptAndUpdateMessage(
   >,
   senderPublicKey: Uint8Array,
 ): Promise<boolean> {
+  const result = await decryptMessageInPlace(channelId, msg, senderPublicKey);
+  if (!result) return false;
+
+  useMessageStore.getState().updateMessage(channelId, result);
+  return true;
+}
+
+/**
+ * Decrypt a batch of messages and apply all results in a single store write.
+ * Eliminates per-message re-renders that cause visible bottom-to-top decryption.
+ */
+export async function decryptAndUpdateMessages(
+  channelId: string,
+  msgs: Array<
+    Pick<
+      Message,
+      'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'
+    >
+  >,
+  pubKeys: Record<string, Uint8Array>,
+): Promise<number> {
+  const results: Message[] = [];
+  for (const msg of msgs) {
+    const pk = pubKeys[msg.authorId];
+    if (!pk) continue;
+    try {
+      const result = await decryptMessageInPlace(channelId, msg, pk);
+      if (result) results.push(result);
+    } catch (err) {
+      console.error(`[E2EE] batch decrypt failed for ${msg.id}:`, err);
+    }
+  }
+  if (results.length > 0) {
+    useMessageStore.getState().bulkUpdateMessages(channelId, results);
+  }
+  return results.length;
+}
+
+/**
+ * Decrypt a message and return the updated Message object without writing
+ * to the store. Returns null if the message was already decrypted or missing.
+ */
+async function decryptMessageInPlace(
+  channelId: string,
+  msg: Pick<
+    Message,
+    'id' | 'authorId' | 'keyVersion' | 'encryptedContent' | 'attachments'
+  >,
+  senderPublicKey: Uint8Array,
+): Promise<Message | null> {
   const plaintext = await decryptMessage(
     channelId,
     msg.keyVersion,
@@ -68,7 +118,7 @@ export async function decryptAndUpdateMessage(
 
   // Re-read from store -- another concurrent path may have already decrypted.
   const stored = useMessageStore.getState().byId[channelId]?.[msg.id];
-  if (!stored || stored.keyVersion === 0) return false;
+  if (!stored || stored.keyVersion === 0) return null;
 
   // Enrich attachments with metadata from the encrypted JSON payload
   let enrichedAttachments: Attachment[] = stored.attachments;
@@ -84,14 +134,11 @@ export async function decryptAndUpdateMessage(
     });
   }
 
-  // Store the text portion (not the raw V1 bytes) as UTF-8
   const textBytes = new TextEncoder().encode(parsed.text);
-  useMessageStore.getState().updateMessage(channelId, {
+  return {
     ...stored,
     encryptedContent: textBytes,
     keyVersion: 0,
     attachments: enrichedAttachments,
-  });
-
-  return true;
+  };
 }

@@ -259,6 +259,8 @@ message JoinServerRequest {
 
 message JoinServerResponse {
   Server server = 1;
+  bytes encrypted_channel_keys = 2;  // AES-256-GCM encrypted key bundle (if invite had one)
+  bytes channel_keys_iv = 3;         // 12-byte IV for decryption
 }
 
 message LeaveServerRequest {
@@ -362,6 +364,8 @@ message CreateInviteRequest {
   string server_id = 1;
   int32 max_uses = 2;
   int32 max_age_seconds = 3;
+  bytes encrypted_channel_keys = 4;  // AES-256-GCM encrypted key bundle (optional)
+  bytes channel_keys_iv = 5;         // 12-byte IV for decryption (optional)
 }
 
 message CreateInviteResponse {
@@ -474,6 +478,7 @@ message Event {
     GetPresenceResponse presence_update = 57;
     RolesReorderedEvent roles_reordered = 58;
     // 59 reserved for future voice activity update event
+    KeyRequestEvent key_request = 60;
   }
 }
 
@@ -529,6 +534,7 @@ enum EventType {
   // 48 reserved (was EVENT_TYPE_MLS_GROUP_MESSAGE)
   EVENT_TYPE_ROLES_REORDERED = 49;
   // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
+  EVENT_TYPE_KEY_REQUEST = 51;
 }
 
 message MessageDeleteEvent {
@@ -555,6 +561,11 @@ message MemberRemoveEvent {
 message TypingEvent {
   string channel_id = 1;
   string user_id = 2;
+}
+
+message KeyRequestEvent {
+  string channel_id = 1;
+  string user_id = 2;  // The user requesting keys
 }
 
 message RoleDeleteEvent {

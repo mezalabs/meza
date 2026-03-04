@@ -16,6 +16,7 @@ import (
 	"github.com/meza-chat/meza/internal/config"
 	"github.com/meza-chat/meza/internal/database"
 	"github.com/meza-chat/meza/internal/middleware"
+	bfnats "github.com/meza-chat/meza/internal/nats"
 	"github.com/meza-chat/meza/internal/observability"
 	"github.com/meza-chat/meza/internal/ratelimit"
 	"github.com/meza-chat/meza/internal/store"
@@ -36,10 +37,17 @@ func main() {
 	}
 	defer pool.Close()
 
+	nc, err := bfnats.NewClient(cfg.NatsURL)
+	if err != nil {
+		slog.Error("connect nats", "err", err)
+		os.Exit(1)
+	}
+	defer nc.Drain()
+
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	permStore := store.NewChannelPermissionStore(pool)
 	chatStore := store.NewChatStore(pool)
-	svc := newKeyService(keyEnvelopeStore, permStore, chatStore)
+	svc := newKeyService(keyEnvelopeStore, permStore, chatStore, nc)
 
 	// Load Ed25519 public key (required for JWT verification).
 	ed25519PubKey, err := auth.LoadEd25519PublicKey(cfg.Ed25519PublicKey, cfg.Ed25519PublicKeyFile)

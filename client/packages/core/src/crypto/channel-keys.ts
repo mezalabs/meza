@@ -304,8 +304,22 @@ export async function distributeKeyToMember(
   userId: string,
   memberEdPub: Uint8Array,
 ): Promise<void> {
-  const version = getLatestKeyVersion(channelId);
-  if (version === null) return;
+  let version = getLatestKeyVersion(channelId);
+
+  // Cache miss — attempt server fetch before giving up
+  if (version === null) {
+    try {
+      await fetchAndCacheChannelKeys(channelId);
+    } catch (err) {
+      console.warn(
+        `[E2EE] distributeKeyToMember fetch failed for ${channelId}:`,
+        err,
+      );
+      return;
+    }
+    version = getLatestKeyVersion(channelId);
+    if (version === null) return;
+  }
 
   const key = channelKeyCache.get(channelId)?.get(version);
   if (!key) return;
@@ -315,13 +329,13 @@ export async function distributeKeyToMember(
 
 /**
  * Lazily initialize a channel key for a channel that has none.
- * Uses RotateChannelKey(expectedVersion=0) for atomic creation —
- * if another client races, the loser re-fetches the winner's key.
+ * Fetch-first: tries to retrieve existing keys from the server before
+ * creating a new one with RotateChannelKey(expectedVersion=0).
  * After creation, distributes to all members with ViewChannel.
  *
  * @param channelId - Channel to create a key for
  * @param userId - Current user's ID (for the self-envelope)
- * @returns true if key is now available (created or fetched from winner)
+ * @returns true if key is now available (created or fetched)
  */
 export function lazyInitChannelKey(
   channelId: string,
@@ -340,6 +354,18 @@ export function lazyInitChannelKey(
 async function doLazyInit(channelId: string, userId: string): Promise<boolean> {
   if (!identityKeypair) return false;
 
+  // Fetch-first: try to get existing keys from the server
+  try {
+    await fetchAndCacheChannelKeys(channelId);
+    if (hasChannelKey(channelId)) return true;
+  } catch (err) {
+    console.warn(
+      `[E2EE] lazyInit fetch failed for ${channelId}, will attempt creation:`,
+      err,
+    );
+  }
+
+  // No keys exist — create version 1 atomically
   const newKey = generateChannelKey();
   const selfEnvelope = await wrapChannelKey(newKey, identityKeypair.publicKey);
 
@@ -347,7 +373,6 @@ async function doLazyInit(channelId: string, userId: string): Promise<boolean> {
     const newVersion = await rotateChannelKeyRpc(channelId, 0, [
       { userId, envelope: selfEnvelope },
     ]);
-    // We won the race — cache key and distribute to others
     setCachedKey(channelId, newVersion, newKey);
     schedulePersist();
 
@@ -359,13 +384,20 @@ async function doLazyInit(channelId: string, userId: string): Promise<boolean> {
       ),
     );
     return true;
-  } catch {
-    // Version conflict — another client created the key first
-    // Re-fetch their key
+  } catch (err) {
+    // Version conflict — another client created the key first, re-fetch
+    console.warn(
+      `[E2EE] lazyInit creation conflict for ${channelId}, re-fetching:`,
+      err,
+    );
     try {
       await fetchAndCacheChannelKeys(channelId);
       return hasChannelKey(channelId);
-    } catch {
+    } catch (fetchErr) {
+      console.error(
+        `[E2EE] lazyInit re-fetch failed for ${channelId}:`,
+        fetchErr,
+      );
       return false;
     }
   }
@@ -491,11 +523,52 @@ export function getCachedChannelIds(): string[] {
   return [...channelKeyCache.keys()];
 }
 
-// Flush pending persist when tab becomes hidden to prevent data loss.
+/**
+ * Get cached channel keys for a set of channel IDs.
+ * Returns a map of channelId → (version → base64-encoded key).
+ * Used by invite key bundles to pre-share keys with joining members.
+ */
+export function getChannelKeysForServer(
+  channelIds: string[],
+): Record<string, Record<string, string>> {
+  const result: Record<string, Record<string, string>> = {};
+  for (const channelId of channelIds) {
+    const versionMap = channelKeyCache.get(channelId);
+    if (!versionMap || versionMap.size === 0) continue;
+    const versions: Record<string, string> = {};
+    for (const [version, key] of versionMap) {
+      versions[String(version)] = bytesToBase64(key);
+    }
+    result[channelId] = versions;
+  }
+  return result;
+}
+
+/**
+ * Import channel keys from an external source (e.g., invite key bundle).
+ * Sets keys in cache and triggers persist to IndexedDB.
+ */
+export function importChannelKeys(
+  keys: Record<string, Record<string, string>>,
+): void {
+  for (const [channelId, versions] of Object.entries(keys)) {
+    for (const [version, keyB64] of Object.entries(versions)) {
+      setCachedKey(channelId, Number(version), base64ToBytes(keyB64));
+    }
+  }
+  schedulePersist();
+}
+
+// Flush pending persist when tab becomes hidden or page unloads to prevent data loss.
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       flushChannelKeys();
     }
+  });
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    flushChannelKeys();
   });
 }
