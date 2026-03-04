@@ -453,24 +453,25 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           useGatewayStore.getState().incrementReconnectCount();
           useTypingStore.getState().reset();
           usePresenceStore.getState().reset();
-          // E2EE: redistribute cached channel keys to all members.
-          // Covers the case where a new member joined while we were offline
-          // and missed the memberJoin event. Cooldown prevents flooding on
-          // flapping connections. UPSERT semantics make duplicates safe.
-          if (
-            isSessionReady() &&
-            Date.now() - lastRedistributeTime > REDISTRIBUTE_COOLDOWN_MS
-          ) {
-            const channelIds = getCachedChannelIds();
-            if (channelIds.length > 0) {
-              lastRedistributeTime = Date.now();
-              redistributeChannelKeys(channelIds).catch((err) =>
-                console.error(
-                  '[E2EE] reconnect key redistribution failed:',
-                  err,
-                ),
-              );
-            }
+        }
+        // E2EE: redistribute cached channel keys to all members.
+        // Covers both initial connection (Bob opens a fresh tab while
+        // Charlie is waiting for keys) and reconnects (missed memberJoin).
+        // Cooldown prevents flooding on flapping connections.
+        // UPSERT semantics make duplicates safe.
+        if (
+          isSessionReady() &&
+          Date.now() - lastRedistributeTime > REDISTRIBUTE_COOLDOWN_MS
+        ) {
+          const channelIds = getCachedChannelIds();
+          if (channelIds.length > 0) {
+            lastRedistributeTime = Date.now();
+            redistributeChannelKeys(channelIds).catch((err) =>
+              console.error(
+                '[E2EE] key redistribution on connect failed:',
+                err,
+              ),
+            );
           }
         }
         hasConnectedBefore = true;
@@ -938,6 +939,31 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         const { user } = event.payload.value;
         if (user) {
           useFriendStore.getState().removeIncomingRequest(user.id);
+        }
+      } else if (event.payload.case === 'keyRequest' && event.payload.value) {
+        // E2EE key request events.
+        const { channelId, userId } = event.payload.value;
+        // Don't respond to our own request.
+        if (userId !== currentUserId && isSessionReady() && hasChannelKey(channelId)) {
+          const gen = generation;
+          // Random jitter (0–2s) to prevent thundering herd when multiple
+          // clients receive the same request simultaneously.
+          const jitterMs = Math.random() * 2000;
+          setTimeout(() => {
+            if (gen !== generation) return;
+            (async () => {
+              try {
+                const pk = await fetchPublicKeyWithRetry(userId, gen);
+                if (!pk || gen !== generation) return;
+                await distributeKeyToMember(channelId, userId, pk);
+              } catch (err) {
+                console.error(
+                  `[E2EE] key request: failed to distribute key for ${channelId} to ${userId}:`,
+                  err,
+                );
+              }
+            })();
+          }, jitterMs);
         }
       }
       // Presence update events.

@@ -62,6 +62,12 @@ export async function listMembersWithViewChannel(
   };
 }
 
+export async function requestChannelKeys(
+  channelId: string,
+): Promise<void> {
+  await keysClient.requestChannelKeys({ channelId });
+}
+
 export async function rotateChannelKeyRpc(
   channelId: string,
   expectedVersion: number,

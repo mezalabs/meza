@@ -746,6 +746,86 @@ func (x *ListMembersWithViewChannelResponse) GetNextCursor() string {
 	return ""
 }
 
+type RequestChannelKeysRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestChannelKeysRequest) Reset() {
+	*x = RequestChannelKeysRequest{}
+	mi := &file_meza_v1_keys_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestChannelKeysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestChannelKeysRequest) ProtoMessage() {}
+
+func (x *RequestChannelKeysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_keys_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestChannelKeysRequest.ProtoReflect.Descriptor instead.
+func (*RequestChannelKeysRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_keys_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RequestChannelKeysRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type RequestChannelKeysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RequestChannelKeysResponse) Reset() {
+	*x = RequestChannelKeysResponse{}
+	mi := &file_meza_v1_keys_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RequestChannelKeysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RequestChannelKeysResponse) ProtoMessage() {}
+
+func (x *RequestChannelKeysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_keys_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RequestChannelKeysResponse.ProtoReflect.Descriptor instead.
+func (*RequestChannelKeysResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_keys_proto_rawDescGZIP(), []int{16}
+}
+
 var File_meza_v1_keys_proto protoreflect.FileDescriptor
 
 const file_meza_v1_keys_proto_rawDesc = "" +
@@ -800,7 +880,11 @@ const file_meza_v1_keys_proto_rawDesc = "" +
 	"\"ListMembersWithViewChannelResponse\x120\n" +
 	"\amembers\x18\x01 \x03(\v2\x16.meza.v1.UserPublicKeyR\amembers\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor2\xba\x04\n" +
+	"nextCursor\":\n" +
+	"\x19RequestChannelKeysRequest\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\"\x1c\n" +
+	"\x1aRequestChannelKeysResponse2\x99\x05\n" +
 	"\n" +
 	"KeyService\x12Z\n" +
 	"\x11RegisterPublicKey\x12!.meza.v1.RegisterPublicKeyRequest\x1a\".meza.v1.RegisterPublicKeyResponse\x12N\n" +
@@ -808,7 +892,8 @@ const file_meza_v1_keys_proto_rawDesc = "" +
 	"\x11StoreKeyEnvelopes\x12!.meza.v1.StoreKeyEnvelopesRequest\x1a\".meza.v1.StoreKeyEnvelopesResponse\x12T\n" +
 	"\x0fGetKeyEnvelopes\x12\x1f.meza.v1.GetKeyEnvelopesRequest\x1a .meza.v1.GetKeyEnvelopesResponse\x12W\n" +
 	"\x10RotateChannelKey\x12 .meza.v1.RotateChannelKeyRequest\x1a!.meza.v1.RotateChannelKeyResponse\x12u\n" +
-	"\x1aListMembersWithViewChannel\x12*.meza.v1.ListMembersWithViewChannelRequest\x1a+.meza.v1.ListMembersWithViewChannelResponseB\x83\x01\n" +
+	"\x1aListMembersWithViewChannel\x12*.meza.v1.ListMembersWithViewChannelRequest\x1a+.meza.v1.ListMembersWithViewChannelResponse\x12]\n" +
+	"\x12RequestChannelKeys\x12\".meza.v1.RequestChannelKeysRequest\x1a#.meza.v1.RequestChannelKeysResponseB\x83\x01\n" +
 	"\vcom.meza.v1B\tKeysProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
@@ -823,7 +908,7 @@ func file_meza_v1_keys_proto_rawDescGZIP() []byte {
 	return file_meza_v1_keys_proto_rawDescData
 }
 
-var file_meza_v1_keys_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_meza_v1_keys_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_meza_v1_keys_proto_goTypes = []any{
 	(*RegisterPublicKeyRequest)(nil),           // 0: meza.v1.RegisterPublicKeyRequest
 	(*RegisterPublicKeyResponse)(nil),          // 1: meza.v1.RegisterPublicKeyResponse
@@ -840,10 +925,12 @@ var file_meza_v1_keys_proto_goTypes = []any{
 	(*UserPublicKey)(nil),                      // 12: meza.v1.UserPublicKey
 	(*ListMembersWithViewChannelRequest)(nil),  // 13: meza.v1.ListMembersWithViewChannelRequest
 	(*ListMembersWithViewChannelResponse)(nil), // 14: meza.v1.ListMembersWithViewChannelResponse
-	nil, // 15: meza.v1.GetPublicKeysResponse.PublicKeysEntry
+	(*RequestChannelKeysRequest)(nil),          // 15: meza.v1.RequestChannelKeysRequest
+	(*RequestChannelKeysResponse)(nil),         // 16: meza.v1.RequestChannelKeysResponse
+	nil,                                        // 17: meza.v1.GetPublicKeysResponse.PublicKeysEntry
 }
 var file_meza_v1_keys_proto_depIdxs = []int32{
-	15, // 0: meza.v1.GetPublicKeysResponse.public_keys:type_name -> meza.v1.GetPublicKeysResponse.PublicKeysEntry
+	17, // 0: meza.v1.GetPublicKeysResponse.public_keys:type_name -> meza.v1.GetPublicKeysResponse.PublicKeysEntry
 	4,  // 1: meza.v1.StoreKeyEnvelopesRequest.envelopes:type_name -> meza.v1.KeyEnvelope
 	9,  // 2: meza.v1.GetKeyEnvelopesResponse.envelopes:type_name -> meza.v1.VersionedKeyEnvelope
 	4,  // 3: meza.v1.RotateChannelKeyRequest.envelopes:type_name -> meza.v1.KeyEnvelope
@@ -854,14 +941,16 @@ var file_meza_v1_keys_proto_depIdxs = []int32{
 	7,  // 8: meza.v1.KeyService.GetKeyEnvelopes:input_type -> meza.v1.GetKeyEnvelopesRequest
 	10, // 9: meza.v1.KeyService.RotateChannelKey:input_type -> meza.v1.RotateChannelKeyRequest
 	13, // 10: meza.v1.KeyService.ListMembersWithViewChannel:input_type -> meza.v1.ListMembersWithViewChannelRequest
-	1,  // 11: meza.v1.KeyService.RegisterPublicKey:output_type -> meza.v1.RegisterPublicKeyResponse
-	3,  // 12: meza.v1.KeyService.GetPublicKeys:output_type -> meza.v1.GetPublicKeysResponse
-	6,  // 13: meza.v1.KeyService.StoreKeyEnvelopes:output_type -> meza.v1.StoreKeyEnvelopesResponse
-	8,  // 14: meza.v1.KeyService.GetKeyEnvelopes:output_type -> meza.v1.GetKeyEnvelopesResponse
-	11, // 15: meza.v1.KeyService.RotateChannelKey:output_type -> meza.v1.RotateChannelKeyResponse
-	14, // 16: meza.v1.KeyService.ListMembersWithViewChannel:output_type -> meza.v1.ListMembersWithViewChannelResponse
-	11, // [11:17] is the sub-list for method output_type
-	5,  // [5:11] is the sub-list for method input_type
+	15, // 11: meza.v1.KeyService.RequestChannelKeys:input_type -> meza.v1.RequestChannelKeysRequest
+	1,  // 12: meza.v1.KeyService.RegisterPublicKey:output_type -> meza.v1.RegisterPublicKeyResponse
+	3,  // 13: meza.v1.KeyService.GetPublicKeys:output_type -> meza.v1.GetPublicKeysResponse
+	6,  // 14: meza.v1.KeyService.StoreKeyEnvelopes:output_type -> meza.v1.StoreKeyEnvelopesResponse
+	8,  // 15: meza.v1.KeyService.GetKeyEnvelopes:output_type -> meza.v1.GetKeyEnvelopesResponse
+	11, // 16: meza.v1.KeyService.RotateChannelKey:output_type -> meza.v1.RotateChannelKeyResponse
+	14, // 17: meza.v1.KeyService.ListMembersWithViewChannel:output_type -> meza.v1.ListMembersWithViewChannelResponse
+	16, // 18: meza.v1.KeyService.RequestChannelKeys:output_type -> meza.v1.RequestChannelKeysResponse
+	12, // [12:19] is the sub-list for method output_type
+	5,  // [5:12] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -878,7 +967,7 @@ func file_meza_v1_keys_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_keys_proto_rawDesc), len(file_meza_v1_keys_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

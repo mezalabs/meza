@@ -17,6 +17,7 @@ import {
   isSessionReady,
   lazyInitChannelKey,
   onSessionReady,
+  requestChannelKeys,
   useAuthStore,
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -172,8 +173,13 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
         }
       }
 
-      // Fast retries exhausted — start slow poll. Keys may arrive when
-      // another member reconnects and redistributes. Cap at 5 minutes.
+      // Fast retries exhausted — actively request keys from online members
+      // and start slow poll. Cap at 5 minutes.
+      try {
+        await requestChannelKeys(channelId);
+      } catch {
+        // Best-effort — don't break the poll loop.
+      }
       if (!cancelled) setReady(true);
       for (let poll = 0; poll < MAX_SLOW_POLLS && !cancelled; poll++) {
         await new Promise((r) => setTimeout(r, SLOW_POLL_MS));
@@ -184,6 +190,15 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
             setReady(true);
           }
           return;
+        }
+        // Re-request every ~60s (every 6th poll) in case earlier requests
+        // didn't reach anyone online.
+        if (poll > 0 && poll % 6 === 0) {
+          try {
+            await requestChannelKeys(channelId);
+          } catch {
+            // Best-effort.
+          }
         }
       }
     }

@@ -126,7 +126,7 @@ export {
   updateSound,
 } from './api/chat.ts';
 // API — key distribution
-export { getPublicKeys } from './api/keys.ts';
+export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
 export {
   completeUpload,

@@ -478,6 +478,7 @@ message Event {
     GetPresenceResponse presence_update = 57;
     RolesReorderedEvent roles_reordered = 58;
     // 59 reserved for future voice activity update event
+    KeyRequestEvent key_request = 60;
   }
 }
 
@@ -533,6 +534,7 @@ enum EventType {
   // 48 reserved (was EVENT_TYPE_MLS_GROUP_MESSAGE)
   EVENT_TYPE_ROLES_REORDERED = 49;
   // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
+  EVENT_TYPE_KEY_REQUEST = 51;
 }
 
 message MessageDeleteEvent {
@@ -559,6 +561,11 @@ message MemberRemoveEvent {
 message TypingEvent {
   string channel_id = 1;
   string user_id = 2;
+}
+
+message KeyRequestEvent {
+  string channel_id = 1;
+  string user_id = 2;  // The user requesting keys
 }
 
 message RoleDeleteEvent {

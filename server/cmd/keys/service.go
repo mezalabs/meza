@@ -5,11 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/nats-io/nats.go"
 	v1 "github.com/meza-chat/meza/gen/meza/v1"
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/store"
+	"github.com/meza-chat/meza/internal/subjects"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -17,6 +23,10 @@ const (
 	maxPublicKeySize = 32   // Ed25519 verify key
 	maxEnvelopeBatch = 1000 // max envelopes per RPC call
 	maxUserIDsBatch  = 100  // max user IDs per GetPublicKeys call
+
+	// keyRequestCooldown is the minimum interval between key request broadcasts
+	// for the same (userID, channelID) pair. Aligned with the client-side 60s re-request.
+	keyRequestCooldown = 30 * time.Second
 )
 
 // viewChannelChecker checks ViewChannel permission for a user on a channel.
@@ -24,6 +34,7 @@ const (
 type viewChannelChecker interface {
 	HasViewChannel(ctx context.Context, userID, channelID string) (bool, error)
 	ListMembersWithViewChannel(ctx context.Context, channelID, cursor string, limit int) ([]store.MemberPublicKey, error)
+	GetChannelServerID(ctx context.Context, channelID string) (string, error)
 }
 
 // envelopeRecipientChecker checks that envelope recipients exist as server
@@ -37,10 +48,15 @@ type keyService struct {
 	store     store.KeyEnvelopeStorer
 	permStore viewChannelChecker
 	chatStore envelopeRecipientChecker
+	nc        *nats.Conn
+
+	// keyRequestThrottle tracks the last key request time per (userID, channelID)
+	// to prevent amplification attacks. Key: "userID:channelID", Value: time.Time.
+	keyRequestThrottle sync.Map
 }
 
-func newKeyService(s store.KeyEnvelopeStorer, ps viewChannelChecker, cs envelopeRecipientChecker) *keyService {
-	return &keyService{store: s, permStore: ps, chatStore: cs}
+func newKeyService(s store.KeyEnvelopeStorer, ps viewChannelChecker, cs envelopeRecipientChecker, nc *nats.Conn) *keyService {
+	return &keyService{store: s, permStore: ps, chatStore: cs, nc: nc}
 }
 
 // validateAndConvertEnvelopes validates proto envelopes and converts them to store types.
@@ -347,4 +363,77 @@ func (s *keyService) ListMembersWithViewChannel(
 		Members:    protoMembers,
 		NextCursor: nextCursor,
 	}), nil
+}
+
+func (s *keyService) RequestChannelKeys(
+	ctx context.Context,
+	req *connect.Request[v1.RequestChannelKeysRequest],
+) (*connect.Response[v1.RequestChannelKeysResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+
+	channelID := req.Msg.GetChannelId()
+	if channelID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_id is required"))
+	}
+
+	// Per-user, per-channel throttle to prevent amplification attacks.
+	// Returns success silently if the same request was made recently.
+	throttleKey := userID + ":" + channelID
+	if lastReq, ok := s.keyRequestThrottle.Load(throttleKey); ok {
+		if time.Since(lastReq.(time.Time)) < keyRequestCooldown {
+			return connect.NewResponse(&v1.RequestChannelKeysResponse{}), nil
+		}
+	}
+
+	// Caller must have ViewChannel on the channel.
+	hasView, err := s.permStore.HasViewChannel(ctx, userID, channelID)
+	if err != nil {
+		slog.Error("check ViewChannel for RequestChannelKeys", "channel_id", channelID, "user_id", userID, "err", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to check channel permission"))
+	}
+	if !hasView {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("no ViewChannel permission on this channel"))
+	}
+
+	// Look up which server owns this channel.
+	// DM channels have no server — key requests are only meaningful for server channels.
+	serverID, err := s.permStore.GetChannelServerID(ctx, channelID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("key requests are not supported for DM channels"))
+		}
+		slog.Error("get channel server ID for RequestChannelKeys", "channel_id", channelID, "err", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get channel server"))
+	}
+
+	// Build and publish the key request event via NATS.
+	event := &v1.Event{
+		Type:      v1.EventType_EVENT_TYPE_KEY_REQUEST,
+		Timestamp: timestamppb.New(time.Now()),
+		Payload: &v1.Event_KeyRequest{
+			KeyRequest: &v1.KeyRequestEvent{
+				ChannelId: channelID,
+				UserId:    userID,
+			},
+		},
+	}
+	eventData, err := proto.Marshal(event)
+	if err != nil {
+		slog.Error("marshal key request event", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal event"))
+	}
+
+	if s.nc != nil {
+		if err := s.nc.Publish(subjects.ServerMember(serverID), eventData); err != nil {
+			slog.Warn("nats publish key request failed", "subject", subjects.ServerMember(serverID), "err", err)
+		}
+	}
+
+	// Record the request time for throttling.
+	s.keyRequestThrottle.Store(throttleKey, time.Now())
+
+	return connect.NewResponse(&v1.RequestChannelKeysResponse{}), nil
 }

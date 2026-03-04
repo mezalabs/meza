@@ -51,6 +51,9 @@ const (
 	// KeyServiceListMembersWithViewChannelProcedure is the fully-qualified name of the KeyService's
 	// ListMembersWithViewChannel RPC.
 	KeyServiceListMembersWithViewChannelProcedure = "/meza.v1.KeyService/ListMembersWithViewChannel"
+	// KeyServiceRequestChannelKeysProcedure is the fully-qualified name of the KeyService's
+	// RequestChannelKeys RPC.
+	KeyServiceRequestChannelKeysProcedure = "/meza.v1.KeyService/RequestChannelKeys"
 )
 
 // KeyServiceClient is a client for the meza.v1.KeyService service.
@@ -69,6 +72,9 @@ type KeyServiceClient interface {
 	// ListMembersWithViewChannel returns user IDs and public keys for server members
 	// who have ViewChannel permission on the given channel. Paginated for large servers.
 	ListMembersWithViewChannel(context.Context, *connect.Request[v1.ListMembersWithViewChannelRequest]) (*connect.Response[v1.ListMembersWithViewChannelResponse], error)
+	// RequestChannelKeys broadcasts a key request event so online members
+	// who have the channel key can distribute it to the requester.
+	RequestChannelKeys(context.Context, *connect.Request[v1.RequestChannelKeysRequest]) (*connect.Response[v1.RequestChannelKeysResponse], error)
 }
 
 // NewKeyServiceClient constructs a client for the meza.v1.KeyService service. By default, it uses
@@ -118,6 +124,12 @@ func NewKeyServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...
 			connect.WithSchema(keyServiceMethods.ByName("ListMembersWithViewChannel")),
 			connect.WithClientOptions(opts...),
 		),
+		requestChannelKeys: connect.NewClient[v1.RequestChannelKeysRequest, v1.RequestChannelKeysResponse](
+			httpClient,
+			baseURL+KeyServiceRequestChannelKeysProcedure,
+			connect.WithSchema(keyServiceMethods.ByName("RequestChannelKeys")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -129,6 +141,7 @@ type keyServiceClient struct {
 	getKeyEnvelopes            *connect.Client[v1.GetKeyEnvelopesRequest, v1.GetKeyEnvelopesResponse]
 	rotateChannelKey           *connect.Client[v1.RotateChannelKeyRequest, v1.RotateChannelKeyResponse]
 	listMembersWithViewChannel *connect.Client[v1.ListMembersWithViewChannelRequest, v1.ListMembersWithViewChannelResponse]
+	requestChannelKeys         *connect.Client[v1.RequestChannelKeysRequest, v1.RequestChannelKeysResponse]
 }
 
 // RegisterPublicKey calls meza.v1.KeyService.RegisterPublicKey.
@@ -161,6 +174,11 @@ func (c *keyServiceClient) ListMembersWithViewChannel(ctx context.Context, req *
 	return c.listMembersWithViewChannel.CallUnary(ctx, req)
 }
 
+// RequestChannelKeys calls meza.v1.KeyService.RequestChannelKeys.
+func (c *keyServiceClient) RequestChannelKeys(ctx context.Context, req *connect.Request[v1.RequestChannelKeysRequest]) (*connect.Response[v1.RequestChannelKeysResponse], error) {
+	return c.requestChannelKeys.CallUnary(ctx, req)
+}
+
 // KeyServiceHandler is an implementation of the meza.v1.KeyService service.
 type KeyServiceHandler interface {
 	// RegisterPublicKey uploads a user's Ed25519 signing public key (called at registration/login).
@@ -177,6 +195,9 @@ type KeyServiceHandler interface {
 	// ListMembersWithViewChannel returns user IDs and public keys for server members
 	// who have ViewChannel permission on the given channel. Paginated for large servers.
 	ListMembersWithViewChannel(context.Context, *connect.Request[v1.ListMembersWithViewChannelRequest]) (*connect.Response[v1.ListMembersWithViewChannelResponse], error)
+	// RequestChannelKeys broadcasts a key request event so online members
+	// who have the channel key can distribute it to the requester.
+	RequestChannelKeys(context.Context, *connect.Request[v1.RequestChannelKeysRequest]) (*connect.Response[v1.RequestChannelKeysResponse], error)
 }
 
 // NewKeyServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -222,6 +243,12 @@ func NewKeyServiceHandler(svc KeyServiceHandler, opts ...connect.HandlerOption) 
 		connect.WithSchema(keyServiceMethods.ByName("ListMembersWithViewChannel")),
 		connect.WithHandlerOptions(opts...),
 	)
+	keyServiceRequestChannelKeysHandler := connect.NewUnaryHandler(
+		KeyServiceRequestChannelKeysProcedure,
+		svc.RequestChannelKeys,
+		connect.WithSchema(keyServiceMethods.ByName("RequestChannelKeys")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.KeyService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KeyServiceRegisterPublicKeyProcedure:
@@ -236,6 +263,8 @@ func NewKeyServiceHandler(svc KeyServiceHandler, opts ...connect.HandlerOption) 
 			keyServiceRotateChannelKeyHandler.ServeHTTP(w, r)
 		case KeyServiceListMembersWithViewChannelProcedure:
 			keyServiceListMembersWithViewChannelHandler.ServeHTTP(w, r)
+		case KeyServiceRequestChannelKeysProcedure:
+			keyServiceRequestChannelKeysHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -267,4 +296,8 @@ func (UnimplementedKeyServiceHandler) RotateChannelKey(context.Context, *connect
 
 func (UnimplementedKeyServiceHandler) ListMembersWithViewChannel(context.Context, *connect.Request[v1.ListMembersWithViewChannelRequest]) (*connect.Response[v1.ListMembersWithViewChannelResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.KeyService.ListMembersWithViewChannel is not implemented"))
+}
+
+func (UnimplementedKeyServiceHandler) RequestChannelKeys(context.Context, *connect.Request[v1.RequestChannelKeysRequest]) (*connect.Response[v1.RequestChannelKeysResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.KeyService.RequestChannelKeys is not implemented"))
 }
