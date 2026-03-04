@@ -82,6 +82,13 @@ func main() {
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	permCache := permissions.NewCache(rdb)
 
+	// Clean up key bundles on expired/revoked invites (best-effort, non-blocking).
+	if n, err := inviteStore.CleanExpiredKeyBundles(ctx); err != nil {
+		slog.Warn("failed to clean expired invite key bundles", "err", err)
+	} else if n > 0 {
+		slog.Info("cleaned expired invite key bundles", "count", n)
+	}
+
 	svc := newChatService(chatServiceConfig{
 		Pool:                    pool,
 		ChatStore:               chatStore,

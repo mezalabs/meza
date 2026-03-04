@@ -505,6 +505,26 @@ func (s *ChannelPermissionStore) listDMParticipantKeys(ctx context.Context, chan
 	return result, rows.Err()
 }
 
+// GetChannelServerID returns the server ID that owns the given channel.
+// Returns ErrNotFound for DM channels (which have no row in the channels table).
+func (s *ChannelPermissionStore) GetChannelServerID(ctx context.Context, channelID string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	var serverID string
+	err := s.pool.QueryRow(ctx,
+		`SELECT server_id FROM channels WHERE id = $1`,
+		channelID,
+	).Scan(&serverID)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", ErrNotFound
+		}
+		return "", fmt.Errorf("get channel server ID: %w", err)
+	}
+	return serverID, nil
+}
+
 // isDMParticipant checks if the user is a member of a DM channel.
 func (s *ChannelPermissionStore) isDMParticipant(ctx context.Context, channelID, userID string) (bool, error) {
 	var exists bool

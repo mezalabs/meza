@@ -90,7 +90,7 @@ type ChatStorer interface {
 
 // InviteStorer provides access to invite data in Postgres.
 type InviteStorer interface {
-	CreateInvite(ctx context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time) (*models.Invite, error)
+	CreateInvite(ctx context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time, encryptedChannelKeys, channelKeysIV []byte) (*models.Invite, error)
 	GetInvite(ctx context.Context, code string) (*models.Invite, error)
 	ConsumeInvite(ctx context.Context, code string) (*models.Invite, error)
 	RevokeInvite(ctx context.Context, code string) error

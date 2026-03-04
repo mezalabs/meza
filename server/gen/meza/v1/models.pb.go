@@ -2074,7 +2074,7 @@ type AudioPreferences struct {
 	NoiseSuppression      bool                   `protobuf:"varint,1,opt,name=noise_suppression,json=noiseSuppression,proto3" json:"noise_suppression,omitempty"`
 	EchoCancellation      bool                   `protobuf:"varint,2,opt,name=echo_cancellation,json=echoCancellation,proto3" json:"echo_cancellation,omitempty"`
 	AutoGainControl       bool                   `protobuf:"varint,3,opt,name=auto_gain_control,json=autoGainControl,proto3" json:"auto_gain_control,omitempty"`
-	NoiseCancellationMode string                 `protobuf:"bytes,4,opt,name=noise_cancellation_mode,json=noiseCancellationMode,proto3" json:"noise_cancellation_mode,omitempty"`
+	NoiseCancellationMode string                 `protobuf:"bytes,4,opt,name=noise_cancellation_mode,json=noiseCancellationMode,proto3" json:"noise_cancellation_mode,omitempty"` // "off", "standard", "giga" — empty means legacy/unset
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -2365,11 +2365,12 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12/\n" +
 	"\x14last_read_message_id\x18\x02 \x01(\tR\x11lastReadMessageId\x12!\n" +
-	"\funread_count\x18\x03 \x01(\x05R\vunreadCount\"\x98\x01\n" +
+	"\funread_count\x18\x03 \x01(\x05R\vunreadCount\"\xd0\x01\n" +
 	"\x10AudioPreferences\x12+\n" +
 	"\x11noise_suppression\x18\x01 \x01(\bR\x10noiseSuppression\x12+\n" +
 	"\x11echo_cancellation\x18\x02 \x01(\bR\x10echoCancellation\x12*\n" +
-	"\x11auto_gain_control\x18\x03 \x01(\bR\x0fautoGainControl*\x8a\x01\n" +
+	"\x11auto_gain_control\x18\x03 \x01(\bR\x0fautoGainControl\x126\n" +
+	"\x17noise_cancellation_mode\x18\x04 \x01(\tR\x15noiseCancellationMode*\x8a\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +

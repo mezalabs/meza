@@ -646,7 +646,7 @@ func newMockInviteStore() *mockInviteStore {
 	}
 }
 
-func (m *mockInviteStore) CreateInvite(_ context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time) (*models.Invite, error) {
+func (m *mockInviteStore) CreateInvite(_ context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time, encryptedChannelKeys, channelKeysIV []byte) (*models.Invite, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

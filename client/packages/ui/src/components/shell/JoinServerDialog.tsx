@@ -4,6 +4,16 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
+/** Extract the 8-char invite code from any input: full URL, URL with fragment, or bare code. */
+function extractInviteCode(input: string): string {
+  const trimmed = input.trim();
+  // Try to match an invite code from a URL like https://example.com/invite/abc12345#fragment
+  const match = trimmed.match(/\/invite\/([a-z0-9]{8})/i);
+  if (match) return match[1].toLowerCase();
+  // Strip any fragment or query from a bare code
+  return trimmed.split(/[#?]/)[0].toLowerCase();
+}
+
 interface ServerPreview {
   name: string;
   memberCount: number;
@@ -61,7 +71,7 @@ export function JoinServerDialog({
 
   const handlePreview = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = code.trim();
+    const trimmed = extractInviteCode(code);
     if (!trimmed) return;
 
     setLoading(true);
@@ -84,7 +94,7 @@ export function JoinServerDialog({
     setLoading(true);
     setError(null);
     try {
-      const server = await joinServer(code.trim());
+      const server = await joinServer(extractInviteCode(code));
       useInviteStore.getState().clearPendingCode();
       if (server) {
         useNavigationStore.getState().selectServer(server.id);

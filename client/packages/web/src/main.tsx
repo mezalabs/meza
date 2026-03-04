@@ -34,6 +34,11 @@ const inviteMatch = window.location.pathname.match(
 );
 if (inviteMatch) {
   useInviteStore.getState().setPendingCode(inviteMatch[1]?.toLowerCase() ?? '');
+  // Capture fragment (invite secret for E2EE key bundle) — never sent to server
+  const fragment = window.location.hash.slice(1); // strip '#'
+  if (fragment) {
+    useInviteStore.getState().setInviteSecret(fragment);
+  }
   history.replaceState(null, '', '/');
 }
 

@@ -17,6 +17,7 @@ import {
   isSessionReady,
   lazyInitChannelKey,
   onSessionReady,
+  requestChannelKeys,
   useAuthStore,
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -38,8 +39,15 @@ export interface ChannelEncryption {
  *  key distribution while keeping total wait under 5s. */
 const KEY_RETRY_DELAYS_MS = [500, 1_000, 1_500, 2_000];
 
+/** Slow poll interval after fast retries are exhausted. Keeps checking for
+ *  keys that may arrive via reconnect-triggered redistribution. */
+const SLOW_POLL_MS = 10_000;
+
+/** Maximum number of slow polls before giving up (10s * 30 = 5 minutes). */
+const MAX_SLOW_POLLS = 30;
+
 /** Minimum interval between manual retries to prevent rapid clicking. */
-const RETRY_COOLDOWN_MS = 10_000;
+const RETRY_COOLDOWN_MS = 3_000;
 
 /**
  * Manages channel key state for an encrypted channel.
@@ -165,8 +173,34 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
         }
       }
 
-      // Truly no keys available — mark ready so composer shows unavailable state
+      // Fast retries exhausted — actively request keys from online members
+      // and start slow poll. Cap at 5 minutes.
+      try {
+        await requestChannelKeys(channelId);
+      } catch {
+        // Best-effort — don't break the poll loop.
+      }
       if (!cancelled) setReady(true);
+      for (let poll = 0; poll < MAX_SLOW_POLLS && !cancelled; poll++) {
+        await new Promise((r) => setTimeout(r, SLOW_POLL_MS));
+        if (cancelled) return;
+        if (await tryFetchKeys()) {
+          if (!cancelled) {
+            setIsEncrypted(true);
+            setReady(true);
+          }
+          return;
+        }
+        // Re-request every ~60s (every 6th poll) in case earlier requests
+        // didn't reach anyone online.
+        if (poll > 0 && poll % 6 === 0) {
+          try {
+            await requestChannelKeys(channelId);
+          } catch {
+            // Best-effort.
+          }
+        }
+      }
     }
 
     init();

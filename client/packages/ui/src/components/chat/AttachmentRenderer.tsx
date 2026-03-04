@@ -54,8 +54,13 @@ function useDecryptedThumbnail(
 
   useEffect(() => {
     mountedRef.current = true;
+    // Reset error on re-run (e.g., attachment updated with encryptedKey from gateway echo)
+    setError(false);
     if (!sessionOk || !isEncrypted(attachment) || !attachment.hasThumbnail)
       return;
+    // Skip if encryptedKey is missing — the gateway echo hasn't merged yet.
+    // The effect will re-run once the attachment reference updates.
+    if (attachment.encryptedKey.length === 0) return;
 
     let cancelled = false;
     (async () => {

@@ -685,7 +685,7 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 
 	// Create a default invite (unlimited uses, 7-day expiry).
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	inv, err := s.inviteStore.CreateInvite(ctx, srv.ID, userID, 0, &expiresAt)
+	inv, err := s.inviteStore.CreateInvite(ctx, srv.ID, userID, 0, &expiresAt, nil, nil)
 	if err != nil {
 		slog.Error("creating invite for new server", "err", err, "user", userID, "server", srv.ID)
 		// Non-fatal: server was created successfully, invite is a bonus.
@@ -2173,7 +2173,9 @@ func (s *chatService) JoinServer(ctx context.Context, req *connect.Request[v1.Jo
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
 
 	return connect.NewResponse(&v1.JoinServerResponse{
-		Server: serverToProto(srv),
+		Server:               serverToProto(srv),
+		EncryptedChannelKeys: inv.EncryptedChannelKeys,
+		ChannelKeysIv:        inv.ChannelKeysIV,
 	}), nil
 }
 
@@ -2261,6 +2263,12 @@ func (s *chatService) CreateInvite(ctx context.Context, req *connect.Request[v1.
 	if req.Msg.MaxUses < 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("max_uses must be non-negative"))
 	}
+	if len(req.Msg.EncryptedChannelKeys) > 64*1024 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_channel_keys too large"))
+	}
+	if len(req.Msg.ChannelKeysIv) > 0 && len(req.Msg.ChannelKeysIv) != 12 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_keys_iv must be 12 bytes"))
+	}
 
 	var expiresAt *time.Time
 	if req.Msg.MaxAgeSeconds > 0 {
@@ -2268,7 +2276,7 @@ func (s *chatService) CreateInvite(ctx context.Context, req *connect.Request[v1.
 		expiresAt = &t
 	}
 
-	inv, err := s.inviteStore.CreateInvite(ctx, req.Msg.ServerId, userID, int(req.Msg.MaxUses), expiresAt)
+	inv, err := s.inviteStore.CreateInvite(ctx, req.Msg.ServerId, userID, int(req.Msg.MaxUses), expiresAt, req.Msg.EncryptedChannelKeys, req.Msg.ChannelKeysIv)
 	if err != nil {
 		slog.Error("creating invite", "err", err, "user", userID, "server", req.Msg.ServerId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
