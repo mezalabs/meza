@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -9,6 +10,16 @@ import (
 
 	"github.com/meza-chat/meza/internal/models"
 )
+
+// metadataParam converts json.RawMessage ([]byte) to *string so pgx v5
+// sends it as text instead of bytea, which PostgreSQL can cast to jsonb.
+func metadataParam(m json.RawMessage) *string {
+	if m == nil {
+		return nil
+	}
+	s := string(m)
+	return &s
+}
 
 // AuditLogStore implements AuditLogStorer using PostgreSQL.
 type AuditLogStore struct {
@@ -28,7 +39,7 @@ func (s *AuditLogStore) CreateEntry(ctx context.Context, entry *models.AuditLogE
 		`INSERT INTO audit_log (id, server_id, action, actor_id, target_id, target_type, metadata, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		entry.ID, entry.ServerID, entry.Action, entry.ActorID,
-		entry.TargetID, entry.TargetType, entry.Metadata, entry.CreatedAt,
+		entry.TargetID, entry.TargetType, metadataParam(entry.Metadata), entry.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert audit log entry: %w", err)
