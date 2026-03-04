@@ -5,12 +5,13 @@ export function isElectron(): boolean {
 }
 
 export function isCapacitor(): boolean {
+  if (typeof window === 'undefined') return false;
+  const cap = (window as Record<string, unknown>).Capacitor;
   return (
-    typeof window !== 'undefined' &&
-    'Capacitor' in window &&
-    typeof (window as Record<string, unknown>).Capacitor === 'object' &&
-    typeof ((window as Record<string, unknown>).Capacitor as Record<string, unknown>)?.isNativePlatform === 'function' &&
-    ((window as Record<string, unknown>).Capacitor as { isNativePlatform: () => boolean }).isNativePlatform()
+    typeof cap === 'object' &&
+    cap !== null &&
+    typeof (cap as { isNativePlatform?: unknown }).isNativePlatform === 'function' &&
+    (cap as { isNativePlatform: () => boolean }).isNativePlatform()
   );
 }
 

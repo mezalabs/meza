@@ -23,10 +23,3 @@ export async function subscribeToPush(adapter: PushAdapter): Promise<void> {
     pushToken: details?.pushToken ?? '',
   });
 }
-
-/**
- * Unsubscribe from push notifications using the provided adapter.
- */
-export async function unsubscribeFromPush(adapter: PushAdapter): Promise<void> {
-  await adapter.unsubscribe();
-}

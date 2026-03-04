@@ -17,6 +17,7 @@ import {
   useAuthStore,
 } from '@meza/core';
 import { CapacitorPushAdapter } from './capacitor-push-adapter.ts';
+import { navigateToChannel } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
 
@@ -60,17 +61,10 @@ function setupPushNotifications(): void {
 }
 
 function setupNotificationNavigation(): void {
-  pushAdapter.onNotificationTap(async (data) => {
+  pushAdapter.onNotificationTap((data) => {
     const channelId = data.channel_id;
     if (!channelId) return;
-
-    // Use the tiling store to navigate — works for both mobile and desktop layouts.
-    const { useTilingStore } = await import('@meza/ui');
-    const store = useTilingStore.getState();
-    store.setPaneContent(store.focusedPaneId, {
-      type: 'channel',
-      channelId,
-    });
+    navigateToChannel(channelId);
   });
 }
 

@@ -395,13 +395,26 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 		return
 	}
 
-	// For each target, get their push-enabled devices and send pushes to offline ones.
+	// Single bulk query for push-enabled devices across all target users.
+	targetUserIDs := make([]string, len(targets))
 	for i, t := range targets {
-		devices, err := s.deviceStore.GetPushEnabledDevices(ctx, t.userID)
-		if err != nil {
-			slog.Error("get push devices", "err", err, "user", t.userID)
-			continue
-		}
+		targetUserIDs[i] = t.userID
+	}
+	allDevices, err := s.deviceStore.GetPushEnabledDevicesForUsers(ctx, targetUserIDs)
+	if err != nil {
+		slog.Error("get push devices bulk", "err", err, "server", serverID)
+		return
+	}
+
+	// For each target, resolve connected devices and collect offline devices.
+	type offlineTarget struct {
+		pushTarget
+		devices []*models.Device
+	}
+	var offlineTargets []offlineTarget
+
+	for i, t := range targets {
+		devices := allDevices[t.userID]
 		if len(devices) == 0 {
 			continue
 		}
@@ -412,31 +425,49 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 			connectedSet[id] = true
 		}
 
-		// Pipeline throttle checks for this user's offline devices.
-		var offlineDevices []*models.Device
+		var offline []*models.Device
 		for _, device := range devices {
 			if !connectedSet[device.ID] {
-				offlineDevices = append(offlineDevices, device)
+				offline = append(offline, device)
 			}
 		}
-		if len(offlineDevices) == 0 {
+		if len(offline) == 0 {
 			continue
 		}
 
-		// Throttle: 1 push per channel per user per type within the throttle window.
-		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.pushType, t.userID, channelID)
-		set, err := s.rdb.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second).Result()
+		offlineTargets = append(offlineTargets, offlineTarget{pushTarget: t, devices: offline})
+	}
+
+	if len(offlineTargets) == 0 {
+		return
+	}
+
+	// Batch Redis pipeline: throttle checks for all offline targets at once.
+	// Throttle: 1 push per channel per user per type within the throttle window.
+	throttlePipe := s.rdb.Pipeline()
+	throttleCmds := make([]*redis.BoolCmd, len(offlineTargets))
+	for i, ot := range offlineTargets {
+		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", ot.pushType, ot.userID, channelID)
+		throttleCmds[i] = throttlePipe.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second)
+	}
+	if _, err := throttlePipe.Exec(ctx); err != nil && err != redis.Nil {
+		slog.Error("redis pipeline setnx throttle", "err", err)
+		return
+	}
+
+	for i, ot := range offlineTargets {
+		set, err := throttleCmds[i].Result()
 		if err != nil {
-			slog.Error("redis setnx throttle", "err", err, "user", t.userID)
+			slog.Error("redis setnx throttle", "err", err, "user", ot.userID)
 			continue
 		}
 		if !set {
 			continue // Already sent a push for this channel recently.
 		}
 
-		for _, device := range offlineDevices {
+		for _, device := range ot.devices {
 			if err := s.sendPush(ctx, device, channelID); err != nil {
-				slog.Error("send push", "err", err, "user", t.userID, "device", device.ID, "platform", device.Platform)
+				slog.Error("send push", "err", err, "user", ot.userID, "device", device.ID, "platform", device.Platform)
 			}
 		}
 	}
