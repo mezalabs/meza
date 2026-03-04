@@ -7,11 +7,12 @@ import {
   flushChannelKeys,
   gatewayConnect,
   gatewayDisconnect,
+  isCapacitor,
   teardownSession,
   useAuthStore,
   useInviteStore,
 } from '@meza/core';
-import { InviteLanding, LandingPage, Shell, TitleBar } from '@meza/ui';
+import { InviteLanding, LandingPage, Shell, TitleBar, useTilingStore } from '@meza/ui';
 import { createRoot } from 'react-dom/client';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
@@ -61,6 +62,22 @@ useAuthStore.subscribe((state, prevState) => {
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();
+  }
+});
+
+// Initialize Capacitor when running inside a native shell.
+if (isCapacitor()) {
+  import('./capacitor-init.ts').then(({ initCapacitor }) => initCapacitor());
+}
+
+// Handle PUSH_NAVIGATE messages from the push service worker (web).
+navigator.serviceWorker?.addEventListener('message', (event) => {
+  if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
+    const store = useTilingStore.getState();
+    store.setPaneContent(store.focusedPaneId, {
+      type: 'channel',
+      channelId: event.data.channelId,
+    });
   }
 });
 

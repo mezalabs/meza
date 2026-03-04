@@ -1,0 +1,30 @@
+{
+  "name": "@meza/mobile",
+  "version": "0.0.1",
+  "license": "AGPL-3.0-or-later",
+  "description": "Meza mobile client — Capacitor native shell",
+  "author": {
+    "name": "Meza Chat",
+    "email": "hello@meza.chat"
+  },
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "sync": "cap sync",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "build": "pnpm --filter @meza/web build && cap sync"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7",
+    "@capacitor/core": "^7",
+    "@capacitor/push-notifications": "^7",
+    "@capacitor/splash-screen": "^7",
+    "@capacitor/status-bar": "^7"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7",
+    "@capacitor/android": "^7",
+    "@capacitor/ios": "^7"
+  }
+}
