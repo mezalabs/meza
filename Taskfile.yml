@@ -474,11 +474,30 @@ tasks:
     cmds:
       - pnpm --filter @meza/desktop dev
 
+  dev:mobile:
+    desc: Start HTTPS Vite dev server and sync to Capacitor for live reload
+    dir: client
+    env:
+      MOBILE_DEV: "true"
+    cmds:
+      - |
+        IP=$(ipconfig getifaddr en0 2>/dev/null || echo "localhost")
+        echo "Dev server: https://$IP:4081"
+        echo "Syncing Capacitor with dev server URL..."
+        cd packages/mobile
+        CAPACITOR_DEV_SERVER="https://$IP:4081" npx cap sync
+        echo ""
+        echo "Run your app from Android Studio / Xcode, then leave this running."
+        echo "Ctrl+C to stop."
+        cd ../..
+        MOBILE_DEV=true pnpm --filter @meza/web dev -- --host --port 4081
+
   build:mobile:
     desc: Build web assets and sync to Capacitor native projects
     dir: client
     cmds:
-      - pnpm --filter @meza/web build
+      - pnpm install --frozen-lockfile
+      - pnpm --filter @meza/web... build
       - cd packages/mobile && npx cap sync
 
   open:ios:
@@ -531,7 +550,8 @@ tasks:
     desc: Build Electron desktop app (web + main/preload + packaging)
     dir: client
     cmds:
-      - pnpm --filter @meza/web build
+      - pnpm install --frozen-lockfile
+      - pnpm --filter @meza/web... build
       - mkdir -p packages/desktop/out/renderer
       - cp -r packages/web/dist/* packages/desktop/out/renderer/
       - pnpm --filter @meza/desktop build

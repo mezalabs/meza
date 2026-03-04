@@ -121,12 +121,13 @@ func detectAudioType(data []byte) (string, bool) {
 }
 
 type mediaService struct {
-	store store.MediaStorer
-	s3    *s3.Client
+	store    store.MediaStorer
+	s3       *s3.Client // internal operations (PutObject, GetObject, etc.)
+	s3Public *s3.Client // presigned URL generation (client-facing)
 }
 
-func newMediaService(st store.MediaStorer, s3Client *s3.Client) *mediaService {
-	return &mediaService{store: st, s3: s3Client}
+func newMediaService(st store.MediaStorer, s3Client, s3Public *s3.Client) *mediaService {
+	return &mediaService{store: st, s3: s3Client, s3Public: s3Public}
 }
 
 func purposeToString(p v1.UploadPurpose) string {
@@ -265,7 +266,7 @@ func (s *mediaService) CreateUpload(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	uploadURL, err := s.s3.GeneratePresignedPUT(ctx, objectKey, r.ContentType, presignExpiry)
+	uploadURL, err := s.s3Public.GeneratePresignedPUT(ctx, objectKey, r.ContentType, presignExpiry)
 	if err != nil {
 		slog.Error("generating presigned PUT", "err", err, "key", objectKey)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -278,7 +279,7 @@ func (s *mediaService) CreateUpload(ctx context.Context, req *connect.Request[v1
 
 	// Generate a second presigned PUT URL for the encrypted thumbnail.
 	if isChatAttachment && thumbnailKey != "" {
-		thumbURL, err := s.s3.GeneratePresignedPUT(ctx, thumbnailKey, "application/octet-stream", presignExpiry)
+		thumbURL, err := s.s3Public.GeneratePresignedPUT(ctx, thumbnailKey, "application/octet-stream", presignExpiry)
 		if err != nil {
 			slog.Error("generating thumbnail presigned PUT", "err", err, "key", thumbnailKey)
 			// Non-fatal: attachment can still be created without thumbnail.
@@ -469,7 +470,7 @@ func (s *mediaService) CompleteUpload(ctx context.Context, req *connect.Request[
 	}
 
 	// Generate download URL.
-	downloadURL, err := s.s3.GeneratePresignedGET(ctx, attachment.ObjectKey, attachment.Filename, downloadExpiry, isInlineContentType(detectedType))
+	downloadURL, err := s.s3Public.GeneratePresignedGET(ctx, attachment.ObjectKey, attachment.Filename, downloadExpiry, isInlineContentType(detectedType))
 	if err != nil {
 		slog.Error("generating download URL", "err", err, "key", attachment.ObjectKey)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -515,7 +516,7 @@ func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[
 		filename = "thumb.webp"
 	}
 
-	downloadURL, err := s.s3.GeneratePresignedGET(ctx, objectKey, filename, downloadExpiry, isInlineContentType(attachment.ContentType))
+	downloadURL, err := s.s3Public.GeneratePresignedGET(ctx, objectKey, filename, downloadExpiry, isInlineContentType(attachment.ContentType))
 	if err != nil {
 		slog.Error("generating download URL", "err", err, "key", objectKey)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -529,7 +530,7 @@ func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[
 // mediaRedirectHandler serves GET /media/{id} and /media/{id}/thumb as a
 // 302 redirect to a fresh presigned URL. This provides stable URLs for
 // avatars, banners, etc.
-func mediaRedirectHandler(st store.MediaStorer, s3Client *s3.Client) http.HandlerFunc {
+func mediaRedirectHandler(st store.MediaStorer, s3Public *s3.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse path: /media/{id} or /media/{id}/thumb
 		path := strings.TrimPrefix(r.URL.Path, "/media/")
@@ -564,7 +565,7 @@ func mediaRedirectHandler(st store.MediaStorer, s3Client *s3.Client) http.Handle
 			filename = "thumb.webp"
 		}
 
-		downloadURL, err := s3Client.GeneratePresignedGET(r.Context(), objectKey, filename, downloadExpiry, isInlineContentType(attachment.ContentType))
+		downloadURL, err := s3Public.GeneratePresignedGET(r.Context(), objectKey, filename, downloadExpiry, isInlineContentType(attachment.ContentType))
 		if err != nil {
 			slog.Error("generating redirect URL", "err", err, "key", objectKey)
 			http.Error(w, "internal error", http.StatusInternalServerError)

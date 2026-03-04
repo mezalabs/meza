@@ -50,7 +50,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	s3Client, err := s3.NewClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Bucket, cfg.S3UseSSL)
+	s3Client, err := s3.NewClient(cfg.S3Endpoint, cfg.S3AccessKey, cfg.S3SecretKey, cfg.S3Bucket, cfg.S3Region, cfg.S3UseSSL)
 	if err != nil {
 		slog.Error("create s3 client", "err", err)
 		os.Exit(1)
@@ -75,8 +75,21 @@ func main() {
 		slog.Error("S3_CORS_ORIGINS not set — bucket CORS not configured; set this for production deployments")
 	}
 
+	// Create a public-facing S3 client for presigned URL generation.
+	// When S3_PUBLIC_ENDPOINT is set, presigned URLs use that endpoint so
+	// clients on other networks (e.g. phones on LAN) can reach MinIO.
+	s3Public := s3Client
+	if cfg.S3PublicEndpoint != "" {
+		s3Public, err = s3Client.WithPublicEndpoint(cfg.S3PublicEndpoint, cfg.S3UseSSL)
+		if err != nil {
+			slog.Error("create public s3 client", "err", err)
+			os.Exit(1)
+		}
+		slog.Info("using public S3 endpoint for presigned URLs", "endpoint", cfg.S3PublicEndpoint)
+	}
+
 	mediaStore := store.NewMediaStore(pool)
-	svc := newMediaService(mediaStore, s3Client)
+	svc := newMediaService(mediaStore, s3Client, s3Public)
 
 	// Start background cleanup of orphaned uploads.
 	startCleanup(ctx, mediaStore, s3Client)
@@ -112,7 +125,7 @@ func main() {
 
 	// Stable redirect endpoint for media URLs (requires authentication).
 	authMiddleware := auth.RequireHTTPAuth(ed25519PubKey)
-	mux.Handle("/media/", limiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, s3Client))))
+	mux.Handle("/media/", limiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, s3Public))))
 
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())

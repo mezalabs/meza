@@ -37,12 +37,13 @@ type Config struct {
 	ChatServiceURL string `envconfig:"CHAT_SERVICE_URL" default:"http://localhost:8082"`
 
 	// Media (S3-compatible)
-	S3Endpoint string `envconfig:"S3_ENDPOINT"`
-	S3AccessKey string `envconfig:"S3_ACCESS_KEY"`
-	S3SecretKey string `envconfig:"S3_SECRET_KEY"`
-	S3Bucket   string `envconfig:"S3_BUCKET"`
-	S3Region   string `envconfig:"S3_REGION" default:"us-east-1"`
-	S3UseSSL   bool   `envconfig:"S3_USE_SSL" default:"false"`
+	S3Endpoint       string `envconfig:"S3_ENDPOINT"`
+	S3PublicEndpoint string `envconfig:"S3_PUBLIC_ENDPOINT"` // URL for client-facing presigned URLs; defaults to S3Endpoint
+	S3AccessKey      string `envconfig:"S3_ACCESS_KEY"`
+	S3SecretKey      string `envconfig:"S3_SECRET_KEY"`
+	S3Bucket         string `envconfig:"S3_BUCKET"`
+	S3Region         string `envconfig:"S3_REGION" default:"us-east-1"`
+	S3UseSSL         bool   `envconfig:"S3_USE_SSL" default:"false"`
 
 	// Voice (LiveKit)
 	LiveKitHost      string `envconfig:"LIVEKIT_HOST"`
