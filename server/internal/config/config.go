@@ -51,9 +51,10 @@ type Config struct {
 	LiveKitAPISecret string `envconfig:"LIVEKIT_API_SECRET"`
 
 	// Notification (Push)
-	VAPIDPublicKey  string `envconfig:"VAPID_PUBLIC_KEY"`
-	VAPIDPrivateKey string `envconfig:"VAPID_PRIVATE_KEY"`
-	VAPIDContact    string `envconfig:"VAPID_CONTACT" default:"mailto:admin@meza.chat"`
+	VAPIDPublicKey     string `envconfig:"VAPID_PUBLIC_KEY"`
+	VAPIDPrivateKey    string `envconfig:"VAPID_PRIVATE_KEY"`
+	VAPIDContact       string `envconfig:"VAPID_CONTACT" default:"mailto:admin@meza.chat"`
+	FCMCredentialsFile string `envconfig:"FCM_CREDENTIALS_FILE"` // Path to Firebase service account JSON
 }
 
 // MustLoad loads configuration from MEZA_* environment variables.

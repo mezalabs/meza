@@ -11,6 +11,7 @@ import (
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"connectrpc.com/connect"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
@@ -46,6 +47,7 @@ type notificationService struct {
 	rdb         *redis.Client
 	nc          *nats.Conn
 	cfg         *config.Config
+	fcmClient   *messaging.Client
 }
 
 func newNotificationService(
@@ -55,6 +57,7 @@ func newNotificationService(
 	rdb *redis.Client,
 	nc *nats.Conn,
 	cfg *config.Config,
+	fcmClient *messaging.Client,
 ) *notificationService {
 	return &notificationService{
 		deviceStore: deviceStore,
@@ -63,6 +66,7 @@ func newNotificationService(
 		rdb:         rdb,
 		nc:          nc,
 		cfg:         cfg,
+		fcmClient:   fcmClient,
 	}
 }
 
@@ -517,14 +521,8 @@ func (s *notificationService) sendPush(ctx context.Context, device *models.Devic
 	switch device.Platform {
 	case "web":
 		return s.sendWebPush(ctx, device, payloadBytes)
-	case "android":
-		// FCM integration — placeholder for future phase.
-		slog.Info("fcm push skipped (not yet implemented)", "user", device.UserID, "device", device.ID)
-		return nil
-	case "ios":
-		// APNs integration — placeholder for future phase.
-		slog.Info("apns push skipped (not yet implemented)", "user", device.UserID, "device", device.ID)
-		return nil
+	case "android", "ios":
+		return s.sendFCMPush(ctx, device, channelID)
 	default:
 		return nil
 	}
@@ -569,6 +567,63 @@ func (s *notificationService) sendWebPush(ctx context.Context, device *models.De
 	}
 
 	slog.Debug("web push sent", "user", device.UserID, "device", device.ID)
+	return nil
+}
+
+// sendFCMPush sends a push notification via Firebase Cloud Messaging.
+// Works for both Android (FCM direct) and iOS (FCM proxied to APNs).
+func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, channelID string) error {
+	if s.fcmClient == nil {
+		slog.Debug("fcm push skipped (not configured)", "user", device.UserID, "device", device.ID)
+		return nil
+	}
+
+	msg := &messaging.Message{
+		Token: device.PushToken,
+		Data: map[string]string{
+			"type":       "message",
+			"channel_id": channelID,
+			"tag":        "channel:" + channelID,
+		},
+		Android: &messaging.AndroidConfig{
+			Priority: "high",
+			Notification: &messaging.AndroidNotification{
+				Title: "New message",
+				Body:  "You have a new message",
+				Tag:   "channel:" + channelID,
+			},
+		},
+		APNS: &messaging.APNSConfig{
+			Headers: map[string]string{
+				"apns-priority":    "10",
+				"apns-collapse-id": "channel:" + channelID,
+			},
+			Payload: &messaging.APNSPayload{
+				Aps: &messaging.Aps{
+					Alert: &messaging.ApsAlert{
+						Title: "New message",
+						Body:  "You have a new message",
+					},
+					Sound: "default",
+				},
+			},
+		},
+	}
+
+	_, err := s.fcmClient.Send(ctx, msg)
+	if err != nil {
+		if messaging.IsUnregistered(err) {
+			slog.Info("FCM token unregistered, disabling push", "user", device.UserID, "device", device.ID)
+			device.PushEnabled = false
+			if dbErr := s.deviceStore.UpsertDevice(ctx, device); dbErr != nil {
+				slog.Error("disable unregistered FCM device", "err", dbErr)
+			}
+			return nil
+		}
+		return fmt.Errorf("fcm send: %w", err)
+	}
+
+	slog.Debug("FCM push sent", "user", device.UserID, "device", device.ID, "platform", device.Platform)
 	return nil
 }
 
