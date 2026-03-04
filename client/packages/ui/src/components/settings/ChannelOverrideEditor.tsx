@@ -133,7 +133,7 @@ function TriStateToggle({
   disabled?: boolean;
   label: string;
 }) {
-  const states: TriState[] = ['allow', 'neutral', 'deny'];
+  const states: TriState[] = ['deny', 'neutral', 'allow'];
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (disabled) return;
@@ -154,23 +154,23 @@ function TriStateToggle({
       className="flex items-center gap-0.5"
       onKeyDown={handleKeyDown}
     >
-      {/* Allow */}
+      {/* Deny */}
       {/* biome-ignore lint/a11y/useSemanticElements: tri-state toggle requires custom radio buttons */}
       <button
         type="button"
         role="radio"
-        aria-checked={value === 'allow'}
-        aria-label="Allow"
+        aria-checked={value === 'deny'}
+        aria-label="Deny"
         disabled={disabled}
-        onClick={() => onChange(value === 'allow' ? 'neutral' : 'allow')}
+        onClick={() => onChange(value === 'deny' ? 'neutral' : 'deny')}
         className={`flex h-7 w-7 items-center justify-center rounded-l-md text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          value === 'allow'
-            ? 'bg-success/20 text-success'
+          value === 'deny'
+            ? 'bg-error/20 text-error'
             : 'bg-bg-elevated text-text-subtle hover:text-text'
         }`}
-        tabIndex={value === 'allow' ? 0 : -1}
+        tabIndex={value === 'deny' ? 0 : -1}
       >
-        <CheckIcon size={14} aria-hidden="true" />
+        <XIcon weight="regular" size={14} aria-hidden="true" />
       </button>
 
       {/* Neutral */}
@@ -192,23 +192,23 @@ function TriStateToggle({
         <MinusIcon size={14} aria-hidden="true" />
       </button>
 
-      {/* Deny */}
+      {/* Allow */}
       {/* biome-ignore lint/a11y/useSemanticElements: tri-state toggle requires custom radio buttons */}
       <button
         type="button"
         role="radio"
-        aria-checked={value === 'deny'}
-        aria-label="Deny"
+        aria-checked={value === 'allow'}
+        aria-label="Allow"
         disabled={disabled}
-        onClick={() => onChange(value === 'deny' ? 'neutral' : 'deny')}
+        onClick={() => onChange(value === 'allow' ? 'neutral' : 'allow')}
         className={`flex h-7 w-7 items-center justify-center rounded-r-md text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          value === 'deny'
-            ? 'bg-error/20 text-error'
+          value === 'allow'
+            ? 'bg-success/20 text-success'
             : 'bg-bg-elevated text-text-subtle hover:text-text'
         }`}
-        tabIndex={value === 'deny' ? 0 : -1}
+        tabIndex={value === 'allow' ? 0 : -1}
       >
-        <XIcon weight="regular" size={14} aria-hidden="true" />
+        <CheckIcon size={14} aria-hidden="true" />
       </button>
     </div>
   );

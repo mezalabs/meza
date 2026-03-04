@@ -91,11 +91,14 @@ export function MobileShell() {
       if (state.overlayContent && !prev.overlayContent) {
         if (state.overlayContent.type === 'settings') {
           openMobileOverlay('settings');
-          // Clear the tiling overlay so it doesn't render on desktop too
           useTilingStore.getState().closeOverlay();
         }
-        // Profile overlays can still use the slide-over
-        if (state.overlayContent.type === 'profile') {
+        // Profile and settings overlays use the slide-over
+        if (
+          state.overlayContent.type === 'profile' ||
+          state.overlayContent.type === 'channelSettings' ||
+          state.overlayContent.type === 'serverSettings'
+        ) {
           openMobileChannel(state.overlayContent);
           useTilingStore.getState().closeOverlay();
         }

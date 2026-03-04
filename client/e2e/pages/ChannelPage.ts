@@ -50,7 +50,7 @@ export class ChannelPage {
   async ensureChannelsLoaded() {
     const nav = this.page.locator('nav[aria-label="Channels"]');
     const retryBtn = nav.getByRole('button', { name: 'Retry' });
-    const anyChannel = nav.locator('button[data-channel-type]');
+    const anyChannel = nav.locator('[data-channel-type]');
 
     for (let attempt = 0; attempt < 5; attempt++) {
       // Wait for either a channel to appear or an error Retry button
@@ -85,7 +85,7 @@ export class ChannelPage {
     const nav = this.page.locator('nav[aria-label="Channels"]');
     // Channel buttons use data-channel-type attribute and contain the channel name as text.
     const channelBtn = nav
-      .locator('button[data-channel-type]')
+      .locator('[data-channel-type]')
       .filter({ hasText: channelName });
     await channelBtn.click({ timeout: 10_000 });
     // Wait for main content to load (composer for text, or voice UI)
