@@ -474,6 +474,25 @@ tasks:
     cmds:
       - pnpm --filter @meza/desktop dev
 
+  build:mobile:
+    desc: Build web assets and sync to Capacitor native projects
+    dir: client
+    cmds:
+      - pnpm --filter @meza/web build
+      - cd packages/mobile && npx cap sync
+
+  open:ios:
+    desc: Open iOS project in Xcode
+    dir: client/packages/mobile
+    cmds:
+      - npx cap open ios
+
+  open:android:
+    desc: Open Android project in Android Studio
+    dir: client/packages/mobile
+    cmds:
+      - npx cap open android
+
   build:prod:
     desc: Build all production Docker images (9 services + client)
     vars:
