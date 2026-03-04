@@ -141,11 +141,18 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 
 func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	r := req.Msg
-	if r.Email == "" || len(r.AuthKey) == 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email and auth_key are required"))
+	if r.Identifier == "" || len(r.AuthKey) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier and auth_key are required"))
 	}
 
-	user, authData, err := s.store.GetUserByEmail(ctx, r.Email)
+	var user *models.User
+	var authData *models.AuthData
+	var err error
+	if isEmail(r.Identifier) {
+		user, authData, err = s.store.GetUserByEmail(ctx, r.Identifier)
+	} else {
+		user, authData, err = s.store.GetUserByUsername(ctx, r.Identifier)
+	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
 	}
@@ -190,27 +197,32 @@ func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 }
 
 func (s *authService) GetSalt(ctx context.Context, req *connect.Request[v1.GetSaltRequest]) (*connect.Response[v1.GetSaltResponse], error) {
-	if req.Msg.Email == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email is required"))
+	if req.Msg.Identifier == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier is required"))
 	}
 
-	salt, err := s.store.GetSalt(ctx, req.Msg.Email)
+	var salt []byte
+	var err error
+	if isEmail(req.Msg.Identifier) {
+		salt, err = s.store.GetSalt(ctx, req.Msg.Identifier)
+	} else {
+		salt, err = s.store.GetSaltByUsername(ctx, req.Msg.Identifier)
+	}
 	if err != nil {
-		// Return a deterministic fake salt for unknown emails to prevent
-		// email enumeration. The client will derive the wrong key and
-		// login will fail with "invalid credentials" — indistinguishable
-		// from a wrong password.
-		salt = deriveFakeSalt(s.hmacSecret, req.Msg.Email)
+		// Return a deterministic fake salt for unknown identifiers to prevent
+		// enumeration. The client will derive the wrong key and login will
+		// fail with "invalid credentials" — indistinguishable from a wrong password.
+		salt = deriveFakeSalt(s.hmacSecret, req.Msg.Identifier)
 	}
 
 	return connect.NewResponse(&v1.GetSaltResponse{Salt: salt}), nil
 }
 
-// deriveFakeSalt produces a deterministic 16-byte salt from a secret and email.
-// Repeated calls with the same email return the same salt.
-func deriveFakeSalt(secret, email string) []byte {
+// deriveFakeSalt produces a deterministic 16-byte salt from a secret and identifier.
+// Repeated calls with the same identifier return the same salt.
+func deriveFakeSalt(secret, identifier string) []byte {
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(email))
+	mac.Write([]byte(identifier))
 	h := mac.Sum(nil)
 	return h[:16]
 }

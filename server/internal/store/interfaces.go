@@ -22,7 +22,9 @@ type AuthStorer interface {
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
+	GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error)
 	GetSalt(ctx context.Context, email string) ([]byte, error)
+	GetSaltByUsername(ctx context.Context, username string) ([]byte, error)
 	StoreRefreshToken(ctx context.Context, tokenHash, userID, deviceID string, expiresAt time.Time) error
 	ConsumeRefreshToken(ctx context.Context, tokenHash string) (userID, deviceID string, err error)
 	DeleteRefreshTokensByUser(ctx context.Context, userID string) error
