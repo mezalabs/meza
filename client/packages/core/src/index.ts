@@ -386,6 +386,6 @@ export { getVAPIDPublicKey } from './api/notification.ts';
 // Push notifications
 export type { PushAdapter, PushSubscriptionDetails } from './push/types.ts';
 export { subscribeToPush, unsubscribeFromPush } from './push/push-manager.ts';
-export { getBaseUrl, isElectron } from './utils/platform.ts';
+export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';
