@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     port: 4080,
+    host: true,
     allowedHosts: ['.share.zrok.io'],
     proxy: {
       // Auth service → server/cmd/auth (port 8081)

@@ -1,5 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const devServer = process.env.CAPACITOR_DEV_SERVER;
+
 const config: CapacitorConfig = {
   appId: 'chat.meza.app',
   appName: 'Meza',
@@ -20,8 +22,16 @@ const config: CapacitorConfig = {
       backgroundColor: '#1a1a1a',
     },
   },
+  server: devServer
+    ? {
+        url: devServer,
+        cleartext: true,
+      }
+    : {
+        androidScheme: 'http',
+      },
   android: {
-    webContentsDebuggingEnabled: false,
+    webContentsDebuggingEnabled: !!devServer,
   },
 };
 
