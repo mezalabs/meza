@@ -112,6 +112,13 @@ export async function teardownSession(): Promise<void> {
   } catch {
     // Best-effort
   }
+  // Clear search indexes and terminate worker
+  try {
+    const { resetSearchState } = await import('../search/indexer.ts');
+    await resetSearchState();
+  } catch {
+    // Best-effort — search module may not be loaded
+  }
   clearChannelKeyCache();
   clearAesKeyCache();
   clearMasterKey();

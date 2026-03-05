@@ -3,7 +3,13 @@ import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import type { Message } from '@meza/gen/meza/v1/models_pb.ts';
 import { transport } from '../api/client.ts';
 import { parseMessageContent } from '../crypto/messages.ts';
-import { clearAllIndexes, hasIndex, indexMessage } from './local-index.ts';
+import {
+  addSearchMessages,
+  clearAllSearchIndexes,
+  initSearchChannel,
+  terminateSearchWorker,
+} from './search-service.ts';
+import type { IndexableMessage } from './types.ts';
 
 const chatClient = createClient(ChatService, transport);
 
@@ -14,25 +20,30 @@ const backfilling = new Set<string>();
 const backfilled = new Set<string>();
 
 /**
- * Try to extract plaintext content from a message for indexing.
- * Returns null if the message is still encrypted.
- *
- * With universal E2EE, all messages arrive encrypted. The gateway decrypts
- * them on arrival and sets keyVersion to 0. Messages with keyVersion > 0
- * are still encrypted and cannot be indexed.
- *
- * Decrypted content may be in V1 JSON format (0x01 prefix) or legacy
- * raw UTF-8. parseMessageContent handles both transparently.
+ * Convert a decrypted Message to an IndexableMessage.
+ * Returns null if the message is still encrypted (keyVersion > 0).
  */
-function extractContent(msg: Message): string | null {
+export function toIndexable(
+  channelId: string,
+  msg: Message,
+): IndexableMessage | null {
   if (!msg.encryptedContent || msg.encryptedContent.length === 0) return null;
-
-  // keyVersion > 0 means the message is still encrypted (not yet decrypted)
   if (msg.keyVersion > 0) return null;
-  // keyVersion === 0 means the gateway already decrypted it
-  // Parse handles both V1 JSON format and legacy raw UTF-8
+
   const parsed = parseMessageContent(msg.encryptedContent);
-  return parsed.text;
+  if (!parsed.text) return null;
+
+  return {
+    id: msg.id,
+    channelId,
+    authorId: msg.authorId,
+    content: parsed.text,
+    createdAt: msg.createdAt
+      ? Number(msg.createdAt.seconds) * 1000
+      : Date.now(),
+    hasAttachment: (msg.attachments?.length ?? 0) > 0,
+    hasMention: (msg.mentionedUserIds?.length ?? 0) > 0 || !!msg.mentionEveryone,
+  };
 }
 
 /**
@@ -40,87 +51,52 @@ function extractContent(msg: Message): string | null {
  * Safe to call for every incoming message — no-ops if content can't be read.
  */
 export function indexIncomingMessage(channelId: string, msg: Message): void {
-  const content = extractContent(msg);
-  if (!content) return;
-
-  const createdAt = msg.createdAt
-    ? Number(msg.createdAt.seconds) * 1000
-    : Date.now();
-
-  indexMessage({
-    id: msg.id,
-    channelId,
-    authorId: msg.authorId,
-    content,
-    createdAt,
-  });
-}
-
-/**
- * Index a batch of already-fetched messages. Used during backfill to
- * yield to the event loop between chunks. Only indexes already-decrypted
- * messages (keyVersion === 0).
- */
-function indexBatch(channelId: string, msgs: Message[]): number {
-  let indexed = 0;
-  for (const msg of msgs) {
-    const content = extractContent(msg);
-    if (!content) continue;
-
-    const createdAt = msg.createdAt
-      ? Number(msg.createdAt.seconds) * 1000
-      : Date.now();
-
-    indexMessage({
-      id: msg.id,
-      channelId,
-      authorId: msg.authorId,
-      content,
-      createdAt,
-    });
-    indexed++;
+  const indexable = toIndexable(channelId, msg);
+  if (!indexable) return;
+  try {
+    addSearchMessages(channelId, [indexable]).catch(() => {});
+  } catch {
+    // Worker not available (test/SSR environment)
   }
-  return indexed;
 }
 
 /**
- * Wait for the next idle period (or setTimeout fallback).
+ * Convert a batch of messages to IndexableMessage[].
  */
-function waitIdle(): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof requestIdleCallback === 'function') {
-      requestIdleCallback(() => resolve());
-    } else {
-      setTimeout(resolve, 16);
-    }
-  });
+function toBatch(channelId: string, msgs: Message[]): IndexableMessage[] {
+  const batch: IndexableMessage[] = [];
+  for (const msg of msgs) {
+    const indexable = toIndexable(channelId, msg);
+    if (indexable) batch.push(indexable);
+  }
+  return batch;
 }
 
 /**
  * Backfill the FlexSearch index for a channel by fetching historical
- * messages in batches. Runs asynchronously, yielding to the event loop
- * between batches to avoid blocking the UI.
+ * messages in batches. The worker handles yielding internally.
  *
- * With universal E2EE, only already-decrypted messages (keyVersion=0)
- * can be indexed.
+ * Progressive backfill:
+ * - Phase A: 10 pages (1,000 msgs) — user gets search results in ~1-2s
+ * - Phase B: 20 more pages (2,000 msgs) — runs in background
  */
 export async function backfillChannel(channelId: string): Promise<void> {
   if (backfilling.has(channelId) || backfilled.has(channelId)) return;
-  if (hasIndex(channelId)) {
-    backfilled.add(channelId);
-    return;
-  }
 
   backfilling.add(channelId);
 
   try {
+    // Init the channel index (loads from IndexedDB if persisted)
+    await initSearchChannel(channelId);
+
     const BATCH_SIZE = 100;
+    const PHASE_A_PAGES = 10;
+    const PHASE_B_PAGES = 20;
+    const TOTAL_PAGES = PHASE_A_PAGES + PHASE_B_PAGES;
     let beforeId: string | undefined;
     let totalIndexed = 0;
 
-    for (let page = 0; page < 10; page++) {
-      await waitIdle();
-
+    for (let page = 0; page < TOTAL_PAGES; page++) {
       const res = await chatClient.getMessages({
         channelId,
         before: beforeId ?? '',
@@ -131,7 +107,10 @@ export async function backfillChannel(channelId: string): Promise<void> {
 
       if (res.messages.length === 0) break;
 
-      totalIndexed += indexBatch(channelId, res.messages);
+      const batch = toBatch(channelId, res.messages);
+      if (batch.length > 0) {
+        totalIndexed += await addSearchMessages(channelId, batch);
+      }
 
       // Use the oldest message ID as the cursor for the next page
       const oldest = res.messages[res.messages.length - 1];
@@ -147,8 +126,13 @@ export async function backfillChannel(channelId: string): Promise<void> {
 }
 
 /** Clear all search state (indexes, backfill tracking). Called on logout. */
-export function resetSearchState(): void {
-  clearAllIndexes();
+export async function resetSearchState(): Promise<void> {
+  try {
+    await clearAllSearchIndexes();
+  } catch {
+    // Worker not available (test/SSR environment)
+  }
+  terminateSearchWorker();
   backfilling.clear();
   backfilled.clear();
 }

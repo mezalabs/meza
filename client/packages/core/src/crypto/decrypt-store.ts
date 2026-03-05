@@ -11,6 +11,7 @@
  */
 
 import type { Attachment, Message } from '@meza/gen/meza/v1/models_pb.ts';
+import { indexIncomingMessage } from '../search/indexer.ts';
 import { useMessageStore } from '../store/messages.ts';
 import { decryptMessage, parseMessageContent } from './messages.ts';
 
@@ -61,6 +62,8 @@ export async function decryptAndUpdateMessage(
   if (!result) return false;
 
   useMessageStore.getState().updateMessage(channelId, result);
+  // Index the now-decrypted message for local search
+  indexIncomingMessage(channelId, result);
   return true;
 }
 
@@ -91,6 +94,10 @@ export async function decryptAndUpdateMessages(
   }
   if (results.length > 0) {
     useMessageStore.getState().bulkUpdateMessages(channelId, results);
+    // Index the now-decrypted messages for local search
+    for (const result of results) {
+      indexIncomingMessage(channelId, result);
+    }
   }
   return results.length;
 }
