@@ -1,10 +1,10 @@
-import type { MessageState, ReplyEntry } from '@meza/core';
+import type { Attachment, MessageState, ReplyEntry } from '@meza/core';
 import {
   ackMessage,
   addReaction,
   backfillChannel,
   buildMessageContent,
-  decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
   fetchAndCacheChannelKeys,
@@ -38,7 +38,8 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import {
@@ -55,6 +56,8 @@ import {
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useLongPress } from '../../hooks/useLongPress.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -67,7 +70,9 @@ import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
+import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
+import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
@@ -150,7 +155,7 @@ export function ChannelView({
   const wasNearBottomRef = useRef(true);
   const lastAckedIdRef = useRef<string | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const _reconnectCount = useGatewayStore((s) => s.reconnectCount);
+  const reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const needsEncryption = true; // Universal E2EE: all channels encrypted
   const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
   const hasEmojis = useEmojiStore((s) =>
@@ -265,6 +270,7 @@ export function ChannelView({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [newActivityAnchor, editingMessageId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated) return;
     let ignore = false;
@@ -284,7 +290,6 @@ export function ChannelView({
             } catch {}
           }
           if (hasChannelKey(channelId)) {
-            // Collect unique author IDs for bulk key fetch
             const encrypted = res.messages.filter(
               (m: { keyVersion: number }) => m.keyVersion > 0,
             );
@@ -298,21 +303,8 @@ export function ChannelView({
             try {
               pubKeys = await getPublicKeys(authorIds);
             } catch {}
-
-            // Decrypt newest messages first so the bottom of the chat
-            // (where the user is looking) resolves before older messages.
-            for (const msg of [...encrypted].reverse()) {
-              if (ignore) break;
-              const pk = pubKeys[msg.authorId];
-              if (!pk) continue;
-              try {
-                await decryptAndUpdateMessage(channelId, msg, pk);
-              } catch (err) {
-                console.error(
-                  `[E2EE] historical decrypt failed for ${msg.id}:`,
-                  err,
-                );
-              }
+            if (!ignore) {
+              await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
             }
           }
         }
@@ -325,16 +317,12 @@ export function ChannelView({
     return () => {
       ignore = true;
     };
-  }, [channelId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps -- reconnectCount is an intentional trigger
+  }, [channelId, isAuthenticated, reconnectCount]);
 
   // Re-decrypt historical messages once channel keys become available.
   // Handles the case where keys arrive after messages were already fetched
   // (e.g., key distribution from channel creator hadn't completed yet).
-  //
-  // The gateway's `decryptInBackground` may also be decrypting these same
-  // messages concurrently via real-time delivery. This is safe because
-  // `decryptAndUpdateMessage` uses a keyVersion > 0 idempotency guard,
-  // ensuring only the first path to finish writes the plaintext.
+  // Uses batched update to avoid per-message re-renders.
   useEffect(() => {
     if (!keysAvailable || !needsEncryption || !channelId) return;
     const messages = useMessageStore.getState().byChannel[channelId] ?? [];
@@ -354,16 +342,8 @@ export function ChannelView({
       } catch {
         return;
       }
-      // Decrypt newest messages first so the bottom of the chat resolves first.
-      for (const msg of [...encrypted].reverse()) {
-        if (cancelled) break;
-        const pk = pubKeys[msg.authorId];
-        if (!pk) continue;
-        try {
-          await decryptAndUpdateMessage(channelId, msg, pk);
-        } catch (err) {
-          console.error(`[E2EE] deferred decrypt failed for ${msg.id}:`, err);
-        }
+      if (!cancelled) {
+        await decryptAndUpdateMessages(channelId, encrypted, pubKeys);
       }
     })();
     return () => {
@@ -616,12 +596,30 @@ export function ChannelView({
           </div>
         )}
 
-        {/* Message input */}
-        <MessageComposer
-          channelId={channelId}
-          serverId={serverId}
-          disabled={viewMode === 'historical'}
-        />
+        {/* Message input — replaced with key status bar when keys unavailable */}
+        {needsEncryption && !keysAvailable ? (
+          <div className="flex flex-shrink-0 items-center gap-3 border-t border-border px-4 py-3">
+            <LockKeyIcon
+              size={18}
+              className="flex-shrink-0 text-text-muted"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-text-muted">
+              <span className="font-medium text-accent">
+                {"You're almost there! "}
+              </span>
+              {isSessionReady()
+                ? 'Waiting for encryption keys — when a member of the channel comes online, keys will be shared with you.'
+                : 'Loading your encryption keys — this only takes a moment.'}
+            </p>
+          </div>
+        ) : (
+          <MessageComposer
+            channelId={channelId}
+            serverId={serverId}
+            disabled={viewMode === 'historical'}
+          />
+        )}
       </div>
 
       {/* Pinned messages sidebar */}
@@ -695,6 +693,113 @@ function useAuthorName(authorId: string, serverId: string | undefined) {
   return useDisplayName(authorId, serverId);
 }
 
+// --- Encrypted attachment placeholder (reserves layout space before decrypt) ---
+
+/** Mirrors the ImageGrid + AttachmentRenderer layout with skeleton placeholders. */
+function EncryptedAttachmentPlaceholder({
+  attachments,
+}: {
+  attachments: Attachment[];
+}) {
+  const images = attachments.filter((a) => a.contentType.startsWith('image/'));
+  const nonImages = attachments.filter(
+    (a) => !a.contentType.startsWith('image/'),
+  );
+
+  return (
+    <div className="mt-1 flex flex-col gap-2">
+      {images.length === 1 && <SingleImagePlaceholder attachment={images[0]} />}
+      {images.length > 1 && <ImageGridPlaceholder images={images} />}
+      {nonImages.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {nonImages.map((att) =>
+            att.contentType.startsWith('video/') ? (
+              <SingleImagePlaceholder key={att.id} attachment={att} />
+            ) : (
+              <div
+                key={att.id}
+                className="flex h-12 w-60 items-center gap-2 rounded-md border border-border bg-bg-surface px-3"
+              >
+                <div className="h-4 w-4 rounded bg-bg-elevated" />
+                <div className="h-3 flex-1 rounded bg-bg-elevated" />
+              </div>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Single image/video: constrained aspect ratio, same as ImageAttachment. */
+function SingleImagePlaceholder({ attachment }: { attachment: Attachment }) {
+  const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
+  return (
+    <div
+      className="rounded-md bg-bg-surface overflow-hidden"
+      style={
+        hasAspectRatio
+          ? {
+              aspectRatio: `${attachment.width}/${attachment.height}`,
+              maxWidth: Math.min(400, attachment.width),
+              maxHeight: 300,
+            }
+          : { maxWidth: 400, maxHeight: 300, aspectRatio: '4/3' }
+      }
+    >
+      {attachment.microThumbnail.length > 0 && (
+        <img
+          src={microThumbDataURI(attachment.microThumbnail)}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover blur-xl scale-110"
+        />
+      )}
+    </div>
+  );
+}
+
+/** Multi-image grid: mirrors ImageGrid layout with square cells. */
+function ImageGridPlaceholder({ images }: { images: Attachment[] }) {
+  const count = images.length;
+  const gridClass =
+    count === 2
+      ? 'grid grid-cols-2 gap-1'
+      : count === 3
+        ? 'grid grid-cols-2 grid-rows-2 gap-1'
+        : 'grid grid-cols-2 gap-1';
+
+  return (
+    <div className={`${gridClass} max-w-[400px] rounded-md overflow-hidden`}>
+      {images.map((img, i) => (
+        <div
+          key={img.id}
+          className={`relative bg-bg-surface overflow-hidden ${count === 3 && i === 0 ? 'row-span-2' : ''}`}
+          style={{ aspectRatio: count === 3 && i === 0 ? '1/2' : '1/1' }}
+        >
+          {img.microThumbnail.length > 0 && (
+            <img
+              src={microThumbDataURI(img.microThumbnail)}
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover blur-xl scale-110"
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Convert raw bytes to a base64 data URI for inline display. */
+function microThumbDataURI(data: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return `data:image/webp;base64,${btoa(binary)}`;
+}
+
 // --- Scrambling "decrypting" placeholder (à la charmbracelet/mods) ---
 
 const CIPHER =
@@ -710,7 +815,7 @@ function scramble(len: number): string[] {
   return arr;
 }
 
-/** Placeholder with cycling Braille characters, mimicking a cipher being decoded. */
+/** Placeholder with cycling characters, mimicking a cipher being decoded. */
 function DecryptingText() {
   // Stable per-instance "shape": random word-lengths with spaces between them.
   const [layout] = useState(() => {
@@ -748,7 +853,7 @@ function DecryptingText() {
   return (
     <output
       className="inline-block font-mono text-sm text-text-muted/50 select-none"
-      aria-label="Decrypting message"
+      aria-label="Encrypted message"
     >
       {display.join('')}
     </output>
@@ -852,12 +957,21 @@ const MessageItem = memo(function MessageItem({
     }
   }
 
+  const isMobile = useMobile();
   const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [quickReactionAnchor, setQuickReactionAnchor] =
+    useState<DOMRect | null>(null);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
+  const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
+
+  const longPressHandlers = useLongPress(
+    useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
+  );
 
   // Initialize edit text when isEditing transitions to true (handles both
   // direct clicks and discard-dialog switches from ChannelView).
@@ -959,87 +1073,98 @@ const MessageItem = memo(function MessageItem({
     }
   }, [isEditing]);
 
-  return (
-    <>
-      <MessageContextMenu
-        encryptedContent={msg.encryptedContent}
-        isOwn={isOwn}
-        isPinned={isPinned}
-        canPin
-        onReply={onReply}
-        onEdit={onStartEdit}
-        onDelete={() => setDeleteDialogOpen(true)}
-        onPin={() => pinMessage(msg.channelId, msg.id)}
-        onUnpin={() => unpinMessage(msg.channelId, msg.id)}
-        onViewProfile={() => openProfilePane(msg.authorId)}
-      >
-        <div
-          className="group relative rounded-md px-2 py-1 hover:bg-bg-surface/50 transition-colors"
-          data-message-id={msg.id}
-        >
-          {/* Reply preview bar (shown above message content when this is a reply) */}
-          {msg.replyToId && (
-            <ReplyPreviewBar
-              parentMessage={parentMessage}
-              parentAuthorName={parentAuthorName}
-              parentAuthorId={parentMessage?.authorId}
-              serverId={serverId}
-              onJump={() => {
-                if (msg.replyToId) onJumpToMessage(msg.replyToId);
-              }}
-            />
-          )}
+  const messageBody = (
+    <div
+      className="group relative rounded-md px-2 py-1 hover:bg-bg-surface/50 transition-colors"
+      data-message-id={msg.id}
+      {...(isMobile ? longPressHandlers : {})}
+    >
+      {/* Reply preview bar (shown above message content when this is a reply) */}
+      {msg.replyToId && (
+        <ReplyPreviewBar
+          parentMessage={parentMessage}
+          parentAuthorName={parentAuthorName}
+          parentAuthorId={parentMessage?.authorId}
+          serverId={serverId}
+          onJump={() => {
+            if (msg.replyToId) onJumpToMessage(msg.replyToId);
+          }}
+        />
+      )}
 
-          {/* Hover action buttons */}
-          <div
-            className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+      {/* Hover action buttons (desktop only) */}
+      {!isMobile && (
+        <div
+          className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        >
+          <button
+            type="button"
+            className="p-1 text-xs text-text-muted hover:text-text rounded"
+            onClick={onReply}
+            title="Reply"
           >
-            <button
-              type="button"
-              className="p-1 text-xs text-text-muted hover:text-text rounded"
-              onClick={onReply}
-              title="Reply"
-            >
-              &#x21A9;
-            </button>
-            <Popover.Root
-              open={reactionPickerOpen}
-              onOpenChange={setReactionPickerOpen}
-            >
-              <Popover.Trigger asChild>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  title="Add reaction"
-                >
-                  <SmileyIcon size={14} aria-hidden="true" />
-                </button>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content
-                  className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
-                  side="top"
-                  align="end"
-                  sideOffset={8}
-                  collisionPadding={16}
-                >
-                  <EmojiPicker
-                    onEmojiSelect={handleReactionSelect}
-                    serverId={serverId}
-                  />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-            {isOwn ? (
-              <>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  onClick={onStartEdit}
-                  title="Edit"
-                >
-                  &#x270E;
-                </button>
+            &#x21A9;
+          </button>
+          <Popover.Root
+            open={reactionPickerOpen}
+            onOpenChange={setReactionPickerOpen}
+          >
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                title="Add reaction"
+              >
+                <SmileyIcon size={14} aria-hidden="true" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="z-50 rounded-xl border border-border shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
+                side="top"
+                align="end"
+                sideOffset={8}
+                collisionPadding={16}
+              >
+                <EmojiPicker
+                  onEmojiSelect={handleReactionSelect}
+                  serverId={serverId}
+                />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+          {isOwn ? (
+            <>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                onClick={onStartEdit}
+                title="Edit"
+              >
+                &#x270E;
+              </button>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-error rounded"
+                onClick={() => setDeleteDialogOpen(true)}
+                title="Delete"
+              >
+                &#x1F5D1;
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                onClick={() => {
+                  navigator.clipboard.writeText(text);
+                }}
+                title="Copy"
+              >
+                &#x1F4CB;
+              </button>
+              {canManageMessages && (
                 <button
                   type="button"
                   className="p-1 text-xs text-text-muted hover:text-error rounded"
@@ -1048,189 +1173,239 @@ const MessageItem = memo(function MessageItem({
                 >
                   &#x1F5D1;
                 </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="p-1 text-xs text-text-muted hover:text-text rounded"
-                  onClick={() => {
-                    navigator.clipboard.writeText(text);
-                  }}
-                  title="Copy"
-                >
-                  &#x1F4CB;
-                </button>
-                {canManageMessages && (
-                  <button
-                    type="button"
-                    className="p-1 text-xs text-text-muted hover:text-error rounded"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    title="Delete"
-                  >
-                    &#x1F5D1;
-                  </button>
-                )}
-              </>
-            )}
-          </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
-          <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2">
+        <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
+          <button type="button" className="mt-0.5 flex-shrink-0 cursor-pointer">
+            <Avatar
+              avatarUrl={authorAvatar}
+              displayName={authorLabel}
+              size="md"
+            />
+          </button>
+        </ProfilePopoverCard>
+        <div className="min-w-0 flex-1 select-text">
+          <div className="flex items-baseline gap-2">
             <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
               <button
                 type="button"
-                className="mt-0.5 flex-shrink-0 cursor-pointer"
+                className="text-sm font-medium cursor-pointer hover:underline text-text"
+                style={authorColor ? { color: authorColor } : undefined}
               >
-                <Avatar
-                  avatarUrl={authorAvatar}
-                  displayName={authorLabel}
-                  size="md"
-                />
+                {authorLabel}
               </button>
             </ProfilePopoverCard>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2">
-                <ProfilePopoverCard userId={msg.authorId} serverId={serverId}>
-                  <button
-                    type="button"
-                    className="text-sm font-medium cursor-pointer hover:underline text-text"
-                    style={authorColor ? { color: authorColor } : undefined}
-                  >
-                    {authorLabel}
-                  </button>
-                </ProfilePopoverCard>
-                {time && (
-                  <span
-                    className="text-xs text-text-subtle"
-                    title={toISO(time)}
-                  >
-                    {formatRelativeTime(time)}
-                  </span>
-                )}
-                {isPinned && (
-                  <PushPinIcon
-                    size={12}
-                    className="text-text-muted inline"
-                    aria-label="Pinned"
-                  />
-                )}
-                {msg.editedAt && (
-                  <span className="text-xs text-text-subtle">(edited)</span>
-                )}
-              </div>
-
-              {isEditing ? (
-                <div className="mt-1">
-                  <textarea
-                    ref={editRef}
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    onKeyDown={handleEditKeyDown}
-                    disabled={isSaving}
-                    rows={1}
-                    className="w-full resize-none rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
-                  />
-                  {editError && (
-                    <p className="text-xs text-error mt-1">{editError}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1">
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      disabled={isSaving}
-                      className="text-xs text-text-muted hover:text-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveEdit}
-                      disabled={isSaving}
-                      className="text-xs text-accent hover:text-accent-hover font-medium"
-                    >
-                      {isSaving ? 'Saving...' : 'Save'}
-                    </button>
-                    <span className="text-xs text-text-subtle">
-                      escape to cancel &middot; enter to save
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {isStillEncrypted ? (
-                    <DecryptingText />
-                  ) : (
-                    text && (
-                      <MarkdownRenderer content={text} serverId={serverId} />
-                    )
-                  )}
-                  {msg.embeds.length > 0 && (
-                    <div className="flex flex-col gap-1">
-                      {msg.embeds.map((embed, i) => (
-                        <LinkPreviewCard key={embed.url || i} embed={embed} />
-                      ))}
-                    </div>
-                  )}
-                  {msg.attachments.length > 0 && (
-                    <AttachmentRenderer
-                      attachments={msg.attachments}
-                      channelId={channelId}
-                    />
-                  )}
-                </>
-              )}
-
-              <ReactionBar
-                channelId={msg.channelId}
-                messageId={msg.id}
-                serverId={serverId}
+            {time && (
+              <span className="text-xs text-text-subtle" title={toISO(time)}>
+                {formatRelativeTime(time)}
+              </span>
+            )}
+            {isPinned && (
+              <PushPinIcon
+                size={12}
+                className="text-text-muted inline"
+                aria-label="Pinned"
               />
+            )}
+            {msg.editedAt && (
+              <span className="text-xs text-text-subtle">(edited)</span>
+            )}
+          </div>
 
-              {/* Replies accordion */}
-              {hasLocalReplies && (
-                <div className="mt-1">
-                  <button
-                    type="button"
-                    className="text-xs text-accent hover:text-accent-hover font-medium"
-                    onClick={handleAccordionToggle}
-                  >
-                    {accordionOpen
-                      ? `Hide replies${replyTotalCount ? ` (${replyTotalCount})` : ''}`
-                      : 'Replies'}
-                  </button>
-                  {accordionOpen && (
-                    <div className="mt-1 ml-2 border-l-2 border-border pl-2 space-y-0.5">
-                      {replyEntries ? (
-                        <>
-                          <div className="text-xs text-text-muted mb-1">
-                            {replyTotalCount}{' '}
-                            {replyTotalCount === 1 ? 'reply' : 'replies'}
-                          </div>
-                          {replyEntries.map((entry) => (
-                            <ReplyAccordionEntry
-                              key={entry.messageId}
-                              entry={entry}
-                              channelId={channelId}
-                              serverId={serverId}
-                              onJump={() => onJumpToMessage(entry.messageId)}
-                            />
-                          ))}
-                        </>
-                      ) : (
-                        <span className="text-xs text-text-subtle">
-                          Loading…
-                        </span>
-                      )}
-                    </div>
+          {isEditing ? (
+            <div className="mt-1">
+              <textarea
+                ref={editRef}
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={handleEditKeyDown}
+                disabled={isSaving}
+                rows={1}
+                className="w-full resize-none rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
+              />
+              {editError && (
+                <p className="text-xs text-error mt-1">{editError}</p>
+              )}
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  disabled={isSaving}
+                  className="text-xs text-text-muted hover:text-text"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  disabled={isSaving}
+                  className="text-xs text-accent hover:text-accent-hover font-medium"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+                <span className="text-xs text-text-subtle">
+                  escape to cancel &middot; enter to save
+                </span>
+              </div>
+            </div>
+          ) : isStillEncrypted ? (
+            <>
+              <DecryptingText />
+              {msg.attachments.length > 0 && (
+                <EncryptedAttachmentPlaceholder
+                  attachments={msg.attachments}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              {text && (
+                <MarkdownRenderer content={text} serverId={serverId} />
+              )}
+              {msg.embeds.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  {msg.embeds.map((embed, i) => (
+                    <LinkPreviewCard key={embed.url || i} embed={embed} />
+                  ))}
+                </div>
+              )}
+              {msg.attachments.length > 0 && (
+                <AttachmentRenderer
+                  attachments={msg.attachments}
+                  channelId={channelId}
+                />
+              )}
+            </>
+          )}
+
+          <ReactionBar
+            channelId={msg.channelId}
+            messageId={msg.id}
+            serverId={serverId}
+          />
+
+          {/* Replies accordion */}
+          {hasLocalReplies && (
+            <div className="mt-1">
+              <button
+                type="button"
+                className="text-xs text-accent hover:text-accent-hover font-medium"
+                onClick={handleAccordionToggle}
+              >
+                {accordionOpen
+                  ? `Hide replies${replyTotalCount ? ` (${replyTotalCount})` : ''}`
+                  : 'Replies'}
+              </button>
+              {accordionOpen && (
+                <div className="mt-1 ml-2 border-l-2 border-border pl-2 space-y-0.5">
+                  {replyEntries ? (
+                    <>
+                      <div className="text-xs text-text-muted mb-1">
+                        {replyTotalCount}{' '}
+                        {replyTotalCount === 1 ? 'reply' : 'replies'}
+                      </div>
+                      {replyEntries.map((entry) => (
+                        <ReplyAccordionEntry
+                          key={entry.messageId}
+                          entry={entry}
+                          channelId={channelId}
+                          serverId={serverId}
+                          onJump={() => onJumpToMessage(entry.messageId)}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <span className="text-xs text-text-subtle">Loading…</span>
                   )}
                 </div>
               )}
             </div>
-            {/* end content column */}
-          </div>
-          {/* end avatar + content row */}
+          )}
         </div>
-      </MessageContextMenu>
+        {/* end content column */}
+      </div>
+      {/* end avatar + content row */}
+    </div>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        messageBody
+      ) : (
+        <MessageContextMenu
+          encryptedContent={msg.encryptedContent}
+          isOwn={isOwn}
+          isPinned={isPinned}
+          canPin
+          onReply={onReply}
+          onEdit={onStartEdit}
+          onDelete={() => setDeleteDialogOpen(true)}
+          onPin={() => pinMessage(msg.channelId, msg.id)}
+          onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onViewProfile={() => openProfilePane(msg.authorId)}
+        >
+          {messageBody}
+        </MessageContextMenu>
+      )}
+
+      {/* Mobile quick reaction bar */}
+      {quickReactionAnchor && (
+        <QuickReactionBar
+          messageId={msg.id}
+          channelId={msg.channelId}
+          anchorRect={quickReactionAnchor}
+          onClose={() => setQuickReactionAnchor(null)}
+          onOpenContextMenu={() => setMobileActionsOpen(true)}
+          onOpenFullPicker={() => setMobileEmojiPickerOpen(true)}
+        />
+      )}
+
+      {/* Mobile message actions bottom sheet */}
+      {mobileActionsOpen && (
+        <MobileMessageActions
+          isOwn={isOwn}
+          isPinned={isPinned}
+          canPin
+          canManageMessages={canManageMessages}
+          encryptedContent={msg.encryptedContent}
+          onClose={() => setMobileActionsOpen(false)}
+          onReply={onReply}
+          onEdit={onStartEdit}
+          onDelete={() => setDeleteDialogOpen(true)}
+          onPin={() => pinMessage(msg.channelId, msg.id)}
+          onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onViewProfile={() => openProfilePane(msg.authorId)}
+        />
+      )}
+
+      {/* Mobile full emoji picker (bottom sheet style) */}
+      {mobileEmojiPickerOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/30"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              setMobileEmojiPickerOpen(false);
+            }}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up">
+            <div className="mx-auto mt-2 mb-1 h-1 w-8 rounded-full bg-border" />
+            <EmojiPicker
+              onEmojiSelect={(emoji) => {
+                handleReactionSelect(emoji);
+                setMobileEmojiPickerOpen(false);
+              }}
+              serverId={serverId}
+            />
+          </div>
+        </>
+      )}
 
       <DeleteMessageDialog
         channelId={msg.channelId}

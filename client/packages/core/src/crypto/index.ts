@@ -18,8 +18,10 @@ export {
   flushChannelKeys,
   getCachedChannelIds,
   getChannelKey,
+  getChannelKeysForServer,
   getLatestKeyVersion,
   hasChannelKey,
+  importChannelKeys,
   initChannelKeys,
   lazyInitChannelKey,
   loadCachedChannelKeys,
@@ -34,7 +36,10 @@ export {
   registerPublicKey,
   restoreIdentity,
 } from './credentials.ts';
-export { decryptAndUpdateMessage } from './decrypt-store.ts';
+export {
+  decryptAndUpdateMessage,
+  decryptAndUpdateMessages,
+} from './decrypt-store.ts';
 export {
   decryptFile,
   encryptFile,
@@ -42,6 +47,10 @@ export {
   unwrapFileKey,
   wrapFileKey,
 } from './file-encryption.ts';
+export {
+  createInviteKeyBundle,
+  importInviteKeyBundle,
+} from './invite-keys.ts';
 export {
   aesGcmDecrypt,
   aesGcmEncrypt,

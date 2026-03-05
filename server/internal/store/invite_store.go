@@ -50,7 +50,7 @@ func generateInviteCode() (string, error) {
 	return string(code), nil
 }
 
-func (s *InviteStore) CreateInvite(ctx context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time) (*models.Invite, error) {
+func (s *InviteStore) CreateInvite(ctx context.Context, serverID, creatorID string, maxUses int, expiresAt *time.Time, encryptedChannelKeys, channelKeysIV []byte) (*models.Invite, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -63,9 +63,9 @@ func (s *InviteStore) CreateInvite(ctx context.Context, serverID, creatorID stri
 
 		now := time.Now()
 		_, err = s.pool.Exec(ctx,
-			`INSERT INTO invites (code, server_id, creator_id, max_uses, expires_at, created_at)
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			code, serverID, creatorID, maxUses, expiresAt, now,
+			`INSERT INTO invites (code, server_id, creator_id, max_uses, expires_at, created_at, encrypted_channel_keys, channel_keys_iv)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+			code, serverID, creatorID, maxUses, expiresAt, now, encryptedChannelKeys, channelKeysIV,
 		)
 		if err != nil {
 			// Retry only on unique constraint violation (code collision).
@@ -77,12 +77,14 @@ func (s *InviteStore) CreateInvite(ctx context.Context, serverID, creatorID stri
 		}
 
 		return &models.Invite{
-			Code:      code,
-			ServerID:  serverID,
-			CreatorID: creatorID,
-			MaxUses:   maxUses,
-			ExpiresAt: expiresAt,
-			CreatedAt: now,
+			Code:                 code,
+			ServerID:             serverID,
+			CreatorID:            creatorID,
+			MaxUses:              maxUses,
+			ExpiresAt:            expiresAt,
+			CreatedAt:            now,
+			EncryptedChannelKeys: encryptedChannelKeys,
+			ChannelKeysIV:        channelKeysIV,
 		}, nil
 	}
 
@@ -95,9 +97,9 @@ func (s *InviteStore) GetInvite(ctx context.Context, code string) (*models.Invit
 
 	var inv models.Invite
 	err := s.pool.QueryRow(ctx,
-		`SELECT code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at
+		`SELECT code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at, encrypted_channel_keys, channel_keys_iv
 		 FROM invites WHERE code = $1`, code,
-	).Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt)
+	).Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt, &inv.EncryptedChannelKeys, &inv.ChannelKeysIV)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("invite not found")
@@ -114,14 +116,16 @@ func (s *InviteStore) ConsumeInvite(ctx context.Context, code string) (*models.I
 	var inv models.Invite
 	err := s.pool.QueryRow(ctx,
 		`UPDATE invites
-		 SET use_count = use_count + 1
+		 SET use_count = use_count + 1,
+		     encrypted_channel_keys = CASE WHEN max_uses > 0 AND use_count + 1 >= max_uses THEN NULL ELSE encrypted_channel_keys END,
+		     channel_keys_iv = CASE WHEN max_uses > 0 AND use_count + 1 >= max_uses THEN NULL ELSE channel_keys_iv END
 		 WHERE code = $1
 		   AND revoked = false
 		   AND (expires_at IS NULL OR expires_at > now())
 		   AND (max_uses = 0 OR use_count < max_uses)
-		 RETURNING code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at`,
+		 RETURNING code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at, encrypted_channel_keys, channel_keys_iv`,
 		code,
-	).Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt)
+	).Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt, &inv.EncryptedChannelKeys, &inv.ChannelKeysIV)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil // invite invalid/expired/maxed — not an error, just nil
@@ -136,7 +140,7 @@ func (s *InviteStore) RevokeInvite(ctx context.Context, code string) error {
 	defer cancel()
 
 	_, err := s.pool.Exec(ctx,
-		`UPDATE invites SET revoked = true WHERE code = $1`, code,
+		`UPDATE invites SET revoked = true, encrypted_channel_keys = NULL, channel_keys_iv = NULL WHERE code = $1`, code,
 	)
 	if err != nil {
 		return fmt.Errorf("revoke invite: %w", err)
@@ -144,12 +148,31 @@ func (s *InviteStore) RevokeInvite(ctx context.Context, code string) error {
 	return nil
 }
 
+// CleanExpiredKeyBundles nulls the key bundle columns on invites that have
+// expired or been revoked, reducing data-at-rest exposure. Safe to call
+// periodically (e.g., on startup or via a background ticker).
+func (s *InviteStore) CleanExpiredKeyBundles(ctx context.Context) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE invites
+		 SET encrypted_channel_keys = NULL, channel_keys_iv = NULL
+		 WHERE encrypted_channel_keys IS NOT NULL
+		   AND (revoked = true OR (expires_at IS NOT NULL AND expires_at <= now()))`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("clean expired key bundles: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
 func (s *InviteStore) ListInvites(ctx context.Context, serverID string) ([]*models.Invite, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	rows, err := s.pool.Query(ctx,
-		`SELECT code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at
+		`SELECT code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at, encrypted_channel_keys, channel_keys_iv
 		 FROM invites WHERE server_id = $1
 		 ORDER BY created_at DESC
 		 LIMIT 100`, serverID,
@@ -162,7 +185,7 @@ func (s *InviteStore) ListInvites(ctx context.Context, serverID string) ([]*mode
 	var invites []*models.Invite
 	for rows.Next() {
 		var inv models.Invite
-		if err := rows.Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt); err != nil {
+		if err := rows.Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt, &inv.EncryptedChannelKeys, &inv.ChannelKeysIV); err != nil {
 			return nil, fmt.Errorf("scan invite: %w", err)
 		}
 		invites = append(invites, &inv)

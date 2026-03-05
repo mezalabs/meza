@@ -14,6 +14,16 @@ import (
 	"github.com/meza-chat/meza/internal/models"
 )
 
+// unmarshalJSONField unmarshals JSON data into dst, logging a warning on failure.
+func unmarshalJSONField(data []byte, dst any, field, userID string) {
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, dst); err != nil {
+			slog.Warn("failed to unmarshal user JSON field",
+				"field", field, "user_id", userID, "error", err)
+		}
+	}
+}
+
 const defaultQueryTimeout = 5 * time.Second
 
 // AuthStore implements AuthStorer using PostgreSQL.
@@ -104,12 +114,8 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 		return nil, fmt.Errorf("query user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(audioPrefsJSON) > 0 {
-		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(connectionsJSON) > 0 {
-		_ = json.Unmarshal(connectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(audioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(connectionsJSON, &u.Connections, "connections", u.ID)
 	return &u, nil
 }
 
@@ -117,22 +123,24 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
-	var audioPrefsJSON []byte
+	var audioPrefsJSON *string
 	if audioPreferences != nil {
-		var err error
-		audioPrefsJSON, err = json.Marshal(audioPreferences)
+		b, err := json.Marshal(audioPreferences)
 		if err != nil {
 			return nil, fmt.Errorf("marshal audio preferences: %w", err)
 		}
+		s := string(b)
+		audioPrefsJSON = &s
 	}
 
-	var connectionsJSON []byte
+	var connectionsJSON *string
 	if connections != nil {
-		var err error
-		connectionsJSON, err = json.Marshal(connections)
+		b, err := json.Marshal(connections)
 		if err != nil {
 			return nil, fmt.Errorf("marshal connections: %w", err)
 		}
+		s := string(b)
+		connectionsJSON = &s
 	}
 
 	var u models.User
@@ -168,12 +176,8 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 		return nil, fmt.Errorf("update user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(returnedAudioPrefsJSON) > 0 {
-		_ = json.Unmarshal(returnedAudioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(returnedConnectionsJSON) > 0 {
-		_ = json.Unmarshal(returnedConnectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(returnedAudioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(returnedConnectionsJSON, &u.Connections, "connections", u.ID)
 	return &u, nil
 }
 
@@ -207,12 +211,8 @@ func (s *AuthStore) getUserWithAuth(ctx context.Context, whereClause string, val
 		return nil, nil, fmt.Errorf("query user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(audioPrefsJSON) > 0 {
-		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(connectionsJSON) > 0 {
-		_ = json.Unmarshal(connectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(audioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(connectionsJSON, &u.Connections, "connections", u.ID)
 	a.UserID = u.ID
 	return &u, &a, nil
 }

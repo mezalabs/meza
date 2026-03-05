@@ -163,16 +163,34 @@ func (m *mockKeyStore) HasChannelKeyVersion(_ context.Context, channelID string)
 
 // mockPermStore implements viewChannelChecker for testing.
 type mockPermStore struct {
-	mu          sync.Mutex
-	viewChannel map[string]map[string]bool   // channelID -> userID -> hasView
-	publicKeys  map[string][]byte            // userID -> signing public key (for ListMembersWithViewChannel)
+	mu            sync.Mutex
+	viewChannel   map[string]map[string]bool // channelID -> userID -> hasView
+	publicKeys    map[string][]byte          // userID -> signing public key (for ListMembersWithViewChannel)
+	channelServer map[string]string          // channelID -> serverID
 }
 
 func newMockPermStore() *mockPermStore {
 	return &mockPermStore{
-		viewChannel: make(map[string]map[string]bool),
-		publicKeys:  make(map[string][]byte),
+		viewChannel:   make(map[string]map[string]bool),
+		publicKeys:    make(map[string][]byte),
+		channelServer: make(map[string]string),
 	}
+}
+
+func (m *mockPermStore) setChannelServer(channelID, serverID string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.channelServer[channelID] = serverID
+}
+
+func (m *mockPermStore) GetChannelServerID(_ context.Context, channelID string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	serverID, ok := m.channelServer[channelID]
+	if !ok {
+		return "", store.ErrNotFound
+	}
+	return serverID, nil
 }
 
 func (m *mockPermStore) grantViewChannel(channelID, userID string) {
@@ -339,7 +357,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	ks := newMockKeyStore()
 	ps := newMockPermStore()
 	cs := newMockChatStore()
-	svc := newKeyService(ks, ps, cs)
+	svc := newKeyService(ks, ps, cs, nil)
 
 	mux := http.NewServeMux()
 	path, handler := mezav1connect.NewKeyServiceHandler(svc,
@@ -1234,5 +1252,120 @@ func TestIntegration_StoreGetRotateFlow(t *testing.T) {
 	}
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("expected CodePermissionDenied, got %v", connect.CodeOf(err))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// RequestChannelKeys tests
+// ---------------------------------------------------------------------------
+
+func TestRequestChannelKeys_Unauthenticated(t *testing.T) {
+	env := setupTestEnv(t)
+
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		connect.NewRequest(&v1.RequestChannelKeysRequest{ChannelId: "ch-1"}),
+	)
+	if err == nil {
+		t.Fatal("expected error for unauthenticated request, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("expected CodeUnauthenticated, got %v", connect.CodeOf(err))
+	}
+}
+
+func TestRequestChannelKeys_EmptyChannelID(t *testing.T) {
+	env := setupTestEnv(t)
+
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: ""}),
+	)
+	if err == nil {
+		t.Fatal("expected error for empty channel_id, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("expected CodeInvalidArgument, got %v", connect.CodeOf(err))
+	}
+}
+
+func TestRequestChannelKeys_NoViewChannel(t *testing.T) {
+	env := setupTestEnv(t)
+
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "ch-1"}),
+	)
+	if err == nil {
+		t.Fatal("expected error for missing ViewChannel, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("expected CodePermissionDenied, got %v", connect.CodeOf(err))
+	}
+}
+
+func TestRequestChannelKeys_DMChannel(t *testing.T) {
+	env := setupTestEnv(t)
+	env.permStore.grantViewChannel("dm-ch-1", "user-1")
+	// No channel-server mapping — simulates DM channel.
+
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "dm-ch-1"}),
+	)
+	if err == nil {
+		t.Fatal("expected error for DM channel, got nil")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("expected CodeInvalidArgument for DM channel, got %v", connect.CodeOf(err))
+	}
+}
+
+func TestRequestChannelKeys_ValidRequest(t *testing.T) {
+	env := setupTestEnv(t)
+	env.permStore.grantViewChannel("ch-1", "user-1")
+	env.permStore.setChannelServer("ch-1", "srv-1")
+
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "ch-1"}),
+	)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRequestChannelKeys_Throttled(t *testing.T) {
+	env := setupTestEnv(t)
+	env.permStore.grantViewChannel("ch-1", "user-1")
+	env.permStore.setChannelServer("ch-1", "srv-1")
+
+	// First request should succeed.
+	_, err := env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "ch-1"}),
+	)
+	if err != nil {
+		t.Fatalf("first request failed: %v", err)
+	}
+
+	// Second request within cooldown should also "succeed" (silently throttled).
+	_, err = env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "ch-1"}),
+	)
+	if err != nil {
+		t.Fatalf("throttled request should succeed silently, got: %v", err)
+	}
+
+	// Different channel should not be throttled.
+	env.permStore.grantViewChannel("ch-2", "user-1")
+	env.permStore.setChannelServer("ch-2", "srv-1")
+	_, err = env.client.RequestChannelKeys(
+		context.Background(),
+		testutil.AuthedRequest(t, "user-1", &v1.RequestChannelKeysRequest{ChannelId: "ch-2"}),
+	)
+	if err != nil {
+		t.Fatalf("different channel should not be throttled: %v", err)
 	}
 }

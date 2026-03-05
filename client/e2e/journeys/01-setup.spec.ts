@@ -228,10 +228,11 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       timeout: 10_000,
     });
 
-    // Extract invite code
+    // Extract invite code (strip URL prefix and fragment)
     const inviteText = await alicePage.locator('.font-mono').textContent();
-    inviteCode = inviteText?.split('/').pop()?.trim() ?? '';
-    expect(inviteCode.length).toBeGreaterThan(0);
+    const codeMatch = inviteText?.match(/\/invite\/([a-z0-9]{8})/i);
+    inviteCode = codeMatch?.[1]?.toLowerCase() ?? '';
+    expect(inviteCode.length).toBe(8);
 
     await alicePage.getByRole('button', { name: 'Done' }).click();
 

@@ -23,7 +23,9 @@ import {
 import {
   distributeKeyToMember,
   fetchAndCacheChannelKeys,
+  getCachedChannelIds,
   hasChannelKey,
+  redistributeChannelKeys,
 } from '../crypto/channel-keys.ts';
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
 import { isSessionReady } from '../crypto/session.ts';
@@ -102,6 +104,8 @@ let reconnectAttempts = 0;
 let generation = 0;
 let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
+let lastRedistributeTime = 0;
+const REDISTRIBUTE_COOLDOWN_MS = 60_000; // 1 minute between reconnect redistributions
 let isOnline =
   typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
 
@@ -450,6 +454,26 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           useTypingStore.getState().reset();
           usePresenceStore.getState().reset();
         }
+        // E2EE: redistribute cached channel keys to all members.
+        // Covers both initial connection (Bob opens a fresh tab while
+        // Charlie is waiting for keys) and reconnects (missed memberJoin).
+        // Cooldown prevents flooding on flapping connections.
+        // UPSERT semantics make duplicates safe.
+        if (
+          isSessionReady() &&
+          Date.now() - lastRedistributeTime > REDISTRIBUTE_COOLDOWN_MS
+        ) {
+          const channelIds = getCachedChannelIds();
+          if (channelIds.length > 0) {
+            lastRedistributeTime = Date.now();
+            redistributeChannelKeys(channelIds).catch((err) =>
+              console.error(
+                '[E2EE] key redistribution on connect failed:',
+                err,
+              ),
+            );
+          }
+        }
         hasConnectedBefore = true;
         // Suppress notification sounds for 3s after connect/reconnect
         // to prevent flooding from a backlog of missed events.
@@ -482,11 +506,27 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       if (event.payload.case === 'messageCreate' && event.payload.value) {
         const msg = event.payload.value;
 
-        // Add message to store immediately. If encrypted (keyVersion > 0),
-        // fire off background decryption that updates the store once done.
-        useMessageStore.getState().addMessage(msg.channelId, msg);
-        if (msg.keyVersion > 0 && isSessionReady()) {
-          decryptInBackground(msg.channelId, msg, generation);
+        // Own encrypted messages: the optimistic path in sendMessage already
+        // added the plaintext version (keyVersion=0). The gateway echo has
+        // encrypted text but also carries server-enriched attachment metadata
+        // (e.g., encryptedKey for file decryption). Merge the attachment data
+        // without overwriting the plaintext content.
+        const store = useMessageStore.getState();
+        const existingOwn =
+          msg.authorId === currentUserId && msg.keyVersion > 0
+            ? store.byId[msg.channelId]?.[msg.id]
+            : undefined;
+        if (existingOwn) {
+          // Keep plaintext content + keyVersion=0, but update attachments
+          store.updateMessage(msg.channelId, {
+            ...existingOwn,
+            attachments: msg.attachments,
+          });
+        } else {
+          store.addMessage(msg.channelId, msg);
+          if (msg.keyVersion > 0 && isSessionReady()) {
+            decryptInBackground(msg.channelId, msg, generation);
+          }
         }
         useTypingStore.getState().clearUser(msg.channelId, msg.authorId);
         // Increment unread count for messages from other users, but only if
@@ -563,61 +603,64 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       } else if (event.payload.case === 'memberJoin' && event.payload.value) {
         const joinedMember = event.payload.value;
         useMemberStore.getState().addMember(joinedMember);
-        // E2EE: if we are the inviter, distribute channel keys to the new member
+        // E2EE: any online member distributes channel keys to the new member.
+        // The inviter distributes immediately; other members delay 3-8s as backup
+        // in case the inviter is offline. UPSERT semantics make duplicates harmless.
         if (
-          joinedMember.inviterUserId === currentUserId &&
           joinedMember.userId !== currentUserId &&
           joinedMember.serverId &&
           isSessionReady()
         ) {
           const serverId = joinedMember.serverId;
           const newUserId = joinedMember.userId;
-          // Distribute keys asynchronously with retry — the new user may
-          // still be bootstrapping their identity keys.
+          const isInviter = joinedMember.inviterUserId === currentUserId;
+          const jitterMs = isInviter ? 0 : 1000 + Math.random() * 2000;
           const gen = generation;
-          (async () => {
-            try {
-              const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
-              if (!maybePk || gen !== generation) return;
-              const pk: Uint8Array = maybePk;
-              // Get all channels in this server that we have keys for,
-              // but skip private channels — the new member won't have
-              // ViewChannel on them (@everyone deny). They'll lazy-init
-              // if they're later granted access.
-              const channels =
-                useChannelStore.getState().byServer[serverId] ?? [];
-              // Limit concurrency to avoid bursting hundreds of RPCs
-              const CONCURRENCY = 5;
-              const queue = channels.filter(
-                (ch) => !ch.isPrivate && hasChannelKey(ch.id),
-              );
-              async function distributeWorker() {
-                while (queue.length > 0) {
-                  const ch = queue.shift();
-                  if (!ch) break;
-                  try {
-                    await distributeKeyToMember(ch.id, newUserId, pk);
-                  } catch (err) {
-                    console.error(
-                      `[E2EE] key distribution to ${newUserId} for ${ch.id}:`,
-                      err,
-                    );
+          setTimeout(() => {
+            if (gen !== generation) return;
+            (async () => {
+              try {
+                const maybePk = await fetchPublicKeyWithRetry(newUserId, gen);
+                if (!maybePk || gen !== generation) return;
+                const pk: Uint8Array = maybePk;
+                // Get all non-private channels in this server.
+                // Skip private channels — the new member won't have
+                // ViewChannel on them (@everyone deny). They'll lazy-init
+                // if they're later granted access.
+                // distributeKeyToMember handles cache misses via server fetch,
+                // so we don't need to pre-filter by hasChannelKey.
+                const channels =
+                  useChannelStore.getState().byServer[serverId] ?? [];
+                const CONCURRENCY = 5;
+                const queue = channels.filter((ch) => !ch.isPrivate);
+                async function distributeWorker() {
+                  while (queue.length > 0) {
+                    const ch = queue.shift();
+                    if (!ch) break;
+                    try {
+                      await distributeKeyToMember(ch.id, newUserId, pk);
+                    } catch (err) {
+                      console.error(
+                        `[E2EE] key distribution to ${newUserId} for ${ch.id}:`,
+                        err,
+                      );
+                    }
                   }
                 }
+                await Promise.all(
+                  Array.from(
+                    { length: Math.min(CONCURRENCY, queue.length) },
+                    () => distributeWorker(),
+                  ),
+                );
+              } catch (err) {
+                console.error(
+                  `[E2EE] failed to distribute keys to new member ${newUserId}:`,
+                  err,
+                );
               }
-              await Promise.all(
-                Array.from(
-                  { length: Math.min(CONCURRENCY, queue.length) },
-                  () => distributeWorker(),
-                ),
-              );
-            } catch (err) {
-              console.error(
-                `[E2EE] failed to distribute keys to new member ${newUserId}:`,
-                err,
-              );
-            }
-          })();
+            })();
+          }, jitterMs);
         }
       } else if (event.payload.case === 'memberUpdate' && event.payload.value) {
         useMemberStore.getState().updateMember(event.payload.value);
@@ -706,22 +749,21 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         if (!serverId && chId) {
           fetchDMChannels().catch(() => {});
         }
-        // If a new member was added and we have the channel key, distribute it
+        // If a new member was added, distribute the channel key to them
         // with retry — the new user may still be bootstrapping.
+        // distributeKeyToMember handles cache misses via server fetch.
         if (userId !== currentUserId && chId && isSessionReady()) {
-          if (hasChannelKey(chId)) {
-            const gen = generation;
-            fetchPublicKeyWithRetry(userId, gen).then((pk) => {
-              if (pk && gen === generation) {
-                distributeKeyToMember(chId, userId, pk).catch((err) =>
-                  console.error(
-                    `[E2EE] distributeKeyToMember failed for ${userId} in ${chId}:`,
-                    err,
-                  ),
-                );
-              }
-            });
-          }
+          const gen = generation;
+          fetchPublicKeyWithRetry(userId, gen).then((pk) => {
+            if (pk && gen === generation) {
+              distributeKeyToMember(chId, userId, pk).catch((err) =>
+                console.error(
+                  `[E2EE] distributeKeyToMember failed for ${userId} in ${chId}:`,
+                  err,
+                ),
+              );
+            }
+          });
         }
       } else if (
         event.payload.case === 'channelMemberRemove' &&
@@ -897,6 +939,31 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         const { user } = event.payload.value;
         if (user) {
           useFriendStore.getState().removeIncomingRequest(user.id);
+        }
+      } else if (event.payload.case === 'keyRequest' && event.payload.value) {
+        // E2EE key request events.
+        const { channelId, userId } = event.payload.value;
+        // Don't respond to our own request.
+        if (userId !== currentUserId && isSessionReady() && hasChannelKey(channelId)) {
+          const gen = generation;
+          // Random jitter (0–2s) to prevent thundering herd when multiple
+          // clients receive the same request simultaneously.
+          const jitterMs = Math.random() * 2000;
+          setTimeout(() => {
+            if (gen !== generation) return;
+            (async () => {
+              try {
+                const pk = await fetchPublicKeyWithRetry(userId, gen);
+                if (!pk || gen !== generation) return;
+                await distributeKeyToMember(channelId, userId, pk);
+              } catch (err) {
+                console.error(
+                  `[E2EE] key request: failed to distribute key for ${channelId} to ${userId}:`,
+                  err,
+                );
+              }
+            })();
+          }, jitterMs);
         }
       }
       // Presence update events.

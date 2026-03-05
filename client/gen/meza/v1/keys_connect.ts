@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetKeyEnvelopesRequest, GetKeyEnvelopesResponse, GetPublicKeysRequest, GetPublicKeysResponse, ListMembersWithViewChannelRequest, ListMembersWithViewChannelResponse, RegisterPublicKeyRequest, RegisterPublicKeyResponse, RotateChannelKeyRequest, RotateChannelKeyResponse, StoreKeyEnvelopesRequest, StoreKeyEnvelopesResponse } from "./keys_pb.js";
+import { GetKeyEnvelopesRequest, GetKeyEnvelopesResponse, GetPublicKeysRequest, GetPublicKeysResponse, ListMembersWithViewChannelRequest, ListMembersWithViewChannelResponse, RegisterPublicKeyRequest, RegisterPublicKeyResponse, RequestChannelKeysRequest, RequestChannelKeysResponse, RotateChannelKeyRequest, RotateChannelKeyResponse, StoreKeyEnvelopesRequest, StoreKeyEnvelopesResponse } from "./keys_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -81,6 +81,18 @@ export const KeyService = {
       name: "ListMembersWithViewChannel",
       I: ListMembersWithViewChannelRequest,
       O: ListMembersWithViewChannelResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * RequestChannelKeys broadcasts a key request event so online members
+     * who have the channel key can distribute it to the requester.
+     *
+     * @generated from rpc meza.v1.KeyService.RequestChannelKeys
+     */
+    requestChannelKeys: {
+      name: "RequestChannelKeys",
+      I: RequestChannelKeysRequest,
+      O: RequestChannelKeysResponse,
       kind: MethodKind.Unary,
     },
   }

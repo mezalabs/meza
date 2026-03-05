@@ -23,6 +23,10 @@ service KeyService {
   // ListMembersWithViewChannel returns user IDs and public keys for server members
   // who have ViewChannel permission on the given channel. Paginated for large servers.
   rpc ListMembersWithViewChannel(ListMembersWithViewChannelRequest) returns (ListMembersWithViewChannelResponse);
+
+  // RequestChannelKeys broadcasts a key request event so online members
+  // who have the channel key can distribute it to the requester.
+  rpc RequestChannelKeys(RequestChannelKeysRequest) returns (RequestChannelKeysResponse);
 }
 
 // RegisterPublicKey
@@ -103,3 +107,11 @@ message ListMembersWithViewChannelResponse {
   repeated UserPublicKey members = 1;
   string next_cursor = 2; // Empty if no more pages
 }
+
+// RequestChannelKeys
+
+message RequestChannelKeysRequest {
+  string channel_id = 1;
+}
+
+message RequestChannelKeysResponse {}
