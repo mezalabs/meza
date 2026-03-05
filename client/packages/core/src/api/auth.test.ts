@@ -192,14 +192,13 @@ describe('getSalt', () => {
     expect(salt).toEqual(new Uint8Array([1, 2, 3]));
   });
 
-  it('returns null for NotFound', async () => {
+  it('throws for NotFound', async () => {
     const { getSalt } = await import('./auth.ts');
     mockAuthClient.getSalt.mockRejectedValue(
       new ConnectError('no user', Code.NotFound),
     );
 
-    const salt = await getSalt('missing@b.com');
-    expect(salt).toBeNull();
+    await expect(getSalt('missing@b.com')).rejects.toThrow();
   });
 
   it('throws for other errors', async () => {

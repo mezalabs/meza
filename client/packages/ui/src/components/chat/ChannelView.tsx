@@ -1257,16 +1257,12 @@ const MessageItem = memo(function MessageItem({
             <>
               <DecryptingText />
               {msg.attachments.length > 0 && (
-                <EncryptedAttachmentPlaceholder
-                  attachments={msg.attachments}
-                />
+                <EncryptedAttachmentPlaceholder attachments={msg.attachments} />
               )}
             </>
           ) : (
             <>
-              {text && (
-                <MarkdownRenderer content={text} serverId={serverId} />
-              )}
+              {text && <MarkdownRenderer content={text} serverId={serverId} />}
               {msg.embeds.length > 0 && (
                 <div className="flex flex-col gap-1">
                   {msg.embeds.map((embed, i) => (

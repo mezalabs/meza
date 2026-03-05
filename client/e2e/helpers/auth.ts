@@ -35,7 +35,7 @@ export async function loginViaUI(
   await expect(signInTab).toBeVisible({ timeout: 15_000 });
   await signInTab.click();
 
-  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Email or username').fill(email);
   await page.getByPlaceholder('Password').fill(password);
 
   // The Sign In submit button (last one to disambiguate from tab)

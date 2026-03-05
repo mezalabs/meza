@@ -119,12 +119,12 @@ export function finalizeRegistration(
   }
 }
 
-export async function login(email: string, authKey: Uint8Array) {
+export async function login(identifier: string, authKey: Uint8Array) {
   const store = useAuthStore.getState();
   store.setLoading(true);
   store.setError(null);
   try {
-    const res = await authClient.login({ email, authKey });
+    const res = await authClient.login({ identifier, authKey });
     if (res.user) {
       store.setAuth(res.accessToken, res.refreshToken, toStoredUser(res.user));
       hydrateAudioPreferences(res.user.audioPreferences);
@@ -138,16 +138,9 @@ export async function login(email: string, authKey: Uint8Array) {
   }
 }
 
-export async function getSalt(email: string) {
-  try {
-    const res = await authClient.getSalt({ email });
-    return res.salt;
-  } catch (err) {
-    if (err instanceof ConnectError && err.code === Code.NotFound) {
-      return null;
-    }
-    throw err;
-  }
+export async function getSalt(identifier: string) {
+  const res = await authClient.getSalt({ identifier });
+  return res.salt;
 }
 
 export async function refreshAccessToken(refreshToken: string) {

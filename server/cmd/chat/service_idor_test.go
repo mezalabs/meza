@@ -348,7 +348,13 @@ func (s *idorMockAuthStore) UpdateUser(context.Context, string, *string, *string
 func (s *idorMockAuthStore) GetUserByEmail(context.Context, string) (*models.User, *models.AuthData, error) {
 	panic("not implemented")
 }
+func (s *idorMockAuthStore) GetUserByUsername(context.Context, string) (*models.User, *models.AuthData, error) {
+	panic("not implemented")
+}
 func (s *idorMockAuthStore) GetSalt(context.Context, string) ([]byte, error) {
+	panic("not implemented")
+}
+func (s *idorMockAuthStore) GetSaltByUsername(context.Context, string) ([]byte, error) {
 	panic("not implemented")
 }
 func (s *idorMockAuthStore) StoreRefreshToken(context.Context, string, string, string, time.Time) error {
