@@ -45,9 +45,8 @@ export interface SearchActions {
   reset: () => void;
 }
 
-// Generation counter + AbortController to prevent stale results
+// Generation counter to prevent stale results
 let searchGeneration = 0;
-let activeAbort: AbortController | null = null;
 
 export const useSearchStore = create<SearchState & SearchActions>()(
   immer((set, get) => ({
@@ -61,31 +60,11 @@ export const useSearchStore = create<SearchState & SearchActions>()(
     hasMore: false,
     error: null,
 
-    setQuery: (query) => {
-      set((s) => {
-        s.query = query;
-      });
-    },
-    setChannelId: (channelId) => {
-      set((s) => {
-        s.channelId = channelId;
-      });
-    },
-    setAuthorId: (authorId) => {
-      set((s) => {
-        s.authorId = authorId;
-      });
-    },
-    setHasAttachment: (v) => {
-      set((s) => {
-        s.hasAttachment = v;
-      });
-    },
-    setScope: (scope) => {
-      set((s) => {
-        s.scope = scope;
-      });
-    },
+    setQuery: (query) => set({ query }),
+    setChannelId: (channelId) => set({ channelId }),
+    setAuthorId: (authorId) => set({ authorId }),
+    setHasAttachment: (v) => set({ hasAttachment: v }),
+    setScope: (scope) => set({ scope }),
 
     search: async () => {
       const { query, channelId, authorId, hasAttachment, scope } = get();
@@ -100,10 +79,6 @@ export const useSearchStore = create<SearchState & SearchActions>()(
         return;
       }
 
-      // Cancel any in-flight search
-      activeAbort?.abort();
-      const controller = new AbortController();
-      activeAbort = controller;
       const gen = ++searchGeneration;
 
       set((s) => {
@@ -115,38 +90,46 @@ export const useSearchStore = create<SearchState & SearchActions>()(
         // Resolve from: filter to authorId
         const effectiveAuthorId = parsed.filters.from?.[0] ?? authorId;
 
-        // --- Local search (FlexSearch worker) ---
-        let localResults: SearchResultItem[] = [];
-        if (parsed.text.trim()) {
-          const localHits = await searchIndex(parsed.text, {
-            channelId: scope === 'channel' ? channelId || undefined : undefined,
-            authorId: effectiveAuthorId || undefined,
-            hasAttachment: hasAttachment || undefined,
-          });
-          if (gen !== searchGeneration) return;
+        // Run local and server searches in parallel
+        const localPromise = parsed.text.trim()
+          ? searchIndex(parsed.text, {
+              channelId:
+                scope === 'channel' ? channelId || undefined : undefined,
+              authorId: effectiveAuthorId || undefined,
+              hasAttachment: hasAttachment || undefined,
+            })
+          : Promise.resolve([] as SearchHit[]);
 
-          localResults = localHits.map((hit) => ({
-            localHit: hit,
-            decryptedContent: null, // content fetched from message store by UI
-            source: 'local' as const,
-          }));
-        }
+        const serverPromise =
+          channelId && scope === 'channel'
+            ? (() => {
+                const params: SearchMessagesParams = { channelId };
+                if (effectiveAuthorId) params.authorId = effectiveAuthorId;
+                if (hasAttachment) params.hasAttachment = true;
+                return searchMessages(params);
+              })()
+            : Promise.resolve(null);
 
-        // --- Server-side metadata search (requires channelId) ---
+        const [localHits, serverRes] = await Promise.all([
+          localPromise,
+          serverPromise,
+        ]);
+        if (gen !== searchGeneration) return;
+
+        // Build local results
+        const localResults: SearchResultItem[] = localHits.map((hit) => ({
+          localHit: hit,
+          decryptedContent: null, // content fetched from message store by UI
+          source: 'local' as const,
+        }));
+
+        // Build server results (decrypt if available)
         let serverResults: SearchResultItem[] = [];
         let hasMore = false;
 
-        if (channelId && scope === 'channel') {
-          const params: SearchMessagesParams = { channelId };
-          if (effectiveAuthorId) params.authorId = effectiveAuthorId;
-          if (hasAttachment) params.hasAttachment = true;
-
-          const serverRes = await searchMessages(params);
-          if (gen !== searchGeneration) return;
-
+        if (serverRes) {
           hasMore = serverRes.hasMore;
 
-          // Decrypt server results for display
           const decrypted = await decryptSearchResults(serverRes.messages);
           if (gen !== searchGeneration) return;
 
@@ -159,7 +142,7 @@ export const useSearchStore = create<SearchState & SearchActions>()(
           );
         }
 
-        // --- Deduplicate: local results take priority (have content) ---
+        // Deduplicate: local results take priority (indexed from decrypted content)
         const localIds = new Set(
           localResults.map((r) => r.localHit?.id).filter(Boolean),
         );
@@ -179,18 +162,19 @@ export const useSearchStore = create<SearchState & SearchActions>()(
         });
       } catch (err) {
         if (gen !== searchGeneration) return;
-        if (err instanceof DOMException && err.name === 'AbortError') return;
         const msg = err instanceof Error ? err.message : 'Search failed';
-        const isRateLimit = msg.includes('Limit reached') || msg.includes('rate limit');
+        const isRateLimit =
+          msg.includes('Limit reached') || msg.includes('rate limit');
         set((s) => {
-          s.error = isRateLimit ? 'Search rate limited — please wait a few seconds' : msg;
+          s.error = isRateLimit
+            ? 'Search rate limited — please wait a few seconds'
+            : msg;
           s.isLoading = false;
         });
       }
     },
 
     reset: () => {
-      activeAbort?.abort();
       searchGeneration++;
       set((s) => {
         s.query = '';

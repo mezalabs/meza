@@ -3,7 +3,6 @@ import type {
   IndexableMessage,
   SearchHit,
   SearchOpts,
-  WorkerRequest,
   WorkerResponse,
 } from './types.ts';
 
@@ -29,6 +28,14 @@ function getWorker(): Worker {
       pending.delete(e.data.id);
       if ('error' in e.data) p.reject(new Error(e.data.error));
       else p.resolve(e.data.result);
+    };
+    worker.onerror = () => {
+      // Reject all pending promises on worker crash
+      for (const [, p] of pending) {
+        p.reject(new Error('Search worker crashed'));
+      }
+      pending.clear();
+      worker = null;
     };
   }
   return worker;
@@ -78,10 +85,6 @@ export function searchIndex(
   return call('search', [query, opts]);
 }
 
-export function warmSearchChannels(ids: string[]): Promise<void> {
-  return call('warmChannels', [ids]);
-}
-
 export function clearSearchChannel(id: string): Promise<void> {
   return call('clearChannel', [id]);
 }
@@ -92,8 +95,20 @@ export function clearAllSearchIndexes(): Promise<void> {
 
 export function terminateSearchWorker(): void {
   if (worker) {
-    worker.terminate();
+    // Best-effort flush before terminating
+    try {
+      call('flush', []).catch(() => {});
+    } catch {
+      // Worker may already be dead
+    }
+    // Give a small window for flush, then terminate
+    const w = worker;
+    setTimeout(() => w.terminate(), 100);
     worker = null;
+  }
+  // Reject all pending promises
+  for (const [, p] of pending) {
+    p.reject(new Error('Search worker terminated'));
   }
   pending.clear();
 }

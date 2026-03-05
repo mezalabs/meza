@@ -1,6 +1,7 @@
 export {
   backfillChannel,
   indexIncomingMessage,
+  indexIncomingMessages,
   resetSearchState,
   toIndexable,
 } from './indexer.ts';
@@ -15,7 +16,6 @@ export {
   searchIndex,
   terminateSearchWorker,
   updateSearchMessage,
-  warmSearchChannels,
 } from './search-service.ts';
 export {
   type SearchActions,
@@ -23,10 +23,4 @@ export {
   type SearchState,
   useSearchStore,
 } from './store.ts';
-export type {
-  IndexableMessage,
-  SearchHit,
-  SearchOpts,
-  WorkerRequest,
-  WorkerResponse,
-} from './types.ts';
+export type { IndexableMessage, SearchHit, SearchOpts } from './types.ts';

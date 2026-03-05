@@ -11,7 +11,10 @@
  */
 
 import type { Attachment, Message } from '@meza/gen/meza/v1/models_pb.ts';
-import { indexIncomingMessage } from '../search/indexer.ts';
+import {
+  indexIncomingMessage,
+  indexIncomingMessages,
+} from '../search/indexer.ts';
 import { useMessageStore } from '../store/messages.ts';
 import { decryptMessage, parseMessageContent } from './messages.ts';
 
@@ -94,10 +97,8 @@ export async function decryptAndUpdateMessages(
   }
   if (results.length > 0) {
     useMessageStore.getState().bulkUpdateMessages(channelId, results);
-    // Index the now-decrypted messages for local search
-    for (const result of results) {
-      indexIncomingMessage(channelId, result);
-    }
+    // Index the now-decrypted messages for local search (batched)
+    indexIncomingMessages(channelId, results);
   }
   return results.length;
 }

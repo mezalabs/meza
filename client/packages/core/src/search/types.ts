@@ -26,7 +26,6 @@ export interface SearchHit {
   readonly createdAt: number;
   readonly hasAttachment: boolean;
   readonly hasMention: boolean;
-  readonly score?: number;
   // content NOT stored in FlexSearch — fetched from message store on demand
 }
 
@@ -38,9 +37,9 @@ export type WorkerRequest =
   | { id: number; method: 'removeMessage'; args: [string, string] }
   | { id: number; method: 'removeMessages'; args: [string, string[]] }
   | { id: number; method: 'search'; args: [string, SearchOpts] }
+  | { id: number; method: 'flush'; args: [] }
   | { id: number; method: 'clearChannel'; args: [string] }
-  | { id: number; method: 'clearAll'; args: [] }
-  | { id: number; method: 'warmChannels'; args: [string[]] };
+  | { id: number; method: 'clearAll'; args: [] };
 
 export type WorkerResponse =
   | { id: number; result: unknown }

@@ -27,6 +27,7 @@ const channelQueues = new Map<string, Promise<void>>();
 const dirtyChannels = new Set<string>();
 let commitTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingMutations = 0;
+let flushInProgress: Promise<void> | null = null;
 
 function touchChannel(channelId: string): void {
   const i = accessOrder.indexOf(channelId);
@@ -38,6 +39,16 @@ async function evictIfNeeded(): Promise<void> {
   while (indexes.size > MAX_HOT_CHANNELS && accessOrder.length > 0) {
     const oldest = accessOrder.shift();
     if (!oldest) break;
+    // Drain pending operations before evicting
+    const pending = channelQueues.get(oldest);
+    if (pending) {
+      try {
+        await pending;
+      } catch {
+        // best effort
+      }
+      channelQueues.delete(oldest);
+    }
     const index = indexes.get(oldest);
     if (index) {
       try {
@@ -95,6 +106,7 @@ async function initChannel(channelId: string): Promise<void> {
 
 function enqueue(channelId: string, fn: () => Promise<void>): Promise<void> {
   const prev = channelQueues.get(channelId) ?? Promise.resolve();
+  // Chain fn regardless of prev's outcome to maintain serialization
   const next = prev.then(fn, fn);
   channelQueues.set(channelId, next);
   return next;
@@ -104,6 +116,10 @@ function scheduleCommit(channelId: string): void {
   dirtyChannels.add(channelId);
   pendingMutations++;
   if (pendingMutations >= COMMIT_BATCH_THRESHOLD) {
+    if (commitTimer) {
+      clearTimeout(commitTimer);
+      commitTimer = null;
+    }
     flushDirty();
     return;
   }
@@ -115,10 +131,27 @@ function scheduleCommit(channelId: string): void {
 }
 
 async function flushDirty(): Promise<void> {
-  pendingMutations = 0;
+  if (flushInProgress) return; // coalesce concurrent flushes
   const channels = [...dirtyChannels];
   dirtyChannels.clear();
-  await Promise.allSettled(channels.map((id) => indexes.get(id)?.commit()));
+  pendingMutations = 0;
+
+  flushInProgress = Promise.allSettled(
+    channels.map((id) => indexes.get(id)?.commit()),
+  ).then((results) => {
+    // Re-mark channels whose commits failed so they retry
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === 'rejected') {
+        dirtyChannels.add(channels[i]);
+      }
+    }
+  });
+
+  try {
+    await flushInProgress;
+  } finally {
+    flushInProgress = null;
+  }
 }
 
 async function addMessages(
@@ -221,11 +254,6 @@ async function search(query: string, opts: SearchOpts): Promise<SearchHit[]> {
   return results.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 }
 
-async function warmChannels(channelIds: string[]): Promise<void> {
-  const cold = channelIds.filter((id) => !indexes.has(id));
-  await Promise.all(cold.slice(0, 5).map((id) => initChannel(id)));
-}
-
 async function clearChannel(channelId: string): Promise<void> {
   return enqueue(channelId, async () => {
     const index = indexes.get(channelId);
@@ -239,26 +267,54 @@ async function clearChannel(channelId: string): Promise<void> {
     }
     indexes.delete(channelId);
     dbs.delete(channelId);
+    channelQueues.delete(channelId);
     const i = accessOrder.indexOf(channelId);
     if (i !== -1) accessOrder.splice(i, 1);
   });
 }
 
 async function clearAll(): Promise<void> {
+  // Clear in-memory indexes
   const channelIds = [...indexes.keys()];
   await Promise.all(channelIds.map((id) => clearChannel(id)));
+
+  // Delete ALL persisted IndexedDB databases matching the naming pattern
+  // (catches channels evicted from LRU that are no longer in memory)
+  if (typeof indexedDB.databases === 'function') {
+    try {
+      const allDbs = await indexedDB.databases();
+      const searchDbs = allDbs.filter((db) =>
+        db.name?.startsWith('meza-search-'),
+      );
+      await Promise.allSettled(
+        searchDbs.map(
+          (db) =>
+            new Promise<void>((resolve, reject) => {
+              const req = indexedDB.deleteDatabase(db.name!);
+              req.onsuccess = () => resolve();
+              req.onerror = () => reject(req.error);
+            }),
+        ),
+      );
+    } catch {
+      // indexedDB.databases() not supported (Firefox < 126)
+    }
+  }
 }
 
 // RPC handler
 // biome-ignore lint/suspicious/noExplicitAny: dynamic dispatch requires untyped args
 const methods: Record<string, (...args: any[]) => Promise<unknown>> = {
   initChannel: (id: string) => initChannel(id),
-  addMessages: (id: string, msgs: IndexableMessage[]) => addMessages(id, msgs),
-  updateMessage: (id: string, msg: IndexableMessage) => updateMessage(id, msg),
+  addMessages: (id: string, msgs: IndexableMessage[]) =>
+    addMessages(id, msgs),
+  updateMessage: (id: string, msg: IndexableMessage) =>
+    updateMessage(id, msg),
   removeMessage: (id: string, msgId: string) => removeMessage(id, msgId),
-  removeMessages: (id: string, msgIds: string[]) => removeMessages(id, msgIds),
+  removeMessages: (id: string, msgIds: string[]) =>
+    removeMessages(id, msgIds),
   search: (query: string, opts: SearchOpts) => search(query, opts),
-  warmChannels: (ids: string[]) => warmChannels(ids),
+  flush: () => flushDirty(),
   clearChannel: (id: string) => clearChannel(id),
   clearAll: () => clearAll(),
 };
@@ -267,7 +323,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const { id, method, args } = event.data;
   try {
     const fn = methods[method];
-    if (!fn) throw new Error(`Unknown method: ${method}`);
+    if (!fn) throw new Error('Unknown worker method');
     const result = await fn(...args);
     self.postMessage({ id, result } as WorkerResponse);
   } catch (err) {
@@ -277,6 +333,3 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     } as WorkerResponse);
   }
 };
-
-// Flush dirty indexes before worker is terminated
-self.addEventListener('beforeunload', () => flushDirty());

@@ -69,6 +69,23 @@ export function indexIncomingMessage(channelId: string, msg: Message): void {
 }
 
 /**
+ * Index a batch of messages at once (avoids per-message postMessage overhead).
+ * Used after bulk decryption.
+ */
+export function indexIncomingMessages(
+  channelId: string,
+  msgs: Message[],
+): void {
+  const batch = toBatch(channelId, msgs);
+  if (batch.length === 0) return;
+  try {
+    addSearchMessages(channelId, batch).catch(() => {});
+  } catch {
+    // Worker not available (test/SSR environment)
+  }
+}
+
+/**
  * Convert a batch of messages to IndexableMessage[].
  */
 function toBatch(channelId: string, msgs: Message[]): IndexableMessage[] {

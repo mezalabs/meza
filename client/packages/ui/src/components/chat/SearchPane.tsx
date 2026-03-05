@@ -1,5 +1,6 @@
 import {
   getMessages,
+  parseMessageContent,
   type SearchResultItem,
   useChannelStore,
   useMemberStore,
@@ -43,6 +44,7 @@ export function SearchPane({
   const hasMore = useSearchStore((s) => s.hasMore);
   const error = useSearchStore((s) => s.error);
   const scope = useSearchStore((s) => s.scope);
+  const hasAttachment = useSearchStore((s) => s.hasAttachment);
 
   const [localQuery, setLocalQuery] = useState(initialQuery ?? '');
   const [showFilters, setShowFilters] = useState(false);
@@ -86,9 +88,10 @@ export function SearchPane({
     inputRef.current?.focus();
   }, []);
 
-  // Reset on unmount
+  // Clean up on unmount
   useEffect(() => {
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       useSearchStore.getState().reset();
     };
   }, []);
@@ -248,7 +251,7 @@ export function SearchPane({
             <label className="flex items-center gap-1.5 text-xs text-text-subtle cursor-pointer">
               <input
                 type="checkbox"
-                checked={useSearchStore.getState().hasAttachment}
+                checked={hasAttachment}
                 onChange={handleAttachmentToggle}
                 className="rounded border-border"
               />
@@ -359,7 +362,8 @@ const SearchResultRow = React.memo(function SearchResultRow({
   } else if (result.source === 'local' && messageContent?.length) {
     // Local hit — content is in the message store (already decrypted)
     try {
-      content = new TextDecoder().decode(messageContent);
+      const parsed = parseMessageContent(messageContent);
+      content = parsed.text;
     } catch {
       content = '';
     }
@@ -396,24 +400,29 @@ const SearchResultRow = React.memo(function SearchResultRow({
     if (messageId) {
       const msgStore = useMessageStore.getState();
       msgStore.setViewMode(channelId, 'historical');
-      getMessages(channelId, { around: messageId }).then(() => {
-        // Scroll to and highlight the target message
-        requestAnimationFrame(() => {
-          const el = document.querySelector(`[data-message-id="${messageId}"]`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.animate(
-              [
-                {
-                  backgroundColor: 'rgba(var(--accent-rgb, 99 102 241) / 0.15)',
-                },
-                { backgroundColor: 'transparent' },
-              ],
-              { duration: 1500, easing: 'ease-out' },
+      getMessages(channelId, { around: messageId })
+        .then(() => {
+          // Scroll to and highlight the target message
+          requestAnimationFrame(() => {
+            const el = document.querySelector(
+              `[data-message-id="${CSS.escape(messageId)}"]`,
             );
-          }
-        });
-      });
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.animate(
+                [
+                  {
+                    backgroundColor:
+                      'rgba(var(--accent-rgb, 99 102 241) / 0.15)',
+                  },
+                  { backgroundColor: 'transparent' },
+                ],
+                { duration: 1500, easing: 'ease-out' },
+              );
+            }
+          });
+        })
+        .catch(() => {});
     }
   }, [focusedPaneId, channelId, messageId, setPaneContent]);
 

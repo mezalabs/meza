@@ -1343,6 +1343,9 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 		opts.MentionedUserID = *req.Msg.MentionedUserId
 	}
 	if req.Msg.BeforeId != nil && *req.Msg.BeforeId != "" {
+		if !validULID.MatchString(*req.Msg.BeforeId) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid before_id"))
+		}
 		opts.BeforeID = *req.Msg.BeforeId
 	}
 	if req.Msg.AfterId != nil && *req.Msg.AfterId != "" {
