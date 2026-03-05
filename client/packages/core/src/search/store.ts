@@ -180,8 +180,10 @@ export const useSearchStore = create<SearchState & SearchActions>()(
       } catch (err) {
         if (gen !== searchGeneration) return;
         if (err instanceof DOMException && err.name === 'AbortError') return;
+        const msg = err instanceof Error ? err.message : 'Search failed';
+        const isRateLimit = msg.includes('Limit reached') || msg.includes('rate limit');
         set((s) => {
-          s.error = err instanceof Error ? err.message : 'Search failed';
+          s.error = isRateLimit ? 'Search rate limited — please wait a few seconds' : msg;
           s.isLoading = false;
         });
       }

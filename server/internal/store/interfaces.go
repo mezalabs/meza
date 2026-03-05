@@ -205,6 +205,7 @@ type SearchMessagesOpts struct {
 	HasAttachment   *bool
 	MentionedUserID string
 	BeforeID        string // ULID cursor — only messages with ID < this
+	AfterID         string // ULID cursor — only messages with ID > this (forward)
 	Limit           int    // default 25, max 100
 }
 

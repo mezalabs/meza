@@ -19,6 +19,14 @@ const backfilling = new Set<string>();
 /** Channels that have completed a full backfill this session. */
 const backfilled = new Set<string>();
 
+/** Request persistent storage once per session (Safari eviction mitigation). */
+let persistenceRequested = false;
+function requestPersistence(): void {
+  if (persistenceRequested) return;
+  persistenceRequested = true;
+  navigator.storage?.persist?.().catch(() => {});
+}
+
 /**
  * Convert a decrypted Message to an IndexableMessage.
  * Returns null if the message is still encrypted (keyVersion > 0).
@@ -84,6 +92,7 @@ export async function backfillChannel(channelId: string): Promise<void> {
   if (backfilling.has(channelId) || backfilled.has(channelId)) return;
 
   backfilling.add(channelId);
+  requestPersistence();
 
   try {
     // Init the channel index (loads from IndexedDB if persisted)

@@ -1481,6 +1481,7 @@ export interface SearchMessagesParams {
   hasAttachment?: boolean;
   mentionedUserId?: string;
   beforeId?: string;
+  afterId?: string;
   limit?: number;
 }
 
@@ -1499,6 +1500,7 @@ export async function searchMessages(
       hasAttachment: params.hasAttachment,
       mentionedUserId: params.mentionedUserId,
       beforeId: params.beforeId,
+      afterId: params.afterId,
       limit: params.limit ?? 25,
     });
     return {

@@ -1200,6 +1200,7 @@ message SearchMessagesRequest {
   int32 limit = 6;
   optional string before_id = 7;
   optional string mentioned_user_id = 8;
+  optional string after_id = 9;
 }
 
 message SearchMessagesResponse {
