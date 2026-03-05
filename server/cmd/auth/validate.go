@@ -28,3 +28,9 @@ func validateHexColor(color string) bool {
 func validateMediaURL(url string) bool {
 	return strings.HasPrefix(url, "/media/")
 }
+
+// isEmail distinguishes emails from usernames. Reliable because
+// validateUsername enforces ^[a-zA-Z0-9_]{3,20}$ — usernames never contain "@".
+func isEmail(identifier string) bool {
+	return strings.Contains(identifier, "@")
+}
