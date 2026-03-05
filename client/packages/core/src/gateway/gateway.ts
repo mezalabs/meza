@@ -944,7 +944,11 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // E2EE key request events.
         const { channelId, userId } = event.payload.value;
         // Don't respond to our own request.
-        if (userId !== currentUserId && isSessionReady() && hasChannelKey(channelId)) {
+        if (
+          userId !== currentUserId &&
+          isSessionReady() &&
+          hasChannelKey(channelId)
+        ) {
           const gen = generation;
           // Random jitter (0–2s) to prevent thundering herd when multiple
           // clients receive the same request simultaneously.
