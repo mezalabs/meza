@@ -1,5 +1,13 @@
+import { ConnectError } from '@connectrpc/connect';
 import { UploadPurpose, uploadFile } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+const ACCEPTED_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+]);
 
 interface NameIconStepProps {
   name: string;
@@ -30,6 +38,11 @@ export function NameIconStep({
       if (!file) return;
       setError(null);
 
+      if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+        setError('Unsupported format. Use JPEG, PNG, GIF, or WebP.');
+        return;
+      }
+
       // Show local preview immediately
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(URL.createObjectURL(file));
@@ -42,8 +55,12 @@ export function NameIconStep({
           setUploadProgress,
         );
         onIconUrlChange(`/media/${result.attachmentId}`);
-      } catch {
-        setError('Failed to upload icon');
+      } catch (err) {
+        const msg =
+          err instanceof ConnectError
+            ? `Upload failed: ${err.message}`
+            : 'Failed to upload icon';
+        setError(msg);
         setPreviewUrl(null);
       } finally {
         setUploadProgress(null);
@@ -91,7 +108,7 @@ export function NameIconStep({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/gif,image/webp"
           onChange={handleFileSelect}
           className="hidden"
         />

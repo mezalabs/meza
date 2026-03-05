@@ -363,8 +363,8 @@ function LoginForm({
         const id = getIdentity();
         if (id) registerPublicKey(id.publicKey).catch(() => {});
       }
-    } catch {
-      // Error set in store
+    } catch (err) {
+      console.error('[LoginForm] login failed:', err);
     } finally {
       masterKey?.fill(0);
       authKey?.fill(0);

@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
     namespace "chat.meza.app"
     compileSdk rootProject.ext.compileSdkVersion
+    buildFeatures {
+        buildConfig true
+    }
     defaultConfig {
         applicationId "chat.meza.app"
         minSdkVersion rootProject.ext.minSdkVersion

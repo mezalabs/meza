@@ -718,7 +718,7 @@ function ProfileEditMode({
         <input
           ref={bannerInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/gif,image/webp"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -746,7 +746,7 @@ function ProfileEditMode({
           <input
             ref={avatarInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
