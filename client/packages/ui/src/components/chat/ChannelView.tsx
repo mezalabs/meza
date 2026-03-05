@@ -1070,6 +1070,9 @@ const MessageItem = memo(function MessageItem({
         editRef.current.value.length,
         editRef.current.value.length,
       );
+      // Auto-grow to fit existing content
+      editRef.current.style.height = 'auto';
+      editRef.current.style.height = `${editRef.current.scrollHeight}px`;
     }
   }, [isEditing]);
 
@@ -1222,11 +1225,17 @@ const MessageItem = memo(function MessageItem({
               <textarea
                 ref={editRef}
                 value={editText}
-                onChange={(e) => setEditText(e.target.value)}
+                onChange={(e) => {
+                  setEditText(e.target.value);
+                  // Auto-grow textarea
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onKeyDown={handleEditKeyDown}
                 disabled={isSaving}
                 rows={1}
-                className="w-full resize-none rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
+                style={{ maxHeight: isMobile ? '80px' : '150px' }}
+                className="w-full resize-none overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
               />
               {editError && (
                 <p className="text-xs text-error mt-1">{editError}</p>
