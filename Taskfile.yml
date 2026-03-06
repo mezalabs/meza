@@ -487,7 +487,7 @@ tasks:
           echo "ERROR: Tailscale is not running. Start Tailscale and try again."
           exit 1
         fi
-        URL="https://$FQDN:4080"
+        URL="https://$FQDN:4081"
         echo "Dev server: $URL"
         echo "Syncing Capacitor with dev server URL..."
         cd packages/mobile
@@ -496,7 +496,7 @@ tasks:
         echo "Run your app from Android Studio / Xcode, then leave this running."
         echo "Ctrl+C to stop."
         cd ../..
-        MOBILE_DEV=true pnpm --filter @meza/web dev -- --host
+        MOBILE_DEV=true pnpm --filter @meza/web dev -- --host --port 4081
 
   build:mobile:
     desc: Build web assets and sync to Capacitor native projects
