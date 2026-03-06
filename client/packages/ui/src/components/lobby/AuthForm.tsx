@@ -320,13 +320,13 @@ function LoginForm({
   isLoading: boolean;
   onRecover: () => void;
 }) {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
-    if (!email) errs.email = 'Email is required';
+    if (!identifier) errs.identifier = 'Email or username is required';
     if (!password) errs.password = 'Password is required';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -339,17 +339,13 @@ function LoginForm({
     let masterKey: Uint8Array | undefined;
     let authKey: Uint8Array | undefined;
     try {
-      const salt = await getSalt(email);
-      if (!salt || salt.length === 0) {
-        setErrors({ email: 'Account not found' });
-        return;
-      }
+      const salt = await getSalt(identifier);
 
       // Two-key derivation: master_key (decrypts key bundle) + auth_key (sent to server)
       const derived = await deriveKeys(password, salt);
       masterKey = derived.masterKey;
       authKey = derived.authKey;
-      const res = await login(email, authKey);
+      const res = await login(identifier, authKey);
 
       // Store encrypted key bundle from server locally and bootstrap E2EE session
       if (res?.encryptedKeyBundle?.length && res?.keyBundleIv?.length) {
@@ -376,11 +372,11 @@ function LoginForm({
       <div>
         <div className="overflow-hidden rounded-lg border border-border">
           <input
-            type="email"
+            type="text"
             className={JOINED_INPUT_CLASS}
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email or username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             disabled={isLoading}
           />
           <div className="border-t border-border" />
@@ -392,9 +388,9 @@ function LoginForm({
             disabled={isLoading}
           />
         </div>
-        {(errors.email || errors.password) && (
+        {(errors.identifier || errors.password) && (
           <p className="mt-1 text-xs text-error">
-            {errors.email || errors.password}
+            {errors.identifier || errors.password}
           </p>
         )}
       </div>

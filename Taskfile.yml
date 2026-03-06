@@ -472,6 +472,7 @@ tasks:
     desc: Start Electron desktop app in development mode
     dir: client
     cmds:
+      - pnpm install --frozen-lockfile --silent
       - pnpm --filter @meza/desktop dev
 
   dev:mobile:

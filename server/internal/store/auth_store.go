@@ -14,6 +14,16 @@ import (
 	"github.com/meza-chat/meza/internal/models"
 )
 
+// unmarshalJSONField unmarshals JSON data into dst, logging a warning on failure.
+func unmarshalJSONField(data []byte, dst any, field, userID string) {
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, dst); err != nil {
+			slog.Warn("failed to unmarshal user JSON field",
+				"field", field, "user_id", userID, "error", err)
+		}
+	}
+}
+
 const defaultQueryTimeout = 5 * time.Second
 
 // AuthStore implements AuthStorer using PostgreSQL.
@@ -104,12 +114,8 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 		return nil, fmt.Errorf("query user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(audioPrefsJSON) > 0 {
-		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(connectionsJSON) > 0 {
-		_ = json.Unmarshal(connectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(audioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(connectionsJSON, &u.Connections, "connections", u.ID)
 	return &u, nil
 }
 
@@ -117,22 +123,24 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
-	var audioPrefsJSON []byte
+	var audioPrefsJSON *string
 	if audioPreferences != nil {
-		var err error
-		audioPrefsJSON, err = json.Marshal(audioPreferences)
+		b, err := json.Marshal(audioPreferences)
 		if err != nil {
 			return nil, fmt.Errorf("marshal audio preferences: %w", err)
 		}
+		s := string(b)
+		audioPrefsJSON = &s
 	}
 
-	var connectionsJSON []byte
+	var connectionsJSON *string
 	if connections != nil {
-		var err error
-		connectionsJSON, err = json.Marshal(connections)
+		b, err := json.Marshal(connections)
 		if err != nil {
 			return nil, fmt.Errorf("marshal connections: %w", err)
 		}
+		s := string(b)
+		connectionsJSON = &s
 	}
 
 	var u models.User
@@ -168,16 +176,14 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 		return nil, fmt.Errorf("update user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(returnedAudioPrefsJSON) > 0 {
-		_ = json.Unmarshal(returnedAudioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(returnedConnectionsJSON) > 0 {
-		_ = json.Unmarshal(returnedConnectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(returnedAudioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(returnedConnectionsJSON, &u.Connections, "connections", u.ID)
 	return &u, nil
 }
 
-func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error) {
+// getUserWithAuth fetches a user and auth data by a dynamic WHERE clause.
+// The whereClause must use $1 for the single parameter.
+func (s *AuthStore) getUserWithAuth(ctx context.Context, whereClause string, value string) (*models.User, *models.AuthData, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -191,7 +197,7 @@ func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.U
 		        u.audio_preferences, u.dm_privacy, u.connections,
 		        a.auth_key_hash, a.salt, a.encrypted_key_bundle, a.key_bundle_iv
 		 FROM users u JOIN user_auth a ON a.user_id = u.id
-		 WHERE u.email = $1`, email,
+		 WHERE `+whereClause, value,
 	).Scan(
 		&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
@@ -205,23 +211,28 @@ func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.U
 		return nil, nil, fmt.Errorf("query user: %w", err)
 	}
 	u.AudioPreferences = models.DefaultAudioPreferences()
-	if len(audioPrefsJSON) > 0 {
-		_ = json.Unmarshal(audioPrefsJSON, &u.AudioPreferences)
-	}
-	if len(connectionsJSON) > 0 {
-		_ = json.Unmarshal(connectionsJSON, &u.Connections)
-	}
+	unmarshalJSONField(audioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+	unmarshalJSONField(connectionsJSON, &u.Connections, "connections", u.ID)
 	a.UserID = u.ID
 	return &u, &a, nil
 }
 
-func (s *AuthStore) GetSalt(ctx context.Context, email string) ([]byte, error) {
+func (s *AuthStore) GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error) {
+	return s.getUserWithAuth(ctx, "u.email = $1 AND u.is_federated = false", email)
+}
+
+func (s *AuthStore) GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error) {
+	return s.getUserWithAuth(ctx, "u.username = $1 AND u.is_federated = false", username)
+}
+
+// getSaltByWhere fetches a user's salt by a dynamic WHERE clause.
+func (s *AuthStore) getSaltByWhere(ctx context.Context, whereClause string, value string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	var salt []byte
 	err := s.pool.QueryRow(ctx,
-		`SELECT a.salt FROM user_auth a JOIN users u ON u.id = a.user_id WHERE u.email = $1`, email,
+		`SELECT a.salt FROM user_auth a JOIN users u ON u.id = a.user_id WHERE `+whereClause, value,
 	).Scan(&salt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -230,6 +241,14 @@ func (s *AuthStore) GetSalt(ctx context.Context, email string) ([]byte, error) {
 		return nil, fmt.Errorf("query salt: %w", err)
 	}
 	return salt, nil
+}
+
+func (s *AuthStore) GetSalt(ctx context.Context, email string) ([]byte, error) {
+	return s.getSaltByWhere(ctx, "u.email = $1 AND u.is_federated = false", email)
+}
+
+func (s *AuthStore) GetSaltByUsername(ctx context.Context, username string) ([]byte, error) {
+	return s.getSaltByWhere(ctx, "u.username = $1 AND u.is_federated = false", username)
 }
 
 func (s *AuthStore) StoreRefreshToken(ctx context.Context, tokenHash, userID, deviceID string, expiresAt time.Time) error {

@@ -62,9 +62,7 @@ export async function listMembersWithViewChannel(
   };
 }
 
-export async function requestChannelKeys(
-  channelId: string,
-): Promise<void> {
+export async function requestChannelKeys(channelId: string): Promise<void> {
   await keysClient.requestChannelKeys({ channelId });
 }
 

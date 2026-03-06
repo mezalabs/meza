@@ -78,6 +78,18 @@ func (m *mockAuthStore) GetUserByEmail(_ context.Context, email string) (*models
 	return nil, nil, fmt.Errorf("user not found")
 }
 
+func (m *mockAuthStore) GetUserByUsername(_ context.Context, username string) (*models.User, *models.AuthData, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, u := range m.users {
+		if u.Username == username {
+			return u, m.authData[u.ID], nil
+		}
+	}
+	return nil, nil, fmt.Errorf("user not found")
+}
+
 func (m *mockAuthStore) GetUserByID(_ context.Context, userID string) (*models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -142,6 +154,22 @@ func (m *mockAuthStore) GetSalt(_ context.Context, email string) ([]byte, error)
 		return nil, fmt.Errorf("user not found")
 	}
 	return salt, nil
+}
+
+func (m *mockAuthStore) GetSaltByUsername(_ context.Context, username string) ([]byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for _, u := range m.users {
+		if u.Username == username {
+			salt, ok := m.salts[u.Email]
+			if !ok {
+				return nil, fmt.Errorf("user not found")
+			}
+			return salt, nil
+		}
+	}
+	return nil, fmt.Errorf("user not found")
 }
 
 func (m *mockAuthStore) StoreRefreshToken(_ context.Context, tokenHash, userID, deviceID string, expiresAt time.Time) error {
@@ -384,8 +412,8 @@ func TestRegisterLoginRoundTrip(t *testing.T) {
 
 	// Login with same credentials
 	loginResp, err := client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
-		Email:   "test@example.com",
-		AuthKey: []byte("my-auth-key"),
+		Identifier: "test@example.com",
+		AuthKey:    []byte("my-auth-key"),
 	}))
 	if err != nil {
 		t.Fatalf("Login: %v", err)
@@ -446,8 +474,8 @@ func TestLoginWrongPassword(t *testing.T) {
 	}
 
 	_, err = client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
-		Email:   "test@example.com",
-		AuthKey: []byte("wrong-key"),
+		Identifier: "test@example.com",
+		AuthKey:    []byte("wrong-key"),
 	}))
 	if err == nil {
 		t.Fatal("expected error for wrong password")
@@ -466,7 +494,7 @@ func TestGetSaltKnownEmail(t *testing.T) {
 	}
 
 	resp, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
-		Email: "test@example.com",
+		Identifier: "test@example.com",
 	}))
 	if err != nil {
 		t.Fatalf("GetSalt: %v", err)
@@ -482,7 +510,7 @@ func TestGetSaltUnknownEmail(t *testing.T) {
 	// Unknown emails should return a fake salt (not an error) to prevent
 	// email enumeration. The salt is deterministic per email.
 	resp, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
-		Email: "unknown@example.com",
+		Identifier: "unknown@example.com",
 	}))
 	if err != nil {
 		t.Fatalf("GetSalt should succeed for unknown emails: %v", err)
@@ -493,7 +521,7 @@ func TestGetSaltUnknownEmail(t *testing.T) {
 
 	// Same email should produce the same fake salt (deterministic).
 	resp2, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
-		Email: "unknown@example.com",
+		Identifier: "unknown@example.com",
 	}))
 	if err != nil {
 		t.Fatalf("GetSalt: %v", err)
@@ -548,5 +576,125 @@ func TestRegisterInvalidUsername(t *testing.T) {
 	}
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Errorf("code = %v, want InvalidArgument", connect.CodeOf(err))
+	}
+}
+
+func TestLoginByUsername(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	_, err := client.Register(context.Background(), connect.NewRequest(makeRegisterRequest()))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// Login with username instead of email
+	loginResp, err := client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
+		Identifier: "testuser",
+		AuthKey:    []byte("my-auth-key"),
+	}))
+	if err != nil {
+		t.Fatalf("Login by username: %v", err)
+	}
+	if loginResp.Msg.AccessToken == "" {
+		t.Error("expected access token from login by username")
+	}
+	if loginResp.Msg.User == nil || loginResp.Msg.User.Username != "testuser" {
+		t.Error("expected user with username 'testuser'")
+	}
+}
+
+func TestGetSaltByUsername(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	_, err := client.Register(context.Background(), connect.NewRequest(makeRegisterRequest()))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// Get salt by username
+	resp, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "testuser",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt by username: %v", err)
+	}
+	if len(resp.Msg.Salt) == 0 {
+		t.Error("expected non-empty salt")
+	}
+
+	// Should match salt retrieved by email
+	respByEmail, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "test@example.com",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt by email: %v", err)
+	}
+	if string(resp.Msg.Salt) != string(respByEmail.Msg.Salt) {
+		t.Error("expected same salt for username and email lookups")
+	}
+}
+
+func TestLoginByEmailStillWorks(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	_, err := client.Register(context.Background(), connect.NewRequest(makeRegisterRequest()))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// Login with email (regression test)
+	loginResp, err := client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
+		Identifier: "test@example.com",
+		AuthKey:    []byte("my-auth-key"),
+	}))
+	if err != nil {
+		t.Fatalf("Login by email: %v", err)
+	}
+	if loginResp.Msg.AccessToken == "" {
+		t.Error("expected access token from login by email")
+	}
+}
+
+func TestLoginNonexistentUsername(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	// Login with a username that doesn't exist should return "invalid credentials",
+	// not leak whether the account exists.
+	_, err := client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
+		Identifier: "noone",
+		AuthKey:    []byte("some-key"),
+	}))
+	if err == nil {
+		t.Fatal("expected error for nonexistent username")
+	}
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Errorf("code = %v, want Unauthenticated", connect.CodeOf(err))
+	}
+}
+
+func TestGetSaltNonexistentUsername(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	// Nonexistent usernames should return a fake salt (not an error)
+	// to prevent username enumeration.
+	resp, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "noone",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt should succeed for unknown usernames: %v", err)
+	}
+	if len(resp.Msg.Salt) == 0 {
+		t.Error("expected non-empty fake salt")
+	}
+
+	// Same username should produce the same fake salt (deterministic).
+	resp2, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "noone",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt: %v", err)
+	}
+	if string(resp.Msg.Salt) != string(resp2.Msg.Salt) {
+		t.Error("expected deterministic salt for same username")
 	}
 }

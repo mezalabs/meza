@@ -42,7 +42,7 @@ message RegisterResponse {
 }
 
 message LoginRequest {
-  string email = 1;
+  string identifier = 1;  // email or username
   bytes auth_key = 2;
 }
 
@@ -56,7 +56,7 @@ message LoginResponse {
 }
 
 message GetSaltRequest {
-  string email = 1;
+  string identifier = 1;  // email or username
 }
 
 message GetSaltResponse {
