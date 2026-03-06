@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/status-bar": "^7.0.5",
     "@meza/core": "workspace:^",
     "@meza/ui": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",

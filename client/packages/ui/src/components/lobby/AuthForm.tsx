@@ -152,6 +152,8 @@ function RegisterForm({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const busy = isLoading || submitting;
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -186,8 +188,9 @@ function RegisterForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || isLoading) return;
+    if (!validate() || busy) return;
 
+    setSubmitting(true);
     let masterKey: Uint8Array | undefined;
     let authKey: Uint8Array | undefined;
     let identityBytes: Uint8Array | undefined;
@@ -242,9 +245,15 @@ function RegisterForm({
 
       // Show recovery phrase — auth will be finalized when user confirms
       onRecoveryPhrase(phrase);
-    } catch {
-      // Error set in store
+    } catch (err) {
+      console.error('[RegisterForm] registration failed:', err);
+      if (!useAuthStore.getState().error) {
+        useAuthStore.getState().setError(
+          'Unable to reach the server. Please check your connection.',
+        );
+      }
     } finally {
+      setSubmitting(false);
       masterKey?.fill(0);
       authKey?.fill(0);
       identityBytes?.fill(0);
@@ -262,7 +271,7 @@ function RegisterForm({
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
           <div className="border-t border-border" />
           <input
@@ -271,7 +280,7 @@ function RegisterForm({
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
           <div className="border-t border-border" />
           <PasswordInput
@@ -279,7 +288,7 @@ function RegisterForm({
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
           <div className="border-t border-border" />
           <PasswordInput
@@ -287,7 +296,7 @@ function RegisterForm({
             placeholder="Confirm password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
         </div>
         {(errors.email ||
@@ -305,9 +314,9 @@ function RegisterForm({
       <button
         type="submit"
         className="mt-1 w-full rounded-lg bg-accent px-5 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover disabled:opacity-50"
-        disabled={isLoading}
+        disabled={busy}
       >
-        {isLoading ? 'Creating account...' : 'Create Account'}
+        {busy ? 'Creating account...' : 'Create Account'}
       </button>
     </form>
   );
@@ -323,6 +332,8 @@ function LoginForm({
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const busy = isLoading || submitting;
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
@@ -334,8 +345,9 @@ function LoginForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!validate() || isLoading) return;
+    if (!validate() || busy) return;
 
+    setSubmitting(true);
     let masterKey: Uint8Array | undefined;
     let authKey: Uint8Array | undefined;
     try {
@@ -361,7 +373,14 @@ function LoginForm({
       }
     } catch (err) {
       console.error('[LoginForm] login failed:', err);
+      // getSalt() doesn't set the store error — surface it here
+      if (!useAuthStore.getState().error) {
+        useAuthStore.getState().setError(
+          'Unable to reach the server. Please check your connection.',
+        );
+      }
     } finally {
+      setSubmitting(false);
       masterKey?.fill(0);
       authKey?.fill(0);
     }
@@ -385,7 +404,7 @@ function LoginForm({
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
         </div>
         {(errors.identifier || errors.password) && (
@@ -397,9 +416,9 @@ function LoginForm({
       <button
         type="submit"
         className="mt-1 w-full rounded-lg bg-accent px-5 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover disabled:opacity-50"
-        disabled={isLoading}
+        disabled={busy}
       >
-        {isLoading ? 'Signing in...' : 'Sign In'}
+        {busy ? 'Signing in...' : 'Sign In'}
       </button>
       <button
         type="button"

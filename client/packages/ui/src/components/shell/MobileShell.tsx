@@ -12,6 +12,7 @@ import { useMobileHistory } from '../../hooks/useMobileHistory.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
+import { MemberList } from '../chat/MemberList.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { MessageRequestsPane } from '../chat/MessageRequestsPane.tsx';
@@ -152,7 +153,13 @@ export function MobileShell() {
           onClose={closeMobileOverlay}
           title="Members"
         >
-          <MobileOverlayPlaceholder label="Members" />
+          {mobileActiveChannel && resolveServerId(mobileActiveChannel) ? (
+            <MemberList serverId={resolveServerId(mobileActiveChannel)!} />
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-text-muted text-sm">
+              No server selected
+            </div>
+          )}
         </MobileOverlay>
 
         <MobileOverlay

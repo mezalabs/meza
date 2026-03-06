@@ -27,7 +27,20 @@ export class CapacitorPushAdapter implements PushAdapter {
   private tapHandle?: PluginListenerHandle;
 
   async subscribe(): Promise<PushSubscriptionDetails | null> {
-    let permStatus = await PushNotifications.checkPermissions();
+    // On Android, FirebaseMessaging.getInstance() crashes the native process
+    // if google-services.json is missing (dev builds without Firebase).
+    // Probe by checking permissions first — if the native call succeeds the
+    // plugin is properly wired up. The actual danger is register() which
+    // calls into Firebase, so we gate on the permission result and catch
+    // any synchronous native bridge errors.
+    let permStatus;
+    try {
+      permStatus = await PushNotifications.checkPermissions();
+    } catch {
+      console.warn('Push notifications unavailable on this device');
+      return null;
+    }
+
     if (permStatus.receive === 'prompt') {
       permStatus = await PushNotifications.requestPermissions();
     }
@@ -38,10 +51,18 @@ export class CapacitorPushAdapter implements PushAdapter {
 
     return new Promise<PushSubscriptionDetails>((resolve, reject) => {
       let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          console.warn('Push registration timed out (Firebase may not be configured)');
+          resolve(null as unknown as PushSubscriptionDetails);
+        }
+      }, 10_000);
 
       const cleanup = async () => {
         if (settled) return;
         settled = true;
+        clearTimeout(timeout);
         await this.registrationHandle?.remove();
         await this.registrationErrorHandle?.remove();
         this.registrationHandle = undefined;
@@ -71,7 +92,13 @@ export class CapacitorPushAdapter implements PushAdapter {
       });
 
       // Register with APNs/FCM.
-      PushNotifications.register();
+      try {
+        PushNotifications.register();
+      } catch (e) {
+        cleanup();
+        console.error('Push register() failed:', e);
+        resolve(null as unknown as PushSubscriptionDetails);
+      }
     });
   }
 

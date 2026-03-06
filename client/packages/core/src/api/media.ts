@@ -10,8 +10,27 @@ import {
   generateVideoThumbnail,
 } from '../crypto/thumbnails.ts';
 import { useAuthStore } from '../store/auth.ts';
-import { getBaseUrl } from '../utils/platform.ts';
+import { getBaseUrl, isCapacitor } from '../utils/platform.ts';
 import { transport } from './client.ts';
+
+/**
+ * In mobile dev the server returns presigned S3 URLs with the host from
+ * S3_PUBLIC_ENDPOINT (e.g. 192.168.50.183:4081) but the WebView's origin is
+ * the Tailscale hostname. Strip the origin so the request goes through the
+ * same-origin Vite proxy instead of triggering a CORS preflight.
+ */
+function normalizePresignedUrl(url: string): string {
+  if (!isCapacitor()) return url;
+  try {
+    const u = new URL(url);
+    if (u.pathname.startsWith('/meza-media/')) {
+      return `${u.pathname}${u.search}`;
+    }
+  } catch {
+    // not a full URL, return as-is
+  }
+  return url;
+}
 
 const mediaClient = createClient(MediaService, transport);
 
@@ -35,8 +54,8 @@ export async function createUpload(
   });
   return {
     uploadId: res.uploadId,
-    uploadUrl: res.uploadUrl,
-    thumbnailUploadUrl: res.thumbnailUploadUrl,
+    uploadUrl: normalizePresignedUrl(res.uploadUrl),
+    thumbnailUploadUrl: normalizePresignedUrl(res.thumbnailUploadUrl),
   };
 }
 
@@ -76,7 +95,7 @@ export async function getDownloadURL(
   thumbnail = false,
 ): Promise<string> {
   const res = await mediaClient.getDownloadURL({ attachmentId, thumbnail });
-  return res.url;
+  return normalizePresignedUrl(res.url);
 }
 
 /**
