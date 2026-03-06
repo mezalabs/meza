@@ -167,6 +167,17 @@ html {
   color-scheme: dark;
 }
 
+/* Suppress native tap/focus highlights in mobile WebViews */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
 *:focus-visible:not(input):not(textarea):not(select) {
   outline: 2px solid var(--color-focus);
   outline-offset: 2px;

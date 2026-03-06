@@ -6,13 +6,18 @@ const config: CapacitorConfig = {
   appId: 'chat.meza.app',
   appName: 'Meza',
   webDir: '../web/dist',
+  backgroundColor: '#121212',
   includePlugins: [
     '@capacitor/app',
+    '@capacitor/keyboard',
     '@capacitor/push-notifications',
     '@capacitor/status-bar',
     '@capacitor/splash-screen',
   ],
   plugins: {
+    Keyboard: {
+      resize: 'native',
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
