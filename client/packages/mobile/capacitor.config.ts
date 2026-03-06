@@ -25,11 +25,15 @@ const config: CapacitorConfig = {
   server: devServer
     ? {
         url: devServer,
+        cleartext: true,
       }
     : {
         androidScheme: 'https',
       },
   android: {
+    webContentsDebuggingEnabled: !!devServer,
+  },
+  ios: {
     webContentsDebuggingEnabled: !!devServer,
   },
 };

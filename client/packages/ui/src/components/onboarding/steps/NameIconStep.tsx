@@ -1,4 +1,3 @@
-import { ConnectError } from '@connectrpc/connect';
 import { UploadPurpose, uploadFile } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -56,11 +55,7 @@ export function NameIconStep({
         );
         onIconUrlChange(`/media/${result.attachmentId}`);
       } catch (err) {
-        const msg =
-          err instanceof ConnectError
-            ? `Upload failed: ${err.message}`
-            : 'Failed to upload icon';
-        setError(msg);
+        setError('Failed to upload icon');
         setPreviewUrl(null);
       } finally {
         setUploadProgress(null);

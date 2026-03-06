@@ -475,22 +475,28 @@ tasks:
       - pnpm --filter @meza/desktop dev
 
   dev:mobile:
-    desc: Start HTTPS Vite dev server and sync to Capacitor for live reload
+    desc: Start HTTPS Vite dev server (Tailscale cert) and sync to Capacitor for live reload
     dir: client
     env:
       MOBILE_DEV: "true"
     cmds:
       - |
-        IP=$(ipconfig getifaddr en0 2>/dev/null || echo "localhost")
-        echo "Dev server: https://$IP:4081"
+        # Get Tailscale FQDN for a real Let's Encrypt cert that all devices trust.
+        FQDN=$(/Applications/Tailscale.app/Contents/MacOS/Tailscale status --json 2>/dev/null | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); const self=d.Self; console.log(self.DNSName.replace(/\.$/,''))" 2>/dev/null)
+        if [ -z "$FQDN" ]; then
+          echo "ERROR: Tailscale is not running. Start Tailscale and try again."
+          exit 1
+        fi
+        URL="https://$FQDN:4080"
+        echo "Dev server: $URL"
         echo "Syncing Capacitor with dev server URL..."
         cd packages/mobile
-        CAPACITOR_DEV_SERVER="https://$IP:4081" npx cap sync
+        CAPACITOR_DEV_SERVER="$URL" npx cap sync
         echo ""
         echo "Run your app from Android Studio / Xcode, then leave this running."
         echo "Ctrl+C to stop."
         cd ../..
-        MOBILE_DEV=true pnpm --filter @meza/web dev -- --host --port 4081
+        MOBILE_DEV=true pnpm --filter @meza/web dev -- --host
 
   build:mobile:
     desc: Build web assets and sync to Capacitor native projects

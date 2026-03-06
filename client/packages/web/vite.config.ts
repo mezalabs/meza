@@ -1,19 +1,23 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
-import { getCertificate } from '@vitejs/plugin-basic-ssl';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const mobileDev = !!process.env.MOBILE_DEV;
 
 export default defineConfig(async () => {
-  // Generate a self-signed cert for mobile dev so the WebView gets a secure
-  // context (required for crypto.subtle). The basic-ssl Vite plugin's
-  // configResolved mutation doesn't propagate in Vite 6, so we configure
-  // server.https directly.
-  let https: undefined | { cert: string; key: string };
+  // Use Tailscale HTTPS cert for mobile dev so the WebView gets a secure
+  // context (required for crypto.subtle) with a real trusted certificate.
+  let https: undefined | { cert: Buffer; key: Buffer };
   if (mobileDev) {
-    const cert = await getCertificate('node_modules/.vite/basic-ssl');
-    https = { cert, key: cert };
+    const certsDir = resolve(__dirname, '../mobile/.certs');
+    https = {
+      cert: readFileSync(resolve(certsDir, 'dev.pem')),
+      key: readFileSync(resolve(certsDir, 'dev-key.pem')),
+    };
   }
 
   return {
@@ -28,7 +32,7 @@ export default defineConfig(async () => {
       port: 4080,
       host: true,
       https,
-      allowedHosts: ['.share.zrok.io'],
+      allowedHosts: ['.share.zrok.io', '.ts.net'],
       proxy: {
         // Auth service → server/cmd/auth (port 8081)
         '/meza.v1.AuthService': {
