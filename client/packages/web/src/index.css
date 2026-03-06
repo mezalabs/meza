@@ -148,13 +148,15 @@
 
 /* ── Base layer ── */
 
-/* Tailwind v4 preflight uses --color-gray-200 as the default border color,
-   but the theme resets --color-* above, so borders fall back to currentColor
-   (white text). Override to use the theme border token instead. */
-*,
-*::before,
-*::after {
-  border-color: var(--color-border);
+/* Tailwind v4 preflight defaults border-color to currentColor, which renders
+   as white on our dark theme. Override in @layer base so utility classes
+   (border-transparent, border-accent, etc.) can still win. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
 }
 
 html {
