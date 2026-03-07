@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/app": "^7",
+    "@capacitor/core": "^7",
+    "@capacitor/push-notifications": "^7",
     "@capacitor/status-bar": "^7.0.5",
     "@meza/core": "workspace:^",
     "@meza/ui": "workspace:*",
@@ -17,9 +20,6 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@capacitor/app": "^7",
-    "@capacitor/core": "^7",
-    "@capacitor/push-notifications": "^7",
     "@fontsource-variable/geist": "^5.2.8",
     "@fontsource-variable/geist-mono": "^5.2.7",
     "@tailwindcss/vite": "^4.1.18",
