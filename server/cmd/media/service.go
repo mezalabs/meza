@@ -121,13 +121,14 @@ func detectAudioType(data []byte) (string, bool) {
 }
 
 type mediaService struct {
-	store    store.MediaStorer
-	s3       *s3.Client // internal operations (PutObject, GetObject, etc.)
+	store   store.MediaStorer
+	access  store.MediaAccessChecker
+	s3      *s3.Client // internal operations (PutObject, GetObject, etc.)
 	s3Public *s3.Client // presigned URL generation (client-facing)
 }
 
-func newMediaService(st store.MediaStorer, s3Client, s3Public *s3.Client) *mediaService {
-	return &mediaService{store: st, s3: s3Client, s3Public: s3Public}
+func newMediaService(st store.MediaStorer, ac store.MediaAccessChecker, s3Client, s3Public *s3.Client) *mediaService {
+	return &mediaService{store: st, access: ac, s3: s3Client, s3Public: s3Public}
 }
 
 func purposeToString(p v1.UploadPurpose) string {
@@ -497,7 +498,7 @@ func (s *mediaService) CompleteUpload(ctx context.Context, req *connect.Request[
 }
 
 func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[v1.GetDownloadURLRequest]) (*connect.Response[v1.GetDownloadURLResponse], error) {
-	_, ok := auth.UserIDFromContext(ctx)
+	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
 	}
@@ -512,6 +513,10 @@ func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[
 	}
 	if attachment.Status != models.AttachmentStatusCompleted {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("attachment is not ready"))
+	}
+
+	if err := s.access.CheckAttachmentAccess(ctx, attachment, userID); err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("attachment not found"))
 	}
 
 	objectKey := attachment.ObjectKey
@@ -535,7 +540,7 @@ func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[
 // mediaRedirectHandler serves GET /media/{id} and /media/{id}/thumb as a
 // 302 redirect to a fresh presigned URL. This provides stable URLs for
 // avatars, banners, etc.
-func mediaRedirectHandler(st store.MediaStorer, s3Public *s3.Client) http.HandlerFunc {
+func mediaRedirectHandler(st store.MediaStorer, ac store.MediaAccessChecker, s3Public *s3.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Parse path: /media/{id} or /media/{id}/thumb
 		path := strings.TrimPrefix(r.URL.Path, "/media/")
@@ -563,6 +568,17 @@ func mediaRedirectHandler(st store.MediaStorer, s3Public *s3.Client) http.Handle
 			return
 		}
 
+		// Verify the authenticated user has access to this attachment.
+		userID, ok := auth.UserIDFromContext(r.Context())
+		if !ok {
+			http.Error(w, "authentication required", http.StatusUnauthorized)
+			return
+		}
+		if err := ac.CheckAttachmentAccess(r.Context(), attachment, userID); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
 		objectKey := attachment.ObjectKey
 		filename := attachment.Filename
 		if wantThumb && attachment.ThumbnailKey != "" {
@@ -583,6 +599,7 @@ func mediaRedirectHandler(st store.MediaStorer, s3Public *s3.Client) http.Handle
 		http.Redirect(w, r, downloadURL, http.StatusFound)
 	}
 }
+
 
 // startCleanup runs a background goroutine that periodically removes orphaned
 // uploads (pending/processing with expired expires_at).

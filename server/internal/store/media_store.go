@@ -23,13 +23,13 @@ func NewMediaStore(pool *pgxpool.Pool) *MediaStore {
 }
 
 // attachmentColumns is the canonical column list for attachment queries.
-const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, created_at, updated_at, completed_at, expires_at, linked_at`
+const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, channel_id, created_at, updated_at, completed_at, expires_at, linked_at`
 
 func scanAttachment(row interface{ Scan(dest ...any) error }, a *models.Attachment) error {
 	return row.Scan(
 		&a.ID, &a.UploaderID, &a.UploadPurpose, &a.ObjectKey, &a.ThumbnailKey,
 		&a.Filename, &a.ContentType, &a.OriginalContentType, &a.SizeBytes, &a.Width, &a.Height,
-		&a.Status, &a.MicroThumbnailData, &a.EncryptedKey, &a.CreatedAt, &a.UpdatedAt, &a.CompletedAt, &a.ExpiresAt,
+		&a.Status, &a.MicroThumbnailData, &a.EncryptedKey, &a.ChannelID, &a.CreatedAt, &a.UpdatedAt, &a.CompletedAt, &a.ExpiresAt,
 		&a.LinkedAt,
 	)
 }
@@ -182,7 +182,7 @@ func (s *MediaStore) ResetAttachmentToPending(ctx context.Context, id string) er
 	return nil
 }
 
-func (s *MediaStore) LinkAttachments(ctx context.Context, ids []string) error {
+func (s *MediaStore) LinkAttachments(ctx context.Context, ids []string, channelID string) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -190,8 +190,8 @@ func (s *MediaStore) LinkAttachments(ctx context.Context, ids []string) error {
 	defer cancel()
 
 	_, err := s.pool.Exec(ctx,
-		`UPDATE attachments SET linked_at = now() WHERE id = ANY($1) AND status = 'completed'`,
-		ids,
+		`UPDATE attachments SET linked_at = now(), channel_id = $2 WHERE id = ANY($1) AND status = 'completed'`,
+		ids, channelID,
 	)
 	if err != nil {
 		return fmt.Errorf("link attachments: %w", err)

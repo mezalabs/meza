@@ -18,6 +18,7 @@ type Attachment struct {
 	Status              string
 	MicroThumbnailData  string
 	EncryptedKey        []byte
+	ChannelID           *string // set when a chat_attachment is linked to a message
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 	CompletedAt         *time.Time
