@@ -1,6 +1,6 @@
 version: "3"
 
-dotenv: ['.env']
+dotenv: ['.env', '.env.mobile']
 
 vars:
   COMPOSE_FILE: deploy/docker/docker-compose.yml
@@ -490,6 +490,14 @@ tasks:
         fi
         URL="https://$FQDN:4081"
         echo "Dev server: $URL"
+
+        # Write S3 endpoint config so presigned URLs route through the Vite
+        # HTTPS proxy (phones can't reach localhost:9000 directly).
+        # task start picks this up via dotenv: ['.env.mobile'].
+        printf 'MEZA_S3_PUBLIC_ENDPOINT=%s\nS3_CORS_ORIGINS=%s\n' "$URL" "$URL" > ../.env.mobile
+        echo "Wrote .env.mobile (MEZA_S3_PUBLIC_ENDPOINT=$URL)"
+        echo "  -> Restart 'task start' if it's already running so the media service picks this up."
+
         echo "Syncing Capacitor with dev server URL..."
         cd packages/mobile
         CAPACITOR_DEV_SERVER="$URL" npx cap sync

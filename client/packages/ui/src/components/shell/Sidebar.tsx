@@ -30,6 +30,7 @@ import {
   useUsersStore,
   useVoiceParticipantsStore,
   useVoiceStore,
+  getBaseUrl,
 } from '@meza/core';
 import {
   ArrowRightIcon,
@@ -1022,8 +1023,9 @@ function ServerIcon({
   const token = useAuthStore((s) => s.accessToken);
   const authQuery = token ? `?token=${encodeURIComponent(token)}` : '';
   // Show the static thumbnail by default; swap to the full (possibly animated) URL on hover.
+  const base = getBaseUrl();
   const iconSrc = iconUrl
-    ? `${iconUrl}${hovered ? '' : '/thumb'}${authQuery}`
+    ? `${base}${iconUrl}${hovered ? '' : '/thumb'}${authQuery}`
     : undefined;
 
   return (

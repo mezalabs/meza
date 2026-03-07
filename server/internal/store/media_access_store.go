@@ -55,8 +55,15 @@ func (s *MediaAccessStore) CheckAttachmentAccess(ctx context.Context, attachment
 // If not yet linked (pending upload), only the uploader may access it.
 func (s *MediaAccessStore) checkChatAttachmentAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
 	if attachment.ChannelID == nil || *attachment.ChannelID == "" {
-		// Not yet linked to a message — only the uploader can access.
+		// Uploader can always access their own attachments.
 		if attachment.UploaderID == userID {
+			return nil
+		}
+		// Pre-migration attachments: linked before channel_id column existed.
+		// These have linked_at set but channel_id NULL. Since the content is
+		// encrypted (only usable with the channel key), allow any authenticated
+		// user to download — the real protection is E2EE, not this access check.
+		if attachment.LinkedAt != nil {
 			return nil
 		}
 		return ErrNotFound

@@ -14,15 +14,16 @@ import { getBaseUrl, isCapacitor } from '../utils/platform.ts';
 import { transport } from './client.ts';
 
 /**
- * In mobile dev the server returns presigned S3 URLs with the host from
- * S3_PUBLIC_ENDPOINT (e.g. 192.168.50.183:4081) but the WebView's origin is
- * the Tailscale hostname. Strip the origin so the request goes through the
- * same-origin Vite proxy instead of triggering a CORS preflight.
+ * On Capacitor the WebView origin differs from the S3/MinIO host.
+ * Strip the origin from presigned URLs so requests route through the
+ * same-origin Vite proxy (dev) or the app's configured proxy (prod),
+ * avoiding CORS issues and unreachable hosts (e.g. localhost:9000).
  */
 function normalizePresignedUrl(url: string): string {
   if (!isCapacitor()) return url;
   try {
     const u = new URL(url);
+    // MinIO path-style URLs always include the bucket name in the path.
     if (u.pathname.startsWith('/meza-media/')) {
       return `${u.pathname}${u.search}`;
     }

@@ -89,6 +89,9 @@ export default defineConfig(async () => {
           ? {
               // S3/MinIO — changeOrigin must be false so the Host header
               // matches the Host signed in the presigned URL.
+              // IMPORTANT: MEZA_S3_PUBLIC_ENDPOINT must be set to this Vite
+              // server's URL (e.g. https://<tailscale-fqdn>:4081) so that
+              // presigned URLs route back through this proxy.
               '/meza-media': {
                 target: 'http://localhost:9000',
               },

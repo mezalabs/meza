@@ -42,6 +42,8 @@ function fitDimensions(
 
 /**
  * Render an ImageBitmap to a WebP blob at the given dimensions and quality.
+ * Uses OffscreenCanvas when available, falls back to HTMLCanvasElement for
+ * iOS < 16.4 / WKWebView contexts where OffscreenCanvas is unsupported.
  */
 async function renderToBlob(
   bitmap: ImageBitmap,
@@ -49,11 +51,28 @@ async function renderToBlob(
   height: number,
   quality: number,
 ): Promise<Blob> {
-  const canvas = new OffscreenCanvas(width, height);
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get OffscreenCanvas 2d context');
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    return canvas.convertToBlob({ type: 'image/webp', quality });
+  }
+
+  // Fallback: HTMLCanvasElement (works on all iOS versions with createImageBitmap)
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Failed to get OffscreenCanvas 2d context');
+  if (!ctx) throw new Error('Failed to get canvas 2d context');
   ctx.drawImage(bitmap, 0, 0, width, height);
-  return canvas.convertToBlob({ type: 'image/webp', quality });
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+      'image/webp',
+      quality,
+    );
+  });
 }
 
 /**
