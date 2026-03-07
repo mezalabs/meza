@@ -2,8 +2,8 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -40,10 +40,13 @@ func (s *MediaAccessStore) CheckAttachmentAccess(ctx context.Context, attachment
 		return s.checkEmojiAccess(ctx, attachment, userID)
 	case "soundboard":
 		return s.checkSoundboardAccess(ctx, attachment, userID)
-	default:
-		// profile_avatar, profile_banner, server_icon, server_banner:
-		// public to any authenticated user.
+	case "profile_avatar", "profile_banner", "server_icon", "server_banner":
+		// Public to any authenticated user — avatars appear in message
+		// lists; icons/banners appear on invite pages.
 		return nil
+	default:
+		// Unknown purpose — fail closed.
+		return ErrNotFound
 	}
 }
 
@@ -73,17 +76,17 @@ func (s *MediaAccessStore) checkChatAttachmentAccess(ctx context.Context, attach
 // Personal emojis (no server) are accessible to the owner.
 // Server emojis require server membership.
 func (s *MediaAccessStore) checkEmojiAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	var serverID *string
 	var emojiUserID string
 	err := s.pool.QueryRow(ctx,
-		`SELECT server_id, user_id FROM emojis WHERE attachment_id = $1`,
+		`SELECT server_id, user_id FROM server_emojis WHERE attachment_id = $1`,
 		attachment.ID,
 	).Scan(&serverID, &emojiUserID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			// Emoji not found — orphaned attachment, allow uploader only.
 			if attachment.UploaderID == userID {
 				return nil
@@ -106,7 +109,7 @@ func (s *MediaAccessStore) checkEmojiAccess(ctx context.Context, attachment *mod
 
 // checkSoundboardAccess verifies the user can access a soundboard sound's attachment.
 func (s *MediaAccessStore) checkSoundboardAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	var serverID *string
@@ -116,7 +119,7 @@ func (s *MediaAccessStore) checkSoundboardAccess(ctx context.Context, attachment
 		attachment.ID,
 	).Scan(&serverID, &soundUserID)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			if attachment.UploaderID == userID {
 				return nil
 			}

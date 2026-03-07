@@ -515,7 +515,7 @@ func (s *mediaService) GetDownloadURL(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("attachment is not ready"))
 	}
 
-	if err := s.checkAccess(ctx, attachment, userID); err != nil {
+	if err := s.access.CheckAttachmentAccess(ctx, attachment, userID); err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("attachment not found"))
 	}
 
@@ -600,10 +600,6 @@ func mediaRedirectHandler(st store.MediaStorer, ac store.MediaAccessChecker, s3P
 	}
 }
 
-// checkAccess verifies the user may download the given attachment.
-func (s *mediaService) checkAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
-	return s.access.CheckAttachmentAccess(ctx, attachment, userID)
-}
 
 // startCleanup runs a background goroutine that periodically removes orphaned
 // uploads (pending/processing with expired expires_at).
