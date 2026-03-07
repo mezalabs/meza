@@ -340,6 +340,13 @@ type KeyEnvelopeStorer interface {
 	HasChannelKeyVersion(ctx context.Context, channelID string) (bool, error)
 }
 
+// MediaAccessChecker verifies whether a user may access (download) an attachment.
+// Returns nil if access is allowed, store.ErrNotFound if denied (to avoid leaking
+// existence), or another error on unexpected failures.
+type MediaAccessChecker interface {
+	CheckAttachmentAccess(ctx context.Context, attachment *models.Attachment, userID string) error
+}
+
 // MediaStorer provides access to attachment data in Postgres.
 type MediaStorer interface {
 	CreateAttachment(ctx context.Context, attachment *models.Attachment) (*models.Attachment, error)
@@ -351,6 +358,6 @@ type MediaStorer interface {
 	DeleteAttachment(ctx context.Context, id string) error
 	FindOrphanedUploads(ctx context.Context, before time.Time, limit int) ([]*models.Attachment, error)
 	ResetAttachmentToPending(ctx context.Context, id string) error
-	LinkAttachments(ctx context.Context, ids []string) error
+	LinkAttachments(ctx context.Context, ids []string, channelID string) error
 	FindUnlinkedAttachments(ctx context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error)
 }

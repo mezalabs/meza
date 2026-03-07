@@ -89,7 +89,9 @@ func main() {
 	}
 
 	mediaStore := store.NewMediaStore(pool)
-	svc := newMediaService(mediaStore, s3Client, s3Public)
+	permChk := store.NewChannelPermissionStore(pool)
+	accessChk := store.NewMediaAccessStore(pool, permChk)
+	svc := newMediaService(mediaStore, accessChk, s3Client, s3Public)
 
 	// Start background cleanup of orphaned uploads.
 	startCleanup(ctx, mediaStore, s3Client)
@@ -125,7 +127,7 @@ func main() {
 
 	// Stable redirect endpoint for media URLs (requires authentication).
 	authMiddleware := auth.RequireHTTPAuth(ed25519PubKey)
-	mux.Handle("/media/", limiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, s3Public))))
+	mux.Handle("/media/", limiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, accessChk, s3Public))))
 
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())

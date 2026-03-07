@@ -9,44 +9,78 @@ import (
 
 	"connectrpc.com/connect"
 	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/models"
+	"github.com/meza-chat/meza/internal/store"
 	"github.com/meza-chat/meza/internal/testutil"
 )
 
-// TestGetDownloadURL_IDOR_AnyAuthUserCanAccess documents that any authenticated
-// user can request a download URL for any completed attachment. This is by design:
-// all content is E2EE and attachment IDs are unguessable ULIDs, so the download
-// URL alone does not reveal plaintext content.
-func TestGetDownloadURL_IDOR_AnyAuthUserCanAccess(t *testing.T) {
-	client, mockStore := setupTestMediaServer(t)
+// TestGetDownloadURL_IDOR_CrossUserDenied verifies that an authenticated user
+// cannot download a chat attachment they don't have access to.
+func TestGetDownloadURL_IDOR_CrossUserDenied(t *testing.T) {
+	ac := &mockAccessChecker{
+		allowAll:     false,
+		allowedUsers: map[string]map[string]bool{},
+	}
+	client, mockStore := setupTestMediaServerWithAccess(t, ac)
 
-	// user-A owns the attachment.
 	now := time.Now()
 	mockStore.attachments["att-owned-by-A"] = &models.Attachment{
-		ID:          "att-owned-by-A",
-		UploaderID:  "user-A",
-		Status:      models.AttachmentStatusCompleted,
-		ContentType: "image/jpeg",
-		CompletedAt: &now,
+		ID:            "att-owned-by-A",
+		UploaderID:    "user-A",
+		UploadPurpose: "chat_attachment",
+		Status:        models.AttachmentStatusCompleted,
+		ContentType:   "image/jpeg",
+		CompletedAt:   &now,
 	}
 
-	// user-B requests the download URL — should succeed (E2EE makes this safe).
-	// The handler will try to generate a presigned S3 URL (nil client → error),
-	// but reaching that point means the auth/ownership check passed.
+	// user-B requests the download URL — should be denied.
 	_, err := client.GetDownloadURL(context.Background(), authedRequest(t, &v1.GetDownloadURLRequest{
 		AttachmentId: "att-owned-by-A",
 	}, "user-B"))
 
-	// We expect an internal error because the S3 client is nil, NOT a
-	// permission error. This proves any auth'd user can access completed attachments.
 	if err == nil {
-		// If the service has a non-nil S3 client in the future, success is acceptable.
-		return
+		t.Fatal("expected error for cross-user download")
 	}
-	if connect.CodeOf(err) == connect.CodePermissionDenied || connect.CodeOf(err) == connect.CodeUnauthenticated {
-		t.Errorf("expected no authz barrier for cross-user download, got %v", connect.CodeOf(err))
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Errorf("code = %v, want NotFound (to avoid leaking existence)", connect.CodeOf(err))
+	}
+}
+
+// TestGetDownloadURL_IDOR_AuthorizedUserAllowed verifies that a user with
+// access (e.g. channel member) can download a chat attachment.
+func TestGetDownloadURL_IDOR_AuthorizedUserAllowed(t *testing.T) {
+	ac := &mockAccessChecker{
+		allowAll: false,
+		allowedUsers: map[string]map[string]bool{
+			"att-owned-by-A": {"user-B": true},
+		},
+	}
+	client, mockStore := setupTestMediaServerWithAccess(t, ac)
+
+	now := time.Now()
+	mockStore.attachments["att-owned-by-A"] = &models.Attachment{
+		ID:            "att-owned-by-A",
+		UploaderID:    "user-A",
+		UploadPurpose: "chat_attachment",
+		Status:        models.AttachmentStatusCompleted,
+		ContentType:   "image/jpeg",
+		ObjectKey:     "uploads/user-A/att-owned-by-A/photo.jpg",
+		Filename:      "photo.jpg",
+		CompletedAt:   &now,
+	}
+
+	// user-B has access — should get past the access check (fails at S3).
+	_, err := client.GetDownloadURL(context.Background(), authedRequest(t, &v1.GetDownloadURLRequest{
+		AttachmentId: "att-owned-by-A",
+	}, "user-B"))
+
+	if err == nil {
+		return // S3 stub succeeded — access confirmed
+	}
+	// Should be Internal (nil S3), NOT NotFound (access denied).
+	if connect.CodeOf(err) == connect.CodeNotFound {
+		t.Errorf("authorized user should not get NotFound, got %v", connect.CodeOf(err))
 	}
 }
 
@@ -75,9 +109,7 @@ func TestCompleteUpload_IDOR_OtherUsersUpload(t *testing.T) {
 }
 
 // TestCompleteUpload_IDOR_OwnerCanComplete verifies that the rightful owner
-// passes the ownership check in TransitionToProcessing. The test will reach
-// the S3 processing stage (nil client → panic caught or error), proving the
-// ownership gate was passed.
+// passes the ownership check in TransitionToProcessing.
 func TestCompleteUpload_IDOR_OwnerCanComplete(t *testing.T) {
 	client, mockStore := setupTestMediaServer(t)
 
@@ -104,14 +136,12 @@ func TestCompleteUpload_IDOR_OwnerCanComplete(t *testing.T) {
 }
 
 // TestMediaRedirect_IDOR_RequiresAuth verifies that the /media/ redirect endpoint
-// is protected by RequireHTTPAuth middleware. An unauthenticated request must
-// receive 401 Unauthorized.
+// is protected by RequireHTTPAuth middleware.
 func TestMediaRedirect_IDOR_RequiresAuth(t *testing.T) {
 	mockStore := newMockMediaStore()
 
-	// Wire up the redirect handler with RequireHTTPAuth middleware, exactly as main.go does.
 	authMiddleware := auth.RequireHTTPAuth(testutil.TestEd25519Keys.PublicKey)
-	handler := authMiddleware(mediaRedirectHandler(mockStore, nil))
+	handler := authMiddleware(mediaRedirectHandler(mockStore, newMockAccessChecker(), nil))
 
 	mux := http.NewServeMux()
 	mux.Handle("/media/", handler)
@@ -119,10 +149,6 @@ func TestMediaRedirect_IDOR_RequiresAuth(t *testing.T) {
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
-	client := mezav1connect.NewMediaServiceClient(http.DefaultClient, server.URL)
-	_ = client // not used — we make a raw HTTP request instead
-
-	// Raw GET with no Authorization header.
 	resp, err := http.Get(server.URL + "/media/some-attachment-id")
 	if err != nil {
 		t.Fatalf("HTTP GET: %v", err)
@@ -133,3 +159,55 @@ func TestMediaRedirect_IDOR_RequiresAuth(t *testing.T) {
 		t.Errorf("status = %d, want %d (401 Unauthorized)", resp.StatusCode, http.StatusUnauthorized)
 	}
 }
+
+// TestMediaRedirect_IDOR_AccessDenied verifies that the /media/ redirect endpoint
+// denies access when the access checker rejects the user.
+func TestMediaRedirect_IDOR_AccessDenied(t *testing.T) {
+	mockStore := newMockMediaStore()
+	ac := &mockAccessChecker{
+		allowAll:     false,
+		allowedUsers: map[string]map[string]bool{},
+	}
+
+	channelID := "channel-1"
+	mockStore.attachments["att-secret"] = &models.Attachment{
+		ID:            "att-secret",
+		UploaderID:    "user-A",
+		UploadPurpose: "chat_attachment",
+		ChannelID:     &channelID,
+		Status:        models.AttachmentStatusCompleted,
+		ObjectKey:     "uploads/user-A/att-secret/doc.pdf",
+		Filename:      "doc.pdf",
+		ContentType:   "application/pdf",
+	}
+
+	authMiddleware := auth.RequireHTTPAuth(testutil.TestEd25519Keys.PublicKey)
+	handler := authMiddleware(mediaRedirectHandler(mockStore, ac, nil))
+
+	mux := http.NewServeMux()
+	mux.Handle("/media/", handler)
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	// Authenticated request from user-B who is NOT in the allowed list.
+	token, _, err := auth.GenerateTokenPairEd25519("user-B", "dev", testutil.TestEd25519Keys, "", false)
+	if err != nil {
+		t.Fatalf("generating test token: %v", err)
+	}
+	req, _ := http.NewRequest(http.MethodGet, server.URL+"/media/att-secret", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("HTTP GET: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("status = %d, want %d (404 Not Found — hides existence)", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+// Compile-time check that mockAccessChecker satisfies the interface.
+var _ store.MediaAccessChecker = (*mockAccessChecker)(nil)

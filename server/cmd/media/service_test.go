@@ -116,13 +116,14 @@ func (m *mockMediaStore) ResetAttachmentToPending(_ context.Context, _ string) e
 	return nil
 }
 
-func (m *mockMediaStore) LinkAttachments(_ context.Context, ids []string) error {
+func (m *mockMediaStore) LinkAttachments(_ context.Context, ids []string, channelID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now()
 	for _, id := range ids {
 		if a, ok := m.attachments[id]; ok {
 			a.LinkedAt = &now
+			a.ChannelID = &channelID
 		}
 	}
 	return nil
@@ -161,13 +162,40 @@ func (m *mockMediaStore) FindOrphanedUploads(_ context.Context, before time.Time
 	return orphans, nil
 }
 
+// mockAccessChecker implements store.MediaAccessChecker for testing.
+type mockAccessChecker struct {
+	// allowAll makes every check pass (default for existing tests).
+	allowAll bool
+	// allowedUsers maps attachmentID → set of userIDs that have access.
+	allowedUsers map[string]map[string]bool
+}
+
+func newMockAccessChecker() *mockAccessChecker {
+	return &mockAccessChecker{allowAll: true}
+}
+
+func (m *mockAccessChecker) CheckAttachmentAccess(_ context.Context, attachment *models.Attachment, userID string) error {
+	if m.allowAll {
+		return nil
+	}
+	// Mirror real behavior: public purposes are always allowed.
+	switch attachment.UploadPurpose {
+	case "profile_avatar", "profile_banner", "server_icon", "server_banner":
+		return nil
+	}
+	if users, ok := m.allowedUsers[attachment.ID]; ok && users[userID] {
+		return nil
+	}
+	return store.ErrNotFound
+}
+
 // setupTestMediaServer creates an httptest server with the media service.
 // The S3 client is nil, which means tests that reach S3 calls will fail.
 // Validation tests (which return errors before S3) will work.
 func setupTestMediaServer(t *testing.T) (mezav1connect.MediaServiceClient, *mockMediaStore) {
 	t.Helper()
 	mockStore := newMockMediaStore()
-	svc := newMediaService(mockStore, nil, nil) // nil S3 — validation-only tests
+	svc := newMediaService(mockStore, newMockAccessChecker(), nil, nil) // nil S3 — validation-only tests
 
 	mux := http.NewServeMux()
 	path, handler := mezav1connect.NewMediaServiceHandler(svc,
@@ -360,7 +388,7 @@ func TestGetDownloadURL_NotCompleted(t *testing.T) {
 
 func TestMediaRedirectHandler_NotFound(t *testing.T) {
 	mockStore := newMockMediaStore()
-	handler := mediaRedirectHandler(mockStore, nil)
+	handler := mediaRedirectHandler(mockStore, newMockAccessChecker(), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/media/nonexistent", nil)
 	w := httptest.NewRecorder()
@@ -378,7 +406,7 @@ func TestMediaRedirectHandler_NotCompleted(t *testing.T) {
 		Status: models.AttachmentStatusPending,
 	}
 
-	handler := mediaRedirectHandler(mockStore, nil)
+	handler := mediaRedirectHandler(mockStore, newMockAccessChecker(), nil)
 	req := httptest.NewRequest(http.MethodGet, "/media/att-1", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -426,6 +454,151 @@ func TestPurposeToString(t *testing.T) {
 		if got := purposeToString(tt.input); got != tt.want {
 			t.Errorf("purposeToString(%v) = %q, want %q", tt.input, got, tt.want)
 		}
+	}
+}
+
+// --- Authorization tests ---
+
+func setupTestMediaServerWithAccess(t *testing.T, ac *mockAccessChecker) (mezav1connect.MediaServiceClient, *mockMediaStore) {
+	t.Helper()
+	mockStore := newMockMediaStore()
+	svc := newMediaService(mockStore, ac, nil, nil)
+
+	mux := http.NewServeMux()
+	path, handler := mezav1connect.NewMediaServiceHandler(svc,
+		connect.WithInterceptors(auth.NewConnectInterceptor(testutil.TestEd25519Keys.PublicKey)),
+	)
+	mux.Handle(path, handler)
+
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	client := mezav1connect.NewMediaServiceClient(http.DefaultClient, server.URL)
+	return client, mockStore
+}
+
+func TestGetDownloadURL_AccessDenied(t *testing.T) {
+	ac := &mockAccessChecker{
+		allowAll:     false,
+		allowedUsers: map[string]map[string]bool{},
+	}
+	client, mockStore := setupTestMediaServerWithAccess(t, ac)
+
+	mockStore.attachments["att-1"] = &models.Attachment{
+		ID:            "att-1",
+		UploaderID:    "user-owner",
+		UploadPurpose: "chat_attachment",
+		Status:        models.AttachmentStatusCompleted,
+	}
+
+	_, err := client.GetDownloadURL(context.Background(), authedRequest(t, &v1.GetDownloadURLRequest{
+		AttachmentId: "att-1",
+	}, "user-other"))
+	if err == nil {
+		t.Fatal("expected error for unauthorized access")
+	}
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Errorf("code = %v, want NotFound", connect.CodeOf(err))
+	}
+}
+
+func TestGetDownloadURL_AccessAllowed(t *testing.T) {
+	ac := &mockAccessChecker{
+		allowAll: false,
+		allowedUsers: map[string]map[string]bool{
+			"att-1": {"user-member": true},
+		},
+	}
+	client, mockStore := setupTestMediaServerWithAccess(t, ac)
+
+	mockStore.attachments["att-1"] = &models.Attachment{
+		ID:            "att-1",
+		UploaderID:    "user-owner",
+		UploadPurpose: "chat_attachment",
+		Status:        models.AttachmentStatusCompleted,
+		ObjectKey:     "uploads/user-owner/att-1/test.jpg",
+		Filename:      "test.jpg",
+		ContentType:   "image/jpeg",
+	}
+
+	// This will fail at S3 presign (nil client), but if it gets past the access
+	// check it means authorization succeeded. The error must NOT be NotFound.
+	_, err := client.GetDownloadURL(context.Background(), authedRequest(t, &v1.GetDownloadURLRequest{
+		AttachmentId: "att-1",
+	}, "user-member"))
+	if err == nil {
+		return // S3 stub succeeded — access confirmed
+	}
+	// Any error other than NotFound means we passed the access check.
+	if connect.CodeOf(err) == connect.CodeNotFound {
+		t.Errorf("authorized user got NotFound — access check wrongly denied")
+	}
+}
+
+func TestGetDownloadURL_PublicPurposeAlwaysAllowed(t *testing.T) {
+	// Even with restrictive access checker, public purposes pass.
+	ac := &mockAccessChecker{
+		allowAll:     false,
+		allowedUsers: map[string]map[string]bool{},
+	}
+
+	for _, purpose := range []string{"profile_avatar", "profile_banner", "server_icon"} {
+		t.Run(purpose, func(t *testing.T) {
+			client, mockStore := setupTestMediaServerWithAccess(t, ac)
+
+			mockStore.attachments["att-pub"] = &models.Attachment{
+				ID:            "att-pub",
+				UploaderID:    "user-owner",
+				UploadPurpose: purpose,
+				Status:        models.AttachmentStatusCompleted,
+				ObjectKey:     "uploads/user-owner/att-pub/icon.png",
+				Filename:      "icon.png",
+				ContentType:   "image/png",
+			}
+
+			_, err := client.GetDownloadURL(context.Background(), authedRequest(t, &v1.GetDownloadURLRequest{
+				AttachmentId: "att-pub",
+			}, "user-random"))
+			if err == nil {
+				return // S3 stub succeeded — access confirmed
+			}
+			// Any error other than NotFound means we passed the access check.
+			if connect.CodeOf(err) == connect.CodeNotFound {
+				t.Errorf("public purpose %s got NotFound — should be accessible to any user", purpose)
+			}
+		})
+	}
+}
+
+func TestMediaRedirectHandler_AccessDenied(t *testing.T) {
+	mockStore := newMockMediaStore()
+	ac := &mockAccessChecker{
+		allowAll:     false,
+		allowedUsers: map[string]map[string]bool{},
+	}
+
+	channelID := "channel-1"
+	mockStore.attachments["att-1"] = &models.Attachment{
+		ID:            "att-1",
+		UploaderID:    "user-owner",
+		UploadPurpose: "chat_attachment",
+		ChannelID:     &channelID,
+		Status:        models.AttachmentStatusCompleted,
+		ObjectKey:     "uploads/user-owner/att-1/test.jpg",
+		Filename:      "test.jpg",
+		ContentType:   "image/jpeg",
+	}
+
+	handler := mediaRedirectHandler(mockStore, ac, nil)
+	req := httptest.NewRequest(http.MethodGet, "/media/att-1", nil)
+	// Inject authenticated user into context.
+	ctx := auth.ContextWithUserID(req.Context(), "user-other")
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
 	}
 }
 
