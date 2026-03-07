@@ -83,6 +83,7 @@ export function MessageComposer({
     ready: encryptionReady,
     isEncrypted,
     retry: retryEncryption,
+    unavailableReason,
   } = useChannelEncryption(channelId);
 
   // Focus textarea on mount and channel switch (skip on mobile to avoid keyboard popup).
@@ -533,10 +534,16 @@ export function MessageComposer({
       {/* Encryption retry banner */}
       {encryptionUnavailable && (
         <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-sm text-error">
-          <span>Encryption unavailable</span>
-          <button type="button" onClick={retryEncryption} className="underline">
-            Retry
-          </button>
+          <span>
+            {unavailableReason === 'no-session'
+              ? 'Session expired \u2014 log out and back in to restore encryption'
+              : 'Waiting for encryption keys \u2014 another member needs to be online'}
+          </span>
+          {unavailableReason !== 'no-session' && (
+            <button type="button" onClick={retryEncryption} className="underline">
+              Retry
+            </button>
+          )}
         </div>
       )}
       {/* Reply preview bar */}

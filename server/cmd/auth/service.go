@@ -41,23 +41,46 @@ func newAuthService(s store.AuthStorer, ds store.DeviceStorer, hmacSecret string
 const recoveryRateLimitMax = 5
 const recoveryRateLimitTTL = 1 * time.Hour
 
-func (s *authService) checkRecoveryRateLimit(ctx context.Context, email string) error {
+func (s *authService) checkRecoveryRateLimit(ctx context.Context, email, endpoint string) error {
 	if s.redisClient == nil {
 		return connect.NewError(connect.CodeUnavailable, errors.New("recovery temporarily unavailable"))
 	}
-	key := fmt.Sprintf("ratelimit:recovery:%s", email)
+	key := fmt.Sprintf("ratelimit:recovery:%s:%s", endpoint, email)
 	count, err := s.redisClient.Incr(ctx, key).Result()
 	if err != nil {
 		slog.Error("recovery rate limit incr", "err", err, "email", email)
 		return connect.NewError(connect.CodeUnavailable, errors.New("recovery temporarily unavailable"))
 	}
-	if count == 1 {
-		s.redisClient.Expire(ctx, key, recoveryRateLimitTTL)
+	if err := s.redisClient.Expire(ctx, key, recoveryRateLimitTTL).Err(); err != nil {
+		slog.Error("recovery rate limit expire", "err", err, "email", email)
 	}
 	if count > recoveryRateLimitMax {
 		return connect.NewError(connect.CodeResourceExhausted, errors.New("too many recovery attempts, try again later"))
 	}
 	return nil
+}
+
+// hashRecoveryVerifier returns the SHA-256 hash of a recovery verifier.
+// Returns nil if the verifier is empty (pre-migration client).
+func hashRecoveryVerifier(verifier []byte) []byte {
+	if len(verifier) == 0 {
+		return nil
+	}
+	h := sha256.Sum256(verifier)
+	return h[:]
+}
+
+// verifyRecoveryVerifier checks that the submitted verifier matches the stored hash.
+// Returns true if the hash is nil (pre-migration account with no verifier set).
+func verifyRecoveryVerifier(storedHash, submittedVerifier []byte) bool {
+	if storedHash == nil {
+		return false // no verifier stored — recovery not available for this account
+	}
+	if len(submittedVerifier) == 0 {
+		return false // verifier required but not provided
+	}
+	h := sha256.Sum256(submittedVerifier)
+	return hmac.Equal(storedHash, h[:])
 }
 
 // generateTokenPair creates an Ed25519 signed access + refresh JWT pair.
@@ -75,6 +98,9 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 	}
 	if !validateUsername(r.Username) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username must be 3-20 characters: letters, numbers, underscores only"))
+	}
+	if len(r.RecoveryVerifier) != 0 && len(r.RecoveryVerifier) != 32 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid recovery_verifier length"))
 	}
 	authKeyHash, err := auth.HashPassword(string(r.AuthKey))
 	if err != nil {
@@ -99,6 +125,7 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 		KeyBundleIV:                r.KeyBundleIv,
 		RecoveryEncryptedKeyBundle: r.RecoveryEncryptedKeyBundle,
 		RecoveryKeyBundleIV:        r.RecoveryKeyBundleIv,
+		RecoveryVerifierHash:       hashRecoveryVerifier(r.RecoveryVerifier),
 	}
 
 	user, err = s.store.CreateUser(ctx, user, authKeyHash, r.Salt, encBundle)
@@ -590,14 +617,12 @@ func (s *authService) ChangePassword(ctx context.Context, req *connect.Request[v
 	if len(r.OldAuthKey) == 0 || len(r.NewAuthKey) == 0 || len(r.NewSalt) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("old_auth_key, new_auth_key, and new_salt are required"))
 	}
-
-	// Verify old password by fetching current auth data.
-	user, err := s.store.GetUserByID(ctx, userID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	if len(r.NewRecoveryVerifier) != 0 && len(r.NewRecoveryVerifier) != 32 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new_recovery_verifier length"))
 	}
 
-	_, ad, err := s.store.GetUserByEmail(ctx, user.Email)
+	// Verify old password by fetching current auth data.
+	ad, err := s.store.GetAuthDataByUserID(ctx, userID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -617,6 +642,7 @@ func (s *authService) ChangePassword(ctx context.Context, req *connect.Request[v
 		KeyBundleIV:                r.NewKeyBundleIv,
 		RecoveryEncryptedKeyBundle: r.NewRecoveryEncryptedKeyBundle,
 		RecoveryKeyBundleIV:        r.NewRecoveryKeyBundleIv,
+		RecoveryVerifierHash:       hashRecoveryVerifier(r.NewRecoveryVerifier),
 	}
 
 	if err := s.store.ChangePassword(ctx, userID, ad.AuthKeyHash, newAuthKeyHash, r.NewSalt, newBundle); err != nil {
@@ -650,7 +676,7 @@ func (s *authService) GetRecoveryBundle(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email is required"))
 	}
 
-	if err := s.checkRecoveryRateLimit(ctx, req.Msg.Email); err != nil {
+	if err := s.checkRecoveryRateLimit(ctx, req.Msg.Email, "bundle"); err != nil {
 		return nil, err
 	}
 
@@ -686,8 +712,14 @@ func (s *authService) RecoverAccount(ctx context.Context, req *connect.Request[v
 	if len(r.NewEncryptedKeyBundle) == 0 || len(r.NewKeyBundleIv) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("new encrypted key bundle is required"))
 	}
+	if len(r.RecoveryVerifier) != 0 && len(r.RecoveryVerifier) != 32 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid recovery_verifier length"))
+	}
+	if len(r.NewRecoveryVerifier) != 0 && len(r.NewRecoveryVerifier) != 32 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new_recovery_verifier length"))
+	}
 
-	if err := s.checkRecoveryRateLimit(ctx, r.Email); err != nil {
+	if err := s.checkRecoveryRateLimit(ctx, r.Email, "account"); err != nil {
 		return nil, err
 	}
 
@@ -702,20 +734,23 @@ func (s *authService) RecoverAccount(ctx context.Context, req *connect.Request[v
 		KeyBundleIV:                r.NewKeyBundleIv,
 		RecoveryEncryptedKeyBundle: r.NewRecoveryEncryptedKeyBundle,
 		RecoveryKeyBundleIV:        r.NewRecoveryKeyBundleIv,
+		RecoveryVerifierHash:       hashRecoveryVerifier(r.NewRecoveryVerifier),
 	}
 
-	userID, err := s.store.RecoverAccount(ctx, r.Email, newAuthKeyHash, r.NewSalt, newBundle)
+	// Verifier check happens inside the transaction (FOR UPDATE) to prevent TOCTOU races.
+	userID, err := s.store.RecoverAccount(ctx, r.Email, newAuthKeyHash, r.NewSalt, newBundle, func(storedHash []byte) bool {
+		return verifyRecoveryVerifier(storedHash, r.RecoveryVerifier)
+	})
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, connect.NewError(connect.CodeNotFound, errors.New("account not found"))
+		if errors.Is(err, store.ErrInvalidRecoveryProof) || strings.Contains(err.Error(), "not found") {
+			// Same error for not-found and invalid proof — prevent email enumeration
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("recovery failed"))
 		}
 		slog.Error("recovering account", "err", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	// Delete old refresh tokens and generate new ones.
-	_ = s.store.DeleteRefreshTokensByUser(ctx, userID)
-
+	// Refresh tokens already deleted inside RecoverAccount transaction.
 	deviceID := models.NewID()
 	if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
 		ID:       deviceID,

@@ -66,4 +66,5 @@ type EncryptedBundle struct {
 	KeyBundleIV                []byte
 	RecoveryEncryptedKeyBundle []byte // Key bundle encrypted with recovery key (BIP39-derived)
 	RecoveryKeyBundleIV        []byte
+	RecoveryVerifierHash       []byte // SHA-256(HKDF(recovery_key, "meza-recovery-verifier"))
 }
