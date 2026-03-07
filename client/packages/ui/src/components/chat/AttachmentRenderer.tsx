@@ -64,11 +64,14 @@ function useDecryptedThumbnail(
 
     let cancelled = false;
     (async () => {
+      let step = 'fetch';
       try {
         const encThumb = await fetchEncryptedMedia(attachment.id, true);
         if (cancelled) return;
+        step = 'unwrap';
         const fileKey = await unwrapFileKey(channelId, attachment.encryptedKey);
         if (cancelled) return;
+        step = 'decrypt';
         const thumbBytes = await decryptFile(fileKey, encThumb);
         if (cancelled) return;
         const blob = new Blob([thumbBytes as BlobPart], {
@@ -78,10 +81,12 @@ function useDecryptedThumbnail(
         });
         const url = acquireBlobURL(thumbKey, blob);
         if (mountedRef.current) setBlobUrl(url);
-      } catch (err) {
+      } catch (err: unknown) {
+        const e = err as { name?: string; message?: string };
         console.error(
-          `[E2EE] Thumbnail decrypt failed for ${attachment.id}:`,
-          err,
+          `[E2EE] Thumbnail ${step} failed for ${attachment.id}:`,
+          e.name ?? 'Error',
+          e.message ?? String(err),
         );
         if (mountedRef.current) setError(true);
       }
