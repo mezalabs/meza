@@ -249,7 +249,15 @@ func (s *MessageStore) SearchMessages(ctx context.Context, opts SearchMessagesOp
 	// Phase 1: metadata-only scan to find matching message IDs.
 	var cql string
 	var args []any
-	if opts.BeforeID != "" {
+	reverseResults := false
+	if opts.AfterID != "" {
+		// Forward scan: messages newer than after_id (ASC order, reversed after)
+		cql = `SELECT message_id, author_id, attachment_ids, mentioned_user_ids, deleted
+		       FROM messages WHERE channel_id = ? AND message_id > ?
+		       ORDER BY message_id ASC`
+		args = []any{opts.ChannelID, opts.AfterID}
+		reverseResults = true
+	} else if opts.BeforeID != "" {
 		cql = `SELECT message_id, author_id, attachment_ids, mentioned_user_ids, deleted
 		       FROM messages WHERE channel_id = ? AND message_id < ?
 		       ORDER BY message_id DESC`
@@ -329,6 +337,11 @@ func (s *MessageStore) SearchMessages(ctx context.Context, opts SearchMessagesOp
 		if msg, ok := msgMap[id]; ok {
 			messages = append(messages, msg)
 		}
+	}
+
+	// After-ID queries scan ASC; reverse to maintain DESC (newest first) output.
+	if reverseResults {
+		slices.Reverse(messages)
 	}
 
 	return messages, hasMore, nil

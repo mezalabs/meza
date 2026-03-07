@@ -11017,6 +11017,7 @@ type SearchMessagesRequest struct {
 	Limit           int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
 	BeforeId        *string                `protobuf:"bytes,7,opt,name=before_id,json=beforeId,proto3,oneof" json:"before_id,omitempty"`
 	MentionedUserId *string                `protobuf:"bytes,8,opt,name=mentioned_user_id,json=mentionedUserId,proto3,oneof" json:"mentioned_user_id,omitempty"`
+	AfterId         *string                `protobuf:"bytes,9,opt,name=after_id,json=afterId,proto3,oneof" json:"after_id,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -11096,6 +11097,13 @@ func (x *SearchMessagesRequest) GetBeforeId() string {
 func (x *SearchMessagesRequest) GetMentionedUserId() string {
 	if x != nil && x.MentionedUserId != nil {
 		return *x.MentionedUserId
+	}
+	return ""
+}
+
+func (x *SearchMessagesRequest) GetAfterId() string {
+	if x != nil && x.AfterId != nil {
+		return *x.AfterId
 	}
 	return ""
 }
@@ -12105,7 +12113,7 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x19ListFriendRequestsRequest\"\x8e\x01\n" +
 	"\x1aListFriendRequestsResponse\x127\n" +
 	"\bincoming\x18\x01 \x03(\v2\x1b.meza.v1.FriendRequestEntryR\bincoming\x127\n" +
-	"\boutgoing\x18\x02 \x03(\v2\x1b.meza.v1.FriendRequestEntryR\boutgoing\"\x83\x03\n" +
+	"\boutgoing\x18\x02 \x03(\v2\x1b.meza.v1.FriendRequestEntryR\boutgoing\"\xb0\x03\n" +
 	"\x15SearchMessagesRequest\x12 \n" +
 	"\tserver_id\x18\x02 \x01(\tH\x00R\bserverId\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -12114,7 +12122,8 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x0ehas_attachment\x18\x05 \x01(\bH\x03R\rhasAttachment\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x06 \x01(\x05R\x05limit\x12 \n" +
 	"\tbefore_id\x18\a \x01(\tH\x04R\bbeforeId\x88\x01\x01\x12/\n" +
-	"\x11mentioned_user_id\x18\b \x01(\tH\x05R\x0fmentionedUserId\x88\x01\x01B\f\n" +
+	"\x11mentioned_user_id\x18\b \x01(\tH\x05R\x0fmentionedUserId\x88\x01\x01\x12\x1e\n" +
+	"\bafter_id\x18\t \x01(\tH\x06R\aafterId\x88\x01\x01B\f\n" +
 	"\n" +
 	"_server_idB\r\n" +
 	"\v_channel_idB\f\n" +
@@ -12123,7 +12132,8 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x0f_has_attachmentB\f\n" +
 	"\n" +
 	"_before_idB\x14\n" +
-	"\x12_mentioned_user_idJ\x04\b\x01\x10\x02R\x05query\"s\n" +
+	"\x12_mentioned_user_idB\v\n" +
+	"\t_after_idJ\x04\b\x01\x10\x02R\x05query\"s\n" +
 	"\x16SearchMessagesResponse\x12,\n" +
 	"\bmessages\x18\x01 \x03(\v2\x10.meza.v1.MessageR\bmessages\x12\x19\n" +
 	"\bhas_more\x18\x03 \x01(\bR\ahasMoreJ\x04\b\x02\x10\x03R\n" +
