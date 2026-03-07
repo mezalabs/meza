@@ -112,6 +112,12 @@ export async function fetchEncryptedMedia(
   if (!response.ok) {
     throw new Error(`Failed to fetch media: ${response.status}`);
   }
+  const ct = response.headers.get('content-type') ?? '';
+  if (ct.startsWith('text/html') || ct.startsWith('application/xml')) {
+    throw new Error(
+      `Unexpected content-type "${ct}" for ${attachmentId} (URL: ${url})`,
+    );
+  }
   return new Uint8Array(await response.arrayBuffer());
 }
 
