@@ -17,15 +17,18 @@ import (
 
 // Client wraps a minio.Client and binds it to a specific bucket.
 type Client struct {
-	client *minio.Client
-	bucket string
+	client    *minio.Client
+	bucket    string
+	accessKey string
+	secretKey string
+	region    string
 }
 
 // NewClient creates a new S3 client using the given endpoint and credentials.
 // The endpoint can be a bare host:port (e.g. "localhost:9000") or a URL
 // (e.g. "http://localhost:9000"). When a URL is provided, the scheme
 // determines the Secure setting and the host:port is extracted automatically.
-func NewClient(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Client, error) {
+func NewClient(endpoint, accessKey, secretKey, bucket, region string, useSSL bool) (*Client, error) {
 	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
 		u, err := url.Parse(endpoint)
 		if err != nil {
@@ -38,15 +41,27 @@ func NewClient(endpoint, accessKey, secretKey, bucket string, useSSL bool) (*Cli
 	mc, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
+		Region: region,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("s3: failed to create minio client: %w", err)
 	}
 
 	return &Client{
-		client: mc,
-		bucket: bucket,
+		client:    mc,
+		bucket:    bucket,
+		accessKey: accessKey,
+		secretKey: secretKey,
+		region:    region,
 	}, nil
+}
+
+// WithPublicEndpoint returns a new Client that uses the given endpoint for
+// presigned URL generation while sharing the same bucket. This is useful when
+// the internal S3 endpoint (e.g. localhost:9000) is not reachable by clients
+// (e.g. a phone on the LAN).
+func (c *Client) WithPublicEndpoint(endpoint string, useSSL bool) (*Client, error) {
+	return NewClient(endpoint, c.accessKey, c.secretKey, c.bucket, c.region, useSSL)
 }
 
 // EnsureBucket checks whether the configured bucket exists and creates it if it

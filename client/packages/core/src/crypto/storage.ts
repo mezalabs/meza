@@ -182,6 +182,21 @@ export function _resetForTesting(): void {
   dbPromise = null;
 }
 
+/**
+ * Clear only the channel keys blob from IndexedDB (e.g. stale cache after key change).
+ */
+export async function clearChannelKeysStorage(): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CHANNEL_KEYS, 'readwrite');
+    tx.objectStore(STORE_CHANNEL_KEYS).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
 // --- Clear ---
 
 /**

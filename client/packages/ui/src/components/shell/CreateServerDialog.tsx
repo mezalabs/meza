@@ -130,7 +130,7 @@ export function CreateServerDialog({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/gif,image/webp"
                 onChange={handleFileSelect}
                 className="hidden"
               />

@@ -16,34 +16,34 @@
   --font-*: initial;
 
   /* ── Background layers (neutral dark, ascending lightness) ── */
-  --color-bg-base: oklch(0.18 0 0); /* Must match inline bg in index.html */
-  --color-bg-surface: oklch(0.22 0 0);
-  --color-bg-elevated: oklch(0.26 0 0);
-  --color-bg-overlay: oklch(0.17 0 0);
+  --color-bg-base: #121212; /* oklch(0.18 0 0) — must match inline bg in index.html */
+  --color-bg-surface: #1b1b1b; /* oklch(0.22 0 0) */
+  --color-bg-elevated: #242424; /* oklch(0.26 0 0) */
+  --color-bg-overlay: #0f0f0f; /* oklch(0.17 0 0) */
 
   /* ── Mint accent scale ── */
-  --color-accent: oklch(0.9 0.17 157);
-  --color-accent-hover: oklch(0.93 0.14 157);
-  --color-accent-muted: oklch(0.65 0.11 157);
-  --color-accent-subtle: oklch(0.35 0.05 157);
+  --color-accent: #6affb0; /* oklch(0.9 0.17 157) */
+  --color-accent-hover: #92ffc2; /* oklch(0.93 0.14 157) */
+  --color-accent-muted: #4ea374; /* oklch(0.65 0.11 157) */
+  --color-accent-subtle: #234230; /* oklch(0.35 0.05 157) */
 
   /* ── Text ── */
-  --color-text: oklch(0.93 0 0);
-  --color-text-muted: oklch(0.65 0 0);
-  --color-text-subtle: oklch(0.45 0 0);
+  --color-text: #e8e8e8; /* oklch(0.93 0 0) */
+  --color-text-muted: #8f8f8f; /* oklch(0.65 0 0) */
+  --color-text-subtle: #555555; /* oklch(0.45 0 0) */
 
   /* ── Borders ── */
-  --color-border: oklch(0.3 0 0);
-  --color-border-hover: oklch(0.4 0 0);
+  --color-border: #2e2e2e; /* oklch(0.3 0 0) */
+  --color-border-hover: #484848; /* oklch(0.4 0 0) */
 
   /* ── Focus ring ── */
-  --color-focus: oklch(0.9 0.17 157);
+  --color-focus: #6affb0; /* oklch(0.9 0.17 157) */
 
   /* ── Semantic ── */
-  --color-success: oklch(0.7 0.15 157);
-  --color-warning: oklch(0.75 0.15 85);
-  --color-error: oklch(0.65 0.2 25);
-  --color-info: oklch(0.7 0.12 230);
+  --color-success: #33b978; /* oklch(0.7 0.15 157) */
+  --color-warning: #d9a514; /* oklch(0.75 0.15 85) */
+  --color-error: #f14d4c; /* oklch(0.65 0.2 25) */
+  --color-info: #3bacda; /* oklch(0.7 0.12 230) */
 
   /* ── Essentials ── */
   --color-white: #fff;
@@ -72,9 +72,9 @@
   --radius-full: 9999px;
 
   /* ── Shadows (subtle) ── */
-  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
-  --shadow-md: 0 2px 8px oklch(0 0 0 / 0.4);
-  --shadow-lg: 0 4px 16px oklch(0 0 0 / 0.5);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 4px 16px rgb(0 0 0 / 0.5);
 
   /* ── Easing ── */
   --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
@@ -147,12 +147,35 @@
 }
 
 /* ── Base layer ── */
+
+/* Tailwind v4 preflight defaults border-color to currentColor, which renders
+   as white on our dark theme. Override in @layer base so utility classes
+   (border-transparent, border-accent, etc.) can still win. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+}
+
 html {
   font-family: var(--font-sans);
   font-size: 16px;
   background-color: var(--color-bg-base);
   color: var(--color-text);
   color-scheme: dark;
+}
+
+/* Suppress native tap/focus highlights in mobile WebViews */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
 }
 
 *:focus-visible:not(input):not(textarea):not(select) {
@@ -187,7 +210,7 @@ html {
 
   input::placeholder,
   textarea::placeholder {
-    color: oklch(0.38 0 0);
+    color: #424242;
   }
 }
 
@@ -224,7 +247,7 @@ html {
     background-color: transparent;
   }
   30% {
-    background-color: oklch(0.9 0.17 157 / 0.15);
+    background-color: rgba(106, 255, 176, 0.15);
   }
 }
 
@@ -275,7 +298,7 @@ html {
 }
 
 .markdown-body .spoiler-revealed {
-  background-color: oklch(from var(--color-bg-elevated) l c h / 0.4);
+  background-color: rgba(36, 36, 36, 0.4); /* bg-elevated at 40% opacity */
   color: inherit;
   user-select: text;
 }
@@ -296,7 +319,7 @@ html {
 .hljs-built_in,
 .hljs-name,
 .hljs-tag {
-  color: oklch(0.72 0.14 25); /* warm red */
+  color: #f07f77; /* warm red */
 }
 
 .hljs-string,
@@ -307,7 +330,7 @@ html {
 .hljs-template-tag,
 .hljs-template-variable,
 .hljs-type {
-  color: oklch(0.72 0.12 157); /* green */
+  color: #5cbb86; /* green */
 }
 
 .hljs-comment,
@@ -321,21 +344,21 @@ html {
 .hljs-regexp,
 .hljs-literal,
 .hljs-link {
-  color: oklch(0.9 0.17 157); /* accent mint */
+  color: #6affb0; /* accent mint */
 }
 
 .hljs-symbol,
 .hljs-bullet {
-  color: oklch(0.7 0.12 230); /* info blue */
+  color: #3bacda; /* info blue */
 }
 
 .hljs-variable,
 .hljs-params {
-  color: oklch(0.78 0.1 60); /* light amber */
+  color: #e7a875; /* light amber */
 }
 
 .hljs-title.function_ {
-  color: oklch(0.7 0.12 230); /* info blue */
+  color: #3bacda; /* info blue */
 }
 
 .hljs-emphasis {

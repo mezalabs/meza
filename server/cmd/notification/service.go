@@ -11,6 +11,7 @@ import (
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"connectrpc.com/connect"
+	"firebase.google.com/go/v4/messaging"
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
@@ -46,6 +47,7 @@ type notificationService struct {
 	rdb         *redis.Client
 	nc          *nats.Conn
 	cfg         *config.Config
+	fcmClient   *messaging.Client
 }
 
 func newNotificationService(
@@ -55,6 +57,7 @@ func newNotificationService(
 	rdb *redis.Client,
 	nc *nats.Conn,
 	cfg *config.Config,
+	fcmClient *messaging.Client,
 ) *notificationService {
 	return &notificationService{
 		deviceStore: deviceStore,
@@ -63,6 +66,7 @@ func newNotificationService(
 		rdb:         rdb,
 		nc:          nc,
 		cfg:         cfg,
+		fcmClient:   fcmClient,
 	}
 }
 
@@ -391,13 +395,26 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 		return
 	}
 
-	// For each target, get their push-enabled devices and send pushes to offline ones.
+	// Single bulk query for push-enabled devices across all target users.
+	targetUserIDs := make([]string, len(targets))
 	for i, t := range targets {
-		devices, err := s.deviceStore.GetPushEnabledDevices(ctx, t.userID)
-		if err != nil {
-			slog.Error("get push devices", "err", err, "user", t.userID)
-			continue
-		}
+		targetUserIDs[i] = t.userID
+	}
+	allDevices, err := s.deviceStore.GetPushEnabledDevicesForUsers(ctx, targetUserIDs)
+	if err != nil {
+		slog.Error("get push devices bulk", "err", err, "server", serverID)
+		return
+	}
+
+	// For each target, resolve connected devices and collect offline devices.
+	type offlineTarget struct {
+		pushTarget
+		devices []*models.Device
+	}
+	var offlineTargets []offlineTarget
+
+	for i, t := range targets {
+		devices := allDevices[t.userID]
 		if len(devices) == 0 {
 			continue
 		}
@@ -408,31 +425,49 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 			connectedSet[id] = true
 		}
 
-		// Pipeline throttle checks for this user's offline devices.
-		var offlineDevices []*models.Device
+		var offline []*models.Device
 		for _, device := range devices {
 			if !connectedSet[device.ID] {
-				offlineDevices = append(offlineDevices, device)
+				offline = append(offline, device)
 			}
 		}
-		if len(offlineDevices) == 0 {
+		if len(offline) == 0 {
 			continue
 		}
 
-		// Throttle: 1 push per channel per user per type within the throttle window.
-		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.pushType, t.userID, channelID)
-		set, err := s.rdb.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second).Result()
+		offlineTargets = append(offlineTargets, offlineTarget{pushTarget: t, devices: offline})
+	}
+
+	if len(offlineTargets) == 0 {
+		return
+	}
+
+	// Batch Redis pipeline: throttle checks for all offline targets at once.
+	// Throttle: 1 push per channel per user per type within the throttle window.
+	throttlePipe := s.rdb.Pipeline()
+	throttleCmds := make([]*redis.BoolCmd, len(offlineTargets))
+	for i, ot := range offlineTargets {
+		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", ot.pushType, ot.userID, channelID)
+		throttleCmds[i] = throttlePipe.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second)
+	}
+	if _, err := throttlePipe.Exec(ctx); err != nil && err != redis.Nil {
+		slog.Error("redis pipeline setnx throttle", "err", err)
+		return
+	}
+
+	for i, ot := range offlineTargets {
+		set, err := throttleCmds[i].Result()
 		if err != nil {
-			slog.Error("redis setnx throttle", "err", err, "user", t.userID)
+			slog.Error("redis setnx throttle", "err", err, "user", ot.userID)
 			continue
 		}
 		if !set {
 			continue // Already sent a push for this channel recently.
 		}
 
-		for _, device := range offlineDevices {
+		for _, device := range ot.devices {
 			if err := s.sendPush(ctx, device, channelID); err != nil {
-				slog.Error("send push", "err", err, "user", t.userID, "device", device.ID, "platform", device.Platform)
+				slog.Error("send push", "err", err, "user", ot.userID, "device", device.ID, "platform", device.Platform)
 			}
 		}
 	}
@@ -517,14 +552,8 @@ func (s *notificationService) sendPush(ctx context.Context, device *models.Devic
 	switch device.Platform {
 	case "web":
 		return s.sendWebPush(ctx, device, payloadBytes)
-	case "android":
-		// FCM integration — placeholder for future phase.
-		slog.Info("fcm push skipped (not yet implemented)", "user", device.UserID, "device", device.ID)
-		return nil
-	case "ios":
-		// APNs integration — placeholder for future phase.
-		slog.Info("apns push skipped (not yet implemented)", "user", device.UserID, "device", device.ID)
-		return nil
+	case "android", "ios":
+		return s.sendFCMPush(ctx, device, channelID)
 	default:
 		return nil
 	}
@@ -569,6 +598,63 @@ func (s *notificationService) sendWebPush(ctx context.Context, device *models.De
 	}
 
 	slog.Debug("web push sent", "user", device.UserID, "device", device.ID)
+	return nil
+}
+
+// sendFCMPush sends a push notification via Firebase Cloud Messaging.
+// Works for both Android (FCM direct) and iOS (FCM proxied to APNs).
+func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, channelID string) error {
+	if s.fcmClient == nil {
+		slog.Debug("fcm push skipped (not configured)", "user", device.UserID, "device", device.ID)
+		return nil
+	}
+
+	msg := &messaging.Message{
+		Token: device.PushToken,
+		Data: map[string]string{
+			"type":       "message",
+			"channel_id": channelID,
+			"tag":        "channel:" + channelID,
+		},
+		Android: &messaging.AndroidConfig{
+			Priority: "high",
+			Notification: &messaging.AndroidNotification{
+				Title: "New message",
+				Body:  "You have a new message",
+				Tag:   "channel:" + channelID,
+			},
+		},
+		APNS: &messaging.APNSConfig{
+			Headers: map[string]string{
+				"apns-priority":    "10",
+				"apns-collapse-id": "channel:" + channelID,
+			},
+			Payload: &messaging.APNSPayload{
+				Aps: &messaging.Aps{
+					Alert: &messaging.ApsAlert{
+						Title: "New message",
+						Body:  "You have a new message",
+					},
+					Sound: "default",
+				},
+			},
+		},
+	}
+
+	_, err := s.fcmClient.Send(ctx, msg)
+	if err != nil {
+		if messaging.IsUnregistered(err) {
+			slog.Info("FCM token unregistered, disabling push", "user", device.UserID, "device", device.ID)
+			device.PushEnabled = false
+			if dbErr := s.deviceStore.UpsertDevice(ctx, device); dbErr != nil {
+				slog.Error("disable unregistered FCM device", "err", dbErr)
+			}
+			return nil
+		}
+		return fmt.Errorf("fcm send: %w", err)
+	}
+
+	slog.Debug("FCM push sent", "user", device.UserID, "device", device.ID, "platform", device.Platform)
 	return nil
 }
 

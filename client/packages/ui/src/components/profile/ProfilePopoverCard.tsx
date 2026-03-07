@@ -16,10 +16,16 @@ import {
   useUsersStore,
   type VoiceActivity,
 } from '@meza/core';
-import { SpeakerHighIcon, UserIcon } from '@phosphor-icons/react';
+import {
+  ChatCircleIcon,
+  SpeakerHighIcon,
+  UserIcon,
+  UserPlusIcon,
+} from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { voiceConnect } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { openProfilePane, useTilingStore } from '../../stores/tiling.ts';
@@ -55,7 +61,7 @@ export function ProfilePopoverCard({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="z-50 w-96 rounded-lg border border-border bg-bg-overlay shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
+          className="z-50 w-72 md:w-96 rounded-lg border border-border bg-bg-overlay shadow-lg data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
           side="top"
           align="center"
           sideOffset={8}
@@ -83,6 +89,7 @@ function ProfileCardContent({
   serverId?: string;
   onClose: () => void;
 }) {
+  const isMobile = useMobile();
   const currentUser = useAuthStore((s) => s.user);
   const displayColor = useDisplayColor(userId, serverId);
   const cachedProfile = useUsersStore((s) => s.profiles[userId]);
@@ -314,7 +321,7 @@ function ProfileCardContent({
               {!isBlocked && (
                 <button
                   type="button"
-                  className="flex-1 rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
                   onClick={async () => {
                     try {
                       await createOrGetDMChannel(userId);
@@ -324,14 +331,14 @@ function ProfileCardContent({
                     }
                   }}
                 >
-                  Message
+                  {isMobile ? <ChatCircleIcon size={18} weight="fill" aria-label="Message" /> : 'Message'}
                 </button>
               )}
 
               {!isBlocked && friendRelationship === 'none' && (
                 <button
                   type="button"
-                  className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
                   onClick={async () => {
                     try {
                       await sendFriendRequest(userId);
@@ -340,7 +347,7 @@ function ProfileCardContent({
                     }
                   }}
                 >
-                  Add Friend
+                  {isMobile ? <UserPlusIcon size={18} weight="fill" aria-label="Add Friend" /> : 'Add Friend'}
                 </button>
               )}
               {!isBlocked && friendRelationship === 'friends' && (
@@ -358,13 +365,13 @@ function ProfileCardContent({
 
           <button
             type="button"
-            className="rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
+            className="flex items-center justify-center rounded-md bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-muted hover:text-text transition-colors"
             onClick={() => {
               onClose();
               openProfilePane(userId);
             }}
           >
-            Profile
+            {isMobile ? <UserIcon size={18} weight="fill" aria-label="Profile" /> : 'Profile'}
           </button>
         </div>
       </div>

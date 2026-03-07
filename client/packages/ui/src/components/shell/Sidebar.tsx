@@ -785,7 +785,7 @@ function SidebarFooter() {
             <div
               className={`rounded-full transition-shadow ${
                 isSpeaking
-                  ? 'ring-[2.5px] ring-success shadow-[0_0_6px_oklch(0.72_0.19_157/0.4)]'
+                  ? 'ring-[2.5px] ring-success shadow-[0_0_6px_rgba(0,196,118,0.4)]'
                   : ''
               }`}
             >
@@ -1324,7 +1324,7 @@ function SidebarVoiceParticipant({
       <div
         className={`rounded-full transition-shadow ${
           isSpeaking
-            ? 'ring-[2px] ring-success shadow-[0_0_4px_oklch(0.72_0.19_157/0.4)]'
+            ? 'ring-[2px] ring-success shadow-[0_0_4px_rgba(0,196,118,0.4)]'
             : ''
         }`}
       >

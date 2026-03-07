@@ -5,9 +5,12 @@
  * Call `bootstrapSession()` after login/registration or on app reload
  * when the user is already authenticated.
  *
- * The master key is stored in sessionStorage (survives page reload, cleared
- * on tab close) so the encrypted key bundle in IndexedDB can be decrypted
- * without re-entering the password.
+ * The master key is cached so the encrypted key bundle in IndexedDB can be
+ * decrypted without re-entering the password:
+ *   - Web: sessionStorage (survives reload, cleared on tab close)
+ *   - Mobile (Capacitor): localStorage (survives app restart, cleared on logout)
+ *     Mobile apps have no "tabs" — the OS can kill the process at any time,
+ *     which would wipe sessionStorage while the user expects to stay logged in.
  */
 
 import {
@@ -19,6 +22,7 @@ import {
 import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
+import { isCapacitor } from '../utils/platform.ts';
 
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;
@@ -27,25 +31,34 @@ const readyListeners: Array<() => void> = [];
 
 const MK_SESSION_KEY = 'meza-mk';
 
+/** Mobile uses localStorage so the key survives process kills. */
+function mkStorage(): Storage | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return isCapacitor() ? localStorage : sessionStorage;
+}
+
 function storeMasterKey(key: Uint8Array): void {
-  if (typeof sessionStorage === 'undefined') return;
+  const storage = mkStorage();
+  if (!storage) return;
   let binary = '';
   for (let i = 0; i < key.length; i++) {
     binary += String.fromCharCode(key[i]);
   }
-  sessionStorage.setItem(MK_SESSION_KEY, btoa(binary));
+  storage.setItem(MK_SESSION_KEY, btoa(binary));
 }
 
 function loadMasterKey(): Uint8Array | null {
-  if (typeof sessionStorage === 'undefined') return null;
-  const stored = sessionStorage.getItem(MK_SESSION_KEY);
+  const storage = mkStorage();
+  if (!storage) return null;
+  const stored = storage.getItem(MK_SESSION_KEY);
   if (!stored) return null;
   return Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
 }
 
 function clearMasterKey(): void {
-  if (typeof sessionStorage === 'undefined') return;
-  sessionStorage.removeItem(MK_SESSION_KEY);
+  // Clear from both storages to handle migration / platform detection edge cases
+  sessionStorage?.removeItem(MK_SESSION_KEY);
+  localStorage?.removeItem(MK_SESSION_KEY);
 }
 
 /**
