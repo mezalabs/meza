@@ -528,15 +528,12 @@ tasks:
       - task: build:mobile
 
   build:mobile:clean:
-    desc: Full clean build — wipe native web assets, rebuild, and sync
+    desc: "Full clean build — wipe native web assets, rebuild, and sync (supports VITE_API_URL)"
     dir: client
     cmds:
-      - rm -rf packages/web/dist
       - rm -rf packages/mobile/android/app/src/main/assets/public
       - rm -rf packages/mobile/ios/App/App/public
-      - pnpm install --frozen-lockfile
-      - pnpm --filter @meza/web... build
-      - cd packages/mobile && npx cap sync
+      - task: build:mobile
       - |
         echo ""
         echo "Clean build complete. Uninstall the app from the device, then run from IDE."
