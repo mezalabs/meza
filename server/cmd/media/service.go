@@ -346,7 +346,12 @@ func (s *mediaService) CompleteUpload(ctx context.Context, req *connect.Request[
 		width = int(req.Msg.Width)
 		height = int(req.Msg.Height)
 		// Thumbnail key was pre-generated at CreateUpload time.
-		thumbnailKey = attachment.ThumbnailKey
+		// Verify the client actually uploaded a thumbnail before claiming it exists.
+		if attachment.ThumbnailKey != "" {
+			if _, sErr := s.s3.StatObject(ctx, attachment.ThumbnailKey); sErr == nil {
+				thumbnailKey = attachment.ThumbnailKey
+			}
+		}
 	} else if attachment.UploadPurpose == "soundboard" {
 		// Soundboard audio path: download full file, enforce 2MB limit, magic byte detection.
 		imageData, err := s.s3.GetObject(ctx, attachment.ObjectKey)

@@ -1,11 +1,13 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import {
   PushNotifications,
   type Token,
   type ActionPerformed,
 } from '@capacitor/push-notifications';
-import type { PluginListenerHandle } from '@capacitor/core';
 import type { PushAdapter, PushSubscriptionDetails } from '@meza/core';
+
+/** Native plugin that exposes the FCM token on iOS (see FCMTokenPlugin.swift). */
+const FCMToken = registerPlugin<{ getToken(): Promise<{ token: string }> }>('FCMToken');
 
 /**
  * Push adapter for Capacitor (iOS + Android).
@@ -49,57 +51,90 @@ export class CapacitorPushAdapter implements PushAdapter {
       return null;
     }
 
-    return new Promise<PushSubscriptionDetails>((resolve, reject) => {
-      let settled = false;
-      const timeout = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          console.warn('Push registration timed out (Firebase may not be configured)');
-          resolve(null as unknown as PushSubscriptionDetails);
+    // Register with APNs/FCM to ensure the device has a push token.
+    const apnsToken = await this.registerNative();
+    if (!apnsToken) return null;
+
+    // On iOS, Capacitor returns the raw APNs token but the server needs an
+    // FCM token. Use the native FCMTokenPlugin to get it from Firebase.
+    if (Capacitor.getPlatform() === 'ios') {
+      try {
+        const { token } = await FCMToken.getToken();
+        if (token) {
+          return {
+            pushEndpoint: '',
+            pushP256dh: '',
+            pushAuth: '',
+            pushToken: token,
+          };
         }
-      }, 10_000);
+      } catch (err) {
+        console.error('Failed to get FCM token:', err);
+      }
+      return null;
+    }
 
-      const cleanup = async () => {
-        if (settled) return;
+    // Android: Capacitor returns the FCM token directly.
+    return {
+      pushEndpoint: '',
+      pushP256dh: '',
+      pushAuth: '',
+      pushToken: apnsToken,
+    };
+  }
+
+  /** Register with APNs/FCM and return the token from the Capacitor plugin. */
+  private async registerNative(): Promise<string | null> {
+    let settled = false;
+    let resolve: (value: string | null) => void;
+    const result = new Promise<string | null>((r) => { resolve = r; });
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
         settled = true;
-        clearTimeout(timeout);
-        await this.registrationHandle?.remove();
-        await this.registrationErrorHandle?.remove();
-        this.registrationHandle = undefined;
-        this.registrationErrorHandle = undefined;
-      };
+        console.warn('Push registration timed out (Firebase may not be configured)');
+        resolve(null);
+      }
+    }, 10_000);
 
-      // Listen for successful registration (FCM token).
-      PushNotifications.addListener('registration', async (token: Token) => {
+    const cleanup = async () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      await this.registrationHandle?.remove();
+      await this.registrationErrorHandle?.remove();
+      this.registrationHandle = undefined;
+      this.registrationErrorHandle = undefined;
+    };
+
+    // Await listener setup before calling register() to avoid race condition
+    // where native callback fires before JS listeners are attached.
+    this.registrationHandle = await PushNotifications.addListener(
+      'registration',
+      async (token: Token) => {
         await cleanup();
-        resolve({
-          pushEndpoint: '',
-          pushP256dh: '',
-          pushAuth: '',
-          pushToken: token.value,
-        });
-      }).then((handle) => {
-        this.registrationHandle = handle;
-      });
+        resolve(token.value);
+      },
+    );
 
-      // Listen for registration errors.
-      PushNotifications.addListener('registrationError', async (error) => {
+    this.registrationErrorHandle = await PushNotifications.addListener(
+      'registrationError',
+      async (error) => {
         await cleanup();
         console.error('Push registration error:', error);
-        reject(new Error(`Push registration failed: ${error}`));
-      }).then((handle) => {
-        this.registrationErrorHandle = handle;
-      });
+        resolve(null);
+      },
+    );
 
-      // Register with APNs/FCM.
-      try {
-        PushNotifications.register();
-      } catch (e) {
-        cleanup();
-        console.error('Push register() failed:', e);
-        resolve(null as unknown as PushSubscriptionDetails);
-      }
-    });
+    try {
+      await PushNotifications.register();
+    } catch (e) {
+      await cleanup();
+      console.error('Push register() failed:', e);
+      resolve!(null);
+    }
+
+    return result;
   }
 
   async unsubscribe(): Promise<void> {
@@ -120,6 +155,8 @@ export class CapacitorPushAdapter implements PushAdapter {
       },
     ).then((handle) => {
       this.tapHandle = handle;
+    }).catch((err) => {
+      console.error('Failed to add notification tap listener:', err);
     });
   }
 }

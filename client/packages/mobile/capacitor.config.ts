@@ -34,6 +34,7 @@ const config: CapacitorConfig = {
       }
     : {
         androidScheme: 'https',
+        iosScheme: 'https',
       },
   android: {
     webContentsDebuggingEnabled: !!devServer,

@@ -4,7 +4,6 @@ import './index.css';
 
 import {
   bootstrapSession,
-  flushChannelKeys,
   gatewayConnect,
   gatewayDisconnect,
   isCapacitor,
@@ -95,16 +94,8 @@ if (isCapacitor()) {
 // Handle PUSH_NAVIGATE messages from the push service worker (web).
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
-    navigateToChannel(event.data.channelId);
+    navigateToChannel(event.data.channelId, !!event.data.isDM);
   }
-});
-
-// Flush channel keys to IndexedDB on tab hide or close.
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushChannelKeys();
-});
-window.addEventListener('beforeunload', () => {
-  flushChannelKeys();
 });
 
 function App() {
