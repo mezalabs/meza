@@ -167,7 +167,7 @@ func (m *mockMediaStore) FindOrphanedUploads(_ context.Context, before time.Time
 func setupTestMediaServer(t *testing.T) (mezav1connect.MediaServiceClient, *mockMediaStore) {
 	t.Helper()
 	mockStore := newMockMediaStore()
-	svc := newMediaService(mockStore, nil) // nil S3 — validation-only tests
+	svc := newMediaService(mockStore, nil, nil) // nil S3 — validation-only tests
 
 	mux := http.NewServeMux()
 	path, handler := mezav1connect.NewMediaServiceHandler(svc,

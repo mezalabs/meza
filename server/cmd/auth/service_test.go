@@ -320,6 +320,22 @@ func (m *mockDeviceStore) GetPushEnabledDevices(_ context.Context, userID string
 	return result, nil
 }
 
+func (m *mockDeviceStore) GetPushEnabledDevicesForUsers(_ context.Context, userIDs []string) (map[string][]*models.Device, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	idSet := make(map[string]bool, len(userIDs))
+	for _, id := range userIDs {
+		idSet[id] = true
+	}
+	result := make(map[string][]*models.Device)
+	for _, d := range m.devices {
+		if idSet[d.UserID] && d.PushEnabled {
+			result[d.UserID] = append(result[d.UserID], d)
+		}
+	}
+	return result, nil
+}
+
 func (m *mockDeviceStore) DeleteDevice(_ context.Context, userID, deviceID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

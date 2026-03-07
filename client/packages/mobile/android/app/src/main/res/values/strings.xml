@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Meza</string>
+    <string name="title_activity_main">Meza</string>
+    <string name="package_name">chat.meza.app</string>
+    <string name="custom_url_scheme">chat.meza.app</string>
+</resources>

@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/messaging"
 	"connectrpc.com/connect"
 	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
@@ -20,6 +22,7 @@ import (
 	"github.com/meza-chat/meza/internal/observability"
 	bfredis "github.com/meza-chat/meza/internal/redis"
 	"github.com/meza-chat/meza/internal/store"
+	"google.golang.org/api/option"
 )
 
 func main() {
@@ -56,7 +59,26 @@ func main() {
 	chatStore := store.NewChatStore(pool)
 	authStore := store.NewAuthStore(pool)
 
-	svc := newNotificationService(deviceStore, prefStore, chatStore, rdb, nc, cfg)
+	// Initialize FCM client if credentials are configured.
+	var fcmClient *messaging.Client
+	if cfg.FCMCredentialsFile != "" {
+		opt := option.WithCredentialsFile(cfg.FCMCredentialsFile)
+		app, err := firebase.NewApp(ctx, nil, opt)
+		if err != nil {
+			slog.Error("init firebase app", "err", err)
+			os.Exit(1)
+		}
+		fcmClient, err = app.Messaging(ctx)
+		if err != nil {
+			slog.Error("init fcm messaging client", "err", err)
+			os.Exit(1)
+		}
+		slog.Info("FCM push notifications enabled")
+	} else {
+		slog.Info("FCM not configured (MEZA_FCM_CREDENTIALS_FILE not set), mobile push disabled")
+	}
+
+	svc := newNotificationService(deviceStore, prefStore, chatStore, rdb, nc, cfg, fcmClient)
 
 	// Start NATS consumers for device connectivity tracking and event processing.
 	if err := svc.StartConsumers(ctx); err != nil {

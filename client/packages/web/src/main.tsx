@@ -4,15 +4,18 @@ import './index.css';
 
 import {
   bootstrapSession,
-  flushChannelKeys,
   gatewayConnect,
   gatewayDisconnect,
+  isCapacitor,
+  isElectron,
+  subscribeToPush,
   teardownSession,
   useAuthStore,
   useInviteStore,
 } from '@meza/core';
 import { InviteLanding, LandingPage, Shell, TitleBar } from '@meza/ui';
 import { createRoot } from 'react-dom/client';
+import { navigateToChannel } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -64,12 +67,35 @@ useAuthStore.subscribe((state, prevState) => {
   }
 });
 
-// Flush channel keys to IndexedDB on tab hide or close.
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flushChannelKeys();
-});
-window.addEventListener('beforeunload', () => {
-  flushChannelKeys();
+// Initialize Capacitor when running inside a native shell.
+if (isCapacitor()) {
+  import('./capacitor-init.ts')
+    .then(({ initCapacitor }) => initCapacitor())
+    .catch((err) => console.error('Capacitor init failed:', err));
+} else if (!isElectron()) {
+  // Web: register for push notifications.
+  import('./push-adapter.ts').then(({ WebPushAdapter }) => {
+    const adapter = new WebPushAdapter();
+    if (useAuthStore.getState().isAuthenticated) {
+      subscribeToPush(adapter).catch((err) =>
+        console.error('Push subscription failed:', err),
+      );
+    }
+    useAuthStore.subscribe((state, prevState) => {
+      if (state.isAuthenticated && !prevState.isAuthenticated) {
+        subscribeToPush(adapter).catch((err) =>
+          console.error('Push subscription failed:', err),
+        );
+      }
+    });
+  });
+}
+
+// Handle PUSH_NAVIGATE messages from the push service worker (web).
+navigator.serviceWorker?.addEventListener('message', (event) => {
+  if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
+    navigateToChannel(event.data.channelId, !!event.data.isDM);
+  }
 });
 
 function App() {

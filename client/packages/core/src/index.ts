@@ -381,6 +381,11 @@ export * from './tiling/index.ts';
 export type { ElectronAPI } from './types/electron.d.ts';
 export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
-export { getBaseUrl, isElectron } from './utils/platform.ts';
+// API — notification
+export { getVAPIDPublicKey } from './api/notification.ts';
+// Push notifications
+export type { PushAdapter, PushSubscriptionDetails } from './push/types.ts';
+export { subscribeToPush } from './push/push-manager.ts';
+export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';

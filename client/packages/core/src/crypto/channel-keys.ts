@@ -22,7 +22,7 @@ import {
   unwrapChannelKey,
   wrapChannelKey,
 } from './primitives.ts';
-import { loadChannelKeys, storeChannelKeys } from './storage.ts';
+import { clearChannelKeysStorage, loadChannelKeys, storeChannelKeys } from './storage.ts';
 
 // --- Module state ---
 
@@ -156,6 +156,8 @@ export async function loadCachedChannelKeys(): Promise<void> {
     deserializeCache(plaintext);
   } catch (err) {
     console.error('[E2EE] Failed to decrypt cached channel keys:', err);
+    // Clear the stale/corrupt cache so we don't retry on every startup.
+    await clearChannelKeysStorage().catch(() => {});
   }
 }
 

@@ -109,6 +109,36 @@ func (s *DeviceStore) GetPushEnabledDevices(ctx context.Context, userID string) 
 	return scanDevices(rows)
 }
 
+func (s *DeviceStore) GetPushEnabledDevicesForUsers(ctx context.Context, userIDs []string) (map[string][]*models.Device, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, user_id, device_name, platform, push_endpoint, push_p256dh, push_auth, push_token, push_enabled, device_public_key, device_signature, created_at, updated_at, last_seen_at
+		 FROM devices WHERE user_id = ANY($1) AND push_enabled = true`,
+		userIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query push-enabled devices for users: %w", err)
+	}
+	defer rows.Close()
+
+	devices, err := scanDevices(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]*models.Device, len(userIDs))
+	for _, d := range devices {
+		result[d.UserID] = append(result[d.UserID], d)
+	}
+	return result, nil
+}
+
 func (s *DeviceStore) DeleteDevice(ctx context.Context, userID, deviceID string) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

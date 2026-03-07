@@ -12,6 +12,7 @@ import { useMobileHistory } from '../../hooks/useMobileHistory.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
+import { MemberList } from '../chat/MemberList.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { MessageRequestsPane } from '../chat/MessageRequestsPane.tsx';
@@ -25,6 +26,7 @@ import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ScreenSharePane } from '../voice/ScreenSharePane.tsx';
+import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { VoicePanel } from '../voice/VoicePanel.tsx';
 import { GatewayConnectionBanner } from './GatewayConnectionBanner.tsx';
 import { MobileOverlay } from './MobileOverlay.tsx';
@@ -151,7 +153,13 @@ export function MobileShell() {
           onClose={closeMobileOverlay}
           title="Members"
         >
-          <MobileOverlayPlaceholder label="Members" />
+          {mobileActiveChannel && resolveServerId(mobileActiveChannel) ? (
+            <MemberList serverId={resolveServerId(mobileActiveChannel)!} />
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-text-muted text-sm">
+              No server selected
+            </div>
+          )}
         </MobileOverlay>
 
         <MobileOverlay
@@ -256,6 +264,9 @@ function MobileChannelContent({
         )}
       </header>
 
+      {/* Voice connection banner */}
+      <MobileVoiceBar />
+
       {/* Content */}
       <div className="flex flex-1 min-h-0 min-w-0 flex-col">
         {renderMobileContent(content, { showPins, onTogglePins })}
@@ -267,21 +278,21 @@ function MobileChannelContent({
 // ── Voice fullscreen ──
 
 function MobileVoiceFullscreen({ onClose }: { onClose: () => void }) {
+  // Primary source: the voice store knows which channel we're actually connected to
+  const voiceStoreChannelId = useVoiceStore((s) => s.channelId);
   const channelId = useNavigationStore((s) => {
-    // Use the voice channel from the tiling store or voice store
     const content = s.mobileActiveChannel;
     if (content?.type === 'voice') return content.channelId;
     return null;
   });
   const voiceChannelId = useTilingStore((s) => {
-    // Check if any pane has voice content
     for (const content of Object.values(s.panes)) {
       if (content.type === 'voice') return content.channelId;
     }
     return null;
   });
 
-  const activeChannelId = channelId || voiceChannelId;
+  const activeChannelId = voiceStoreChannelId || channelId || voiceChannelId;
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">

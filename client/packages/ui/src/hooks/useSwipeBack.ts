@@ -1,7 +1,8 @@
 import type { RefObject } from 'react';
 import { useEffect, useRef } from 'react';
 
-const SWIPE_EDGE_WIDTH = 30;
+/** Fraction of the element width that acts as the swipe-start zone (left 40%). */
+const SWIPE_ZONE_FRACTION = 0.4;
 const DISMISS_THRESHOLD = 0.4;
 const DIRECTION_LOCK_THRESHOLD = 10;
 
@@ -12,17 +13,12 @@ interface UseSwipeBackOptions {
 }
 
 /**
- * Detects a right-swipe gesture starting from the left edge of the referenced element.
+ * Detects a right-swipe gesture starting from the left 40% of the referenced element.
  * If the swipe exceeds 40% of the element width, calls `onClose`.
  * Uses CSS transform for interactive dragging (GPU accelerated).
  *
  * Includes direction lock: if vertical movement dominates before the lock threshold,
  * the swipe is cancelled to allow normal scrolling.
- *
- * The swipe zone starts at the left edge of the slide-over content (offset 64px
- * from the screen edge by the server rail), avoiding conflict with iOS Safari's
- * browser-back gesture which triggers from the screen's absolute left edge.
- * For full-screen overlays, use `edgeOffset` to skip the browser gesture zone.
  */
 export function useSwipeBack(
   ref: RefObject<HTMLElement | null>,
@@ -44,10 +40,8 @@ export function useSwipeBack(
       if (!touch || !el) return;
       const rect = el.getBoundingClientRect();
       const relativeX = touch.clientX - rect.left;
-      if (
-        relativeX >= edgeOffset &&
-        relativeX <= edgeOffset + SWIPE_EDGE_WIDTH
-      ) {
+      const swipeZoneWidth = rect.width * SWIPE_ZONE_FRACTION;
+      if (relativeX >= edgeOffset && relativeX <= edgeOffset + swipeZoneWidth) {
         trackingRef.current = true;
         directionLockedRef.current = false;
         startXRef.current = touch.clientX;
