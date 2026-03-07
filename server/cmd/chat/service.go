@@ -1084,7 +1084,7 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 
 	// Mark attachments as linked so unlinked-attachment cleanup skips them.
 	if len(req.Msg.AttachmentIds) > 0 {
-		if lErr := s.mediaStore.LinkAttachments(ctx, req.Msg.AttachmentIds); lErr != nil {
+		if lErr := s.mediaStore.LinkAttachments(ctx, req.Msg.AttachmentIds, req.Msg.ChannelId); lErr != nil {
 			slog.Error("linking attachments", "err", lErr, "message", msgID)
 		}
 	}
