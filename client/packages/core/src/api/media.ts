@@ -14,16 +14,18 @@ import { getBaseUrl, isCapacitor } from '../utils/platform.ts';
 import { transport } from './client.ts';
 
 /**
- * On Capacitor the WebView origin differs from the S3/MinIO host.
- * Strip the origin from presigned URLs so requests route through the
- * same-origin Vite proxy (dev) or the app's configured proxy (prod),
- * avoiding CORS issues and unreachable hosts (e.g. localhost:9000).
+ * In Capacitor DEV mode, the phone can't reach the S3 host (localhost:9000)
+ * directly. Strip the origin so requests route through the Vite HTTPS proxy.
+ *
+ * In production Capacitor, use the full S3 URL — there's no proxy, and the
+ * relative path would resolve to https://localhost (the WKWebView origin)
+ * which serves the SPA shell instead of S3 content. S3 CORS must allow
+ * the Capacitor origin (https://localhost) for this to work.
  */
 function normalizePresignedUrl(url: string): string {
-  if (!isCapacitor()) return url;
+  if (!isCapacitor() || !import.meta.env.DEV) return url;
   try {
     const u = new URL(url);
-    // MinIO path-style URLs always include the bucket name in the path.
     if (u.pathname.startsWith('/meza-media/')) {
       return `${u.pathname}${u.search}`;
     }
