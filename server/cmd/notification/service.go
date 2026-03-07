@@ -250,7 +250,7 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 			if uid == senderID {
 				continue
 			}
-			s.notifyOfflineDevices(ctx, uid, channelID, "message")
+			s.notifyOfflineDevices(ctx, uid, channelID, "message", true)
 		}
 		return
 	}
@@ -466,7 +466,7 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 		}
 
 		for _, device := range ot.devices {
-			if err := s.sendPush(ctx, device, channelID); err != nil {
+			if err := s.sendPush(ctx, device, channelID, false); err != nil {
 				slog.Error("send push", "err", err, "user", ot.userID, "device", device.ID, "platform", device.Platform)
 			}
 		}
@@ -478,7 +478,7 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 // pushType differentiates throttle keys: "message" for regular pushes, "mention"
 // for mention pushes, preventing mention notifications from being suppressed by
 // regular message throttling.
-func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, channelID, pushType string) {
+func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, channelID, pushType string, isDM bool) {
 	// Get all push-enabled devices for this user.
 	devices, err := s.deviceStore.GetPushEnabledDevices(ctx, userID)
 	if err != nil {
@@ -519,7 +519,7 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, 
 		}
 
 		// Dispatch push notification.
-		if err := s.sendPush(ctx, device, channelID); err != nil {
+		if err := s.sendPush(ctx, device, channelID, isDM); err != nil {
 			slog.Error("send push", "err", err, "user", userID, "device", device.ID, "platform", device.Platform)
 		}
 	}
@@ -530,16 +530,18 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, 
 type pushPayload struct {
 	Type      string `json:"type"`       // "message", "mention", "dm", etc.
 	ChannelID string `json:"channel_id"` // For navigation on click.
+	IsDM      bool   `json:"is_dm"`      // True for DM/group-DM channels.
 	Title     string `json:"title"`
 	Body      string `json:"body"`
 	Tag       string `json:"tag"` // Collapse key — same tag replaces previous notification.
 }
 
 // sendPush dispatches a push notification to a single device.
-func (s *notificationService) sendPush(ctx context.Context, device *models.Device, channelID string) error {
+func (s *notificationService) sendPush(ctx context.Context, device *models.Device, channelID string, isDM bool) error {
 	payload := pushPayload{
 		Type:      "message",
 		ChannelID: channelID,
+		IsDM:      isDM,
 		Title:     "New message",
 		Body:      "You have a new message", // Generic — E2EE means no content in push.
 		Tag:       "channel:" + channelID,
@@ -553,7 +555,7 @@ func (s *notificationService) sendPush(ctx context.Context, device *models.Devic
 	case "web":
 		return s.sendWebPush(ctx, device, payloadBytes)
 	case "android", "ios":
-		return s.sendFCMPush(ctx, device, channelID)
+		return s.sendFCMPush(ctx, device, channelID, isDM)
 	default:
 		return nil
 	}
@@ -603,10 +605,15 @@ func (s *notificationService) sendWebPush(ctx context.Context, device *models.De
 
 // sendFCMPush sends a push notification via Firebase Cloud Messaging.
 // Works for both Android (FCM direct) and iOS (FCM proxied to APNs).
-func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, channelID string) error {
+func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, channelID string, isDM bool) error {
 	if s.fcmClient == nil {
 		slog.Debug("fcm push skipped (not configured)", "user", device.UserID, "device", device.ID)
 		return nil
+	}
+
+	isDMStr := "false"
+	if isDM {
+		isDMStr = "true"
 	}
 
 	msg := &messaging.Message{
@@ -614,6 +621,7 @@ func (s *notificationService) sendFCMPush(ctx context.Context, device *models.De
 		Data: map[string]string{
 			"type":       "message",
 			"channel_id": channelID,
+			"is_dm":      isDMStr,
 			"tag":        "channel:" + channelID,
 		},
 		Android: &messaging.AndroidConfig{

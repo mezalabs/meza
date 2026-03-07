@@ -62,7 +62,8 @@ mkdir -p "$BIN_DIR"
   go build -o "$BIN_DIR/presence" ./cmd/presence && \
   go build -o "$BIN_DIR/media" ./cmd/media && \
   go build -o "$BIN_DIR/voice" ./cmd/voice && \
-  go build -o "$BIN_DIR/keys" ./cmd/keys) || { echo "Build failed"; exit 1; }
+  go build -o "$BIN_DIR/keys" ./cmd/keys && \
+  go build -o "$BIN_DIR/notification" ./cmd/notification) || { echo "Build failed"; exit 1; }
 
 echo "Starting Meza services (worktree: $WORKTREE_ID)..."
 
@@ -87,15 +88,24 @@ echo $! > "$PID_DIR/voice.pid"
 MEZA_LISTEN_ADDR=:8088 "$BIN_DIR/keys" &
 echo $! > "$PID_DIR/keys.pid"
 
+# FCM push notifications: use Firebase service account if available.
+FCM_CREDS="$KEYS_DIR/firebase-service-account.json"
+if [[ -f "$FCM_CREDS" ]]; then
+  export MEZA_FCM_CREDENTIALS_FILE="$FCM_CREDS"
+fi
+MEZA_LISTEN_ADDR=:8086 "$BIN_DIR/notification" &
+echo $! > "$PID_DIR/notification.pid"
+
 echo ""
-echo "  gateway   :8080"
-echo "  auth      :8081"
-echo "  chat      :8082"
-echo "  presence  :8083"
-echo "  media     :8084"
-echo "  voice     :8085"
-echo "  keys      :8088"
-echo "  web       :4080 (vite)"
+echo "  gateway      :8080"
+echo "  auth         :8081"
+echo "  chat         :8082"
+echo "  presence     :8083"
+echo "  media        :8084"
+echo "  voice        :8085"
+echo "  notification :8086"
+echo "  keys         :8088"
+echo "  web          :4080 (vite)"
 echo ""
 
 # Wait for core services to accept connections before starting Vite,

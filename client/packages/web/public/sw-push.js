@@ -27,6 +27,7 @@ self.addEventListener('push', (event) => {
     data: {
       channelId: data.channel_id,
       type: data.type,
+      isDM: data.is_dm,
     },
     // Renotify so the user sees updated notifications for the same tag.
     renotify: true,
@@ -38,7 +39,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const { channelId } = event.notification.data || {};
+  const { channelId, isDM } = event.notification.data || {};
 
   // Focus an existing Meza window or open a new one.
   event.waitUntil(
@@ -54,6 +55,7 @@ self.addEventListener('notificationclick', (event) => {
               client.postMessage({
                 type: 'PUSH_NAVIGATE',
                 channelId,
+                isDM,
               });
             }
             return;

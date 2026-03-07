@@ -32,9 +32,12 @@ public class MainActivity extends BridgeActivity {
         // as padding on the root content view so app content is not obscured.
         View contentView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(contentView, (view, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
-            return WindowInsetsCompat.CONSUMED;
+            Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+            // Pad for system bars, and also for the keyboard so content resizes.
+            view.setPadding(bars.left, bars.top, bars.right,
+                    Math.max(bars.bottom, ime.bottom));
+            return windowInsets;
         });
     }
 

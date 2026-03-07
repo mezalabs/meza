@@ -46,6 +46,8 @@ export function RulesStep({
             I have read and agree to the server rules
           </label>
 
+          <div className="pb-4" />
+
           <button
             type="button"
             onClick={onAcknowledge}

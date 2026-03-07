@@ -1053,6 +1053,22 @@ export async function updateServer(
 export async function acknowledgeRules(serverId: string) {
   try {
     const res = await chatClient.acknowledgeRules({ serverId });
+
+    // Update the current member's rulesAcknowledgedAt in the store so the
+    // sidebar unblocks immediately without needing to re-fetch.
+    const currentUserId = useAuthStore.getState().user?.id;
+    if (currentUserId && res.acknowledgedAt) {
+      const memberStore = useMemberStore.getState();
+      const members = memberStore.byServer[serverId];
+      const member = members?.find((m) => m.userId === currentUserId);
+      if (member) {
+        memberStore.updateMember({
+          ...member,
+          rulesAcknowledgedAt: res.acknowledgedAt,
+        });
+      }
+    }
+
     return res.acknowledgedAt;
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });

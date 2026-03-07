@@ -78,9 +78,14 @@ function setupPushNotifications(): void {
 
 function setupNotificationNavigation(): void {
   pushAdapter.onNotificationTap((data) => {
+    console.info('[push] notification tapped:', JSON.stringify(data));
     const channelId = data.channel_id;
-    if (!channelId) return;
-    navigateToChannel(channelId);
+    if (!channelId) {
+      console.warn('[push] notification tap missing channel_id');
+      return;
+    }
+    const isDM = data.is_dm === 'true';
+    navigateToChannel(channelId, isDM);
   });
 }
 

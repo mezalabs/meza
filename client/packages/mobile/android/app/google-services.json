@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "357959899030",
+    "project_id": "meza-da8e8",
+    "storage_bucket": "meza-da8e8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357959899030:android:ac185b63d20e3877642fb7",
+        "android_client_info": {
+          "package_name": "chat.meza.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApyyAn4EmXfgu-O-KKBgK1huJQM1n0Ytc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

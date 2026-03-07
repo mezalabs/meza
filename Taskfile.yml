@@ -208,7 +208,7 @@ tasks:
           if [ -n "$active_worktree" ]; then
             echo "  Active worktree: $active_worktree"
           fi
-          for name in gateway auth chat presence media voice keys vite; do
+          for name in gateway auth chat presence media voice notification keys vite; do
             pidfile="$PID_DIR/${name}.pid"
             if [ -f "$pidfile" ] && [ ! -L "$pidfile" ]; then
               pid=$(cat "$pidfile")
