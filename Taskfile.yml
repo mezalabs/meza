@@ -508,12 +508,38 @@ tasks:
         MOBILE_DEV=true pnpm --filter @meza/web dev -- --host --port 4081
 
   build:mobile:
-    desc: Build web assets and sync to Capacitor native projects
+    desc: "Build web assets and sync to Capacitor (pass VITE_API_URL for prod: task build:mobile VITE_API_URL=https://meza.chat)"
     dir: client
     cmds:
+      - rm -rf packages/web/dist
       - pnpm install --frozen-lockfile
       - pnpm --filter @meza/web... build
       - cd packages/mobile && npx cap sync
+      - |
+        echo ""
+        echo "Build complete. Run the app from Xcode (Cmd+R) or Android Studio."
+        echo "If the device serves a stale bundle, uninstall the app first."
+
+  build:mobile:prod:
+    desc: Build mobile app against production API and sync
+    env:
+      VITE_API_URL: '{{.VITE_API_URL | default "https://meza.chat"}}'
+    cmds:
+      - task: build:mobile
+
+  build:mobile:clean:
+    desc: Full clean build — wipe native web assets, rebuild, and sync
+    dir: client
+    cmds:
+      - rm -rf packages/web/dist
+      - rm -rf packages/mobile/android/app/src/main/assets/public
+      - rm -rf packages/mobile/ios/App/App/public
+      - pnpm install --frozen-lockfile
+      - pnpm --filter @meza/web... build
+      - cd packages/mobile && npx cap sync
+      - |
+        echo ""
+        echo "Clean build complete. Uninstall the app from the device, then run from IDE."
 
   open:ios:
     desc: Open iOS project in Xcode
