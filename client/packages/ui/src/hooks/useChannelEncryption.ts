@@ -88,7 +88,7 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
     bootstrapSession().then((ok) => {
       if (cancelled) return;
       if (!ok) {
-        // Session can't bootstrap (no master key in sessionStorage).
+        // Session can't bootstrap (no master key in localStorage).
         // Allow sending without encryption rather than blocking forever.
         setReady(true);
       }
