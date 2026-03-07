@@ -30,6 +30,10 @@ import {
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
 import { isSessionReady } from '../crypto/session.ts';
 import { indexIncomingMessage } from '../search/indexer.ts';
+import {
+  removeSearchMessage,
+  removeSearchMessages,
+} from '../search/search-service.ts';
 import type { SoundType } from '../sound/SoundManager.ts';
 import { soundManager } from '../sound/SoundManager.ts';
 import { useAuthStore } from '../store/auth.ts';
@@ -559,6 +563,9 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // Decrypt edited content (same as messageCreate)
         if (msg.keyVersion > 0 && isSessionReady()) {
           decryptInBackground(msg.channelId, msg, generation);
+        } else {
+          // Already decrypted — re-index with updated content
+          indexIncomingMessage(msg.channelId, msg);
         }
       } else if (
         event.payload.case === 'messageDelete' &&
@@ -566,12 +573,14 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       ) {
         const { channelId, messageId } = event.payload.value;
         useMessageStore.getState().removeMessage(channelId, messageId);
+        removeSearchMessage(channelId, messageId).catch(() => {});
       } else if (
         event.payload.case === 'messageBulkDelete' &&
         event.payload.value
       ) {
         const { channelId, messageIds } = event.payload.value;
         useMessageStore.getState().removeMessages(channelId, messageIds);
+        removeSearchMessages(channelId, messageIds).catch(() => {});
       } else if (event.payload.case === 'typingStart' && event.payload.value) {
         const { channelId, userId } = event.payload.value;
         if (userId !== currentUserId) {
