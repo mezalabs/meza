@@ -6,9 +6,6 @@ export interface PushAdapter {
   /** Platform identifier for device registration (e.g. 'web', 'android', 'ios'). */
   platform: string;
 
-  /** Device name for registration (e.g. 'Chrome', 'Meza Desktop'). */
-  deviceName: string;
-
   /**
    * Subscribe to push notifications.
    * Returns push subscription details for server registration, or null if unavailable.

@@ -246,6 +246,15 @@ export async function revokeDevice(deviceId: string) {
   }
 }
 
+export async function revokeAllOtherDevices(): Promise<number> {
+  try {
+    const res = await authClient.revokeAllOtherDevices({});
+    return res.revokedCount;
+  } catch (err) {
+    throw new Error(mapAuthError(err), { cause: err });
+  }
+}
+
 export async function getRecoveryBundle(email: string) {
   try {
     const res = await authClient.getRecoveryBundle({ email });

@@ -11,6 +11,7 @@ service AuthService {
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
   rpc RevokeDevice(RevokeDeviceRequest) returns (RevokeDeviceResponse);
+  rpc RevokeAllOtherDevices(RevokeAllOtherDevicesRequest) returns (RevokeAllOtherDevicesResponse);
   rpc ListDevices(ListDevicesRequest) returns (ListDevicesResponse);
   rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
@@ -102,6 +103,12 @@ message RevokeDeviceRequest {
 }
 
 message RevokeDeviceResponse {}
+
+message RevokeAllOtherDevicesRequest {}
+
+message RevokeAllOtherDevicesResponse {
+  int32 revoked_count = 1;
+}
 
 message ListDevicesRequest {}
 

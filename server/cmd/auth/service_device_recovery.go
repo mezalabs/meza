@@ -550,10 +550,12 @@ func (s *authService) CompleteDeviceRecovery(ctx context.Context, req *connect.R
 			platform = "web"
 		}
 		deviceID := models.NewID()
+		deviceName := auth.DeviceNameFromUA(req.Header().Get("User-Agent"))
 		if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
-			ID:       deviceID,
-			UserID:   userID,
-			Platform: platform,
+			ID:         deviceID,
+			UserID:     userID,
+			DeviceName: deviceName,
+			Platform:   platform,
 		}); err != nil {
 			slog.Error("create device on device recovery", "err", err, "user", userID)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

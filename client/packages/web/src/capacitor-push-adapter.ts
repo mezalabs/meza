@@ -18,11 +18,6 @@ export class CapacitorPushAdapter implements PushAdapter {
     return Capacitor.getPlatform(); // 'android' | 'ios'
   }
 
-  get deviceName(): string {
-    const p = Capacitor.getPlatform();
-    return p === 'ios' ? 'Meza iOS' : 'Meza Android';
-  }
-
   /** Handles for subscription-related listeners, cleared on unsubscribe. */
   private registrationHandle?: PluginListenerHandle;
   private registrationErrorHandle?: PluginListenerHandle;

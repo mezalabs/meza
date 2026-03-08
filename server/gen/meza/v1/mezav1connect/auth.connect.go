@@ -48,6 +48,9 @@ const (
 	// AuthServiceRevokeDeviceProcedure is the fully-qualified name of the AuthService's RevokeDevice
 	// RPC.
 	AuthServiceRevokeDeviceProcedure = "/meza.v1.AuthService/RevokeDevice"
+	// AuthServiceRevokeAllOtherDevicesProcedure is the fully-qualified name of the AuthService's
+	// RevokeAllOtherDevices RPC.
+	AuthServiceRevokeAllOtherDevicesProcedure = "/meza.v1.AuthService/RevokeAllOtherDevices"
 	// AuthServiceListDevicesProcedure is the fully-qualified name of the AuthService's ListDevices RPC.
 	AuthServiceListDevicesProcedure = "/meza.v1.AuthService/ListDevices"
 	// AuthServiceUpdateProfileProcedure is the fully-qualified name of the AuthService's UpdateProfile
@@ -95,6 +98,7 @@ type AuthServiceClient interface {
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	RegisterDevice(context.Context, *connect.Request[v1.RegisterDeviceRequest]) (*connect.Response[v1.RegisterDeviceResponse], error)
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	RevokeAllOtherDevices(context.Context, *connect.Request[v1.RevokeAllOtherDevicesRequest]) (*connect.Response[v1.RevokeAllOtherDevicesResponse], error)
 	ListDevices(context.Context, *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error)
 	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error)
 	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
@@ -157,6 +161,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+AuthServiceRevokeDeviceProcedure,
 			connect.WithSchema(authServiceMethods.ByName("RevokeDevice")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeAllOtherDevices: connect.NewClient[v1.RevokeAllOtherDevicesRequest, v1.RevokeAllOtherDevicesResponse](
+			httpClient,
+			baseURL+AuthServiceRevokeAllOtherDevicesProcedure,
+			connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherDevices")),
 			connect.WithClientOptions(opts...),
 		),
 		listDevices: connect.NewClient[v1.ListDevicesRequest, v1.ListDevicesResponse](
@@ -248,6 +258,7 @@ type authServiceClient struct {
 	refreshToken              *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
 	registerDevice            *connect.Client[v1.RegisterDeviceRequest, v1.RegisterDeviceResponse]
 	revokeDevice              *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	revokeAllOtherDevices     *connect.Client[v1.RevokeAllOtherDevicesRequest, v1.RevokeAllOtherDevicesResponse]
 	listDevices               *connect.Client[v1.ListDevicesRequest, v1.ListDevicesResponse]
 	updateProfile             *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
 	changePassword            *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
@@ -291,6 +302,11 @@ func (c *authServiceClient) RegisterDevice(ctx context.Context, req *connect.Req
 // RevokeDevice calls meza.v1.AuthService.RevokeDevice.
 func (c *authServiceClient) RevokeDevice(ctx context.Context, req *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
 	return c.revokeDevice.CallUnary(ctx, req)
+}
+
+// RevokeAllOtherDevices calls meza.v1.AuthService.RevokeAllOtherDevices.
+func (c *authServiceClient) RevokeAllOtherDevices(ctx context.Context, req *connect.Request[v1.RevokeAllOtherDevicesRequest]) (*connect.Response[v1.RevokeAllOtherDevicesResponse], error) {
+	return c.revokeAllOtherDevices.CallUnary(ctx, req)
 }
 
 // ListDevices calls meza.v1.AuthService.ListDevices.
@@ -366,6 +382,7 @@ type AuthServiceHandler interface {
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	RegisterDevice(context.Context, *connect.Request[v1.RegisterDeviceRequest]) (*connect.Response[v1.RegisterDeviceResponse], error)
 	RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error)
+	RevokeAllOtherDevices(context.Context, *connect.Request[v1.RevokeAllOtherDevicesRequest]) (*connect.Response[v1.RevokeAllOtherDevicesResponse], error)
 	ListDevices(context.Context, *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error)
 	UpdateProfile(context.Context, *connect.Request[v1.UpdateProfileRequest]) (*connect.Response[v1.UpdateProfileResponse], error)
 	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
@@ -424,6 +441,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		AuthServiceRevokeDeviceProcedure,
 		svc.RevokeDevice,
 		connect.WithSchema(authServiceMethods.ByName("RevokeDevice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceRevokeAllOtherDevicesHandler := connect.NewUnaryHandler(
+		AuthServiceRevokeAllOtherDevicesProcedure,
+		svc.RevokeAllOtherDevices,
+		connect.WithSchema(authServiceMethods.ByName("RevokeAllOtherDevices")),
 		connect.WithHandlerOptions(opts...),
 	)
 	authServiceListDevicesHandler := connect.NewUnaryHandler(
@@ -518,6 +541,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRegisterDeviceHandler.ServeHTTP(w, r)
 		case AuthServiceRevokeDeviceProcedure:
 			authServiceRevokeDeviceHandler.ServeHTTP(w, r)
+		case AuthServiceRevokeAllOtherDevicesProcedure:
+			authServiceRevokeAllOtherDevicesHandler.ServeHTTP(w, r)
 		case AuthServiceListDevicesProcedure:
 			authServiceListDevicesHandler.ServeHTTP(w, r)
 		case AuthServiceUpdateProfileProcedure:
@@ -575,6 +600,10 @@ func (UnimplementedAuthServiceHandler) RegisterDevice(context.Context, *connect.
 
 func (UnimplementedAuthServiceHandler) RevokeDevice(context.Context, *connect.Request[v1.RevokeDeviceRequest]) (*connect.Response[v1.RevokeDeviceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.RevokeDevice is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) RevokeAllOtherDevices(context.Context, *connect.Request[v1.RevokeAllOtherDevicesRequest]) (*connect.Response[v1.RevokeAllOtherDevicesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.RevokeAllOtherDevices is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) ListDevices(context.Context, *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error) {
