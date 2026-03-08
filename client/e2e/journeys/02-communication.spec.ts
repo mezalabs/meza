@@ -167,11 +167,11 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     await searchInput.fill('test');
     await searchInput.press('Enter');
 
-    // With E2EE metadata-only search, results show author/timestamp, not content.
-    // Verify either results appear or the "No results" message shows.
+    // With E2EE, results are decrypted client-side and show actual content.
+    // Verify either a result row (with #channel tag) appears or the empty state.
     await expect(
       alicePage
-        .getByText(/click to jump/i)
+        .getByText('#general')
         .or(alicePage.getByText(/No results found/i))
         .first(),
     ).toBeVisible({ timeout: 10_000 });
