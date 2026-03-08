@@ -9,6 +9,7 @@ import {
   useMessageStore,
 } from '@meza/core';
 import {
+  EyeIcon,
   EyeSlashIcon,
   FileIcon,
   PaperclipIcon,
@@ -585,50 +586,58 @@ export function MessageComposer({
           {pendingFiles.map((pf) => (
             <div
               key={pf.id}
-              className="relative group rounded-md border border-border bg-bg-elevated overflow-hidden"
+              className="relative h-32 w-32 rounded-md border border-border bg-bg-elevated overflow-hidden [&:hover_.preview-overlay]:opacity-100 [&:hover_.spoiler-badge]:opacity-0"
             >
-              {/* Remove button */}
-              <button
-                type="button"
-                onClick={() => removeFile(pf.id)}
-                className="absolute top-0.5 right-0.5 z-10 rounded-full bg-bg-elevated/80 p-0.5 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove"
-              >
-                <XIcon weight="regular" size={14} aria-hidden="true" />
-              </button>
-
-              {/* Spoiler toggle */}
-              <button
-                type="button"
-                onClick={() => toggleSpoiler(pf.id)}
-                className={`absolute top-0.5 left-0.5 z-10 rounded-full p-0.5 transition-opacity ${
-                  pf.isSpoiler
-                    ? 'bg-accent text-black opacity-100'
-                    : 'bg-bg-elevated/80 text-text-muted opacity-0 group-hover:opacity-100'
-                }`}
-                title={pf.isSpoiler ? 'Remove spoiler' : 'Mark as spoiler'}
-              >
-                <EyeSlashIcon weight="regular" size={14} aria-hidden="true" />
-              </button>
-
               {pf.preview ? (
                 <img
                   src={pf.preview}
                   alt={pf.file.name}
-                  className="h-16 w-16 object-cover"
+                  className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-16 w-16 items-center justify-center">
+                <div className="flex h-full w-full items-center justify-center">
                   <div className="text-center px-1">
                     <FileIcon
-                      size={16}
+                      size={24}
                       className="mx-auto text-text-muted"
                       aria-hidden="true"
                     />
-                    <p className="text-[9px] text-text-muted mt-0.5 truncate max-w-[56px]">
+                    <p className="text-xs text-text-muted mt-1 truncate max-w-[112px]">
                       {pf.file.name}
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Split action zones with dim backdrop */}
+              <div className="preview-overlay absolute inset-0 z-10 flex opacity-0 transition-opacity duration-150">
+                {/* Content Warning zone (left half) */}
+                <button
+                  type="button"
+                  onClick={() => toggleSpoiler(pf.id)}
+                  className="flex-1 flex items-center justify-center bg-black/50 text-white hover:bg-black/60 transition-colors"
+                  title={pf.isSpoiler ? 'Remove spoiler' : 'Mark as spoiler'}
+                >
+                  {pf.isSpoiler
+                    ? <EyeIcon weight="bold" size={28} aria-hidden="true" />
+                    : <EyeSlashIcon weight="bold" size={28} aria-hidden="true" />
+                  }
+                </button>
+                {/* Remove zone (right half) */}
+                <button
+                  type="button"
+                  onClick={() => removeFile(pf.id)}
+                  className="flex-1 flex items-center justify-center bg-black/50 text-white hover:text-error hover:bg-black/60 transition-colors"
+                  title="Remove"
+                >
+                  <XIcon weight="bold" size={28} aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Persistent spoiler indicator when not hovering */}
+              {pf.isSpoiler && (
+                <div className="spoiler-badge absolute inset-0 z-[5] flex items-center justify-center bg-black/70 pointer-events-none transition-opacity duration-150">
+                  <EyeSlashIcon weight="bold" size={20} className="text-white/60" aria-hidden="true" />
                 </div>
               )}
 
