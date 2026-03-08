@@ -251,10 +251,20 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
 
   // Single-pass channel grouping + text/voice split for stable references
   const { ungroupedText, ungroupedVoice, groupedChannels } = useMemo(() => {
+    // Build set of companion text channel IDs to exclude from the sidebar.
+    // Companions are discovered via the voice channel's voiceTextChannelId field.
+    const companionIds = new Set<string>();
+    for (const ch of channels) {
+      if (ch.voiceTextChannelId) {
+        companionIds.add(ch.voiceTextChannelId);
+      }
+    }
+
     const grouped = new Map<string, typeof channels>();
     const text: typeof channels = [];
     const voice: typeof channels = [];
     for (const ch of channels) {
+      if (companionIds.has(ch.id)) continue; // Hide companion text channels
       if (ch.channelGroupId) {
         let list = grouped.get(ch.channelGroupId);
         if (!list) {
