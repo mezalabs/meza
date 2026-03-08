@@ -33,8 +33,10 @@ type RegisterRequest struct {
 	// Recovery bundle: key bundle encrypted with recovery key derived from BIP39 phrase
 	RecoveryEncryptedKeyBundle []byte `protobuf:"bytes,8,opt,name=recovery_encrypted_key_bundle,json=recoveryEncryptedKeyBundle,proto3" json:"recovery_encrypted_key_bundle,omitempty"`
 	RecoveryKeyBundleIv        []byte `protobuf:"bytes,9,opt,name=recovery_key_bundle_iv,json=recoveryKeyBundleIv,proto3" json:"recovery_key_bundle_iv,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	// HKDF-derived verifier proving knowledge of recovery phrase (server stores SHA-256 hash)
+	RecoveryVerifier []byte `protobuf:"bytes,10,opt,name=recovery_verifier,json=recoveryVerifier,proto3" json:"recovery_verifier,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RegisterRequest) Reset() {
@@ -119,6 +121,13 @@ func (x *RegisterRequest) GetRecoveryEncryptedKeyBundle() []byte {
 func (x *RegisterRequest) GetRecoveryKeyBundleIv() []byte {
 	if x != nil {
 		return x.RecoveryKeyBundleIv
+	}
+	return nil
+}
+
+func (x *RegisterRequest) GetRecoveryVerifier() []byte {
+	if x != nil {
+		return x.RecoveryVerifier
 	}
 	return nil
 }
@@ -1093,8 +1102,10 @@ type ChangePasswordRequest struct {
 	NewKeyBundleIv                []byte                 `protobuf:"bytes,5,opt,name=new_key_bundle_iv,json=newKeyBundleIv,proto3" json:"new_key_bundle_iv,omitempty"`
 	NewRecoveryEncryptedKeyBundle []byte                 `protobuf:"bytes,6,opt,name=new_recovery_encrypted_key_bundle,json=newRecoveryEncryptedKeyBundle,proto3" json:"new_recovery_encrypted_key_bundle,omitempty"`
 	NewRecoveryKeyBundleIv        []byte                 `protobuf:"bytes,7,opt,name=new_recovery_key_bundle_iv,json=newRecoveryKeyBundleIv,proto3" json:"new_recovery_key_bundle_iv,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	// Updated recovery verifier for the new recovery phrase
+	NewRecoveryVerifier []byte `protobuf:"bytes,8,opt,name=new_recovery_verifier,json=newRecoveryVerifier,proto3" json:"new_recovery_verifier,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *ChangePasswordRequest) Reset() {
@@ -1172,6 +1183,13 @@ func (x *ChangePasswordRequest) GetNewRecoveryEncryptedKeyBundle() []byte {
 func (x *ChangePasswordRequest) GetNewRecoveryKeyBundleIv() []byte {
 	if x != nil {
 		return x.NewRecoveryKeyBundleIv
+	}
+	return nil
+}
+
+func (x *ChangePasswordRequest) GetNewRecoveryVerifier() []byte {
+	if x != nil {
+		return x.NewRecoveryVerifier
 	}
 	return nil
 }
@@ -1501,8 +1519,12 @@ type RecoverAccountRequest struct {
 	NewKeyBundleIv                []byte                 `protobuf:"bytes,5,opt,name=new_key_bundle_iv,json=newKeyBundleIv,proto3" json:"new_key_bundle_iv,omitempty"`
 	NewRecoveryEncryptedKeyBundle []byte                 `protobuf:"bytes,6,opt,name=new_recovery_encrypted_key_bundle,json=newRecoveryEncryptedKeyBundle,proto3" json:"new_recovery_encrypted_key_bundle,omitempty"`
 	NewRecoveryKeyBundleIv        []byte                 `protobuf:"bytes,7,opt,name=new_recovery_key_bundle_iv,json=newRecoveryKeyBundleIv,proto3" json:"new_recovery_key_bundle_iv,omitempty"`
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	// Proof of recovery phrase knowledge: HKDF-derived verifier from the OLD recovery key
+	RecoveryVerifier []byte `protobuf:"bytes,8,opt,name=recovery_verifier,json=recoveryVerifier,proto3" json:"recovery_verifier,omitempty"`
+	// Updated verifier for the NEW recovery phrase
+	NewRecoveryVerifier []byte `protobuf:"bytes,9,opt,name=new_recovery_verifier,json=newRecoveryVerifier,proto3" json:"new_recovery_verifier,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RecoverAccountRequest) Reset() {
@@ -1584,6 +1606,20 @@ func (x *RecoverAccountRequest) GetNewRecoveryKeyBundleIv() []byte {
 	return nil
 }
 
+func (x *RecoverAccountRequest) GetRecoveryVerifier() []byte {
+	if x != nil {
+		return x.RecoveryVerifier
+	}
+	return nil
+}
+
+func (x *RecoverAccountRequest) GetNewRecoveryVerifier() []byte {
+	if x != nil {
+		return x.NewRecoveryVerifier
+	}
+	return nil
+}
+
 type RecoverAccountResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
@@ -1648,7 +1684,7 @@ var File_meza_v1_auth_proto protoreflect.FileDescriptor
 
 const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12meza/v1/auth.proto\x12\ameza.v1\x1a\x14meza/v1/models.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc6\x02\n" +
+	"\x12meza/v1/auth.proto\x12\ameza.v1\x1a\x14meza/v1/models.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf3\x02\n" +
 	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x19\n" +
 	"\bauth_key\x18\x02 \x01(\fR\aauthKey\x12\x12\n" +
@@ -1657,7 +1693,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\rkey_bundle_iv\x18\x05 \x01(\fR\vkeyBundleIv\x12\x1a\n" +
 	"\busername\x18\x06 \x01(\tR\busername\x12A\n" +
 	"\x1drecovery_encrypted_key_bundle\x18\b \x01(\fR\x1arecoveryEncryptedKeyBundle\x123\n" +
-	"\x16recovery_key_bundle_iv\x18\t \x01(\fR\x13recoveryKeyBundleIvJ\x04\b\a\x10\b\"}\n" +
+	"\x16recovery_key_bundle_iv\x18\t \x01(\fR\x13recoveryKeyBundleIv\x12+\n" +
+	"\x11recovery_verifier\x18\n" +
+	" \x01(\fR\x10recoveryVerifierJ\x04\b\a\x10\b\"}\n" +
 	"\x10RegisterResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12!\n" +
@@ -1754,7 +1792,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x12_audio_preferencesB\r\n" +
 	"\v_dm_privacy\":\n" +
 	"\x15UpdateProfileResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.meza.v1.UserR\x04user\"\xe0\x02\n" +
+	"\x04user\x18\x01 \x01(\v2\r.meza.v1.UserR\x04user\"\x94\x03\n" +
 	"\x15ChangePasswordRequest\x12 \n" +
 	"\fold_auth_key\x18\x01 \x01(\fR\n" +
 	"oldAuthKey\x12 \n" +
@@ -1764,7 +1802,8 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x18new_encrypted_key_bundle\x18\x04 \x01(\fR\x15newEncryptedKeyBundle\x12)\n" +
 	"\x11new_key_bundle_iv\x18\x05 \x01(\fR\x0enewKeyBundleIv\x12H\n" +
 	"!new_recovery_encrypted_key_bundle\x18\x06 \x01(\fR\x1dnewRecoveryEncryptedKeyBundle\x12:\n" +
-	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\"\x18\n" +
+	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\x122\n" +
+	"\x15new_recovery_verifier\x18\b \x01(\fR\x13newRecoveryVerifier\"\x18\n" +
 	"\x16ChangePasswordResponse\"\x15\n" +
 	"\x13GetKeyBundleRequest\"l\n" +
 	"\x14GetKeyBundleResponse\x120\n" +
@@ -1779,7 +1818,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x19GetRecoveryBundleResponse\x12A\n" +
 	"\x1drecovery_encrypted_key_bundle\x18\x01 \x01(\fR\x1arecoveryEncryptedKeyBundle\x123\n" +
 	"\x16recovery_key_bundle_iv\x18\x02 \x01(\fR\x13recoveryKeyBundleIv\x12\x12\n" +
-	"\x04salt\x18\x03 \x01(\fR\x04salt\"\xd4\x02\n" +
+	"\x04salt\x18\x03 \x01(\fR\x04salt\"\xb5\x03\n" +
 	"\x15RecoverAccountRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12 \n" +
 	"\fnew_auth_key\x18\x02 \x01(\fR\n" +
@@ -1788,7 +1827,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x18new_encrypted_key_bundle\x18\x04 \x01(\fR\x15newEncryptedKeyBundle\x12)\n" +
 	"\x11new_key_bundle_iv\x18\x05 \x01(\fR\x0enewKeyBundleIv\x12H\n" +
 	"!new_recovery_encrypted_key_bundle\x18\x06 \x01(\fR\x1dnewRecoveryEncryptedKeyBundle\x12:\n" +
-	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\"\x83\x01\n" +
+	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\x12+\n" +
+	"\x11recovery_verifier\x18\b \x01(\fR\x10recoveryVerifier\x122\n" +
+	"\x15new_recovery_verifier\x18\t \x01(\fR\x13newRecoveryVerifier\"\x83\x01\n" +
 	"\x16RecoverAccountResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12!\n" +

@@ -22,6 +22,9 @@ import {
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/** Why encryption is unavailable — helps the UI show actionable guidance. */
+export type EncryptionUnavailableReason = 'no-session' | 'no-channel-key' | null;
+
 export interface ChannelEncryption {
   /** Whether the channel key is ready for encryption. */
   ready: boolean;
@@ -31,6 +34,8 @@ export interface ChannelEncryption {
   isEncrypted: boolean;
   /** Manually retry key initialization (e.g. after timeout). */
   retry: () => void;
+  /** Why encryption is unavailable (null when encrypted or still loading). */
+  unavailableReason: EncryptionUnavailableReason;
 }
 
 /** Retry delays used only after lazy init fails (another client won the
@@ -59,6 +64,8 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
   const [ready, setReady] = useState(false);
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [sessionReady, setSessionReady] = useState(isSessionReady);
+  const [unavailableReason, setUnavailableReason] =
+    useState<EncryptionUnavailableReason>(null);
   // Incrementing this counter re-runs the init effect (manual retry).
   const [retryCounter, setRetryCounter] = useState(0);
   const lastRetryRef = useRef(0);
@@ -88,8 +95,9 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
     bootstrapSession().then((ok) => {
       if (cancelled) return;
       if (!ok) {
-        // Session can't bootstrap (no master key in localStorage).
-        // Allow sending without encryption rather than blocking forever.
+        // Session can't bootstrap (no master key in sessionStorage).
+        // Mark ready so the composer isn't blocked, but record why.
+        setUnavailableReason('no-session');
         setReady(true);
       }
     });
@@ -107,6 +115,7 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
 
     setReady(false);
     setIsEncrypted(false);
+    setUnavailableReason(null);
 
     if (!sessionReady) return;
 
@@ -180,12 +189,16 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
       } catch {
         // Best-effort — don't break the poll loop.
       }
-      if (!cancelled) setReady(true);
+      if (!cancelled) {
+        setUnavailableReason('no-channel-key');
+        setReady(true);
+      }
       for (let poll = 0; poll < MAX_SLOW_POLLS && !cancelled; poll++) {
         await new Promise((r) => setTimeout(r, SLOW_POLL_MS));
         if (cancelled) return;
         if (await tryFetchKeys()) {
           if (!cancelled) {
+            setUnavailableReason(null);
             setIsEncrypted(true);
             setReady(true);
           }
@@ -230,5 +243,5 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
     [channelId],
   );
 
-  return { ready, encrypt, isEncrypted, retry };
+  return { ready, encrypt, isEncrypted, retry, unavailableReason };
 }

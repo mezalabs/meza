@@ -21,6 +21,7 @@ type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error)
+	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error)
 	GetSalt(ctx context.Context, email string) ([]byte, error)
@@ -31,7 +32,10 @@ type AuthStorer interface {
 	GetKeyBundle(ctx context.Context, userID string) (*models.EncryptedBundle, error)
 	ChangePassword(ctx context.Context, userID, oldAuthKeyHash, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) error
 	GetRecoveryBundle(ctx context.Context, email string) (recoveryBundle, recoveryIV, salt []byte, err error)
-	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) (userID string, err error)
+	// RecoverAccount atomically verifies the recovery verifier and resets credentials.
+	// verifyVerifier is called with the stored hash inside the transaction; if it returns
+	// false, the transaction is rolled back and ErrInvalidRecoveryProof is returned.
+	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool) (userID string, err error)
 }
 
 // ChatStorer provides access to server/channel/member data in Postgres.

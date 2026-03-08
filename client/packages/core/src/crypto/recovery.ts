@@ -69,6 +69,33 @@ export async function deriveRecoveryKey(phrase: string): Promise<Uint8Array> {
 }
 
 /**
+ * Derive a 32-byte recovery verifier from a recovery key using HKDF-SHA256.
+ * The server stores SHA-256(verifier) and checks it during account recovery
+ * to prove the caller actually knows the recovery phrase.
+ *
+ * Domain-separated from the recovery key itself so the server cannot
+ * use the verifier to decrypt the recovery bundle.
+ */
+export async function deriveRecoveryVerifier(
+  recoveryKey: Uint8Array,
+): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey('raw', recoveryKey, 'HKDF', false, [
+    'deriveBits',
+  ]);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(32), // empty salt — domain separation is in info
+      info: new TextEncoder().encode('meza-recovery-verifier'),
+    },
+    key,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
+/**
  * Encrypt the identity keypair with a recovery key for server-side backup.
  * Returns { ciphertext, iv } for storage as recovery_encrypted_key_bundle + recovery_key_bundle_iv.
  */
