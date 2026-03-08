@@ -23,6 +23,13 @@ type Config struct {
 	Ed25519PublicKey     string `envconfig:"ED25519_PUBLIC_KEY"`      // PEM-encoded Ed25519 public key
 	Ed25519PublicKeyFile string `envconfig:"ED25519_PUBLIC_KEY_FILE"` // Alternative: path to PEM file
 
+	// Email (SMTP) — used by auth service for OTP verification
+	SMTPHost     string `envconfig:"SMTP_HOST"`
+	SMTPPort     int    `envconfig:"SMTP_PORT" default:"587"`
+	SMTPFrom     string `envconfig:"SMTP_FROM"`
+	SMTPUsername string `envconfig:"SMTP_USERNAME"`
+	SMTPPassword string `envconfig:"SMTP_PASSWORD"`
+
 	// Federation
 	FederationEnabled    bool   `envconfig:"FEDERATION_ENABLED" default:"false"`
 	TrustedHomeServers   string `envconfig:"TRUSTED_HOME_SERVERS" default:"https://meza.chat"` // Comma-separated

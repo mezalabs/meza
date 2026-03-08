@@ -1680,6 +1680,646 @@ func (x *RecoverAccountResponse) GetUser() *User {
 	return nil
 }
 
+type VerifyRecoveryEmailRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // empty for send mode, 6-digit OTP for verify mode
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyRecoveryEmailRequest) Reset() {
+	*x = VerifyRecoveryEmailRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyRecoveryEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyRecoveryEmailRequest) ProtoMessage() {}
+
+func (x *VerifyRecoveryEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyRecoveryEmailRequest.ProtoReflect.Descriptor instead.
+func (*VerifyRecoveryEmailRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *VerifyRecoveryEmailRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *VerifyRecoveryEmailRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type VerifyRecoveryEmailResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Status          string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                                            // "otp_sent" or "verified"
+	OtpSessionToken string                 `protobuf:"bytes,2,opt,name=otp_session_token,json=otpSessionToken,proto3" json:"otp_session_token,omitempty"` // only set when status="verified"
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *VerifyRecoveryEmailResponse) Reset() {
+	*x = VerifyRecoveryEmailResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyRecoveryEmailResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyRecoveryEmailResponse) ProtoMessage() {}
+
+func (x *VerifyRecoveryEmailResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyRecoveryEmailResponse.ProtoReflect.Descriptor instead.
+func (*VerifyRecoveryEmailResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *VerifyRecoveryEmailResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *VerifyRecoveryEmailResponse) GetOtpSessionToken() string {
+	if x != nil {
+		return x.OtpSessionToken
+	}
+	return ""
+}
+
+type InitiateDeviceRecoveryRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	OtpSessionToken    string                 `protobuf:"bytes,1,opt,name=otp_session_token,json=otpSessionToken,proto3" json:"otp_session_token,omitempty"`
+	EphemeralPublicKey []byte                 `protobuf:"bytes,2,opt,name=ephemeral_public_key,json=ephemeralPublicKey,proto3" json:"ephemeral_public_key,omitempty"` // 32 bytes X25519
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *InitiateDeviceRecoveryRequest) Reset() {
+	*x = InitiateDeviceRecoveryRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateDeviceRecoveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateDeviceRecoveryRequest) ProtoMessage() {}
+
+func (x *InitiateDeviceRecoveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateDeviceRecoveryRequest.ProtoReflect.Descriptor instead.
+func (*InitiateDeviceRecoveryRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *InitiateDeviceRecoveryRequest) GetOtpSessionToken() string {
+	if x != nil {
+		return x.OtpSessionToken
+	}
+	return ""
+}
+
+func (x *InitiateDeviceRecoveryRequest) GetEphemeralPublicKey() []byte {
+	if x != nil {
+		return x.EphemeralPublicKey
+	}
+	return nil
+}
+
+type InitiateDeviceRecoveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InitiateDeviceRecoveryResponse) Reset() {
+	*x = InitiateDeviceRecoveryResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InitiateDeviceRecoveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InitiateDeviceRecoveryResponse) ProtoMessage() {}
+
+func (x *InitiateDeviceRecoveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InitiateDeviceRecoveryResponse.ProtoReflect.Descriptor instead.
+func (*InitiateDeviceRecoveryResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *InitiateDeviceRecoveryResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type PollDeviceRecoveryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PollDeviceRecoveryRequest) Reset() {
+	*x = PollDeviceRecoveryRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PollDeviceRecoveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PollDeviceRecoveryRequest) ProtoMessage() {}
+
+func (x *PollDeviceRecoveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PollDeviceRecoveryRequest.ProtoReflect.Descriptor instead.
+func (*PollDeviceRecoveryRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *PollDeviceRecoveryRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type PollDeviceRecoveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                                    // "pending", "approved", "completed", "expired"
+	WrappedBundle []byte                 `protobuf:"bytes,2,opt,name=wrapped_bundle,json=wrappedBundle,proto3" json:"wrapped_bundle,omitempty"` // 124 bytes ECIES envelope (only when status="approved")
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PollDeviceRecoveryResponse) Reset() {
+	*x = PollDeviceRecoveryResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PollDeviceRecoveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PollDeviceRecoveryResponse) ProtoMessage() {}
+
+func (x *PollDeviceRecoveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PollDeviceRecoveryResponse.ProtoReflect.Descriptor instead.
+func (*PollDeviceRecoveryResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *PollDeviceRecoveryResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *PollDeviceRecoveryResponse) GetWrappedBundle() []byte {
+	if x != nil {
+		return x.WrappedBundle
+	}
+	return nil
+}
+
+type ApproveDeviceRecoveryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	WrappedBundle []byte                 `protobuf:"bytes,2,opt,name=wrapped_bundle,json=wrappedBundle,proto3" json:"wrapped_bundle,omitempty"` // 124 bytes: ephemeral_pub(32) + nonce(12) + ciphertext(80)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveDeviceRecoveryRequest) Reset() {
+	*x = ApproveDeviceRecoveryRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveDeviceRecoveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveDeviceRecoveryRequest) ProtoMessage() {}
+
+func (x *ApproveDeviceRecoveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveDeviceRecoveryRequest.ProtoReflect.Descriptor instead.
+func (*ApproveDeviceRecoveryRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ApproveDeviceRecoveryRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *ApproveDeviceRecoveryRequest) GetWrappedBundle() []byte {
+	if x != nil {
+		return x.WrappedBundle
+	}
+	return nil
+}
+
+type ApproveDeviceRecoveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveDeviceRecoveryResponse) Reset() {
+	*x = ApproveDeviceRecoveryResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveDeviceRecoveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveDeviceRecoveryResponse) ProtoMessage() {}
+
+func (x *ApproveDeviceRecoveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveDeviceRecoveryResponse.ProtoReflect.Descriptor instead.
+func (*ApproveDeviceRecoveryResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{34}
+}
+
+type CompleteDeviceRecoveryRequest struct {
+	state                         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId                     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	NewAuthKey                    []byte                 `protobuf:"bytes,2,opt,name=new_auth_key,json=newAuthKey,proto3" json:"new_auth_key,omitempty"`
+	NewSalt                       []byte                 `protobuf:"bytes,3,opt,name=new_salt,json=newSalt,proto3" json:"new_salt,omitempty"`
+	NewEncryptedKeyBundle         []byte                 `protobuf:"bytes,4,opt,name=new_encrypted_key_bundle,json=newEncryptedKeyBundle,proto3" json:"new_encrypted_key_bundle,omitempty"`
+	NewKeyBundleIv                []byte                 `protobuf:"bytes,5,opt,name=new_key_bundle_iv,json=newKeyBundleIv,proto3" json:"new_key_bundle_iv,omitempty"`
+	NewRecoveryEncryptedKeyBundle []byte                 `protobuf:"bytes,6,opt,name=new_recovery_encrypted_key_bundle,json=newRecoveryEncryptedKeyBundle,proto3" json:"new_recovery_encrypted_key_bundle,omitempty"`
+	NewRecoveryKeyBundleIv        []byte                 `protobuf:"bytes,7,opt,name=new_recovery_key_bundle_iv,json=newRecoveryKeyBundleIv,proto3" json:"new_recovery_key_bundle_iv,omitempty"`
+	NewRecoveryVerifier           []byte                 `protobuf:"bytes,8,opt,name=new_recovery_verifier,json=newRecoveryVerifier,proto3" json:"new_recovery_verifier,omitempty"`
+	Platform                      string                 `protobuf:"bytes,9,opt,name=platform,proto3" json:"platform,omitempty"` // "web", "android", "ios", "electron" — defaults to "web"
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
+}
+
+func (x *CompleteDeviceRecoveryRequest) Reset() {
+	*x = CompleteDeviceRecoveryRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteDeviceRecoveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteDeviceRecoveryRequest) ProtoMessage() {}
+
+func (x *CompleteDeviceRecoveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteDeviceRecoveryRequest.ProtoReflect.Descriptor instead.
+func (*CompleteDeviceRecoveryRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewAuthKey() []byte {
+	if x != nil {
+		return x.NewAuthKey
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewSalt() []byte {
+	if x != nil {
+		return x.NewSalt
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewEncryptedKeyBundle() []byte {
+	if x != nil {
+		return x.NewEncryptedKeyBundle
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewKeyBundleIv() []byte {
+	if x != nil {
+		return x.NewKeyBundleIv
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewRecoveryEncryptedKeyBundle() []byte {
+	if x != nil {
+		return x.NewRecoveryEncryptedKeyBundle
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewRecoveryKeyBundleIv() []byte {
+	if x != nil {
+		return x.NewRecoveryKeyBundleIv
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetNewRecoveryVerifier() []byte {
+	if x != nil {
+		return x.NewRecoveryVerifier
+	}
+	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+type CompleteDeviceRecoveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	User          *User                  `protobuf:"bytes,3,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteDeviceRecoveryResponse) Reset() {
+	*x = CompleteDeviceRecoveryResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteDeviceRecoveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteDeviceRecoveryResponse) ProtoMessage() {}
+
+func (x *CompleteDeviceRecoveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteDeviceRecoveryResponse.ProtoReflect.Descriptor instead.
+func (*CompleteDeviceRecoveryResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *CompleteDeviceRecoveryResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *CompleteDeviceRecoveryResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *CompleteDeviceRecoveryResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+type GetPendingRecoveryRequestRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetPendingRecoveryRequestRequest) Reset() {
+	*x = GetPendingRecoveryRequestRequest{}
+	mi := &file_meza_v1_auth_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPendingRecoveryRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPendingRecoveryRequestRequest) ProtoMessage() {}
+
+func (x *GetPendingRecoveryRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPendingRecoveryRequestRequest.ProtoReflect.Descriptor instead.
+func (*GetPendingRecoveryRequestRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{37}
+}
+
+type GetPendingRecoveryRequestResponse struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	SessionId          string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`                              // empty if no pending request
+	EphemeralPublicKey []byte                 `protobuf:"bytes,2,opt,name=ephemeral_public_key,json=ephemeralPublicKey,proto3" json:"ephemeral_public_key,omitempty"` // 32 bytes X25519
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *GetPendingRecoveryRequestResponse) Reset() {
+	*x = GetPendingRecoveryRequestResponse{}
+	mi := &file_meza_v1_auth_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetPendingRecoveryRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPendingRecoveryRequestResponse) ProtoMessage() {}
+
+func (x *GetPendingRecoveryRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_auth_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPendingRecoveryRequestResponse.ProtoReflect.Descriptor instead.
+func (*GetPendingRecoveryRequestResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_auth_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *GetPendingRecoveryRequestResponse) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *GetPendingRecoveryRequestResponse) GetEphemeralPublicKey() []byte {
+	if x != nil {
+		return x.EphemeralPublicKey
+	}
+	return nil
+}
+
 var File_meza_v1_auth_proto protoreflect.FileDescriptor
 
 const file_meza_v1_auth_proto_rawDesc = "" +
@@ -1833,7 +2473,51 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x16RecoverAccountResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12!\n" +
-	"\x04user\x18\x03 \x01(\v2\r.meza.v1.UserR\x04user2\xe1\a\n" +
+	"\x04user\x18\x03 \x01(\v2\r.meza.v1.UserR\x04user\"F\n" +
+	"\x1aVerifyRecoveryEmailRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"a\n" +
+	"\x1bVerifyRecoveryEmailResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12*\n" +
+	"\x11otp_session_token\x18\x02 \x01(\tR\x0fotpSessionToken\"}\n" +
+	"\x1dInitiateDeviceRecoveryRequest\x12*\n" +
+	"\x11otp_session_token\x18\x01 \x01(\tR\x0fotpSessionToken\x120\n" +
+	"\x14ephemeral_public_key\x18\x02 \x01(\fR\x12ephemeralPublicKey\"?\n" +
+	"\x1eInitiateDeviceRecoveryResponse\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\":\n" +
+	"\x19PollDeviceRecoveryRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"[\n" +
+	"\x1aPollDeviceRecoveryResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12%\n" +
+	"\x0ewrapped_bundle\x18\x02 \x01(\fR\rwrappedBundle\"d\n" +
+	"\x1cApproveDeviceRecoveryRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12%\n" +
+	"\x0ewrapped_bundle\x18\x02 \x01(\fR\rwrappedBundle\"\x1f\n" +
+	"\x1dApproveDeviceRecoveryResponse\"\xb5\x03\n" +
+	"\x1dCompleteDeviceRecoveryRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
+	"\fnew_auth_key\x18\x02 \x01(\fR\n" +
+	"newAuthKey\x12\x19\n" +
+	"\bnew_salt\x18\x03 \x01(\fR\anewSalt\x127\n" +
+	"\x18new_encrypted_key_bundle\x18\x04 \x01(\fR\x15newEncryptedKeyBundle\x12)\n" +
+	"\x11new_key_bundle_iv\x18\x05 \x01(\fR\x0enewKeyBundleIv\x12H\n" +
+	"!new_recovery_encrypted_key_bundle\x18\x06 \x01(\fR\x1dnewRecoveryEncryptedKeyBundle\x12:\n" +
+	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\x122\n" +
+	"\x15new_recovery_verifier\x18\b \x01(\fR\x13newRecoveryVerifier\x12\x1a\n" +
+	"\bplatform\x18\t \x01(\tR\bplatform\"\x8b\x01\n" +
+	"\x1eCompleteDeviceRecoveryResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12!\n" +
+	"\x04user\x18\x03 \x01(\v2\r.meza.v1.UserR\x04user\"\"\n" +
+	" GetPendingRecoveryRequestRequest\"t\n" +
+	"!GetPendingRecoveryRequestResponse\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\x120\n" +
+	"\x14ephemeral_public_key\x18\x02 \x01(\fR\x12ephemeralPublicKey2\xd4\f\n" +
 	"\vAuthService\x12?\n" +
 	"\bRegister\x12\x18.meza.v1.RegisterRequest\x1a\x19.meza.v1.RegisterResponse\x126\n" +
 	"\x05Login\x12\x15.meza.v1.LoginRequest\x1a\x16.meza.v1.LoginResponse\x12<\n" +
@@ -1848,7 +2532,13 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"GetProfile\x12\x1a.meza.v1.GetProfileRequest\x1a\x1b.meza.v1.GetProfileResponse\x12Z\n" +
 	"\x11GetRecoveryBundle\x12!.meza.v1.GetRecoveryBundleRequest\x1a\".meza.v1.GetRecoveryBundleResponse\x12Q\n" +
-	"\x0eRecoverAccount\x12\x1e.meza.v1.RecoverAccountRequest\x1a\x1f.meza.v1.RecoverAccountResponseB\x83\x01\n" +
+	"\x0eRecoverAccount\x12\x1e.meza.v1.RecoverAccountRequest\x1a\x1f.meza.v1.RecoverAccountResponse\x12`\n" +
+	"\x13VerifyRecoveryEmail\x12#.meza.v1.VerifyRecoveryEmailRequest\x1a$.meza.v1.VerifyRecoveryEmailResponse\x12i\n" +
+	"\x16InitiateDeviceRecovery\x12&.meza.v1.InitiateDeviceRecoveryRequest\x1a'.meza.v1.InitiateDeviceRecoveryResponse\x12]\n" +
+	"\x12PollDeviceRecovery\x12\".meza.v1.PollDeviceRecoveryRequest\x1a#.meza.v1.PollDeviceRecoveryResponse\x12f\n" +
+	"\x15ApproveDeviceRecovery\x12%.meza.v1.ApproveDeviceRecoveryRequest\x1a&.meza.v1.ApproveDeviceRecoveryResponse\x12i\n" +
+	"\x16CompleteDeviceRecovery\x12&.meza.v1.CompleteDeviceRecoveryRequest\x1a'.meza.v1.CompleteDeviceRecoveryResponse\x12r\n" +
+	"\x19GetPendingRecoveryRequest\x12).meza.v1.GetPendingRecoveryRequestRequest\x1a*.meza.v1.GetPendingRecoveryRequestResponseB\x83\x01\n" +
 	"\vcom.meza.v1B\tAuthProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
@@ -1863,82 +2553,107 @@ func file_meza_v1_auth_proto_rawDescGZIP() []byte {
 	return file_meza_v1_auth_proto_rawDescData
 }
 
-var file_meza_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_meza_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_meza_v1_auth_proto_goTypes = []any{
-	(*RegisterRequest)(nil),           // 0: meza.v1.RegisterRequest
-	(*RegisterResponse)(nil),          // 1: meza.v1.RegisterResponse
-	(*LoginRequest)(nil),              // 2: meza.v1.LoginRequest
-	(*LoginResponse)(nil),             // 3: meza.v1.LoginResponse
-	(*GetSaltRequest)(nil),            // 4: meza.v1.GetSaltRequest
-	(*GetSaltResponse)(nil),           // 5: meza.v1.GetSaltResponse
-	(*RefreshTokenRequest)(nil),       // 6: meza.v1.RefreshTokenRequest
-	(*RefreshTokenResponse)(nil),      // 7: meza.v1.RefreshTokenResponse
-	(*RegisterDeviceRequest)(nil),     // 8: meza.v1.RegisterDeviceRequest
-	(*RegisterDeviceResponse)(nil),    // 9: meza.v1.RegisterDeviceResponse
-	(*RevokeDeviceRequest)(nil),       // 10: meza.v1.RevokeDeviceRequest
-	(*RevokeDeviceResponse)(nil),      // 11: meza.v1.RevokeDeviceResponse
-	(*ListDevicesRequest)(nil),        // 12: meza.v1.ListDevicesRequest
-	(*ListDevicesResponse)(nil),       // 13: meza.v1.ListDevicesResponse
-	(*Device)(nil),                    // 14: meza.v1.Device
-	(*UpdateProfileRequest)(nil),      // 15: meza.v1.UpdateProfileRequest
-	(*UpdateProfileResponse)(nil),     // 16: meza.v1.UpdateProfileResponse
-	(*ChangePasswordRequest)(nil),     // 17: meza.v1.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil),    // 18: meza.v1.ChangePasswordResponse
-	(*GetKeyBundleRequest)(nil),       // 19: meza.v1.GetKeyBundleRequest
-	(*GetKeyBundleResponse)(nil),      // 20: meza.v1.GetKeyBundleResponse
-	(*GetProfileRequest)(nil),         // 21: meza.v1.GetProfileRequest
-	(*GetProfileResponse)(nil),        // 22: meza.v1.GetProfileResponse
-	(*GetRecoveryBundleRequest)(nil),  // 23: meza.v1.GetRecoveryBundleRequest
-	(*GetRecoveryBundleResponse)(nil), // 24: meza.v1.GetRecoveryBundleResponse
-	(*RecoverAccountRequest)(nil),     // 25: meza.v1.RecoverAccountRequest
-	(*RecoverAccountResponse)(nil),    // 26: meza.v1.RecoverAccountResponse
-	(*User)(nil),                      // 27: meza.v1.User
-	(*timestamppb.Timestamp)(nil),     // 28: google.protobuf.Timestamp
-	(*AudioPreferences)(nil),          // 29: meza.v1.AudioPreferences
-	(*UserConnection)(nil),            // 30: meza.v1.UserConnection
+	(*RegisterRequest)(nil),                   // 0: meza.v1.RegisterRequest
+	(*RegisterResponse)(nil),                  // 1: meza.v1.RegisterResponse
+	(*LoginRequest)(nil),                      // 2: meza.v1.LoginRequest
+	(*LoginResponse)(nil),                     // 3: meza.v1.LoginResponse
+	(*GetSaltRequest)(nil),                    // 4: meza.v1.GetSaltRequest
+	(*GetSaltResponse)(nil),                   // 5: meza.v1.GetSaltResponse
+	(*RefreshTokenRequest)(nil),               // 6: meza.v1.RefreshTokenRequest
+	(*RefreshTokenResponse)(nil),              // 7: meza.v1.RefreshTokenResponse
+	(*RegisterDeviceRequest)(nil),             // 8: meza.v1.RegisterDeviceRequest
+	(*RegisterDeviceResponse)(nil),            // 9: meza.v1.RegisterDeviceResponse
+	(*RevokeDeviceRequest)(nil),               // 10: meza.v1.RevokeDeviceRequest
+	(*RevokeDeviceResponse)(nil),              // 11: meza.v1.RevokeDeviceResponse
+	(*ListDevicesRequest)(nil),                // 12: meza.v1.ListDevicesRequest
+	(*ListDevicesResponse)(nil),               // 13: meza.v1.ListDevicesResponse
+	(*Device)(nil),                            // 14: meza.v1.Device
+	(*UpdateProfileRequest)(nil),              // 15: meza.v1.UpdateProfileRequest
+	(*UpdateProfileResponse)(nil),             // 16: meza.v1.UpdateProfileResponse
+	(*ChangePasswordRequest)(nil),             // 17: meza.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),            // 18: meza.v1.ChangePasswordResponse
+	(*GetKeyBundleRequest)(nil),               // 19: meza.v1.GetKeyBundleRequest
+	(*GetKeyBundleResponse)(nil),              // 20: meza.v1.GetKeyBundleResponse
+	(*GetProfileRequest)(nil),                 // 21: meza.v1.GetProfileRequest
+	(*GetProfileResponse)(nil),                // 22: meza.v1.GetProfileResponse
+	(*GetRecoveryBundleRequest)(nil),          // 23: meza.v1.GetRecoveryBundleRequest
+	(*GetRecoveryBundleResponse)(nil),         // 24: meza.v1.GetRecoveryBundleResponse
+	(*RecoverAccountRequest)(nil),             // 25: meza.v1.RecoverAccountRequest
+	(*RecoverAccountResponse)(nil),            // 26: meza.v1.RecoverAccountResponse
+	(*VerifyRecoveryEmailRequest)(nil),        // 27: meza.v1.VerifyRecoveryEmailRequest
+	(*VerifyRecoveryEmailResponse)(nil),       // 28: meza.v1.VerifyRecoveryEmailResponse
+	(*InitiateDeviceRecoveryRequest)(nil),     // 29: meza.v1.InitiateDeviceRecoveryRequest
+	(*InitiateDeviceRecoveryResponse)(nil),    // 30: meza.v1.InitiateDeviceRecoveryResponse
+	(*PollDeviceRecoveryRequest)(nil),         // 31: meza.v1.PollDeviceRecoveryRequest
+	(*PollDeviceRecoveryResponse)(nil),        // 32: meza.v1.PollDeviceRecoveryResponse
+	(*ApproveDeviceRecoveryRequest)(nil),      // 33: meza.v1.ApproveDeviceRecoveryRequest
+	(*ApproveDeviceRecoveryResponse)(nil),     // 34: meza.v1.ApproveDeviceRecoveryResponse
+	(*CompleteDeviceRecoveryRequest)(nil),     // 35: meza.v1.CompleteDeviceRecoveryRequest
+	(*CompleteDeviceRecoveryResponse)(nil),    // 36: meza.v1.CompleteDeviceRecoveryResponse
+	(*GetPendingRecoveryRequestRequest)(nil),  // 37: meza.v1.GetPendingRecoveryRequestRequest
+	(*GetPendingRecoveryRequestResponse)(nil), // 38: meza.v1.GetPendingRecoveryRequestResponse
+	(*User)(nil),                              // 39: meza.v1.User
+	(*timestamppb.Timestamp)(nil),             // 40: google.protobuf.Timestamp
+	(*AudioPreferences)(nil),                  // 41: meza.v1.AudioPreferences
+	(*UserConnection)(nil),                    // 42: meza.v1.UserConnection
 }
 var file_meza_v1_auth_proto_depIdxs = []int32{
-	27, // 0: meza.v1.RegisterResponse.user:type_name -> meza.v1.User
-	27, // 1: meza.v1.LoginResponse.user:type_name -> meza.v1.User
+	39, // 0: meza.v1.RegisterResponse.user:type_name -> meza.v1.User
+	39, // 1: meza.v1.LoginResponse.user:type_name -> meza.v1.User
 	14, // 2: meza.v1.ListDevicesResponse.devices:type_name -> meza.v1.Device
-	28, // 3: meza.v1.Device.created_at:type_name -> google.protobuf.Timestamp
-	28, // 4: meza.v1.Device.last_seen_at:type_name -> google.protobuf.Timestamp
-	29, // 5: meza.v1.UpdateProfileRequest.audio_preferences:type_name -> meza.v1.AudioPreferences
-	30, // 6: meza.v1.UpdateProfileRequest.connections:type_name -> meza.v1.UserConnection
-	27, // 7: meza.v1.UpdateProfileResponse.user:type_name -> meza.v1.User
-	27, // 8: meza.v1.GetProfileResponse.user:type_name -> meza.v1.User
-	27, // 9: meza.v1.RecoverAccountResponse.user:type_name -> meza.v1.User
-	0,  // 10: meza.v1.AuthService.Register:input_type -> meza.v1.RegisterRequest
-	2,  // 11: meza.v1.AuthService.Login:input_type -> meza.v1.LoginRequest
-	4,  // 12: meza.v1.AuthService.GetSalt:input_type -> meza.v1.GetSaltRequest
-	6,  // 13: meza.v1.AuthService.RefreshToken:input_type -> meza.v1.RefreshTokenRequest
-	8,  // 14: meza.v1.AuthService.RegisterDevice:input_type -> meza.v1.RegisterDeviceRequest
-	10, // 15: meza.v1.AuthService.RevokeDevice:input_type -> meza.v1.RevokeDeviceRequest
-	12, // 16: meza.v1.AuthService.ListDevices:input_type -> meza.v1.ListDevicesRequest
-	15, // 17: meza.v1.AuthService.UpdateProfile:input_type -> meza.v1.UpdateProfileRequest
-	17, // 18: meza.v1.AuthService.ChangePassword:input_type -> meza.v1.ChangePasswordRequest
-	19, // 19: meza.v1.AuthService.GetKeyBundle:input_type -> meza.v1.GetKeyBundleRequest
-	21, // 20: meza.v1.AuthService.GetProfile:input_type -> meza.v1.GetProfileRequest
-	23, // 21: meza.v1.AuthService.GetRecoveryBundle:input_type -> meza.v1.GetRecoveryBundleRequest
-	25, // 22: meza.v1.AuthService.RecoverAccount:input_type -> meza.v1.RecoverAccountRequest
-	1,  // 23: meza.v1.AuthService.Register:output_type -> meza.v1.RegisterResponse
-	3,  // 24: meza.v1.AuthService.Login:output_type -> meza.v1.LoginResponse
-	5,  // 25: meza.v1.AuthService.GetSalt:output_type -> meza.v1.GetSaltResponse
-	7,  // 26: meza.v1.AuthService.RefreshToken:output_type -> meza.v1.RefreshTokenResponse
-	9,  // 27: meza.v1.AuthService.RegisterDevice:output_type -> meza.v1.RegisterDeviceResponse
-	11, // 28: meza.v1.AuthService.RevokeDevice:output_type -> meza.v1.RevokeDeviceResponse
-	13, // 29: meza.v1.AuthService.ListDevices:output_type -> meza.v1.ListDevicesResponse
-	16, // 30: meza.v1.AuthService.UpdateProfile:output_type -> meza.v1.UpdateProfileResponse
-	18, // 31: meza.v1.AuthService.ChangePassword:output_type -> meza.v1.ChangePasswordResponse
-	20, // 32: meza.v1.AuthService.GetKeyBundle:output_type -> meza.v1.GetKeyBundleResponse
-	22, // 33: meza.v1.AuthService.GetProfile:output_type -> meza.v1.GetProfileResponse
-	24, // 34: meza.v1.AuthService.GetRecoveryBundle:output_type -> meza.v1.GetRecoveryBundleResponse
-	26, // 35: meza.v1.AuthService.RecoverAccount:output_type -> meza.v1.RecoverAccountResponse
-	23, // [23:36] is the sub-list for method output_type
-	10, // [10:23] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	40, // 3: meza.v1.Device.created_at:type_name -> google.protobuf.Timestamp
+	40, // 4: meza.v1.Device.last_seen_at:type_name -> google.protobuf.Timestamp
+	41, // 5: meza.v1.UpdateProfileRequest.audio_preferences:type_name -> meza.v1.AudioPreferences
+	42, // 6: meza.v1.UpdateProfileRequest.connections:type_name -> meza.v1.UserConnection
+	39, // 7: meza.v1.UpdateProfileResponse.user:type_name -> meza.v1.User
+	39, // 8: meza.v1.GetProfileResponse.user:type_name -> meza.v1.User
+	39, // 9: meza.v1.RecoverAccountResponse.user:type_name -> meza.v1.User
+	39, // 10: meza.v1.CompleteDeviceRecoveryResponse.user:type_name -> meza.v1.User
+	0,  // 11: meza.v1.AuthService.Register:input_type -> meza.v1.RegisterRequest
+	2,  // 12: meza.v1.AuthService.Login:input_type -> meza.v1.LoginRequest
+	4,  // 13: meza.v1.AuthService.GetSalt:input_type -> meza.v1.GetSaltRequest
+	6,  // 14: meza.v1.AuthService.RefreshToken:input_type -> meza.v1.RefreshTokenRequest
+	8,  // 15: meza.v1.AuthService.RegisterDevice:input_type -> meza.v1.RegisterDeviceRequest
+	10, // 16: meza.v1.AuthService.RevokeDevice:input_type -> meza.v1.RevokeDeviceRequest
+	12, // 17: meza.v1.AuthService.ListDevices:input_type -> meza.v1.ListDevicesRequest
+	15, // 18: meza.v1.AuthService.UpdateProfile:input_type -> meza.v1.UpdateProfileRequest
+	17, // 19: meza.v1.AuthService.ChangePassword:input_type -> meza.v1.ChangePasswordRequest
+	19, // 20: meza.v1.AuthService.GetKeyBundle:input_type -> meza.v1.GetKeyBundleRequest
+	21, // 21: meza.v1.AuthService.GetProfile:input_type -> meza.v1.GetProfileRequest
+	23, // 22: meza.v1.AuthService.GetRecoveryBundle:input_type -> meza.v1.GetRecoveryBundleRequest
+	25, // 23: meza.v1.AuthService.RecoverAccount:input_type -> meza.v1.RecoverAccountRequest
+	27, // 24: meza.v1.AuthService.VerifyRecoveryEmail:input_type -> meza.v1.VerifyRecoveryEmailRequest
+	29, // 25: meza.v1.AuthService.InitiateDeviceRecovery:input_type -> meza.v1.InitiateDeviceRecoveryRequest
+	31, // 26: meza.v1.AuthService.PollDeviceRecovery:input_type -> meza.v1.PollDeviceRecoveryRequest
+	33, // 27: meza.v1.AuthService.ApproveDeviceRecovery:input_type -> meza.v1.ApproveDeviceRecoveryRequest
+	35, // 28: meza.v1.AuthService.CompleteDeviceRecovery:input_type -> meza.v1.CompleteDeviceRecoveryRequest
+	37, // 29: meza.v1.AuthService.GetPendingRecoveryRequest:input_type -> meza.v1.GetPendingRecoveryRequestRequest
+	1,  // 30: meza.v1.AuthService.Register:output_type -> meza.v1.RegisterResponse
+	3,  // 31: meza.v1.AuthService.Login:output_type -> meza.v1.LoginResponse
+	5,  // 32: meza.v1.AuthService.GetSalt:output_type -> meza.v1.GetSaltResponse
+	7,  // 33: meza.v1.AuthService.RefreshToken:output_type -> meza.v1.RefreshTokenResponse
+	9,  // 34: meza.v1.AuthService.RegisterDevice:output_type -> meza.v1.RegisterDeviceResponse
+	11, // 35: meza.v1.AuthService.RevokeDevice:output_type -> meza.v1.RevokeDeviceResponse
+	13, // 36: meza.v1.AuthService.ListDevices:output_type -> meza.v1.ListDevicesResponse
+	16, // 37: meza.v1.AuthService.UpdateProfile:output_type -> meza.v1.UpdateProfileResponse
+	18, // 38: meza.v1.AuthService.ChangePassword:output_type -> meza.v1.ChangePasswordResponse
+	20, // 39: meza.v1.AuthService.GetKeyBundle:output_type -> meza.v1.GetKeyBundleResponse
+	22, // 40: meza.v1.AuthService.GetProfile:output_type -> meza.v1.GetProfileResponse
+	24, // 41: meza.v1.AuthService.GetRecoveryBundle:output_type -> meza.v1.GetRecoveryBundleResponse
+	26, // 42: meza.v1.AuthService.RecoverAccount:output_type -> meza.v1.RecoverAccountResponse
+	28, // 43: meza.v1.AuthService.VerifyRecoveryEmail:output_type -> meza.v1.VerifyRecoveryEmailResponse
+	30, // 44: meza.v1.AuthService.InitiateDeviceRecovery:output_type -> meza.v1.InitiateDeviceRecoveryResponse
+	32, // 45: meza.v1.AuthService.PollDeviceRecovery:output_type -> meza.v1.PollDeviceRecoveryResponse
+	34, // 46: meza.v1.AuthService.ApproveDeviceRecovery:output_type -> meza.v1.ApproveDeviceRecoveryResponse
+	36, // 47: meza.v1.AuthService.CompleteDeviceRecovery:output_type -> meza.v1.CompleteDeviceRecoveryResponse
+	38, // 48: meza.v1.AuthService.GetPendingRecoveryRequest:output_type -> meza.v1.GetPendingRecoveryRequestResponse
+	30, // [30:49] is the sub-list for method output_type
+	11, // [11:30] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_auth_proto_init() }
@@ -1955,7 +2670,7 @@ func file_meza_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_auth_proto_rawDesc), len(file_meza_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

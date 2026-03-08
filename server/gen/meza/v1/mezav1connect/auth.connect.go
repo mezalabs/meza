@@ -67,6 +67,24 @@ const (
 	// AuthServiceRecoverAccountProcedure is the fully-qualified name of the AuthService's
 	// RecoverAccount RPC.
 	AuthServiceRecoverAccountProcedure = "/meza.v1.AuthService/RecoverAccount"
+	// AuthServiceVerifyRecoveryEmailProcedure is the fully-qualified name of the AuthService's
+	// VerifyRecoveryEmail RPC.
+	AuthServiceVerifyRecoveryEmailProcedure = "/meza.v1.AuthService/VerifyRecoveryEmail"
+	// AuthServiceInitiateDeviceRecoveryProcedure is the fully-qualified name of the AuthService's
+	// InitiateDeviceRecovery RPC.
+	AuthServiceInitiateDeviceRecoveryProcedure = "/meza.v1.AuthService/InitiateDeviceRecovery"
+	// AuthServicePollDeviceRecoveryProcedure is the fully-qualified name of the AuthService's
+	// PollDeviceRecovery RPC.
+	AuthServicePollDeviceRecoveryProcedure = "/meza.v1.AuthService/PollDeviceRecovery"
+	// AuthServiceApproveDeviceRecoveryProcedure is the fully-qualified name of the AuthService's
+	// ApproveDeviceRecovery RPC.
+	AuthServiceApproveDeviceRecoveryProcedure = "/meza.v1.AuthService/ApproveDeviceRecovery"
+	// AuthServiceCompleteDeviceRecoveryProcedure is the fully-qualified name of the AuthService's
+	// CompleteDeviceRecovery RPC.
+	AuthServiceCompleteDeviceRecoveryProcedure = "/meza.v1.AuthService/CompleteDeviceRecovery"
+	// AuthServiceGetPendingRecoveryRequestProcedure is the fully-qualified name of the AuthService's
+	// GetPendingRecoveryRequest RPC.
+	AuthServiceGetPendingRecoveryRequestProcedure = "/meza.v1.AuthService/GetPendingRecoveryRequest"
 )
 
 // AuthServiceClient is a client for the meza.v1.AuthService service.
@@ -85,6 +103,13 @@ type AuthServiceClient interface {
 	// Account recovery via BIP39 recovery phrase
 	GetRecoveryBundle(context.Context, *connect.Request[v1.GetRecoveryBundleRequest]) (*connect.Response[v1.GetRecoveryBundleResponse], error)
 	RecoverAccount(context.Context, *connect.Request[v1.RecoverAccountRequest]) (*connect.Response[v1.RecoverAccountResponse], error)
+	// Device recovery via another logged-in device
+	VerifyRecoveryEmail(context.Context, *connect.Request[v1.VerifyRecoveryEmailRequest]) (*connect.Response[v1.VerifyRecoveryEmailResponse], error)
+	InitiateDeviceRecovery(context.Context, *connect.Request[v1.InitiateDeviceRecoveryRequest]) (*connect.Response[v1.InitiateDeviceRecoveryResponse], error)
+	PollDeviceRecovery(context.Context, *connect.Request[v1.PollDeviceRecoveryRequest]) (*connect.Response[v1.PollDeviceRecoveryResponse], error)
+	ApproveDeviceRecovery(context.Context, *connect.Request[v1.ApproveDeviceRecoveryRequest]) (*connect.Response[v1.ApproveDeviceRecoveryResponse], error)
+	CompleteDeviceRecovery(context.Context, *connect.Request[v1.CompleteDeviceRecoveryRequest]) (*connect.Response[v1.CompleteDeviceRecoveryResponse], error)
+	GetPendingRecoveryRequest(context.Context, *connect.Request[v1.GetPendingRecoveryRequestRequest]) (*connect.Response[v1.GetPendingRecoveryRequestResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the meza.v1.AuthService service. By default, it uses
@@ -176,24 +201,66 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RecoverAccount")),
 			connect.WithClientOptions(opts...),
 		),
+		verifyRecoveryEmail: connect.NewClient[v1.VerifyRecoveryEmailRequest, v1.VerifyRecoveryEmailResponse](
+			httpClient,
+			baseURL+AuthServiceVerifyRecoveryEmailProcedure,
+			connect.WithSchema(authServiceMethods.ByName("VerifyRecoveryEmail")),
+			connect.WithClientOptions(opts...),
+		),
+		initiateDeviceRecovery: connect.NewClient[v1.InitiateDeviceRecoveryRequest, v1.InitiateDeviceRecoveryResponse](
+			httpClient,
+			baseURL+AuthServiceInitiateDeviceRecoveryProcedure,
+			connect.WithSchema(authServiceMethods.ByName("InitiateDeviceRecovery")),
+			connect.WithClientOptions(opts...),
+		),
+		pollDeviceRecovery: connect.NewClient[v1.PollDeviceRecoveryRequest, v1.PollDeviceRecoveryResponse](
+			httpClient,
+			baseURL+AuthServicePollDeviceRecoveryProcedure,
+			connect.WithSchema(authServiceMethods.ByName("PollDeviceRecovery")),
+			connect.WithClientOptions(opts...),
+		),
+		approveDeviceRecovery: connect.NewClient[v1.ApproveDeviceRecoveryRequest, v1.ApproveDeviceRecoveryResponse](
+			httpClient,
+			baseURL+AuthServiceApproveDeviceRecoveryProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ApproveDeviceRecovery")),
+			connect.WithClientOptions(opts...),
+		),
+		completeDeviceRecovery: connect.NewClient[v1.CompleteDeviceRecoveryRequest, v1.CompleteDeviceRecoveryResponse](
+			httpClient,
+			baseURL+AuthServiceCompleteDeviceRecoveryProcedure,
+			connect.WithSchema(authServiceMethods.ByName("CompleteDeviceRecovery")),
+			connect.WithClientOptions(opts...),
+		),
+		getPendingRecoveryRequest: connect.NewClient[v1.GetPendingRecoveryRequestRequest, v1.GetPendingRecoveryRequestResponse](
+			httpClient,
+			baseURL+AuthServiceGetPendingRecoveryRequestProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetPendingRecoveryRequest")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	register          *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
-	login             *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	getSalt           *connect.Client[v1.GetSaltRequest, v1.GetSaltResponse]
-	refreshToken      *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
-	registerDevice    *connect.Client[v1.RegisterDeviceRequest, v1.RegisterDeviceResponse]
-	revokeDevice      *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
-	listDevices       *connect.Client[v1.ListDevicesRequest, v1.ListDevicesResponse]
-	updateProfile     *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
-	changePassword    *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
-	getKeyBundle      *connect.Client[v1.GetKeyBundleRequest, v1.GetKeyBundleResponse]
-	getProfile        *connect.Client[v1.GetProfileRequest, v1.GetProfileResponse]
-	getRecoveryBundle *connect.Client[v1.GetRecoveryBundleRequest, v1.GetRecoveryBundleResponse]
-	recoverAccount    *connect.Client[v1.RecoverAccountRequest, v1.RecoverAccountResponse]
+	register                  *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
+	login                     *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	getSalt                   *connect.Client[v1.GetSaltRequest, v1.GetSaltResponse]
+	refreshToken              *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
+	registerDevice            *connect.Client[v1.RegisterDeviceRequest, v1.RegisterDeviceResponse]
+	revokeDevice              *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	listDevices               *connect.Client[v1.ListDevicesRequest, v1.ListDevicesResponse]
+	updateProfile             *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
+	changePassword            *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
+	getKeyBundle              *connect.Client[v1.GetKeyBundleRequest, v1.GetKeyBundleResponse]
+	getProfile                *connect.Client[v1.GetProfileRequest, v1.GetProfileResponse]
+	getRecoveryBundle         *connect.Client[v1.GetRecoveryBundleRequest, v1.GetRecoveryBundleResponse]
+	recoverAccount            *connect.Client[v1.RecoverAccountRequest, v1.RecoverAccountResponse]
+	verifyRecoveryEmail       *connect.Client[v1.VerifyRecoveryEmailRequest, v1.VerifyRecoveryEmailResponse]
+	initiateDeviceRecovery    *connect.Client[v1.InitiateDeviceRecoveryRequest, v1.InitiateDeviceRecoveryResponse]
+	pollDeviceRecovery        *connect.Client[v1.PollDeviceRecoveryRequest, v1.PollDeviceRecoveryResponse]
+	approveDeviceRecovery     *connect.Client[v1.ApproveDeviceRecoveryRequest, v1.ApproveDeviceRecoveryResponse]
+	completeDeviceRecovery    *connect.Client[v1.CompleteDeviceRecoveryRequest, v1.CompleteDeviceRecoveryResponse]
+	getPendingRecoveryRequest *connect.Client[v1.GetPendingRecoveryRequestRequest, v1.GetPendingRecoveryRequestResponse]
 }
 
 // Register calls meza.v1.AuthService.Register.
@@ -261,6 +328,36 @@ func (c *authServiceClient) RecoverAccount(ctx context.Context, req *connect.Req
 	return c.recoverAccount.CallUnary(ctx, req)
 }
 
+// VerifyRecoveryEmail calls meza.v1.AuthService.VerifyRecoveryEmail.
+func (c *authServiceClient) VerifyRecoveryEmail(ctx context.Context, req *connect.Request[v1.VerifyRecoveryEmailRequest]) (*connect.Response[v1.VerifyRecoveryEmailResponse], error) {
+	return c.verifyRecoveryEmail.CallUnary(ctx, req)
+}
+
+// InitiateDeviceRecovery calls meza.v1.AuthService.InitiateDeviceRecovery.
+func (c *authServiceClient) InitiateDeviceRecovery(ctx context.Context, req *connect.Request[v1.InitiateDeviceRecoveryRequest]) (*connect.Response[v1.InitiateDeviceRecoveryResponse], error) {
+	return c.initiateDeviceRecovery.CallUnary(ctx, req)
+}
+
+// PollDeviceRecovery calls meza.v1.AuthService.PollDeviceRecovery.
+func (c *authServiceClient) PollDeviceRecovery(ctx context.Context, req *connect.Request[v1.PollDeviceRecoveryRequest]) (*connect.Response[v1.PollDeviceRecoveryResponse], error) {
+	return c.pollDeviceRecovery.CallUnary(ctx, req)
+}
+
+// ApproveDeviceRecovery calls meza.v1.AuthService.ApproveDeviceRecovery.
+func (c *authServiceClient) ApproveDeviceRecovery(ctx context.Context, req *connect.Request[v1.ApproveDeviceRecoveryRequest]) (*connect.Response[v1.ApproveDeviceRecoveryResponse], error) {
+	return c.approveDeviceRecovery.CallUnary(ctx, req)
+}
+
+// CompleteDeviceRecovery calls meza.v1.AuthService.CompleteDeviceRecovery.
+func (c *authServiceClient) CompleteDeviceRecovery(ctx context.Context, req *connect.Request[v1.CompleteDeviceRecoveryRequest]) (*connect.Response[v1.CompleteDeviceRecoveryResponse], error) {
+	return c.completeDeviceRecovery.CallUnary(ctx, req)
+}
+
+// GetPendingRecoveryRequest calls meza.v1.AuthService.GetPendingRecoveryRequest.
+func (c *authServiceClient) GetPendingRecoveryRequest(ctx context.Context, req *connect.Request[v1.GetPendingRecoveryRequestRequest]) (*connect.Response[v1.GetPendingRecoveryRequestResponse], error) {
+	return c.getPendingRecoveryRequest.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the meza.v1.AuthService service.
 type AuthServiceHandler interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
@@ -277,6 +374,13 @@ type AuthServiceHandler interface {
 	// Account recovery via BIP39 recovery phrase
 	GetRecoveryBundle(context.Context, *connect.Request[v1.GetRecoveryBundleRequest]) (*connect.Response[v1.GetRecoveryBundleResponse], error)
 	RecoverAccount(context.Context, *connect.Request[v1.RecoverAccountRequest]) (*connect.Response[v1.RecoverAccountResponse], error)
+	// Device recovery via another logged-in device
+	VerifyRecoveryEmail(context.Context, *connect.Request[v1.VerifyRecoveryEmailRequest]) (*connect.Response[v1.VerifyRecoveryEmailResponse], error)
+	InitiateDeviceRecovery(context.Context, *connect.Request[v1.InitiateDeviceRecoveryRequest]) (*connect.Response[v1.InitiateDeviceRecoveryResponse], error)
+	PollDeviceRecovery(context.Context, *connect.Request[v1.PollDeviceRecoveryRequest]) (*connect.Response[v1.PollDeviceRecoveryResponse], error)
+	ApproveDeviceRecovery(context.Context, *connect.Request[v1.ApproveDeviceRecoveryRequest]) (*connect.Response[v1.ApproveDeviceRecoveryResponse], error)
+	CompleteDeviceRecovery(context.Context, *connect.Request[v1.CompleteDeviceRecoveryRequest]) (*connect.Response[v1.CompleteDeviceRecoveryResponse], error)
+	GetPendingRecoveryRequest(context.Context, *connect.Request[v1.GetPendingRecoveryRequestRequest]) (*connect.Response[v1.GetPendingRecoveryRequestResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -364,6 +468,42 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RecoverAccount")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceVerifyRecoveryEmailHandler := connect.NewUnaryHandler(
+		AuthServiceVerifyRecoveryEmailProcedure,
+		svc.VerifyRecoveryEmail,
+		connect.WithSchema(authServiceMethods.ByName("VerifyRecoveryEmail")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceInitiateDeviceRecoveryHandler := connect.NewUnaryHandler(
+		AuthServiceInitiateDeviceRecoveryProcedure,
+		svc.InitiateDeviceRecovery,
+		connect.WithSchema(authServiceMethods.ByName("InitiateDeviceRecovery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServicePollDeviceRecoveryHandler := connect.NewUnaryHandler(
+		AuthServicePollDeviceRecoveryProcedure,
+		svc.PollDeviceRecovery,
+		connect.WithSchema(authServiceMethods.ByName("PollDeviceRecovery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceApproveDeviceRecoveryHandler := connect.NewUnaryHandler(
+		AuthServiceApproveDeviceRecoveryProcedure,
+		svc.ApproveDeviceRecovery,
+		connect.WithSchema(authServiceMethods.ByName("ApproveDeviceRecovery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceCompleteDeviceRecoveryHandler := connect.NewUnaryHandler(
+		AuthServiceCompleteDeviceRecoveryProcedure,
+		svc.CompleteDeviceRecovery,
+		connect.WithSchema(authServiceMethods.ByName("CompleteDeviceRecovery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceGetPendingRecoveryRequestHandler := connect.NewUnaryHandler(
+		AuthServiceGetPendingRecoveryRequestProcedure,
+		svc.GetPendingRecoveryRequest,
+		connect.WithSchema(authServiceMethods.ByName("GetPendingRecoveryRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceRegisterProcedure:
@@ -392,6 +532,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceGetRecoveryBundleHandler.ServeHTTP(w, r)
 		case AuthServiceRecoverAccountProcedure:
 			authServiceRecoverAccountHandler.ServeHTTP(w, r)
+		case AuthServiceVerifyRecoveryEmailProcedure:
+			authServiceVerifyRecoveryEmailHandler.ServeHTTP(w, r)
+		case AuthServiceInitiateDeviceRecoveryProcedure:
+			authServiceInitiateDeviceRecoveryHandler.ServeHTTP(w, r)
+		case AuthServicePollDeviceRecoveryProcedure:
+			authServicePollDeviceRecoveryHandler.ServeHTTP(w, r)
+		case AuthServiceApproveDeviceRecoveryProcedure:
+			authServiceApproveDeviceRecoveryHandler.ServeHTTP(w, r)
+		case AuthServiceCompleteDeviceRecoveryProcedure:
+			authServiceCompleteDeviceRecoveryHandler.ServeHTTP(w, r)
+		case AuthServiceGetPendingRecoveryRequestProcedure:
+			authServiceGetPendingRecoveryRequestHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -451,4 +603,28 @@ func (UnimplementedAuthServiceHandler) GetRecoveryBundle(context.Context, *conne
 
 func (UnimplementedAuthServiceHandler) RecoverAccount(context.Context, *connect.Request[v1.RecoverAccountRequest]) (*connect.Response[v1.RecoverAccountResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.RecoverAccount is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) VerifyRecoveryEmail(context.Context, *connect.Request[v1.VerifyRecoveryEmailRequest]) (*connect.Response[v1.VerifyRecoveryEmailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.VerifyRecoveryEmail is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) InitiateDeviceRecovery(context.Context, *connect.Request[v1.InitiateDeviceRecoveryRequest]) (*connect.Response[v1.InitiateDeviceRecoveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.InitiateDeviceRecovery is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) PollDeviceRecovery(context.Context, *connect.Request[v1.PollDeviceRecoveryRequest]) (*connect.Response[v1.PollDeviceRecoveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.PollDeviceRecovery is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ApproveDeviceRecovery(context.Context, *connect.Request[v1.ApproveDeviceRecoveryRequest]) (*connect.Response[v1.ApproveDeviceRecoveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.ApproveDeviceRecovery is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) CompleteDeviceRecovery(context.Context, *connect.Request[v1.CompleteDeviceRecoveryRequest]) (*connect.Response[v1.CompleteDeviceRecoveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.CompleteDeviceRecovery is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetPendingRecoveryRequest(context.Context, *connect.Request[v1.GetPendingRecoveryRequestRequest]) (*connect.Response[v1.GetPendingRecoveryRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.GetPendingRecoveryRequest is not implemented"))
 }

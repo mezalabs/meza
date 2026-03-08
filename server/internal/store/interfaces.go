@@ -35,7 +35,7 @@ type AuthStorer interface {
 	// RecoverAccount atomically verifies the recovery verifier and resets credentials.
 	// verifyVerifier is called with the stored hash inside the transaction; if it returns
 	// false, the transaction is rolled back and ErrInvalidRecoveryProof is returned.
-	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool) (userID string, err error)
+	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (userID string, err error)
 }
 
 // ChatStorer provides access to server/channel/member data in Postgres.

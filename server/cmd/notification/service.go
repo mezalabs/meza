@@ -196,6 +196,13 @@ func (s *notificationService) StartConsumers(ctx context.Context) error {
 		return fmt.Errorf("subscribe channel delivery: %w", err)
 	}
 
+	// Listen for device recovery events to push-notify offline devices.
+	if _, err := s.nc.QueueSubscribe(subjects.UserRecoveryWildcard(), "notification-workers", func(msg *nats.Msg) {
+		s.handleRecoveryEvent(ctx, msg)
+	}); err != nil {
+		return fmt.Errorf("subscribe user recovery: %w", err)
+	}
+
 	slog.Info("notification consumers started")
 	return nil
 }
@@ -528,11 +535,12 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, 
 // pushPayload is the JSON sent inside the push notification.
 // The service worker on the client reads this to display the notification.
 type pushPayload struct {
-	Type      string `json:"type"`       // "message", "mention", "dm", etc.
-	ChannelID string `json:"channel_id"` // For navigation on click.
+	Type      string `json:"type"`                 // "message", "mention", "dm", "device_recovery", etc.
+	ChannelID string `json:"channel_id"`           // For navigation on click.
 	Title     string `json:"title"`
 	Body      string `json:"body"`
-	Tag       string `json:"tag"` // Collapse key — same tag replaces previous notification.
+	Tag       string `json:"tag"`                  // Collapse key — same tag replaces previous notification.
+	SessionID string `json:"session_id,omitempty"` // Recovery session identifier.
 }
 
 // sendPush dispatches a push notification to a single device.
@@ -655,6 +663,149 @@ func (s *notificationService) sendFCMPush(ctx context.Context, device *models.De
 	}
 
 	slog.Debug("FCM push sent", "user", device.UserID, "device", device.ID, "platform", device.Platform)
+	return nil
+}
+
+// handleRecoveryEvent processes device recovery request events and sends
+// push notifications to the user's offline devices.
+func (s *notificationService) handleRecoveryEvent(ctx context.Context, msg *nats.Msg) {
+	// Extract userID from subject: meza.user.recovery.<userID>
+	parts := strings.Split(msg.Subject, ".")
+	if len(parts) < 4 {
+		return
+	}
+	userID := parts[3]
+
+	// Parse the event to get session_id for the push payload.
+	var event v1.Event
+	if err := proto.Unmarshal(msg.Data, &event); err != nil {
+		slog.Error("unmarshal recovery event", "err", err)
+		return
+	}
+	recoveryEvent := event.GetDeviceRecoveryRequest()
+	if recoveryEvent == nil {
+		return
+	}
+
+	// Get all push-enabled devices for this user.
+	devices, err := s.deviceStore.GetPushEnabledDevices(ctx, userID)
+	if err != nil {
+		slog.Error("get push devices for recovery", "err", err, "user", userID)
+		return
+	}
+	if len(devices) == 0 {
+		return
+	}
+
+	// Get connected device IDs from Redis.
+	connectedIDs, err := s.rdb.SMembers(ctx, connectedDevicesPrefix+userID).Result()
+	if err != nil && err != redis.Nil {
+		slog.Error("redis smembers for recovery", "err", err, "user", userID)
+		return
+	}
+	connectedSet := make(map[string]bool, len(connectedIDs))
+	for _, id := range connectedIDs {
+		connectedSet[id] = true
+	}
+
+	for _, device := range devices {
+		if connectedSet[device.ID] {
+			continue // Device is online via WebSocket, skip push.
+		}
+
+		// Throttle: 1 push per recovery session per user.
+		throttleKey := fmt.Sprintf("push_throttle:device_recovery:%s:%s", userID, recoveryEvent.SessionId)
+		set, err := s.rdb.SetNX(ctx, throttleKey, "1", 5*time.Minute).Result()
+		if err != nil {
+			slog.Error("redis setnx recovery throttle", "err", err, "user", userID)
+			continue
+		}
+		if !set {
+			break // Already sent for this recovery session.
+		}
+
+		// Send recovery-specific push notification.
+		if err := s.sendRecoveryPush(ctx, device, recoveryEvent.SessionId); err != nil {
+			slog.Error("send recovery push", "err", err, "user", userID, "device", device.ID)
+		}
+	}
+}
+
+// sendRecoveryPush sends a push notification for a device recovery request.
+func (s *notificationService) sendRecoveryPush(ctx context.Context, device *models.Device, sessionID string) error {
+	payload := pushPayload{
+		Type:      "device_recovery",
+		Title:     "Account Recovery Request",
+		Body:      "Another device is requesting access to your account",
+		SessionID: sessionID,
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal recovery push payload: %w", err)
+	}
+
+	switch device.Platform {
+	case "web":
+		return s.sendWebPush(ctx, device, payloadBytes)
+	case "android", "ios":
+		return s.sendFCMRecoveryPush(ctx, device, sessionID)
+	default:
+		return nil
+	}
+}
+
+// sendFCMRecoveryPush sends a recovery push notification via Firebase Cloud Messaging.
+func (s *notificationService) sendFCMRecoveryPush(ctx context.Context, device *models.Device, sessionID string) error {
+	if s.fcmClient == nil {
+		slog.Debug("fcm recovery push skipped (not configured)", "user", device.UserID, "device", device.ID)
+		return nil
+	}
+
+	msg := &messaging.Message{
+		Token: device.PushToken,
+		Data: map[string]string{
+			"type":       "device_recovery",
+			"session_id": sessionID,
+		},
+		Android: &messaging.AndroidConfig{
+			Priority: "high",
+			Notification: &messaging.AndroidNotification{
+				Title: "Account Recovery Request",
+				Body:  "Another device is requesting access to your account",
+				Tag:   "device_recovery:" + sessionID,
+			},
+		},
+		APNS: &messaging.APNSConfig{
+			Headers: map[string]string{
+				"apns-priority":    "10",
+				"apns-collapse-id": "device_recovery:" + sessionID,
+			},
+			Payload: &messaging.APNSPayload{
+				Aps: &messaging.Aps{
+					Alert: &messaging.ApsAlert{
+						Title: "Account Recovery Request",
+						Body:  "Another device is requesting access to your account",
+					},
+					Sound: "default",
+				},
+			},
+		},
+	}
+
+	_, err := s.fcmClient.Send(ctx, msg)
+	if err != nil {
+		if messaging.IsUnregistered(err) {
+			slog.Info("FCM token unregistered, disabling push", "user", device.UserID, "device", device.ID)
+			device.PushEnabled = false
+			if dbErr := s.deviceStore.UpsertDevice(ctx, device); dbErr != nil {
+				slog.Error("disable unregistered FCM device", "err", dbErr)
+			}
+			return nil
+		}
+		return fmt.Errorf("fcm send recovery: %w", err)
+	}
+
+	slog.Debug("FCM recovery push sent", "user", device.UserID, "device", device.ID, "platform", device.Platform)
 	return nil
 }
 

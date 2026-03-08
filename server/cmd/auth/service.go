@@ -12,10 +12,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
 	v1 "github.com/meza-chat/meza/gen/meza/v1"
 	"github.com/meza-chat/meza/internal/auth"
+	"github.com/meza-chat/meza/internal/email"
 	"github.com/meza-chat/meza/internal/models"
 	"github.com/meza-chat/meza/internal/store"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -30,6 +32,8 @@ type authService struct {
 	instanceURL    string              // This instance's public URL
 	redisClient    *redis.Client       // Optional Redis client for rate limiting
 	tokenBlocklist *auth.TokenBlocklist // Optional blocklist for revoked devices
+	nc             *nats.Conn          // NATS connection for publishing recovery events
+	emailSender    email.Sender        // Email sender for OTP
 }
 
 func newAuthService(s store.AuthStorer, ds store.DeviceStorer, hmacSecret string, ed25519Keys *auth.Ed25519Keys) *authService {
