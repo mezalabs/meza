@@ -272,7 +272,7 @@ func (m *mockAuthStore) GetRecoveryBundle(_ context.Context, email string) ([]by
 	return nil, nil, nil, fmt.Errorf("user not found")
 }
 
-func (m *mockAuthStore) RecoverAccount(_ context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool) (string, error) {
+func (m *mockAuthStore) RecoverAccount(_ context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

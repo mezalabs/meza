@@ -380,7 +380,7 @@ func (s *AuthStore) GetRecoveryBundle(ctx context.Context, email string) ([]byte
 // ErrInvalidRecoveryProof is returned when the recovery verifier does not match.
 var ErrInvalidRecoveryProof = errors.New("invalid recovery proof")
 
-func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool) (string, error) {
+func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -432,8 +432,12 @@ func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash st
 		return "", fmt.Errorf("recover account: %w", err)
 	}
 
-	// Invalidate all existing sessions by deleting refresh tokens.
-	_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
+	// Invalidate existing sessions by deleting refresh tokens (optionally excluding specific devices).
+	if len(excludeDeviceIDs) > 0 {
+		_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1 AND device_id != ALL($2)`, userID, excludeDeviceIDs)
+	} else {
+		_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
+	}
 	if err != nil {
 		return "", fmt.Errorf("delete refresh tokens during recovery: %w", err)
 	}

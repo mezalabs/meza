@@ -15,8 +15,10 @@ import (
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/config"
 	"github.com/meza-chat/meza/internal/database"
+	"github.com/meza-chat/meza/internal/email"
 	"github.com/meza-chat/meza/internal/federation"
 	"github.com/meza-chat/meza/internal/middleware"
+	bfnats "github.com/meza-chat/meza/internal/nats"
 	"github.com/meza-chat/meza/internal/observability"
 	"github.com/meza-chat/meza/internal/ratelimit"
 	mezaRedis "github.com/meza-chat/meza/internal/redis"
@@ -65,6 +67,23 @@ func main() {
 		defer rdb.Close()
 		svc.redisClient = rdb
 		svc.tokenBlocklist = auth.NewTokenBlocklist(rdb)
+	}
+
+	// Connect NATS for publishing device recovery events.
+	nc, err := bfnats.NewClient(cfg.NatsURL)
+	if err != nil {
+		slog.Error("connect nats", "err", err)
+		os.Exit(1)
+	}
+	defer nc.Drain()
+	svc.nc = nc
+
+	// Email sender for OTP verification.
+	if cfg.SMTPHost != "" {
+		svc.emailSender = email.NewSMTPSender(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPFrom, cfg.SMTPUsername, cfg.SMTPPassword)
+	} else {
+		svc.emailSender = email.NewNoopSender()
+		slog.Warn("SMTP not configured, using noop email sender")
 	}
 
 	// Build interceptor options: verification cache + optional token blocklist
