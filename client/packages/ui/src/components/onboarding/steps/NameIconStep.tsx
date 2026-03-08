@@ -1,12 +1,7 @@
-import { UploadPurpose, uploadFile } from '@meza/core';
-import { useCallback, useEffect, useRef, useState } from 'react';
-
-const ACCEPTED_IMAGE_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-]);
+import { UploadPurpose, getMediaURL } from '@meza/core';
+import { useEffect, useState } from 'react';
+import { ImageCropper } from '../../shared/ImageCropper.tsx';
+import { useImageCropUpload } from '../../../hooks/useImageCropUpload.ts';
 
 interface NameIconStepProps {
   name: string;
@@ -19,10 +14,19 @@ export function NameIconStep({
   onNameChange,
   onIconUrlChange,
 }: NameIconStepProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const iconUpload = useImageCropUpload({
+    purpose: UploadPurpose.SERVER_ICON,
+    aspectRatio: 1,
+    cropShape: 'rect',
+    onUploadComplete: (url) => {
+      onIconUrlChange(url);
+      const attachmentId = url.replace('/media/', '');
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(getMediaURL(attachmentId, true));
+    },
+  });
 
   // Revoke blob URL on unmount or when replaced
   useEffect(() => {
@@ -30,39 +34,6 @@ export function NameIconStep({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setError(null);
-
-      if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-        setError('Unsupported format. Use JPEG, PNG, GIF, or WebP.');
-        return;
-      }
-
-      // Show local preview immediately
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(file));
-
-      setUploadProgress(0);
-      try {
-        const result = await uploadFile(
-          file,
-          UploadPurpose.SERVER_ICON,
-          setUploadProgress,
-        );
-        onIconUrlChange(`/media/${result.attachmentId}`);
-      } catch (err) {
-        setError('Failed to upload icon');
-        setPreviewUrl(null);
-      } finally {
-        setUploadProgress(null);
-      }
-    },
-    [onIconUrlChange, previewUrl],
-  );
 
   return (
     <div className="space-y-6">
@@ -77,8 +48,8 @@ export function NameIconStep({
       <div className="flex flex-col items-center gap-3">
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadProgress !== null}
+          onClick={() => iconUpload.openFileDialog()}
+          disabled={iconUpload.state !== 'idle'}
           className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-bg-surface transition-colors hover:border-accent"
         >
           {previewUrl ? (
@@ -92,19 +63,19 @@ export function NameIconStep({
               +
             </span>
           )}
-          {uploadProgress !== null && (
+          {iconUpload.uploadProgress !== null && (
             <div className="absolute inset-0 flex items-center justify-center bg-bg-base/80">
               <span className="text-xs text-text-muted">
-                {Math.round(uploadProgress * 100)}%
+                {iconUpload.uploadProgress}%
               </span>
             </div>
           )}
         </button>
         <input
-          ref={fileInputRef}
+          ref={iconUpload.fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          onChange={handleFileSelect}
+          onChange={iconUpload.onFileChange}
           className="hidden"
         />
         {previewUrl && (
@@ -120,8 +91,19 @@ export function NameIconStep({
             Remove icon
           </button>
         )}
-        {error && <p className="text-xs text-error">{error}</p>}
+        {iconUpload.error && (
+          <p className="text-xs text-error">{iconUpload.error}</p>
+        )}
       </div>
+
+      {iconUpload.cropperProps && (
+        <ImageCropper
+          {...iconUpload.cropperProps}
+          onOpenChange={(open) => {
+            if (!open) iconUpload.cropperProps?.onCancel();
+          }}
+        />
+      )}
 
       {/* Server name */}
       <div>

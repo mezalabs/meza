@@ -1991,6 +1991,25 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
+	// Validate icon URL – must be a /media/ path (same check the auth service does for avatars/banners).
+	if req.Msg.IconUrl != nil {
+		v := *req.Msg.IconUrl
+		if v != "" && !strings.HasPrefix(v, "/media/") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("icon_url must start with /media/"))
+		}
+	}
+
+	// Validate server name.
+	if req.Msg.Name != nil {
+		trimmed := strings.TrimSpace(*req.Msg.Name)
+		if trimmed == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot be empty"))
+		}
+		if len(trimmed) > 100 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot exceed 100 characters"))
+		}
+	}
+
 	updated, err := s.chatStore.UpdateServer(ctx, req.Msg.ServerId,
 		req.Msg.Name, req.Msg.IconUrl,
 		req.Msg.WelcomeMessage, req.Msg.Rules,
