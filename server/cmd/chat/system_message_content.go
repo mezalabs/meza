@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
 // MemberEventContent is used for MESSAGE_TYPE_MEMBER_JOIN and MESSAGE_TYPE_MEMBER_LEAVE.
 type MemberEventContent struct {
 	UserID  string `json:"user_id"`
@@ -35,4 +41,45 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+// Template variable validation and rendering for configurable system messages.
+
+// validTemplateVars maps event action keys to their allowed template variables.
+var validTemplateVars = map[string][]string{
+	"join":    {"user"},
+	"leave":   {"user"},
+	"kick":    {"user", "actor", "reason"},
+	"ban":     {"user", "actor", "reason"},
+	"timeout": {"user", "actor", "reason", "duration"},
+}
+
+var templateVarPattern = regexp.MustCompile(`\{(\w+)\}`)
+
+// validateTemplate checks that a template only uses valid variables for the given event type.
+func validateTemplate(template, eventType string) error {
+	allowed, ok := validTemplateVars[eventType]
+	if !ok {
+		return fmt.Errorf("unknown event type: %s", eventType)
+	}
+	allowedSet := make(map[string]bool, len(allowed))
+	for _, v := range allowed {
+		allowedSet[v] = true
+	}
+	matches := templateVarPattern.FindAllStringSubmatch(template, -1)
+	for _, m := range matches {
+		if !allowedSet[m[1]] {
+			return fmt.Errorf("invalid variable {%s} for %s events (allowed: %s)", m[1], eventType, strings.Join(allowed, ", "))
+		}
+	}
+	return nil
+}
+
+// renderTemplate substitutes {variable} placeholders with values from the vars map.
+func renderTemplate(template string, vars map[string]string) string {
+	result := template
+	for k, v := range vars {
+		result = strings.ReplaceAll(result, "{"+k+"}", v)
+	}
+	return result
 }

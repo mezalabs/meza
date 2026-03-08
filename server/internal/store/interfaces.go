@@ -100,6 +100,25 @@ type ChatStorer interface {
 	GetDefaultChannels(ctx context.Context, serverID string) ([]*models.Channel, error)
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
 	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
+	// System message configuration.
+	GetSystemMessageConfig(ctx context.Context, serverID string) (*models.ServerSystemMessageConfig, error)
+	UpsertSystemMessageConfig(ctx context.Context, serverID string, opts UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error)
+}
+
+// UpsertSystemMessageConfigOpts holds optional fields for upserting system message config.
+type UpsertSystemMessageConfigOpts struct {
+	WelcomeChannelID *string
+	ModLogChannelID  *string
+	JoinEnabled      *bool
+	JoinTemplate     *string
+	LeaveEnabled     *bool
+	LeaveTemplate    *string
+	KickEnabled      *bool
+	KickTemplate     *string
+	BanEnabled       *bool
+	BanTemplate      *string
+	TimeoutEnabled   *bool
+	TimeoutTemplate  *string
 }
 
 // InviteStorer provides access to invite data in Postgres.
