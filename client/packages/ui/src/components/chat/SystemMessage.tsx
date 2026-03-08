@@ -35,6 +35,23 @@ interface KeyRotationContent {
   new_key_version: number;
 }
 
+function iconForType(type: number): string {
+  switch (type) {
+    case MessageType.MEMBER_JOIN:
+      return '\u2192';
+    case MessageType.MEMBER_LEAVE:
+      return '\u2190';
+    case MessageType.MEMBER_KICK:
+      return '\u26D4';
+    case MessageType.CHANNEL_UPDATE:
+      return '\u270E';
+    case MessageType.KEY_ROTATION:
+      return '\uD83D\uDD11';
+    default:
+      return '\u2139';
+  }
+}
+
 function parseContent(raw: Uint8Array): unknown {
   try {
     return JSON.parse(new TextDecoder().decode(raw));
@@ -64,6 +81,12 @@ function useSystemMessageText(
     () => parseContent(encryptedContent),
     [encryptedContent],
   );
+
+  // If server rendered a custom template, use it directly.
+  const rendered = (content as Record<string, unknown> | null)?.rendered;
+  if (typeof rendered === 'string') {
+    return { icon: iconForType(type), node: <span>{rendered}</span> };
+  }
 
   switch (type) {
     case MessageType.MEMBER_JOIN: {
