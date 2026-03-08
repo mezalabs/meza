@@ -17,6 +17,7 @@ export type {
   PermissionOverride,
   Role,
   Server,
+  ServerSystemMessageConfig,
   User,
 } from '@meza/gen/meza/v1/models_pb.ts';
 // Re-export protobuf enums used by UI
@@ -123,8 +124,10 @@ export {
   updateEmoji,
   updateMember,
   updateRole,
+  getSystemMessageConfig,
   updateServer,
   updateSound,
+  updateSystemMessageConfig,
 } from './api/chat.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';

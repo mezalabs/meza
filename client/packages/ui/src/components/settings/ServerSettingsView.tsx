@@ -8,6 +8,7 @@ import { OnboardingSection } from './OnboardingSection.tsx';
 import { OverviewSection } from './OverviewSection.tsx';
 import { RolesSection } from './RolesSection.tsx';
 import { SoundsSection } from './SoundsSection.tsx';
+import { SystemMessagesSection } from './SystemMessagesSection.tsx';
 
 const SERVER_SETTINGS_SECTIONS = [
   { id: 'overview', label: 'Overview' },
@@ -17,6 +18,7 @@ const SERVER_SETTINGS_SECTIONS = [
   { id: 'soundboard', label: 'Soundboard' },
   { id: 'bans', label: 'Bans' },
   { id: 'onboarding', label: 'Onboarding' },
+  { id: 'system-messages', label: 'System Messages' },
 ] as const;
 
 type SectionId = (typeof SERVER_SETTINGS_SECTIONS)[number]['id'];
@@ -136,6 +138,8 @@ function renderServerSettingsContent(
       return <BansSection serverId={serverId} />;
     case 'onboarding':
       return <OnboardingSection serverId={serverId} />;
+    case 'system-messages':
+      return <SystemMessagesSection serverId={serverId} />;
     default:
       return null;
   }
