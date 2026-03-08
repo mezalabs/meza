@@ -59,6 +59,66 @@ import { useTypingStore } from '../store/typing.ts';
 import { useVoiceStore } from '../store/voice.ts';
 import { getBaseUrl } from '../utils/platform.ts';
 import { retryWithBackoff } from '../utils/retry.ts';
+import type {
+  Connection,
+  ConnectionCallbacks,
+  ConnectionStatus,
+} from './connection.ts';
+import {
+  ackHeartbeat,
+  cancelReconnectTimer,
+  closeConnection,
+  forceClose,
+  isHeartbeatStale,
+  makeConnection,
+  openConnection,
+  resetReconnectDelay,
+  scheduleReconnectTimer,
+  sendOnConnection,
+} from './connection.ts';
+
+// ---------------------------------------------------------------------------
+// Multi-instance connection infrastructure (federation satellites)
+// ---------------------------------------------------------------------------
+
+/** Sentinel key used for the home-server connection in the connections map. */
+export const HOME_INSTANCE = '__home__' as const;
+
+/** All active connections keyed by instance URL (or HOME_INSTANCE). */
+const connections = new Map<string, Connection>();
+
+/**
+ * When true, no new connections will be opened. Set by disconnectAll() and
+ * cleared on the next connect() call.
+ */
+let isShuttingDown = false;
+
+/**
+ * Global generation counter. Incremented by disconnectAll() so that callbacks
+ * created before the shutdown can detect they are stale and bail out.
+ */
+let globalGeneration = 0;
+
+/**
+ * Normalize a federation instance URL for use as a map key.
+ * - Lowercases the hostname
+ * - Strips trailing slashes
+ * - Enforces HTTPS
+ */
+export function normalizeInstanceUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.protocol = 'https:';
+    // URL constructor lowercases hostname automatically
+    let normalized = parsed.toString();
+    // Strip trailing slash(es)
+    normalized = normalized.replace(/\/+$/, '');
+    return normalized;
+  } catch {
+    // If the URL is unparseable, lowercase and strip slashes as best-effort
+    return url.toLowerCase().replace(/\/+$/, '');
+  }
+}
 
 /**
  * Validate the shape of the READY payload to prevent corrupted state.
@@ -100,13 +160,8 @@ function validateReadyPayload(data: unknown): data is {
   return true;
 }
 
-let ws: WebSocket | null = null;
-let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let reconnectDelay = 1000;
-let reconnectAttempts = 0;
-let generation = 0;
-let lastHeartbeatAck = 0;
+// The home connection (single instance, will become one of N for federation)
+let homeConn: Connection = makeConnection('', '', '');
 let hasConnectedBefore = false;
 let lastRedistributeTime = 0;
 const REDISTRIBUTE_COOLDOWN_MS = 60_000; // 1 minute between reconnect redistributions
@@ -337,18 +392,70 @@ function scheduleOverrideExpiry() {
   }, remaining);
 }
 
+// ---------------------------------------------------------------------------
+// Envelope helpers (protobuf wire format, delegates to connection module)
+// ---------------------------------------------------------------------------
+
 function sendEnvelope(
   op: GatewayOpCode,
   payload: Uint8Array = new Uint8Array(),
 ) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return;
   const env = create(GatewayEnvelopeSchema, { op, payload, sequence: 0n });
-  ws.send(toBinary(GatewayEnvelopeSchema, env));
+  sendOnConnection(homeConn, toBinary(GatewayEnvelopeSchema, env));
 }
+
+// ---------------------------------------------------------------------------
+// Connection callbacks — bridge between connection module and gateway logic
+// ---------------------------------------------------------------------------
+
+const homeCallbacks: ConnectionCallbacks = {
+  onMessage: (_conn, data) => {
+    const env = fromBinary(GatewayEnvelopeSchema, data);
+    dispatch(env.op, env.payload);
+  },
+
+  onOpen: (_conn) => {
+    useGatewayStore.getState().setStatus('connected');
+    useGatewayStore.getState().setReconnectAttempt(0);
+    // Always tell the server we're ONLINE (so it knows we're connected).
+    // The server will apply any active override before broadcasting to others.
+    updatePresence(PresenceStatus.ONLINE);
+    const activeOverride = usePresenceStore.getState().myOverride;
+    if (activeOverride) {
+      // Keep local status reflecting the override
+      usePresenceStore.getState().setMyStatus(activeOverride.status);
+    } else {
+      usePresenceStore.getState().setMyStatus(PresenceStatus.ONLINE);
+    }
+  },
+
+  onClose: (_conn, reason) => {
+    useGatewayStore.getState().setLastError(reason);
+    scheduleReconnect();
+  },
+
+  sendIdentify: (conn) => {
+    // V1 simplification: IDENTIFY uses JSON-in-protobuf instead of a dedicated
+    // proto message type. The outer envelope is protobuf (GatewayEnvelope), but
+    // the auth payload is JSON text encoded as bytes.
+    const identifyJson = JSON.stringify({ token: conn.token });
+    sendEnvelope(
+      GatewayOpCode.GATEWAY_OP_IDENTIFY,
+      new TextEncoder().encode(identifyJson),
+    );
+  },
+
+  onHeartbeatTick: () => {
+    sendEnvelope(GatewayOpCode.GATEWAY_OP_HEARTBEAT);
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Public API (identical to original)
+// ---------------------------------------------------------------------------
 
 export function connect(token: string) {
   disconnect();
-  const gen = ++generation;
 
   const gw = useGatewayStore.getState();
   gw.setStatus('connecting');
@@ -364,60 +471,9 @@ export function connect(token: string) {
     const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     wsUrl = `${wsProto}//${location.host}/ws`;
   }
-  const socket = new WebSocket(wsUrl);
-  socket.binaryType = 'arraybuffer';
-  ws = socket;
 
-  socket.onopen = () => {
-    if (gen !== generation) return;
-    // V1 simplification: IDENTIFY uses JSON-in-protobuf instead of a dedicated
-    // proto message type. The outer envelope is protobuf (GatewayEnvelope), but
-    // the auth payload is JSON text encoded as bytes. The server-side
-    // authenticateFirstMessage() expects this format. This avoids needing
-    // separate IdentifyPayload/ReadyPayload proto messages for the handshake
-    // during early development.
-    const identifyJson = JSON.stringify({ token });
-    sendEnvelope(
-      GatewayOpCode.GATEWAY_OP_IDENTIFY,
-      new TextEncoder().encode(identifyJson),
-    );
-    lastHeartbeatAck = Date.now();
-    startHeartbeat();
-    reconnectDelay = 1000;
-    reconnectAttempts = 0;
-    useGatewayStore.getState().setStatus('connected');
-    useGatewayStore.getState().setReconnectAttempt(0);
-    // Always tell the server we're ONLINE (so it knows we're connected).
-    // The server will apply any active override before broadcasting to others.
-    updatePresence(PresenceStatus.ONLINE);
-    const activeOverride = usePresenceStore.getState().myOverride;
-    if (activeOverride) {
-      // Keep local status reflecting the override
-      usePresenceStore.getState().setMyStatus(activeOverride.status);
-    } else {
-      usePresenceStore.getState().setMyStatus(PresenceStatus.ONLINE);
-    }
-  };
-
-  socket.onmessage = (e: MessageEvent) => {
-    if (gen !== generation) return;
-    const data = new Uint8Array(e.data as ArrayBuffer);
-    const env = fromBinary(GatewayEnvelopeSchema, data);
-    dispatch(env.op, env.payload);
-  };
-
-  socket.onclose = (e?: CloseEvent) => {
-    if (gen !== generation) return;
-    stopHeartbeat();
-    useGatewayStore
-      .getState()
-      .setLastError(e?.reason || `WebSocket closed (code ${e?.code ?? 1006})`);
-    scheduleReconnect();
-  };
-
-  socket.onerror = () => {
-    // onclose fires after onerror — reconnect handled there
-  };
+  homeConn = makeConnection(wsUrl, token, '');
+  openConnection(homeConn, homeCallbacks);
 }
 
 function dispatch(op: GatewayOpCode, payload: Uint8Array) {
@@ -503,7 +559,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       break;
     }
     case GatewayOpCode.GATEWAY_OP_HEARTBEAT_ACK:
-      lastHeartbeatAck = Date.now();
+      ackHeartbeat(homeConn);
       break;
     case GatewayOpCode.GATEWAY_OP_EVENT: {
       const event = fromBinary(EventSchema, payload);
@@ -1006,68 +1062,32 @@ export function sendTyping(channelId: string) {
   sendEnvelope(GatewayOpCode.GATEWAY_OP_TYPING_START, payload);
 }
 
-function startHeartbeat() {
-  stopHeartbeat();
-  heartbeatTimer = setInterval(() => {
-    // If no ACK received for 1.5 heartbeat cycles, force reconnect
-    if (lastHeartbeatAck > 0 && Date.now() - lastHeartbeatAck > 45_000) {
-      console.warn('[Gateway] Heartbeat ACK timeout, forcing reconnect');
-      if (ws) {
-        ws.close();
-      }
-      return;
-    }
-    sendEnvelope(GatewayOpCode.GATEWAY_OP_HEARTBEAT);
-  }, 30_000);
-}
-
-function stopHeartbeat() {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = null;
-  }
-}
-
 function scheduleReconnect() {
   // Skip reconnect attempts when offline — the 'online' listener will trigger reconnect
   if (!isOnline) {
     useGatewayStore.getState().setStatus('reconnecting');
     return;
   }
-  if (reconnectAttempts >= 10) return;
-  reconnectAttempts++;
-  const gw = useGatewayStore.getState();
-  gw.setStatus('reconnecting');
-  gw.setReconnectAttempt(reconnectAttempts);
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(() => {
+  scheduleReconnectTimer(homeConn, () => {
     const freshToken = useAuthStore.getState().accessToken;
     if (freshToken) connect(freshToken);
-  }, reconnectDelay);
-  reconnectDelay = Math.min(reconnectDelay * 2, 30_000);
+  });
+  const gw = useGatewayStore.getState();
+  gw.setStatus('reconnecting');
+  gw.setReconnectAttempt(homeConn.reconnectAttempt);
 }
 
 export function disconnect() {
   updatePresence(PresenceStatus.OFFLINE);
   usePresenceStore.getState().setMyStatus(PresenceStatus.OFFLINE);
-  generation++;
-  stopHeartbeat();
+  closeConnection(homeConn);
   if (overrideExpiryTimer) {
     clearTimeout(overrideExpiryTimer);
     overrideExpiryTimer = null;
   }
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
   typingThrottles.clear();
   keyRetryInFlight.clear();
   signingKeyCache.clear();
-  lastHeartbeatAck = 0;
   hasConnectedBefore = false;
   useGatewayStore.getState().setStatus('disconnected');
 }
@@ -1079,8 +1099,8 @@ if (typeof window !== 'undefined') {
     const { status } = useGatewayStore.getState();
     if (status === 'reconnecting') {
       // Network returned — reset backoff and attempt immediately
-      reconnectDelay = 1000;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      resetReconnectDelay(homeConn);
+      cancelReconnectTimer(homeConn);
       const freshToken = useAuthStore.getState().accessToken;
       if (freshToken) connect(freshToken);
     }
@@ -1089,10 +1109,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => {
     isOnline = false;
     // Pause scheduled reconnect attempts
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
+    cancelReconnectTimer(homeConn);
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -1100,17 +1117,17 @@ if (typeof window !== 'undefined') {
     const { status } = useGatewayStore.getState();
     if (status === 'reconnecting') {
       // Tab became visible while reconnecting — reset backoff for fast retry
-      reconnectDelay = 1000;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      resetReconnectDelay(homeConn);
+      cancelReconnectTimer(homeConn);
       const freshToken = useAuthStore.getState().accessToken;
       if (freshToken) connect(freshToken);
-    } else if (status === 'connected' && ws) {
+    } else if (status === 'connected' && homeConn.ws) {
       // If connected but heartbeat ACK is stale, force reconnect
-      if (lastHeartbeatAck > 0 && Date.now() - lastHeartbeatAck > 45_000) {
+      if (isHeartbeatStale(homeConn)) {
         console.warn(
           '[Gateway] Stale heartbeat ACK on visibility change, forcing reconnect',
         );
-        ws.close();
+        forceClose(homeConn);
       }
     }
   });
