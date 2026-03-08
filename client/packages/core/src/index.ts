@@ -356,6 +356,13 @@ export { useServerStore } from './store/servers.ts';
 export type { SoundActions, SoundState } from './store/sounds.ts';
 export { useSoundStore } from './store/sounds.ts';
 export type {
+  Toast,
+  ToastActions,
+  ToastState,
+  ToastVariant,
+} from './store/toasts.ts';
+export { useToastStore } from './store/toasts.ts';
+export type {
   ContentHint,
   ScreenSharePresetKey,
   StreamSettingsActions,
