@@ -373,6 +373,19 @@ func (m *mockDeviceStore) DeleteDevice(_ context.Context, userID, deviceID strin
 	return nil
 }
 
+func (m *mockDeviceStore) DeleteAllOtherDevices(_ context.Context, userID, currentDeviceID string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var deleted []string
+	for id, d := range m.devices {
+		if d.UserID == userID && id != currentDeviceID {
+			deleted = append(deleted, id)
+			delete(m.devices, id)
+		}
+	}
+	return deleted, nil
+}
+
 func (m *mockDeviceStore) TouchLastSeen(_ context.Context, _, _ string) error { return nil }
 
 func (m *mockDeviceStore) PruneStaleDevices(_ context.Context, _ time.Duration) (int64, error) {
