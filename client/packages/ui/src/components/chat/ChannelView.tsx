@@ -77,6 +77,7 @@ import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
+import { SystemMessage } from './SystemMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
 type Message = MessageState['byChannel'][string][number];
@@ -1361,6 +1362,18 @@ const MessageItem = memo(function MessageItem({
       {/* end avatar + content row */}
     </div>
   );
+
+  // System messages get a distinct centered layout — no avatar, actions, or reactions.
+  if (msg.type > 0) {
+    return (
+      <SystemMessage
+        type={msg.type}
+        encryptedContent={msg.encryptedContent}
+        createdAt={msg.createdAt}
+        serverId={serverId}
+      />
+    );
+  }
 
   return (
     <>
