@@ -9,6 +9,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 	"time"
 
 	"connectrpc.com/connect"
@@ -1988,6 +1989,25 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 			if !srv.OnboardingEnabled {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("rules_required requires onboarding_enabled"))
 			}
+		}
+	}
+
+	// Validate icon URL – must be a /media/ path (same check the auth service does for avatars/banners).
+	if req.Msg.IconUrl != nil {
+		v := *req.Msg.IconUrl
+		if v != "" && !strings.HasPrefix(v, "/media/") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("icon_url must start with /media/"))
+		}
+	}
+
+	// Validate server name.
+	if req.Msg.Name != nil {
+		trimmed := strings.TrimSpace(*req.Msg.Name)
+		if trimmed == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot be empty"))
+		}
+		if utf8.RuneCountInString(trimmed) > 100 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot exceed 100 characters"))
 		}
 	}
 

@@ -20,7 +20,6 @@ import {
   type User,
   unblockUser,
   updateProfile,
-  uploadFile,
   useAuthStore,
   useBlockStore,
   useFriendStore,
@@ -29,7 +28,9 @@ import {
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Avatar } from '../shared/Avatar.tsx';
+import { ImageCropper } from '../shared/ImageCropper.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
+import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
 interface ProfileViewProps {
@@ -606,10 +607,31 @@ function ProfileEditMode({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarUpload = useImageCropUpload({
+    purpose: UploadPurpose.PROFILE_AVATAR,
+    aspectRatio: 1,
+    cropShape: 'round',
+    onUploadComplete: async (url) => {
+      await updateProfile({ avatarUrl: url });
+      const updated = await getProfile(profile.id);
+      onSave(updated);
+    },
+  });
+
+  const bannerUpload = useImageCropUpload({
+    purpose: UploadPurpose.PROFILE_BANNER,
+    aspectRatio: 16 / 9,
+    cropShape: 'rect',
+    onUploadComplete: async (url) => {
+      await updateProfile({ bannerUrl: url });
+      const updated = await getProfile(profile.id);
+      onSave(updated);
+    },
+  });
+
+  const uploadProgress = avatarUpload.uploadProgress ?? bannerUpload.uploadProgress;
+  const uploadError = avatarUpload.error || bannerUpload.error;
 
   const connectionsChanged =
     JSON.stringify(connections) !== JSON.stringify(profile.connections ?? []);
@@ -621,45 +643,6 @@ function ProfileEditMode({
     themeColorPrimary !== (profile.themeColorPrimary || '') ||
     themeColorSecondary !== (profile.themeColorSecondary || '') ||
     connectionsChanged;
-
-  async function handleAvatarUpload(file: File) {
-    setUploadProgress(0);
-    setError('');
-    try {
-      const result = await uploadFile(
-        file,
-        UploadPurpose.PROFILE_AVATAR,
-        setUploadProgress,
-      );
-      await updateProfile({ avatarUrl: `/media/${result.attachmentId}` });
-      // Refresh profile
-      const updated = await getProfile(profile.id);
-      onSave(updated);
-    } catch {
-      setError('Failed to upload avatar');
-    } finally {
-      setUploadProgress(null);
-    }
-  }
-
-  async function handleBannerUpload(file: File) {
-    setUploadProgress(0);
-    setError('');
-    try {
-      const result = await uploadFile(
-        file,
-        UploadPurpose.PROFILE_BANNER,
-        setUploadProgress,
-      );
-      await updateProfile({ bannerUrl: `/media/${result.attachmentId}` });
-      const updated = await getProfile(profile.id);
-      onSave(updated);
-    } catch {
-      setError('Failed to upload banner');
-    } finally {
-      setUploadProgress(null);
-    }
-  }
 
   async function handleSave() {
     if (saving) return;
@@ -706,7 +689,7 @@ function ProfileEditMode({
         <button
           type="button"
           className="relative h-[120px] w-full overflow-hidden cursor-pointer group"
-          onClick={() => bannerInputRef.current?.click()}
+          onClick={() => bannerUpload.openFileDialog()}
         >
           <ProfileBanner profile={profile} />
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -716,14 +699,11 @@ function ProfileEditMode({
           </div>
         </button>
         <input
-          ref={bannerInputRef}
+          ref={bannerUpload.fileInputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
           className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleBannerUpload(file);
-          }}
+          onChange={bannerUpload.onFileChange}
         />
 
         {/* Avatar (click to upload) */}
@@ -731,7 +711,7 @@ function ProfileEditMode({
           <button
             type="button"
             className="relative inline-block cursor-pointer group"
-            onClick={() => avatarInputRef.current?.click()}
+            onClick={() => avatarUpload.openFileDialog()}
           >
             <Avatar
               avatarUrl={profile.avatarUrl}
@@ -744,16 +724,29 @@ function ProfileEditMode({
             </div>
           </button>
           <input
-            ref={avatarInputRef}
+            ref={avatarUpload.fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/gif,image/webp"
             className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleAvatarUpload(file);
-            }}
+            onChange={avatarUpload.onFileChange}
           />
         </div>
+        {avatarUpload.cropperProps && (
+          <ImageCropper
+            {...avatarUpload.cropperProps}
+            onOpenChange={(open) => {
+              if (!open) avatarUpload.cropperProps?.onCancel();
+            }}
+          />
+        )}
+        {bannerUpload.cropperProps && (
+          <ImageCropper
+            {...bannerUpload.cropperProps}
+            onOpenChange={(open) => {
+              if (!open) bannerUpload.cropperProps?.onCancel();
+            }}
+          />
+        )}
 
         {/* Upload progress */}
         {uploadProgress !== null && (
@@ -941,7 +934,9 @@ function ProfileEditMode({
           </div>
 
           {/* Error */}
-          {error && <p className="text-sm text-error">{error}</p>}
+          {(error || uploadError) && (
+            <p className="text-sm text-error">{error || uploadError}</p>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-3 pb-4">
