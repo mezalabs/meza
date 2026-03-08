@@ -12,7 +12,7 @@ func NewNoopSender() *NoopSender {
 	return &NoopSender{}
 }
 
-func (s *NoopSender) SendOTP(_ context.Context, to string, code string) error {
-	slog.Info("OTP email (noop)", "to", to, "code", code)
+func (s *NoopSender) SendOTP(_ context.Context, to string, _ string) error {
+	slog.Info("OTP email (noop)", "to", to)
 	return nil
 }

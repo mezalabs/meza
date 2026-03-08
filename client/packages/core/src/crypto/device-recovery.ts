@@ -17,6 +17,31 @@ import { deserializeIdentity, serializeIdentity } from './primitives.ts';
 const RECOVERY_WRAP_INFO = new TextEncoder().encode('meza-device-recovery-v1');
 
 /**
+ * Known X25519 low-order points that produce all-zero shared secrets.
+ * Rejecting these prevents a malicious server from substituting a key
+ * that would make the ECIES wrapping trivially decryptable.
+ */
+const X25519_LOW_ORDER_POINTS = new Set([
+  '0000000000000000000000000000000000000000000000000000000000000000',
+  '0100000000000000000000000000000000000000000000000000000000000000',
+  'ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f',
+  'e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800',
+  '5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157',
+]);
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function rejectLowOrderPoint(pub: Uint8Array, label: string): void {
+  if (X25519_LOW_ORDER_POINTS.has(toHex(pub))) {
+    throw new Error(`${label} is a low-order point`);
+  }
+}
+
+/**
  * Generate an ephemeral X25519 keypair for the recovery handshake.
  * The requesting device generates this and sends the public key to the server.
  */
@@ -60,6 +85,8 @@ export async function wrapIdentityForRecovery(
   identity: IdentityKeypair,
   recipientEphemeralPub: Uint8Array,
 ): Promise<Uint8Array> {
+  rejectLowOrderPoint(recipientEphemeralPub, 'recipient ephemeral public key');
+
   const serialized = serializeIdentity(identity);
 
   // Sender's ephemeral X25519 keypair
@@ -131,6 +158,8 @@ export async function unwrapIdentityFromRecovery(
   const senderEphemeralPub = envelope.slice(0, 32);
   const nonce = envelope.slice(32, 44);
   const ciphertext = envelope.slice(44);
+
+  rejectLowOrderPoint(senderEphemeralPub, 'sender ephemeral public key');
 
   // Our ephemeral public key (for HKDF salt)
   const myEphemeralPub = x25519.getPublicKey(ephemeralSecret);
