@@ -9,6 +9,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 	"time"
 
 	"connectrpc.com/connect"
@@ -33,6 +34,35 @@ var validULID = regexp.MustCompile(`^[0-9A-Z]{26}$`)
 // Used as a defense-in-depth measure to reject plaintext messages on encrypted channels.
 type EncryptionChecker interface {
 	HasChannelKeyVersion(ctx context.Context, channelID string) (bool, error)
+}
+
+// validateContentWarning checks that a content warning is within length limits
+// and free of null bytes, HTML tags, and control characters.
+// An empty string is valid (clears the content warning).
+func validateContentWarning(cw string) error {
+	if cw == "" {
+		return nil
+	}
+	if strings.TrimSpace(cw) == "" {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("content warning cannot be whitespace-only"))
+	}
+	if len([]rune(cw)) > 256 {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("content warning exceeds 256 characters"))
+	}
+	if strings.ContainsRune(cw, 0) {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("content warning contains invalid characters"))
+	}
+	if strings.Contains(cw, "<") && strings.Contains(cw, ">") {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("content warning contains invalid characters"))
+	}
+	// Reject bidi override characters that could spoof warning text.
+	for _, r := range cw {
+		if r == '\u202A' || r == '\u202B' || r == '\u202C' || r == '\u202D' || r == '\u202E' ||
+			r == '\u2066' || r == '\u2067' || r == '\u2068' || r == '\u2069' {
+			return connect.NewError(connect.CodeInvalidArgument, errors.New("content warning contains invalid characters"))
+		}
+	}
+	return nil
 }
 
 // validateServerName checks that a server name is non-empty, not whitespace-only,
@@ -1886,6 +1916,7 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 	var slowModeSeconds *int
 	var isDefault *bool
 	var channelGroupID *string
+	var contentWarning *string
 	if req.Msg.Name != nil {
 		name = req.Msg.Name
 	}
@@ -1920,6 +1951,12 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		}
 		channelGroupID = req.Msg.ChannelGroupId
 	}
+	if req.Msg.ContentWarning != nil {
+		if err := validateContentWarning(*req.Msg.ContentWarning); err != nil {
+			return nil, err
+		}
+		contentWarning = req.Msg.ContentWarning
+	}
 	if req.Msg.IsPrivate != nil {
 		isPrivate = req.Msg.IsPrivate
 	}
@@ -1931,9 +1968,9 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 	privacyToggled := isPrivate != nil && *isPrivate != ch.IsPrivate
 	if privacyToggled {
 		everyoneRoleID := ch.ServerID // @everyone role ID = server ID
-		updated, err = s.chatStore.UpdateChannelPrivacy(ctx, req.Msg.ChannelId, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID, ch.IsPrivate, everyoneRoleID, permissions.ViewChannel)
+		updated, err = s.chatStore.UpdateChannelPrivacy(ctx, req.Msg.ChannelId, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID, contentWarning, ch.IsPrivate, everyoneRoleID, permissions.ViewChannel)
 	} else {
-		updated, err = s.chatStore.UpdateChannel(ctx, req.Msg.ChannelId, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID)
+		updated, err = s.chatStore.UpdateChannel(ctx, req.Msg.ChannelId, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID, contentWarning)
 	}
 	if err != nil {
 		slog.Error("updating channel", "err", err, "user", userID, "channel", req.Msg.ChannelId)
@@ -2172,6 +2209,25 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 			if !srv.OnboardingEnabled {
 				return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("rules_required requires onboarding_enabled"))
 			}
+		}
+	}
+
+	// Validate icon URL – must be a /media/ path (same check the auth service does for avatars/banners).
+	if req.Msg.IconUrl != nil {
+		v := *req.Msg.IconUrl
+		if v != "" && !strings.HasPrefix(v, "/media/") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("icon_url must start with /media/"))
+		}
+	}
+
+	// Validate server name.
+	if req.Msg.Name != nil {
+		trimmed := strings.TrimSpace(*req.Msg.Name)
+		if trimmed == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot be empty"))
+		}
+		if utf8.RuneCountInString(trimmed) > 100 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot exceed 100 characters"))
 		}
 	}
 
@@ -2849,6 +2905,9 @@ func channelToProto(c *models.Channel) *v1.Channel {
 	if c.DMInitiatorID != "" {
 		ch.DmInitiatorId = &c.DMInitiatorID
 	}
+	if c.ContentWarning != "" {
+		ch.ContentWarning = &c.ContentWarning
+	}
 	if c.VoiceTextChannelID != "" {
 		ch.VoiceTextChannelId = &c.VoiceTextChannelID
 	}
@@ -2892,6 +2951,7 @@ func attachmentToProto(a *models.Attachment) *v1.Attachment {
 		Height:         int32(a.Height),
 		HasThumbnail:   a.ThumbnailKey != "",
 		MicroThumbnail: microThumb,
+		IsSpoiler:      a.IsSpoiler,
 	}
 }
 

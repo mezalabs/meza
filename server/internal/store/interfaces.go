@@ -48,13 +48,13 @@ type ChatStorer interface {
 	GetChannel(ctx context.Context, channelID string) (*models.Channel, error)
 	GetChannelAndCheckMembership(ctx context.Context, channelID, userID string) (*models.Channel, bool, error)
 	ListChannels(ctx context.Context, serverID, userID string) ([]*models.Channel, error)
-	UpdateChannel(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string) (*models.Channel, error)
+	UpdateChannel(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string) (*models.Channel, error)
 	// UpdateChannelPrivacy atomically updates the channel and manages the
 	// ViewChannel permission override on @everyone. When toggling to private it
 	// upserts a deny override; when toggling to public it removes it. Both
 	// operations run in a single transaction so the channel state and permission
 	// overrides are always consistent.
-	UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string, oldIsPrivate bool, everyoneRoleID string, viewChannelPerm int64) (*models.Channel, error)
+	UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string, oldIsPrivate bool, everyoneRoleID string, viewChannelPerm int64) (*models.Channel, error)
 	DeleteChannel(ctx context.Context, channelID string) error
 	// CreateVoiceChannelWithCompanion atomically creates a voice channel and its companion text channel.
 	CreateVoiceChannelWithCompanion(ctx context.Context, serverID, name string, isPrivate bool, channelGroupID string) (voiceCh *models.Channel, textCh *models.Channel, err error)
@@ -367,7 +367,7 @@ type MediaStorer interface {
 	GetAttachmentsByIDs(ctx context.Context, attachmentIDs []string) (map[string]*models.Attachment, error)
 	CountPendingByUploader(ctx context.Context, uploaderID string) (int, error)
 	TransitionToProcessing(ctx context.Context, id, uploaderID string) (*models.Attachment, error)
-	UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte) error
+	UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte, isSpoiler bool) error
 	DeleteAttachment(ctx context.Context, id string) error
 	FindOrphanedUploads(ctx context.Context, before time.Time, limit int) ([]*models.Attachment, error)
 	ResetAttachmentToPending(ctx context.Context, id string) error

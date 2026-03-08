@@ -433,7 +433,8 @@ type Channel struct {
 	ChannelGroupId     *string                `protobuf:"bytes,11,opt,name=channel_group_id,json=channelGroupId,proto3,oneof" json:"channel_group_id,omitempty"`
 	DmStatus           *string                `protobuf:"bytes,12,opt,name=dm_status,json=dmStatus,proto3,oneof" json:"dm_status,omitempty"`                                   // "active", "pending", "declined" (DM channels only)
 	DmInitiatorId      *string                `protobuf:"bytes,13,opt,name=dm_initiator_id,json=dmInitiatorId,proto3,oneof" json:"dm_initiator_id,omitempty"`                  // user who initiated the DM request
-	VoiceTextChannelId *string                `protobuf:"bytes,14,opt,name=voice_text_channel_id,json=voiceTextChannelId,proto3,oneof" json:"voice_text_channel_id,omitempty"` // companion text channel ID (VOICE channels only)
+	ContentWarning     *string                `protobuf:"bytes,14,opt,name=content_warning,json=contentWarning,proto3,oneof" json:"content_warning,omitempty"`                 // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
+	VoiceTextChannelId *string                `protobuf:"bytes,15,opt,name=voice_text_channel_id,json=voiceTextChannelId,proto3,oneof" json:"voice_text_channel_id,omitempty"` // companion text channel ID (VOICE channels only)
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -555,6 +556,13 @@ func (x *Channel) GetDmStatus() string {
 func (x *Channel) GetDmInitiatorId() string {
 	if x != nil && x.DmInitiatorId != nil {
 		return *x.DmInitiatorId
+	}
+	return ""
+}
+
+func (x *Channel) GetContentWarning() string {
+	if x != nil && x.ContentWarning != nil {
+		return *x.ContentWarning
 	}
 	return ""
 }
@@ -1046,6 +1054,7 @@ type Attachment struct {
 	Height         int32                  `protobuf:"varint,8,opt,name=height,proto3" json:"height,omitempty"`
 	HasThumbnail   bool                   `protobuf:"varint,9,opt,name=has_thumbnail,json=hasThumbnail,proto3" json:"has_thumbnail,omitempty"`
 	MicroThumbnail []byte                 `protobuf:"bytes,10,opt,name=micro_thumbnail,json=microThumbnail,proto3" json:"micro_thumbnail,omitempty"`
+	IsSpoiler      bool                   `protobuf:"varint,11,opt,name=is_spoiler,json=isSpoiler,proto3" json:"is_spoiler,omitempty"` // Content warning: image is blurred until user reveals it. Immutable after send.
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1148,6 +1157,13 @@ func (x *Attachment) GetMicroThumbnail() []byte {
 		return x.MicroThumbnail
 	}
 	return nil
+}
+
+func (x *Attachment) GetIsSpoiler() bool {
+	if x != nil {
+		return x.IsSpoiler
+	}
+	return false
 }
 
 type Member struct {
@@ -2191,7 +2207,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12onboarding_enabled\x18\b \x01(\bR\x11onboardingEnabled\x12%\n" +
 	"\x0erules_required\x18\t \x01(\bR\rrulesRequired\x126\n" +
 	"\x17default_channel_privacy\x18\n" +
-	" \x01(\bR\x15defaultChannelPrivacy\"\xed\x04\n" +
+	" \x01(\bR\x15defaultChannelPrivacy\"\xaf\x05\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -2209,13 +2225,15 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	" \x01(\bR\tisDefault\x12-\n" +
 	"\x10channel_group_id\x18\v \x01(\tH\x01R\x0echannelGroupId\x88\x01\x01\x12 \n" +
 	"\tdm_status\x18\f \x01(\tH\x02R\bdmStatus\x88\x01\x01\x12+\n" +
-	"\x0fdm_initiator_id\x18\r \x01(\tH\x03R\rdmInitiatorId\x88\x01\x01\x126\n" +
-	"\x15voice_text_channel_id\x18\x0e \x01(\tH\x04R\x12voiceTextChannelId\x88\x01\x01B\x14\n" +
+	"\x0fdm_initiator_id\x18\r \x01(\tH\x03R\rdmInitiatorId\x88\x01\x01\x12,\n" +
+	"\x0fcontent_warning\x18\x0e \x01(\tH\x04R\x0econtentWarning\x88\x01\x01\x126\n" +
+	"\x15voice_text_channel_id\x18\x0f \x01(\tH\x05R\x12voiceTextChannelId\x88\x01\x01B\x14\n" +
 	"\x12_slow_mode_secondsB\x13\n" +
 	"\x11_channel_group_idB\f\n" +
 	"\n" +
 	"_dm_statusB\x12\n" +
-	"\x10_dm_initiator_idB\x18\n" +
+	"\x10_dm_initiator_idB\x12\n" +
+	"\x10_content_warningB\x18\n" +
 	"\x16_voice_text_channel_id\"\xa6\x01\n" +
 	"\fChannelGroup\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -2266,7 +2284,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"faviconUrl\x12\x17\n" +
 	"\aog_type\x18\t \x01(\tR\x06ogType\x12\x16\n" +
 	"\x06domain\x18\n" +
-	" \x01(\tR\x06domain\"\xad\x02\n" +
+	" \x01(\tR\x06domain\"\xcc\x02\n" +
 	"\n" +
 	"Attachment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
@@ -2280,7 +2298,9 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x06height\x18\b \x01(\x05R\x06height\x12#\n" +
 	"\rhas_thumbnail\x18\t \x01(\bR\fhasThumbnail\x12'\n" +
 	"\x0fmicro_thumbnail\x18\n" +
-	" \x01(\fR\x0emicroThumbnail\"\xb9\x04\n" +
+	" \x01(\fR\x0emicroThumbnail\x12\x1d\n" +
+	"\n" +
+	"is_spoiler\x18\v \x01(\bR\tisSpoiler\"\xb9\x04\n" +
 	"\x06Member\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x19\n" +

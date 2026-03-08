@@ -27,6 +27,7 @@ import {
   toISO,
   unpinMessage,
   useAuthStore,
+  useChannelStore,
   useEmojiStore,
   useGatewayStore,
   useMemberStore,
@@ -58,6 +59,8 @@ import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { useContentWarningStore } from '../../stores/contentWarnings.ts';
+import { ContentWarningInterstitial } from './ContentWarningInterstitial.tsx';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -505,6 +508,27 @@ export function ChannelView({
       el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
     wasNearBottomRef.current = nearBottom;
     if (nearBottom) ackLatest();
+  }
+
+  // Channel-level content warning gate
+  const channel = useChannelStore((s) =>
+    serverId
+      ? s.byServer[serverId]?.find((c) => c.id === channelId)
+      : undefined,
+  );
+  const cwDismissed = useContentWarningStore((s) =>
+    s.isChannelDismissed(channelId),
+  );
+  const channelCW = channel?.contentWarning;
+
+  if (channelCW && !cwDismissed) {
+    return (
+      <ContentWarningInterstitial
+        channelId={channelId}
+        channelName={channel?.name ?? ''}
+        contentWarning={channelCW}
+      />
+    );
   }
 
   return (

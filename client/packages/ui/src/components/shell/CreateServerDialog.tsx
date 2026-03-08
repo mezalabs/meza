@@ -1,13 +1,9 @@
-import { createServer, UploadPurpose, uploadFile } from '@meza/core';
+import { createServer, getMediaURL, UploadPurpose } from '@meza/core';
 import * as Dialog from '@radix-ui/react-dialog';
-import {
-  type FormEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
+import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
+import { ImageCropper } from '../shared/ImageCropper.tsx';
 
 export function CreateServerDialog({
   open,
@@ -19,56 +15,30 @@ export function CreateServerDialog({
   const [name, setName] = useState('');
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const iconUpload = useImageCropUpload({
+    purpose: UploadPurpose.SERVER_ICON,
+    aspectRatio: 1,
+    cropShape: 'rect',
+    onUploadComplete: (url) => {
+      setIconUrl(url);
+      const attachmentId = url.replace('/media/', '');
+      setPreviewUrl(getMediaURL(attachmentId, true));
+    },
+  });
+
+  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       setName('');
       setIconUrl(null);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
-      setUploadProgress(null);
       setError(null);
       setLoading(false);
     }
-  }, [open, previewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setError(null);
-
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(URL.createObjectURL(file));
-
-      setUploadProgress(0);
-      try {
-        const result = await uploadFile(
-          file,
-          UploadPurpose.SERVER_ICON,
-          setUploadProgress,
-        );
-        setIconUrl(`/media/${result.attachmentId}`);
-      } catch {
-        setError('Failed to upload icon');
-        setPreviewUrl(null);
-        setIconUrl(null);
-      } finally {
-        setUploadProgress(null);
-      }
-    },
-    [previewUrl],
-  );
+  }, [open]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,7 +61,8 @@ export function CreateServerDialog({
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/60 animate-fade-in" />
         <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-bg-elevated p-6 shadow-lg animate-scale-in">
@@ -104,8 +75,8 @@ export function CreateServerDialog({
             <div className="flex flex-col items-center gap-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadProgress !== null || loading}
+                onClick={() => iconUpload.openFileDialog()}
+                disabled={iconUpload.state !== 'idle' || loading}
                 className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-bg-surface transition-colors hover:border-accent"
               >
                 {previewUrl ? (
@@ -119,26 +90,25 @@ export function CreateServerDialog({
                     +
                   </span>
                 )}
-                {uploadProgress !== null && (
+                {iconUpload.uploadProgress !== null && (
                   <div className="absolute inset-0 flex items-center justify-center bg-bg-base/80">
                     <span className="text-xs text-text-muted">
-                      {Math.round(uploadProgress * 100)}%
+                      {iconUpload.uploadProgress}%
                     </span>
                   </div>
                 )}
               </button>
               <input
-                ref={fileInputRef}
+                ref={iconUpload.fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleFileSelect}
+                onChange={iconUpload.onFileChange}
                 className="hidden"
               />
               {previewUrl ? (
                 <button
                   type="button"
                   onClick={() => {
-                    if (previewUrl) URL.revokeObjectURL(previewUrl);
                     setPreviewUrl(null);
                     setIconUrl(null);
                   }}
@@ -171,7 +141,11 @@ export function CreateServerDialog({
               />
             </div>
 
-            {error && <p className="text-xs text-error">{error}</p>}
+            {(error || iconUpload.error) && (
+              <p className="text-xs text-error">
+                {error || iconUpload.error}
+              </p>
+            )}
 
             <div className="flex justify-end gap-2">
               <Dialog.Close asChild>
@@ -185,7 +159,9 @@ export function CreateServerDialog({
               </Dialog.Close>
               <button
                 type="submit"
-                disabled={loading || !name.trim() || uploadProgress !== null}
+                disabled={
+                  loading || !name.trim() || iconUpload.state !== 'idle'
+                }
                 className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black hover:bg-accent-hover disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create'}
@@ -195,5 +171,15 @@ export function CreateServerDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+
+      {iconUpload.cropperProps && (
+        <ImageCropper
+          {...iconUpload.cropperProps}
+          onOpenChange={(open) => {
+            if (!open) iconUpload.cropperProps?.onCancel();
+          }}
+        />
+      )}
+    </>
   );
 }

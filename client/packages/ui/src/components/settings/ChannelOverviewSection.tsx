@@ -41,6 +41,7 @@ export function ChannelOverviewSection({
 
   const [name, setName] = useState('');
   const [topic, setTopic] = useState('');
+  const [contentWarning, setContentWarning] = useState('');
   const [slowMode, setSlowMode] = useState<number | null>(null);
   const [channelGroupId, setChannelGroupId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -54,6 +55,7 @@ export function ChannelOverviewSection({
     if (!channel) return;
     setName(channel.name);
     setTopic(channel.topic);
+    setContentWarning(channel.contentWarning ?? '');
     setSlowMode(
       channel.slowModeSeconds === undefined ? null : channel.slowModeSeconds,
     );
@@ -67,6 +69,7 @@ export function ChannelOverviewSection({
   const isDirty =
     name !== channel.name ||
     topic !== channel.topic ||
+    contentWarning !== (channel.contentWarning ?? '') ||
     slowMode !==
       (channel.slowModeSeconds === undefined
         ? null
@@ -75,6 +78,7 @@ export function ChannelOverviewSection({
 
   const nameValid = name.trim().length >= 1 && name.trim().length <= 100;
   const topicValid = topic.length <= 1024;
+  const cwValid = contentWarning.length <= 256;
 
   async function handleSave() {
     setIsSaving(true);
@@ -83,6 +87,7 @@ export function ChannelOverviewSection({
       await updateChannel(channelId, {
         name: name.trim(),
         topic,
+        contentWarning: contentWarning.trim(),
         slowModeSeconds: slowMode ?? undefined,
         channelGroupId: channelGroupId || undefined,
       });
@@ -142,6 +147,35 @@ export function ChannelOverviewSection({
           placeholder="Set a topic for this channel"
         />
         <p className="text-xs text-text-subtle">{topic.length}/1024</p>
+      </div>
+
+      {/* Content Warning */}
+      <div className="space-y-1.5">
+        <label
+          htmlFor="content-warning"
+          className="block text-sm font-medium text-text"
+        >
+          Content Warning
+        </label>
+        <input
+          id="content-warning"
+          type="text"
+          value={contentWarning}
+          onChange={(e) => setContentWarning(e.target.value)}
+          maxLength={256}
+          className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
+          placeholder="e.g. NSFW, spoilers for Season 3, graphic imagery"
+        />
+        <p className="text-xs text-text-subtle">
+          {contentWarning.length > 0
+            ? `${contentWarning.length}/256 — Users will see an interstitial before entering this channel.`
+            : 'Leave empty for no warning.'}
+        </p>
+        {!cwValid && (
+          <p className="text-xs text-error">
+            Content warning cannot exceed 256 characters
+          </p>
+        )}
       </div>
 
       {/* Slow Mode */}
@@ -215,7 +249,7 @@ export function ChannelOverviewSection({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          disabled={!isDirty || !nameValid || !topicValid || isSaving}
+          disabled={!isDirty || !nameValid || !topicValid || !cwValid || isSaving}
           onClick={handleSave}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >

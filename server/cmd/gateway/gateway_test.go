@@ -80,7 +80,7 @@ func (m *mockChatStoreGW) GetMemberCount(_ context.Context, _ string) (int, erro
 func (m *mockChatStoreGW) GetChannelAndCheckMembership(_ context.Context, channelID, _ string) (*models.Channel, bool, error) {
 	return nil, false, fmt.Errorf("not implemented")
 }
-func (m *mockChatStoreGW) UpdateChannel(_ context.Context, channelID string, name, topic *string, position *int, _ *bool, _ *int, _ *bool, _ *string) (*models.Channel, error) {
+func (m *mockChatStoreGW) UpdateChannel(_ context.Context, channelID string, name, topic *string, position *int, _ *bool, _ *int, _ *bool, _, _ *string) (*models.Channel, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (m *mockChatStoreGW) DeleteChannel(_ context.Context, channelID string) error {
@@ -171,7 +171,7 @@ func (m *mockChatStoreGW) CountChannelMembers(_ context.Context, _ string) (int,
 func (m *mockChatStoreGW) ListChannelParticipantIDs(_ context.Context, _ string) ([]string, error) {
 	return nil, nil
 }
-func (m *mockChatStoreGW) UpdateChannelPrivacy(_ context.Context, _ string, _, _ *string, _ *int, _ *bool, _ *int, _ *bool, _ *string, _ bool, _ string, _ int64) (*models.Channel, error) {
+func (m *mockChatStoreGW) UpdateChannelPrivacy(_ context.Context, _ string, _, _ *string, _ *int, _ *bool, _ *int, _ *bool, _, _ *string, _ bool, _ string, _ int64) (*models.Channel, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (m *mockChatStoreGW) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
