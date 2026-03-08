@@ -10,6 +10,7 @@ import { useInstanceStore } from '../store/instances.ts';
 import { useServerStore } from '../store/servers.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useMemberStore } from '../store/members.ts';
+import { useRoleStore } from '../store/roles.ts';
 import {
   connectInstance,
   disconnectInstance,
@@ -229,18 +230,20 @@ export async function leaveSatelliteGuild(
       );
     });
 
-  // 3. Remove guild data from stores
+  // 3. Remove guild data from stores (scoped to this server, not the whole instance)
   useServerStore.getState().removeServer(serverId, normalizedUrl);
   useChannelStore.getState().removeServerChannels(serverId, normalizedUrl);
-  useMemberStore.getState().removeInstanceData(normalizedUrl);
+  useMemberStore.getState().removeServerMembers(serverId, normalizedUrl);
+  useRoleStore.getState().removeServerRoles(serverId, normalizedUrl);
 
   // 4. Check if other guilds exist on this satellite
   const remainingServers = useServerStore.getState().getServers(normalizedUrl);
   if (Object.keys(remainingServers).length === 0) {
-    // No more guilds on this satellite — disconnect and clean up
+    // No more guilds on this satellite — disconnect and clean up everything
     clearTokenRefreshTimer(normalizedUrl);
     disconnectInstance(normalizedUrl);
     useInstanceStore.getState().removeInstance(normalizedUrl);
+    useMemberStore.getState().removeInstanceData(normalizedUrl);
     removeTransport(normalizedUrl);
   }
 }

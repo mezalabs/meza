@@ -1,7 +1,7 @@
 ---
 title: "feat: Federation Satellites & Nodes — Implementation Plan"
 type: feat
-status: active
+status: completed
 date: 2026-03-07
 deepened: 2026-03-07
 supersedes: docs/plans/2026-03-07-feat-federation-satellites-primary-model-plan.md (positioning absorbed), docs/plans/2026-02-17-feat-federation-phase-1-plan.md (Phase B absorbed)

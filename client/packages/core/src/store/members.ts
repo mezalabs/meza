@@ -34,6 +34,7 @@ export interface MemberActions {
     roleId: string,
     instanceUrl?: string,
   ) => void;
+  removeServerMembers: (serverId: string, instanceUrl?: string) => void;
   removeInstanceData: (instanceUrl: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -120,6 +121,16 @@ export const useMemberStore = create<MemberState & MemberActions>()(
         for (const member of members) {
           const idx = member.roleIds.indexOf(roleId);
           if (idx !== -1) member.roleIds.splice(idx, 1);
+        }
+        syncCompat(state);
+      });
+    },
+
+    removeServerMembers: (serverId, instanceUrl = HOME_INSTANCE) => {
+      set((state) => {
+        const bucket = state.byInstance[instanceUrl];
+        if (bucket) {
+          delete bucket[serverId];
         }
         syncCompat(state);
       });
