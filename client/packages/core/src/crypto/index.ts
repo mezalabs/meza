@@ -87,6 +87,7 @@ export {
 export {
   decryptRecoveryBundle,
   deriveRecoveryKey,
+  deriveRecoveryVerifier,
   encryptRecoveryBundle,
   generateRecoveryPhrase,
   validateRecoveryPhrase,

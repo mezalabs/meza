@@ -6,6 +6,7 @@ import {
   decryptRecoveryBundle,
   deriveKeys,
   deriveRecoveryKey,
+  deriveRecoveryVerifier,
   deserializeIdentity,
   encryptRecoveryBundle,
   finalizeRegistration,
@@ -27,6 +28,7 @@ import {
 } from '@meza/core';
 import { EyeIcon, EyeSlashIcon } from '@phosphor-icons/react';
 import { type InputHTMLAttributes, useCallback, useRef, useState } from 'react';
+import { RecoveryPhraseDisplay } from '../shared/RecoveryPhraseDisplay.tsx';
 
 type Mode = 'register' | 'login' | 'recover';
 
@@ -195,6 +197,7 @@ function RegisterForm({
     let authKey: Uint8Array | undefined;
     let identityBytes: Uint8Array | undefined;
     let recoveryKey: Uint8Array | undefined;
+    let recoveryVerifier: Uint8Array | undefined;
     try {
       const salt = crypto.getRandomValues(new Uint8Array(16));
 
@@ -212,6 +215,7 @@ function RegisterForm({
       const phrase = await generateRecoveryPhrase();
       recoveryKey = await deriveRecoveryKey(phrase);
       const recovery = await encryptRecoveryBundle(recoveryKey, identityBytes);
+      recoveryVerifier = await deriveRecoveryVerifier(recoveryKey);
 
       const res = await register(
         {
@@ -223,6 +227,7 @@ function RegisterForm({
           keyBundleIv: iv,
           recoveryEncryptedKeyBundle: recovery.ciphertext,
           recoveryKeyBundleIv: recovery.iv,
+          recoveryVerifier,
         },
         { deferAuth: true },
       );
@@ -258,6 +263,7 @@ function RegisterForm({
       authKey?.fill(0);
       identityBytes?.fill(0);
       recoveryKey?.fill(0);
+      recoveryVerifier?.fill(0);
     }
   }
 
@@ -396,7 +402,7 @@ function LoginForm({
             placeholder="Email or username"
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            disabled={isLoading}
+            disabled={busy}
           />
           <div className="border-t border-border" />
           <PasswordInput
@@ -476,6 +482,8 @@ function RecoverAccountForm({
     let authKey: Uint8Array | undefined;
     let keyBundle: Uint8Array | undefined;
     let newRecoveryKey: Uint8Array | undefined;
+    let recoveryVerifier: Uint8Array | undefined;
+    let newRecoveryVerifier: Uint8Array | undefined;
     try {
       // Validate phrase
       const valid = await validateRecoveryPhrase(phrase);
@@ -495,6 +503,9 @@ function RecoverAccountForm({
         bundle.recoveryKeyBundleIv,
       );
 
+      // Derive verifier from the old recovery key to prove phrase knowledge
+      recoveryVerifier = await deriveRecoveryVerifier(recoveryKey);
+
       // Derive new credentials from new password
       const newSalt = crypto.getRandomValues(new Uint8Array(16));
       const derived = await deriveKeys(newPassword, newSalt);
@@ -511,6 +522,7 @@ function RecoverAccountForm({
         newRecoveryKey,
         keyBundle,
       );
+      newRecoveryVerifier = await deriveRecoveryVerifier(newRecoveryKey);
 
       // Submit recovery to server (resets credentials + returns session)
       const res = await recoverAccount(
@@ -522,6 +534,8 @@ function RecoverAccountForm({
           newKeyBundleIv: iv,
           newRecoveryEncryptedKeyBundle: newRecovery.ciphertext,
           newRecoveryKeyBundleIv: newRecovery.iv,
+          recoveryVerifier,
+          newRecoveryVerifier,
         },
         { deferAuth: true },
       );
@@ -558,6 +572,8 @@ function RecoverAccountForm({
       authKey?.fill(0);
       keyBundle?.fill(0);
       newRecoveryKey?.fill(0);
+      recoveryVerifier?.fill(0);
+      newRecoveryVerifier?.fill(0);
     }
   }
 
@@ -675,70 +691,3 @@ function PasswordInput({
   );
 }
 
-function RecoveryPhraseDisplay({
-  phrase,
-  onDone,
-}: {
-  phrase: string;
-  onDone: () => void;
-}) {
-  const words = phrase.split(' ');
-  const [confirmed, setConfirmed] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(phrase);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <h3 className="text-sm font-semibold text-text">Recovery Phrase</h3>
-      <p className="text-xs text-text-muted">
-        Write down these 12 words and store them safely. This is the only way to
-        recover your encrypted messages if you lose your password.
-      </p>
-
-      <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-bg-base p-4">
-        {words.map((word, i) => (
-          <div
-            key={`${i}-${word}`}
-            className="flex items-center justify-center"
-          >
-            <span className="text-sm font-mono text-text">{word}</span>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="w-full rounded-lg border border-border px-4 py-2 text-xs text-text-muted hover:bg-bg-surface transition-colors"
-      >
-        {copied ? 'Copied!' : 'Copy to clipboard'}
-      </button>
-
-      <label className="flex items-start gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={confirmed}
-          onChange={(e) => setConfirmed(e.target.checked)}
-          className="mt-0.5 accent-accent"
-        />
-        <span className="text-xs text-text-muted">
-          I have saved my recovery phrase in a safe place
-        </span>
-      </label>
-
-      <button
-        type="button"
-        onClick={onDone}
-        disabled={!confirmed}
-        className="w-full rounded-lg bg-accent px-5 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover disabled:opacity-50"
-      >
-        Continue
-      </button>
-    </div>
-  );
-}

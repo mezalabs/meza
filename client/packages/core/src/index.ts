@@ -188,6 +188,7 @@ export {
   decryptRecoveryBundle,
   deriveKeys,
   deriveRecoveryKey,
+  deriveRecoveryVerifier,
   deserializeIdentity,
   distributeKeyToMember,
   type EncryptedMessage,

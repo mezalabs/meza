@@ -33,6 +33,8 @@ message RegisterRequest {
   // Recovery bundle: key bundle encrypted with recovery key derived from BIP39 phrase
   bytes recovery_encrypted_key_bundle = 8;
   bytes recovery_key_bundle_iv = 9;
+  // HKDF-derived verifier proving knowledge of recovery phrase (server stores SHA-256 hash)
+  bytes recovery_verifier = 10;
 }
 
 message RegisterResponse {
@@ -138,6 +140,8 @@ message ChangePasswordRequest {
   bytes new_key_bundle_iv = 5;
   bytes new_recovery_encrypted_key_bundle = 6;
   bytes new_recovery_key_bundle_iv = 7;
+  // Updated recovery verifier for the new recovery phrase
+  bytes new_recovery_verifier = 8;
 }
 
 message ChangePasswordResponse {}
@@ -177,6 +181,10 @@ message RecoverAccountRequest {
   bytes new_key_bundle_iv = 5;
   bytes new_recovery_encrypted_key_bundle = 6;
   bytes new_recovery_key_bundle_iv = 7;
+  // Proof of recovery phrase knowledge: HKDF-derived verifier from the OLD recovery key
+  bytes recovery_verifier = 8;
+  // Updated verifier for the NEW recovery phrase
+  bytes new_recovery_verifier = 9;
 }
 
 message RecoverAccountResponse {
