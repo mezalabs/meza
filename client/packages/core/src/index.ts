@@ -132,6 +132,14 @@ export {
   updateServer,
   updateSound,
 } from './api/chat.ts';
+// API — federation
+export {
+  type FederationJoinResult,
+  isFederatedInvite,
+  joinSatelliteGuild,
+  leaveSatelliteGuild,
+  listFederatedMemberships,
+} from './api/federation.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
