@@ -9,6 +9,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode/utf8"
 	"time"
 
@@ -103,10 +104,11 @@ type chatService struct {
 	linkPreviewStore        store.LinkPreviewStorer
 	channelGroupStore       store.ChannelGroupStorer
 	permissionOverrideStore store.PermissionOverrideStorer
-	encryptionChecker       EncryptionChecker
-	nc                      *nats.Conn
-	rdb                     *redis.Client
-	permCache               *permissions.Cache
+	encryptionChecker          EncryptionChecker
+	nc                         *nats.Conn
+	rdb                        *redis.Client
+	permCache                  *permissions.Cache
+	systemMessageConfigCache   sync.Map // map[serverID]*cachedSystemMessageConfig
 }
 
 type chatServiceConfig struct {
@@ -2458,18 +2460,12 @@ func (s *chatService) JoinServer(ctx context.Context, req *connect.Request[v1.Jo
 	// Signal gateway to refresh channel subscriptions for this user.
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
 
-	// Emit system message to the default text channel.
-	if ch, err := s.getDefaultTextChannel(ctx, consumed.ServerID); err != nil {
-		slog.Warn("system message: default channel lookup failed", "server", consumed.ServerID, "err", err)
-	} else if ch != nil {
-		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_JOIN), MemberEventContent{
-			UserID: userID,
-		}); err != nil {
-			slog.Warn("system message: member join failed", "channel", ch.ID, "err", err)
-		}
-	} else {
-		slog.Warn("system message: no default text channel", "server", consumed.ServerID)
-	}
+	// Emit system message (config-aware: channel routing, enable/disable, templates).
+	s.publishServerSystemMessage(ctx, consumed.ServerID,
+		uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_JOIN), "join",
+		MemberEventContent{UserID: userID},
+		map[string]string{"user": s.resolveDisplayName(ctx, userID, consumed.ServerID)},
+	)
 
 	return connect.NewResponse(&v1.JoinServerResponse{
 		Server:               serverToProto(srv),
@@ -2539,18 +2535,12 @@ func (s *chatService) LeaveServer(ctx context.Context, req *connect.Request[v1.L
 	// Signal gateway to refresh channel subscriptions for this user.
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
 
-	// Emit system message to the default text channel.
-	if ch, err := s.getDefaultTextChannel(ctx, req.Msg.ServerId); err != nil {
-		slog.Warn("system message: default channel lookup failed", "server", req.Msg.ServerId, "err", err)
-	} else if ch != nil {
-		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_LEAVE), MemberEventContent{
-			UserID: userID,
-		}); err != nil {
-			slog.Warn("system message: member leave failed", "channel", ch.ID, "err", err)
-		}
-	} else {
-		slog.Warn("system message: no default text channel", "server", req.Msg.ServerId)
-	}
+	// Emit system message (config-aware: channel routing, enable/disable, templates).
+	s.publishServerSystemMessage(ctx, req.Msg.ServerId,
+		uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_LEAVE), "leave",
+		MemberEventContent{UserID: userID},
+		map[string]string{"user": s.resolveDisplayName(ctx, userID, req.Msg.ServerId)},
+	)
 
 	return connect.NewResponse(&v1.LeaveServerResponse{}), nil
 }
@@ -3026,5 +3016,141 @@ func toProtoAttachments(ids []string, m map[string]*models.Attachment) []*v1.Att
 		}
 	}
 	return out
+}
+
+// --- System Message Configuration ---
+
+func systemMessageConfigToProto(cfg *models.ServerSystemMessageConfig) *v1.ServerSystemMessageConfig {
+	if cfg == nil {
+		return &v1.ServerSystemMessageConfig{}
+	}
+	return &v1.ServerSystemMessageConfig{
+		ServerId:          cfg.ServerID,
+		WelcomeChannelId:  cfg.WelcomeChannelID,
+		ModLogChannelId:   cfg.ModLogChannelID,
+		JoinEnabled:       cfg.JoinEnabled,
+		JoinTemplate:      cfg.JoinTemplate,
+		LeaveEnabled:      cfg.LeaveEnabled,
+		LeaveTemplate:     cfg.LeaveTemplate,
+		KickEnabled:       cfg.KickEnabled,
+		KickTemplate:      cfg.KickTemplate,
+		BanEnabled:        cfg.BanEnabled,
+		BanTemplate:       cfg.BanTemplate,
+		TimeoutEnabled:    cfg.TimeoutEnabled,
+		TimeoutTemplate:   cfg.TimeoutTemplate,
+	}
+}
+
+func (s *chatService) GetSystemMessageConfig(ctx context.Context, req *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.ServerId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
+	}
+	_, _, _, permErr := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+	if permErr != nil {
+		return nil, permErr
+	}
+
+	cfg, err := s.chatStore.GetSystemMessageConfig(ctx, req.Msg.ServerId)
+	if err != nil {
+		slog.Error("getting system message config", "err", err, "server", req.Msg.ServerId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	proto := systemMessageConfigToProto(cfg)
+	proto.ServerId = req.Msg.ServerId
+	// Default all enables to true when no config row exists
+	if cfg == nil {
+		proto.JoinEnabled = true
+		proto.LeaveEnabled = true
+		proto.KickEnabled = true
+		proto.BanEnabled = true
+		proto.TimeoutEnabled = true
+	}
+
+	return connect.NewResponse(&v1.GetSystemMessageConfigResponse{Config: proto}), nil
+}
+
+func (s *chatService) UpdateSystemMessageConfig(ctx context.Context, req *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.ServerId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
+	}
+	_, _, _, permErr := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+	if permErr != nil {
+		return nil, permErr
+	}
+
+	// Validate channel IDs are text channels in this server.
+	for _, chID := range []*string{req.Msg.WelcomeChannelId, req.Msg.ModLogChannelId} {
+		if chID == nil || *chID == "" {
+			continue
+		}
+		ch, err := s.chatStore.GetChannel(ctx, *chID)
+		if err != nil || ch == nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %s not found", *chID))
+		}
+		if ch.ServerID != req.Msg.ServerId {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %s does not belong to this server", *chID))
+		}
+		if ch.Type != 1 { // CHANNEL_TYPE_TEXT
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %s is not a text channel", *chID))
+		}
+	}
+
+	// Validate templates.
+	templateFields := []struct {
+		tmpl      *string
+		eventType string
+	}{
+		{req.Msg.JoinTemplate, "join"},
+		{req.Msg.LeaveTemplate, "leave"},
+		{req.Msg.KickTemplate, "kick"},
+		{req.Msg.BanTemplate, "ban"},
+		{req.Msg.TimeoutTemplate, "timeout"},
+	}
+	for _, tf := range templateFields {
+		if tf.tmpl == nil || *tf.tmpl == "" {
+			continue
+		}
+		if len(*tf.tmpl) > 512 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s template exceeds 512 characters", tf.eventType))
+		}
+		if err := validateTemplate(*tf.tmpl, tf.eventType); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+	}
+
+	opts := store.UpsertSystemMessageConfigOpts{
+		WelcomeChannelID: req.Msg.WelcomeChannelId,
+		ModLogChannelID:  req.Msg.ModLogChannelId,
+		JoinEnabled:      req.Msg.JoinEnabled,
+		JoinTemplate:     req.Msg.JoinTemplate,
+		LeaveEnabled:     req.Msg.LeaveEnabled,
+		LeaveTemplate:    req.Msg.LeaveTemplate,
+		KickEnabled:      req.Msg.KickEnabled,
+		KickTemplate:     req.Msg.KickTemplate,
+		BanEnabled:       req.Msg.BanEnabled,
+		BanTemplate:      req.Msg.BanTemplate,
+		TimeoutEnabled:   req.Msg.TimeoutEnabled,
+		TimeoutTemplate:  req.Msg.TimeoutTemplate,
+	}
+
+	cfg, err := s.chatStore.UpsertSystemMessageConfig(ctx, req.Msg.ServerId, opts)
+	if err != nil {
+		slog.Error("upserting system message config", "err", err, "server", req.Msg.ServerId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Invalidate config cache.
+	s.systemMessageConfigCache.Delete(req.Msg.ServerId)
+
+	return connect.NewResponse(&v1.UpdateSystemMessageConfigResponse{Config: systemMessageConfigToProto(cfg)}), nil
 }
 
