@@ -440,7 +440,7 @@ export function ImageViewer() {
                 {currentIndex + 1} / {attachments.length}
               </div>
             )}
-            <Dialog.Close className="absolute right-4 top-4 bg-black/50 hover:bg-black/70 text-white/80 hover:text-white rounded-full p-2">
+            <Dialog.Close className="absolute right-4 top-[max(1rem,env(safe-area-inset-top,1rem))] bg-black/50 hover:bg-black/70 text-white/80 hover:text-white rounded-full p-2">
               <XIcon weight="regular" size={14} aria-hidden="true" />
             </Dialog.Close>
           </Dialog.Content>

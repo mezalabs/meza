@@ -8,9 +8,15 @@
  * The master key is cached so the encrypted key bundle in IndexedDB can be
  * decrypted without re-entering the password:
  *   - Web: sessionStorage (survives reload, cleared on tab close)
- *   - Mobile (Capacitor): localStorage (survives app restart, cleared on logout)
- *     Mobile apps have no "tabs" — the OS can kill the process at any time,
- *     which would wipe sessionStorage while the user expects to stay logged in.
+ *   - Mobile (Capacitor): sessionStorage (survives reload within same WebView
+ *     lifecycle; cleared when OS kills the process, requiring re-login)
+ *
+ * NOTE: We intentionally use sessionStorage on all platforms. On mobile,
+ * the OS may kill the process and clear the key, but using localStorage
+ * would persist the master key in plaintext on disk indefinitely — an
+ * unacceptable risk for the most sensitive secret in the E2EE system.
+ * When Capacitor Secure Storage or iOS Keychain integration is added,
+ * mobile can use that for persistence across process restarts.
  */
 
 import {
@@ -22,7 +28,6 @@ import {
 import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
-import { isCapacitor } from '../utils/platform.ts';
 
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;
@@ -31,10 +36,9 @@ const readyListeners: Array<() => void> = [];
 
 const MK_SESSION_KEY = 'meza-mk';
 
-/** Mobile uses localStorage so the key survives process kills. */
 function mkStorage(): Storage | undefined {
   if (typeof window === 'undefined') return undefined;
-  return isCapacitor() ? localStorage : sessionStorage;
+  return sessionStorage;
 }
 
 function storeMasterKey(key: Uint8Array): void {

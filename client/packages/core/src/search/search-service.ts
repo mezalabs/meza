@@ -95,16 +95,16 @@ export function clearAllSearchIndexes(): Promise<void> {
 
 export function terminateSearchWorker(): void {
   if (worker) {
-    // Best-effort flush before terminating
+    const w = worker;
+    worker = null;
+    // Best-effort flush then terminate — use postMessage directly
+    // to avoid getWorker() re-creating a new worker.
     try {
-      call('flush', []).catch(() => {});
+      w.postMessage({ id: -1, method: 'flush', args: [] });
     } catch {
       // Worker may already be dead
     }
-    // Give a small window for flush, then terminate
-    const w = worker;
     setTimeout(() => w.terminate(), 100);
-    worker = null;
   }
   // Reject all pending promises
   for (const [, p] of pending) {
