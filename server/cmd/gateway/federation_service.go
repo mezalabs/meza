@@ -72,8 +72,8 @@ func gwSanitizeFederationProfile(displayName, avatarURL string) (string, string)
 	// Validate avatar_url is an HTTPS URL
 	if avatarURL != "" {
 		u, err := url.Parse(avatarURL)
-		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-			avatarURL = "" // Drop invalid URLs
+		if err != nil || u.Scheme != "https" || u.Host == "" {
+			avatarURL = "" // Drop non-HTTPS URLs
 		}
 	}
 	return displayName, avatarURL

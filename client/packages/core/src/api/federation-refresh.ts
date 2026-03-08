@@ -115,6 +115,9 @@ export function clearAllTokenRefreshTimers(): void {
 // Core refresh logic
 // ---------------------------------------------------------------------------
 
+/** Per-instance dedup: prevents concurrent refreshes for the same satellite. */
+const refreshInFlight = new Map<string, Promise<boolean>>();
+
 /**
  * Refresh a satellite instance's tokens via the federation assertion flow.
  *
@@ -124,9 +127,25 @@ export function clearAllTokenRefreshTimers(): void {
  * 4. Update tokens in the instance store
  * 5. Schedule the next proactive refresh
  *
+ * Deduplicated: concurrent calls for the same instance share one in-flight
+ * promise (prevents proactive timer + 401 interceptor racing).
+ *
  * Returns true on success, false on failure.
  */
 export async function refreshSatelliteToken(
+  instanceUrl: string,
+): Promise<boolean> {
+  const existing = refreshInFlight.get(instanceUrl);
+  if (existing) return existing;
+
+  const promise = doRefreshSatelliteToken(instanceUrl).finally(() => {
+    refreshInFlight.delete(instanceUrl);
+  });
+  refreshInFlight.set(instanceUrl, promise);
+  return promise;
+}
+
+async function doRefreshSatelliteToken(
   instanceUrl: string,
 ): Promise<boolean> {
   const instance = useInstanceStore.getState().getInstance(instanceUrl);

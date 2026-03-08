@@ -42,10 +42,12 @@ func (s *federationService) checkAssertionRateLimit(ctx context.Context, userID 
 	count, err := s.redisClient.Incr(ctx, key).Result()
 	if err != nil {
 		slog.Error("federation assertion rate limit incr", "err", err, "user", userID)
-		return nil // Fail open on Redis errors
+		return connect.NewError(connect.CodeUnavailable, errors.New("rate limit check unavailable"))
 	}
 	if count == 1 {
-		s.redisClient.Expire(ctx, key, assertionRateLimitTTL)
+		if err := s.redisClient.Expire(ctx, key, assertionRateLimitTTL).Err(); err != nil {
+			slog.Error("federation assertion rate limit expire", "err", err, "user", userID)
+		}
 	}
 	if count > assertionRateLimitMax {
 		return connect.NewError(connect.CodeResourceExhausted, errors.New("too many federation assertion requests, try again later"))
