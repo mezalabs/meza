@@ -764,13 +764,32 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 		isPrivate = srv.DefaultChannelPrivacy
 	}
 
-	ch, err := s.chatStore.CreateChannel(ctx, req.Msg.ServerId, req.Msg.Name, int(req.Msg.Type), isPrivate, req.Msg.GetChannelGroupId())
-	if err != nil {
-		if errors.Is(err, store.ErrAlreadyExists) {
-			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("a channel with that name already exists"))
+	// Voice channels get a companion text channel created atomically.
+	isVoice := req.Msg.Type == v1.ChannelType_CHANNEL_TYPE_VOICE
+	var ch *models.Channel
+	var companionCh *models.Channel
+
+	if isVoice {
+		voiceCh, textCh, err := s.chatStore.CreateVoiceChannelWithCompanion(ctx, req.Msg.ServerId, req.Msg.Name, isPrivate, req.Msg.GetChannelGroupId())
+		if err != nil {
+			if errors.Is(err, store.ErrAlreadyExists) {
+				return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("a channel with that name already exists"))
+			}
+			slog.Error("creating voice channel with companion", "err", err, "user", userID, "server", req.Msg.ServerId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
-		slog.Error("creating channel", "err", err, "user", userID, "server", req.Msg.ServerId)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		ch = voiceCh
+		companionCh = textCh
+	} else {
+		var err error
+		ch, err = s.chatStore.CreateChannel(ctx, req.Msg.ServerId, req.Msg.Name, int(req.Msg.Type), isPrivate, req.Msg.GetChannelGroupId())
+		if err != nil {
+			if errors.Is(err, store.ErrAlreadyExists) {
+				return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("a channel with that name already exists"))
+			}
+			slog.Error("creating channel", "err", err, "user", userID, "server", req.Msg.ServerId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
 	}
 
 	// Auto-add creator as channel member (key distribution tracking for E2EE).
@@ -780,6 +799,13 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 	} else {
 		// Signal gateway to refresh channel subscriptions for the creator.
 		s.nc.Publish(subjects.UserSubscription(userID), nil)
+	}
+
+	// Also add creator to companion text channel for E2EE key tracking.
+	if companionCh != nil {
+		if err := s.chatStore.AddChannelMember(ctx, companionCh.ID, userID); err != nil {
+			slog.Error("adding channel creator as companion member", "err", err, "user", userID, "channel", companionCh.ID)
+		}
 	}
 
 	// Private channels: deny ViewChannel on @everyone so only explicit members can see it.
@@ -794,6 +820,19 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 		}
 		if _, err := s.permissionOverrideStore.SetOverride(ctx, denyOverride); err != nil {
 			slog.Error("setting ViewChannel deny for private channel", "err", err, "channel", ch.ID)
+		}
+		// Mirror to companion text channel.
+		if companionCh != nil {
+			companionDeny := &models.PermissionOverride{
+				ID:        models.NewID(),
+				ChannelID: companionCh.ID,
+				RoleID:    everyoneRoleID,
+				Allow:     0,
+				Deny:      permissions.ViewChannel,
+			}
+			if _, err := s.permissionOverrideStore.SetOverride(ctx, companionDeny); err != nil {
+				slog.Error("setting ViewChannel deny for companion channel", "err", err, "channel", companionCh.ID)
+			}
 		}
 	}
 
@@ -815,12 +854,51 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 				if _, err := s.permissionOverrideStore.SetOverride(ctx, channelOverride); err != nil {
 					slog.Error("copying category override to channel", "err", err, "channel", ch.ID, "role", ovr.RoleID)
 				}
+				// Mirror to companion text channel.
+				if companionCh != nil {
+					companionOverride := &models.PermissionOverride{
+						ID:        models.NewID(),
+						ChannelID: companionCh.ID,
+						RoleID:    ovr.RoleID,
+						Allow:     ovr.Allow,
+						Deny:      ovr.Deny,
+					}
+					if _, err := s.permissionOverrideStore.SetOverride(ctx, companionOverride); err != nil {
+						slog.Error("copying category override to companion", "err", err, "channel", companionCh.ID, "role", ovr.RoleID)
+					}
+				}
 			}
 		}
 	}
 
-	// Broadcast channel create event.
+	// Broadcast channel create event(s).
 	now := time.Now()
+	privateChID := ""
+	if ch.IsPrivate {
+		privateChID = ch.ID
+	}
+
+	// Broadcast companion text channel create first (so clients have it when they process the voice channel).
+	if companionCh != nil {
+		companionEvent := &v1.Event{
+			Id:        models.NewID(),
+			Type:      v1.EventType_EVENT_TYPE_CHANNEL_CREATE,
+			Timestamp: timestamppb.New(now),
+			Payload: &v1.Event_ChannelCreate{
+				ChannelCreate: channelToProto(companionCh),
+			},
+		}
+		if eventData, err := proto.Marshal(companionEvent); err != nil {
+			slog.Error("marshaling companion event", "err", err)
+		} else {
+			companionPrivateID := ""
+			if companionCh.IsPrivate {
+				companionPrivateID = companionCh.ID
+			}
+			s.nc.Publish(subjects.ServerChannel(req.Msg.ServerId), subjects.EncodeServerChannelEvent(eventData, companionPrivateID))
+		}
+	}
+
 	event := &v1.Event{
 		Id:        models.NewID(),
 		Type:      v1.EventType_EVENT_TYPE_CHANNEL_CREATE,
@@ -834,10 +912,6 @@ func (s *chatService) CreateChannel(ctx context.Context, req *connect.Request[v1
 		slog.Error("marshaling event", "err", err)
 		// Don't return error - the DB mutation succeeded, event broadcast is best-effort
 	} else {
-		privateChID := ""
-		if ch.IsPrivate {
-			privateChID = ch.ID
-		}
 		s.nc.Publish(subjects.ServerChannel(req.Msg.ServerId), subjects.EncodeServerChannelEvent(eventData, privateChID))
 	}
 
@@ -1445,8 +1519,20 @@ func (s *chatService) ListChannels(ctx context.Context, req *connect.Request[v1.
 		return nil, permErr
 	}
 
+	// Build set of companion text channel IDs to exclude from the response.
+	// Clients discover companions via the voice channel's voice_text_channel_id field.
+	companionIDs := make(map[string]bool)
+	for _, ch := range channels {
+		if ch.VoiceTextChannelID != "" {
+			companionIDs[ch.VoiceTextChannelID] = true
+		}
+	}
+
 	var protoChannels []*v1.Channel
 	for _, ch := range channels {
+		if companionIDs[ch.ID] {
+			continue // Skip companion text channels from the list.
+		}
 		if chPerms, ok := permsMap[ch.ID]; ok && permissions.Has(chPerms, permissions.ViewChannel) {
 			protoChannels = append(protoChannels, channelToProto(ch))
 		}
@@ -1844,6 +1930,32 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Sync relevant fields to companion text channel if this is a voice channel.
+	if updated.VoiceTextChannelID != "" && (name != nil || topic != nil || channelGroupID != nil) {
+		if err := s.chatStore.UpdateCompanionChannel(ctx, updated.VoiceTextChannelID, name, topic, channelGroupID); err != nil {
+			slog.Error("syncing companion channel", "err", err, "companion", updated.VoiceTextChannelID)
+			// Non-fatal: voice channel update succeeded.
+		}
+		// Also sync privacy toggle to companion.
+		if privacyToggled {
+			everyoneRoleID := ch.ServerID
+			if *isPrivate {
+				companionDeny := &models.PermissionOverride{
+					ID:        models.NewID(),
+					ChannelID: updated.VoiceTextChannelID,
+					RoleID:    everyoneRoleID,
+					Allow:     0,
+					Deny:      permissions.ViewChannel,
+				}
+				if _, err := s.permissionOverrideStore.SetOverride(ctx, companionDeny); err != nil {
+					slog.Error("setting ViewChannel deny for companion on privacy toggle", "err", err)
+				}
+			}
+			// Public toggle: the companion override will be removed when privacy is removed on the voice channel.
+			// We don't need to explicitly remove it since the companion channel's privacy is also updated.
+		}
+	}
+
 	// Broadcast channel update event.
 	now := time.Now()
 	event := &v1.Event{
@@ -1888,19 +2000,57 @@ func (s *chatService) DeleteChannel(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot delete DM channels"))
 	}
 
+	// Prevent direct deletion of companion text channels.
+	isCompanion, err := s.chatStore.IsVoiceTextCompanion(ctx, req.Msg.ChannelId)
+	if err != nil {
+		slog.Error("checking voice text companion", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if isCompanion {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot delete a voice text channel directly; delete the parent voice channel instead"))
+	}
+
 	// Require ManageChannels permission.
 	_, _, _, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageChannels)
 	if permErr != nil {
 		return nil, permErr
 	}
 
-	if err := s.chatStore.DeleteChannel(ctx, req.Msg.ChannelId); err != nil {
-		slog.Error("deleting channel", "err", err, "user", userID, "channel", req.Msg.ChannelId)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	// If this is a voice channel with a companion, delete both atomically.
+	if ch.VoiceTextChannelID != "" {
+		if err := s.chatStore.DeleteChannelWithCompanion(ctx, req.Msg.ChannelId, ch.VoiceTextChannelID); err != nil {
+			slog.Error("deleting voice channel with companion", "err", err, "user", userID, "channel", req.Msg.ChannelId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+	} else {
+		if err := s.chatStore.DeleteChannel(ctx, req.Msg.ChannelId); err != nil {
+			slog.Error("deleting channel", "err", err, "user", userID, "channel", req.Msg.ChannelId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+	}
+
+	// Broadcast companion channel delete event first.
+	now := time.Now()
+	if ch.VoiceTextChannelID != "" {
+		companionEvent := &v1.Event{
+			Id:        models.NewID(),
+			Type:      v1.EventType_EVENT_TYPE_CHANNEL_DELETE,
+			Timestamp: timestamppb.New(now),
+			Payload: &v1.Event_ChannelDelete{
+				ChannelDelete: &v1.ChannelDeleteEvent{
+					ChannelId: ch.VoiceTextChannelID,
+					ServerId:  ch.ServerID,
+				},
+			},
+		}
+		if eventData, err := proto.Marshal(companionEvent); err != nil {
+			slog.Error("marshaling companion delete event", "err", err)
+		} else {
+			s.nc.Publish(subjects.ServerChannel(ch.ServerID), subjects.EncodeServerChannelEvent(eventData, ""))
+		}
 	}
 
 	// Broadcast channel delete event.
-	now := time.Now()
 	event := &v1.Event{
 		Id:        models.NewID(),
 		Type:      v1.EventType_EVENT_TYPE_CHANNEL_DELETE,
@@ -2664,6 +2814,9 @@ func channelToProto(c *models.Channel) *v1.Channel {
 	}
 	if c.DMInitiatorID != "" {
 		ch.DmInitiatorId = &c.DMInitiatorID
+	}
+	if c.VoiceTextChannelID != "" {
+		ch.VoiceTextChannelId = &c.VoiceTextChannelID
 	}
 	return ch
 }

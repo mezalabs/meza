@@ -172,6 +172,24 @@ func (s *chatService) SetPermissionOverride(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Mirror override to companion text channel if target is a voice channel.
+	if !isGroup && override.ChannelID != "" {
+		targetCh, chErr := s.chatStore.GetChannel(ctx, override.ChannelID)
+		if chErr == nil && targetCh.VoiceTextChannelID != "" {
+			companionOverride := &models.PermissionOverride{
+				ID:        models.NewID(),
+				ChannelID: targetCh.VoiceTextChannelID,
+				RoleID:    override.RoleID,
+				UserID:    override.UserID,
+				Allow:     override.Allow,
+				Deny:      override.Deny,
+			}
+			if _, mirrorErr := s.permissionOverrideStore.SetOverride(ctx, companionOverride); mirrorErr != nil {
+				slog.Error("mirroring override to companion channel", "err", mirrorErr, "companion", targetCh.VoiceTextChannelID)
+			}
+		}
+	}
+
 	// Invalidate permission cache for entire server (override change affects all members with this role).
 	s.permCache.InvalidateServer(ctx, serverID)
 

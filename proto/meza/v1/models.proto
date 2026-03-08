@@ -59,6 +59,7 @@ message Channel {
   optional string channel_group_id = 11;
   optional string dm_status = 12;         // "active", "pending", "declined" (DM channels only)
   optional string dm_initiator_id = 13;   // user who initiated the DM request
+  optional string voice_text_channel_id = 14; // companion text channel ID (VOICE channels only)
 }
 
 message ChannelGroup {

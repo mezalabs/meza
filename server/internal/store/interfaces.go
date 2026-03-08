@@ -56,6 +56,14 @@ type ChatStorer interface {
 	// overrides are always consistent.
 	UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string, oldIsPrivate bool, everyoneRoleID string, viewChannelPerm int64) (*models.Channel, error)
 	DeleteChannel(ctx context.Context, channelID string) error
+	// CreateVoiceChannelWithCompanion atomically creates a voice channel and its companion text channel.
+	CreateVoiceChannelWithCompanion(ctx context.Context, serverID, name string, isPrivate bool, channelGroupID string) (voiceCh *models.Channel, textCh *models.Channel, err error)
+	// DeleteChannelWithCompanion deletes a voice channel and its companion text channel atomically.
+	DeleteChannelWithCompanion(ctx context.Context, voiceChannelID, companionChannelID string) error
+	// IsVoiceTextCompanion checks if a channel is a companion text channel for a voice channel.
+	IsVoiceTextCompanion(ctx context.Context, channelID string) (bool, error)
+	// UpdateCompanionChannel syncs fields from a voice channel to its companion text channel.
+	UpdateCompanionChannel(ctx context.Context, companionID string, name, topic *string, channelGroupID *string) error
 	AddMember(ctx context.Context, userID, serverID string) error
 	RemoveMember(ctx context.Context, userID, serverID string) error
 	IsMember(ctx context.Context, userID, serverID string) (bool, error)
