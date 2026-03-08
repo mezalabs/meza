@@ -183,7 +183,7 @@ function ImageGrid({
 
   if (count === 1) {
     const att = images[0];
-    return isEncrypted(att) ? (
+    const inner = isEncrypted(att) ? (
       <EncryptedImageAttachment
         attachment={att}
         allImageAttachments={allImageAttachments}
@@ -198,6 +198,9 @@ function ImageGrid({
         channelId={channelId}
       />
     );
+    return att.isSpoiler ? (
+      <SpoilerOverlay attachmentId={att.id}>{inner}</SpoilerOverlay>
+    ) : inner;
   }
 
   // For 2+ images, use a grid with object-fit: cover
@@ -216,23 +219,28 @@ function ImageGrid({
           className={`relative ${count === 3 && i === 0 ? 'row-span-2' : ''}`}
           style={{ aspectRatio: count === 3 && i === 0 ? '1/2' : '1/1' }}
         >
-          {isEncrypted(img) ? (
-            <EncryptedImageAttachment
-              attachment={img}
-              allImageAttachments={allImageAttachments}
-              indexInGroup={allImageAttachments.indexOf(img)}
-              channelId={channelId}
-              cover
-            />
-          ) : (
-            <ImageAttachment
-              attachment={img}
-              allImageAttachments={allImageAttachments}
-              indexInGroup={allImageAttachments.indexOf(img)}
-              channelId={channelId}
-              cover
-            />
-          )}
+          {(() => {
+            const inner = isEncrypted(img) ? (
+              <EncryptedImageAttachment
+                attachment={img}
+                allImageAttachments={allImageAttachments}
+                indexInGroup={allImageAttachments.indexOf(img)}
+                channelId={channelId}
+                cover
+              />
+            ) : (
+              <ImageAttachment
+                attachment={img}
+                allImageAttachments={allImageAttachments}
+                indexInGroup={allImageAttachments.indexOf(img)}
+                channelId={channelId}
+                cover
+              />
+            );
+            return img.isSpoiler ? (
+              <SpoilerOverlay attachmentId={img.id}>{inner}</SpoilerOverlay>
+            ) : inner;
+          })()}
         </div>
       ))}
     </div>
@@ -580,8 +588,8 @@ function SpoilerOverlay({ attachmentId, children }: { attachmentId: string; chil
   if (revealed) return <>{children}</>;
 
   return (
-    <div className="relative w-fit rounded-md overflow-hidden">
-      <div className="blur-xl pointer-events-none select-none" aria-hidden="true">
+    <div className="relative h-full rounded-md overflow-hidden">
+      <div className="blur-xl pointer-events-none select-none h-full" aria-hidden="true">
         {children}
       </div>
       <button
@@ -617,15 +625,6 @@ export function AttachmentRenderer({
     [attachments],
   );
 
-  // Split images into spoiler and non-spoiler groups
-  const spoilerImages = useMemo(
-    () => imageAttachments.filter((a) => a.isSpoiler),
-    [imageAttachments],
-  );
-  const normalImages = useMemo(
-    () => imageAttachments.filter((a) => !a.isSpoiler),
-    [imageAttachments],
-  );
 
   if (attachments.length === 0) return null;
 
@@ -655,32 +654,13 @@ export function AttachmentRenderer({
 
   return (
     <div className="mt-1 flex flex-col gap-2">
-      {normalImages.length > 0 && (
+      {imageAttachments.length > 0 && (
         <ImageGrid
-          images={normalImages}
+          images={imageAttachments}
           allImageAttachments={imageAttachments}
           channelId={channelId}
         />
       )}
-      {spoilerImages.map((att) => (
-        <SpoilerOverlay key={att.id} attachmentId={att.id}>
-          {isEncrypted(att) ? (
-            <EncryptedImageAttachment
-              attachment={att}
-              allImageAttachments={imageAttachments}
-              indexInGroup={imageAttachments.indexOf(att)}
-              channelId={channelId}
-            />
-          ) : (
-            <ImageAttachment
-              attachment={att}
-              allImageAttachments={imageAttachments}
-              indexInGroup={imageAttachments.indexOf(att)}
-              channelId={channelId}
-            />
-          )}
-        </SpoilerOverlay>
-      ))}
       {nonImageAttachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {nonImageAttachments.map(renderVideoOrFile)}
