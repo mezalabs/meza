@@ -142,9 +142,11 @@ function EncryptedViewerImage({
           type: attachment.contentType,
         });
         const url = acquireBlobURL(fullKey, blob);
-        // Store in session cache (extra ref keeps it alive across swipes)
-        cache.set(fullKey, url);
+        // Acquire a second ref for the session cache — the component's ref is
+        // released on effect cleanup while the cache ref survives across swipes
+        // and is released when the viewer closes (see viewer-close effect).
         acquireBlobURL(fullKey, blob);
+        cache.set(fullKey, url);
         if (mountedRef.current) setFullUrl(url);
       } catch (err) {
         console.error(
@@ -239,7 +241,10 @@ export function ImageViewer() {
       el.style.transition = `transform ${SWIPE_ANIMATE_MS}ms ease-out`;
       el.style.transform = `translateX(${direction === 'left' ? '-100vw' : '100vw'})`;
 
+      let finished = false;
       const finish = () => {
+        if (finished) return;
+        finished = true;
         el.removeEventListener('transitionend', finish);
         el.style.transition = '';
         el.style.transform = '';

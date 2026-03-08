@@ -1,5 +1,6 @@
 export {
   backfillChannel,
+  cancelBackfill,
   indexIncomingMessage,
   indexIncomingMessages,
   resetSearchState,

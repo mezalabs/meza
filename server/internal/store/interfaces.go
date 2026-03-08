@@ -360,4 +360,5 @@ type MediaStorer interface {
 	ResetAttachmentToPending(ctx context.Context, id string) error
 	LinkAttachments(ctx context.Context, ids []string, channelID string) error
 	FindUnlinkedAttachments(ctx context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error)
+	NullifyChannelAttachments(ctx context.Context, channelID string) error
 }

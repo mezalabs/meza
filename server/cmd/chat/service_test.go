@@ -1114,6 +1114,16 @@ func (m *mockMediaStore) LinkAttachments(_ context.Context, ids []string, channe
 func (m *mockMediaStore) FindUnlinkedAttachments(context.Context, time.Time, int) ([]*models.Attachment, error) {
 	return nil, nil
 }
+func (m *mockMediaStore) NullifyChannelAttachments(_ context.Context, channelID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, a := range m.attachments {
+		if a.ChannelID != nil && *a.ChannelID == channelID {
+			a.ChannelID = nil
+		}
+	}
+	return nil
+}
 
 func setupChatTestServer(t *testing.T) (mezav1connect.ChatServiceClient, *mockChatStore, *mockMessageStore, *mockInviteStore) {
 	t.Helper()

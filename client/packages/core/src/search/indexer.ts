@@ -16,6 +16,9 @@ const chatClient = createClient(ChatService, transport);
 /** Channels currently being backfilled (prevents duplicate runs). */
 const backfilling = new Set<string>();
 
+/** Abort controllers for in-progress backfills. */
+const backfillControllers = new Map<string, AbortController>();
+
 /** Channels that have completed a full backfill this session. */
 const backfilled = new Set<string>();
 
@@ -109,6 +112,8 @@ export async function backfillChannel(channelId: string): Promise<void> {
   if (backfilling.has(channelId) || backfilled.has(channelId)) return;
 
   backfilling.add(channelId);
+  const ac = new AbortController();
+  backfillControllers.set(channelId, ac);
   requestPersistence();
 
   try {
@@ -123,6 +128,8 @@ export async function backfillChannel(channelId: string): Promise<void> {
     let totalIndexed = 0;
 
     for (let page = 0; page < TOTAL_PAGES; page++) {
+      if (ac.signal.aborted) break;
+
       const res = await chatClient.getMessages({
         channelId,
         before: beforeId ?? '',
@@ -131,6 +138,7 @@ export async function backfillChannel(channelId: string): Promise<void> {
         limit: BATCH_SIZE,
       });
 
+      if (ac.signal.aborted) break;
       if (res.messages.length === 0) break;
 
       const batch = toBatch(channelId, res.messages);
@@ -148,11 +156,22 @@ export async function backfillChannel(channelId: string): Promise<void> {
     if (totalIndexed > 0) backfilled.add(channelId);
   } finally {
     backfilling.delete(channelId);
+    backfillControllers.delete(channelId);
   }
+}
+
+/** Cancel an in-progress backfill for a channel. */
+export function cancelBackfill(channelId: string): void {
+  backfillControllers.get(channelId)?.abort();
 }
 
 /** Clear all search state (indexes, backfill tracking). Called on logout. */
 export async function resetSearchState(): Promise<void> {
+  // Cancel all in-progress backfills
+  for (const ac of backfillControllers.values()) {
+    ac.abort();
+  }
+  backfillControllers.clear();
   try {
     await clearAllSearchIndexes();
   } catch {

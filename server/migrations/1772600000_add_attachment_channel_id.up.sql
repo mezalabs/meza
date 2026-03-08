@@ -1,4 +1,4 @@
-ALTER TABLE attachments ADD COLUMN channel_id TEXT;
+ALTER TABLE attachments ADD COLUMN IF NOT EXISTS channel_id TEXT;
 
 -- Index for access checks: look up a chat attachment's channel quickly.
 CREATE INDEX IF NOT EXISTS idx_attachments_channel_id
