@@ -208,7 +208,7 @@ tasks:
           if [ -n "$active_worktree" ]; then
             echo "  Active worktree: $active_worktree"
           fi
-          for name in gateway auth chat presence media voice keys vite; do
+          for name in gateway auth chat presence media voice notification keys vite; do
             pidfile="$PID_DIR/${name}.pid"
             if [ -f "$pidfile" ] && [ ! -L "$pidfile" ]; then
               pid=$(cat "$pidfile")
@@ -229,7 +229,7 @@ tasks:
 
         # Port usage
         echo "Port Usage:"
-        for entry in gateway:8080 auth:8081 chat:8082 presence:8083 media:8084 voice:8085 keys:8088 vite:4080; do
+        for entry in gateway:8080 auth:8081 chat:8082 presence:8083 media:8084 voice:8085 notification:8086 keys:8088 vite:4080; do
           name="${entry%%:*}"
           port="${entry##*:}"
           pid=$(lsof -ti ":$port" 2>/dev/null)
