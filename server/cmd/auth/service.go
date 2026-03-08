@@ -141,11 +141,14 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	// Create a minimal device record so the deviceID in the JWT references an existing row.
+	// Create a device record with a name and platform derived from the User-Agent header.
+	ua := req.Header().Get("User-Agent")
+	deviceName := auth.DeviceNameFromUA(ua)
 	if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
-		ID:       deviceID,
-		UserID:   userID,
-		Platform: "web",
+		ID:         deviceID,
+		UserID:     userID,
+		DeviceName: deviceName,
+		Platform:   auth.PlatformFromUA(ua),
 	}); err != nil {
 		slog.Error("creating device on register", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -195,11 +198,14 @@ func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 
 	deviceID := models.NewID()
 
-	// Create a minimal device record so the deviceID in the JWT references an existing row.
+	// Create a device record with a name and platform derived from the User-Agent header.
+	ua := req.Header().Get("User-Agent")
+	deviceName := auth.DeviceNameFromUA(ua)
 	if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
-		ID:       deviceID,
-		UserID:   user.ID,
-		Platform: "web",
+		ID:         deviceID,
+		UserID:     user.ID,
+		DeviceName: deviceName,
+		Platform:   auth.PlatformFromUA(ua),
 	}); err != nil {
 		slog.Error("creating device on login", "err", err, "user", user.ID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -514,6 +520,16 @@ func (s *authService) RegisterDevice(ctx context.Context, req *connect.Request[v
 	if platform != "web" && platform != "android" && platform != "ios" && platform != "electron" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("platform must be web, android, ios, or electron"))
 	}
+	if len(r.DeviceName) > 100 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("device_name must be at most 100 characters"))
+	}
+
+	// If the client didn't send a device name, derive one from the User-Agent
+	// header so all device-creation paths use the same server-side parser.
+	deviceName := r.DeviceName
+	if deviceName == "" {
+		deviceName = auth.DeviceNameFromUA(req.Header().Get("User-Agent"))
+	}
 
 	pushEnabled := false
 	if platform == "web" && r.PushEndpoint != nil && *r.PushEndpoint != "" {
@@ -525,7 +541,7 @@ func (s *authService) RegisterDevice(ctx context.Context, req *connect.Request[v
 	device := &models.Device{
 		ID:         deviceID,
 		UserID:     userID,
-		DeviceName: r.DeviceName,
+		DeviceName: deviceName,
 		Platform:   platform,
 		PushEnabled: pushEnabled,
 	}
@@ -578,6 +594,36 @@ func (s *authService) RevokeDevice(ctx context.Context, req *connect.Request[v1.
 	}
 
 	return connect.NewResponse(&v1.RevokeDeviceResponse{}), nil
+}
+
+func (s *authService) RevokeAllOtherDevices(ctx context.Context, req *connect.Request[v1.RevokeAllOtherDevicesRequest]) (*connect.Response[v1.RevokeAllOtherDevicesResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+	currentDeviceID, _ := auth.DeviceIDFromContext(ctx)
+	if currentDeviceID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("no current device"))
+	}
+
+	deletedIDs, err := s.deviceStore.DeleteAllOtherDevices(ctx, userID, currentDeviceID)
+	if err != nil {
+		slog.Error("revoke all other devices", "err", err, "user", userID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Block tokens for all deleted devices.
+	if s.tokenBlocklist != nil && len(deletedIDs) > 0 {
+		for _, deviceID := range deletedIDs {
+			if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, 1*time.Hour); err != nil {
+				slog.Error("blocking revoked device", "err", err, "device", deviceID)
+			}
+		}
+	}
+
+	return connect.NewResponse(&v1.RevokeAllOtherDevicesResponse{
+		RevokedCount: int32(len(deletedIDs)),
+	}), nil
 }
 
 func (s *authService) ListDevices(ctx context.Context, req *connect.Request[v1.ListDevicesRequest]) (*connect.Response[v1.ListDevicesResponse], error) {
@@ -756,10 +802,13 @@ func (s *authService) RecoverAccount(ctx context.Context, req *connect.Request[v
 
 	// Refresh tokens already deleted inside RecoverAccount transaction.
 	deviceID := models.NewID()
+	ua := req.Header().Get("User-Agent")
+	deviceName := auth.DeviceNameFromUA(ua)
 	if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
-		ID:       deviceID,
-		UserID:   userID,
-		Platform: "web",
+		ID:         deviceID,
+		UserID:     userID,
+		DeviceName: deviceName,
+		Platform:   auth.PlatformFromUA(ua),
 	}); err != nil {
 		slog.Error("creating device on recovery", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

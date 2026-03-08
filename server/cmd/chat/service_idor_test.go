@@ -378,7 +378,7 @@ func (s *idorMockAuthStore) ChangePassword(context.Context, string, string, stri
 func (s *idorMockAuthStore) GetRecoveryBundle(context.Context, string) ([]byte, []byte, []byte, error) {
 	panic("not implemented")
 }
-func (s *idorMockAuthStore) RecoverAccount(context.Context, string, string, []byte, models.EncryptedBundle, func([]byte) bool) (string, error) {
+func (s *idorMockAuthStore) RecoverAccount(context.Context, string, string, []byte, models.EncryptedBundle, func([]byte) bool, ...string) (string, error) {
 	panic("not implemented")
 }
 

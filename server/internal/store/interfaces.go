@@ -251,6 +251,7 @@ type DeviceStorer interface {
 	GetPushEnabledDevices(ctx context.Context, userID string) ([]*models.Device, error)
 	GetPushEnabledDevicesForUsers(ctx context.Context, userIDs []string) (map[string][]*models.Device, error)
 	DeleteDevice(ctx context.Context, userID, deviceID string) error
+	DeleteAllOtherDevices(ctx context.Context, userID, currentDeviceID string) ([]string, error)
 	TouchLastSeen(ctx context.Context, userID, deviceID string) error
 	PruneStaleDevices(ctx context.Context, olderThan time.Duration) (int64, error)
 }
