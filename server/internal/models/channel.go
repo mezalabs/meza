@@ -16,6 +16,7 @@ type Channel struct {
 	ChannelGroupID  string
 	DMStatus        string // "active", "pending", "declined" (DM channels only)
 	DMInitiatorID   string // user who initiated the DM request (DM channels only)
+	ContentWarning  string // free-text content warning (empty = none)
 	CreatedAt       time.Time
 }
 

@@ -346,6 +346,7 @@ export async function updateChannel(
     slowModeSeconds?: number;
     isDefault?: boolean;
     channelGroupId?: string;
+    contentWarning?: string;
   },
 ) {
   const store = useChannelStore.getState();
