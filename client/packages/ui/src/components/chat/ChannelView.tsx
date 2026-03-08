@@ -58,6 +58,10 @@ import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import {
+  useSatelliteOffline,
+  useServerInstanceUrl,
+} from '../../hooks/useSatellite.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -170,6 +174,10 @@ export function ChannelView({
 
   // Compute whether the current user can manage (delete) other users' messages
   const canManageMessages = useCanManageMessages(serverId, currentUser?.id);
+
+  // Satellite offline detection
+  const instanceUrl = useServerInstanceUrl(serverId);
+  const satelliteOffline = useSatelliteOffline(instanceUrl);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -510,6 +518,13 @@ export function ChannelView({
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
       <div className="flex flex-1 flex-col min-h-0 min-w-0">
+        {/* Satellite offline banner */}
+        {satelliteOffline && (
+          <div className="flex-shrink-0 border-b border-warning/30 bg-warning/10 px-4 py-2 text-xs text-warning">
+            This satellite is currently offline. Messages are read-only.
+          </div>
+        )}
+
         {/* Message list */}
         <div
           ref={scrollRef}
@@ -617,7 +632,7 @@ export function ChannelView({
           <MessageComposer
             channelId={channelId}
             serverId={serverId}
-            disabled={viewMode === 'historical'}
+            disabled={viewMode === 'historical' || satelliteOffline}
           />
         )}
       </div>

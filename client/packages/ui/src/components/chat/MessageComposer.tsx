@@ -20,6 +20,11 @@ import { getCommand } from '../../commands/index.ts';
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import {
+  useInstanceCapabilities,
+  useSatelliteOffline,
+  useServerInstanceUrl,
+} from '../../hooks/useSatellite.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { EmojiAutocomplete } from './EmojiAutocomplete.tsx';
 import { EmojiPickerButton } from './EmojiPickerButton.tsx';
@@ -77,6 +82,14 @@ export function MessageComposer({
   );
   const channelName = channel?.name;
   const isMobile = useMobile();
+
+  // Satellite offline detection
+  const instanceUrl = useServerInstanceUrl(resolvedServerId);
+  const satelliteOffline = useSatelliteOffline(instanceUrl);
+  const capabilities = useInstanceCapabilities(instanceUrl);
+  const mediaHidden = capabilities?.mediaEnabled === false;
+  const effectiveDisabled = disabled || satelliteOffline;
+
   const needsEncryption = true; // Universal E2EE: all channels encrypted
   const {
     encrypt,
@@ -655,7 +668,7 @@ export function MessageComposer({
         )}
 
         {/* Slash command autocomplete popup */}
-        {slashQuery !== null && !disabled && (
+        {slashQuery !== null && !effectiveDisabled && (
           <SlashCommandAutocomplete
             query={slashQuery}
             onSelect={(cmd) => {
@@ -696,36 +709,35 @@ export function MessageComposer({
         />
 
         <div className="flex min-h-[60px] rounded-lg border border-border/50 bg-bg-surface transition-colors">
-          {/* Attachment button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={
-              sending ||
-              disabled ||
-              encryptionPending ||
-              pendingFiles.length >= MAX_FILES
-            }
-            className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
-            title="Attach files"
-          >
-            <PaperclipIcon weight="regular" size={22} aria-hidden="true" />
-          </button>
+          {/* Attachment button (hidden when satellite disables media) */}
+          {!mediaHidden && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || effectiveDisabled || encryptionPending || pendingFiles.length >= MAX_FILES}
+              className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
+              title="Attach files"
+            >
+              <PaperclipIcon weight="regular" size={22} aria-hidden="true" />
+            </button>
+          )}
 
           <textarea
             ref={textareaRef}
             className="flex-1 resize-none rounded-none border-none bg-transparent text-text focus:outline-none overflow-y-auto"
             style={{ maxHeight: isMobile ? '80px' : '150px' }}
             placeholder={
-              encryptionPending
-                ? 'Setting up encryption…'
-                : encryptionUnavailable
-                  ? 'Encryption unavailable'
-                  : replyingTo
-                    ? 'Type a reply…'
-                    : channelName
-                      ? `Message #${channelName}`
-                      : 'Type a message…'
+              satelliteOffline
+                ? 'Satellite offline'
+                : encryptionPending
+                  ? 'Setting up encryption…'
+                  : encryptionUnavailable
+                    ? 'Encryption unavailable'
+                    : replyingTo
+                      ? 'Type a reply…'
+                      : channelName
+                        ? `Message #${channelName}`
+                        : 'Type a message…'
             }
             rows={1}
             maxLength={4000}
@@ -746,13 +758,13 @@ export function MessageComposer({
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
-            disabled={sending || disabled}
+            disabled={sending || effectiveDisabled}
           />
 
           <EmojiPickerButton
             onSelect={insertEmoji}
             onClose={focusTextarea}
-            disabled={sending || disabled}
+            disabled={sending || effectiveDisabled}
             serverId={serverId}
           />
 

@@ -56,6 +56,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import {
+  useInstanceCapabilities,
+  useSatelliteStatus,
+  useServerInstanceUrl,
+} from '../../hooks/useSatellite.ts';
 import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticipants.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
@@ -297,6 +302,11 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   });
   const rulesBlocked =
     !!selectedServer?.rulesRequired && !currentMember?.rulesAcknowledgedAt;
+
+  // Satellite capability-adaptive UI: hide voice channels when disabled
+  const selectedInstanceUrl = useServerInstanceUrl(selectedServerId ?? undefined);
+  const selectedCapabilities = useInstanceCapabilities(selectedInstanceUrl);
+  const voiceHidden = selectedCapabilities?.voiceEnabled === false;
 
   return (
     <aside
@@ -631,8 +641,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                     />
                   ))}
 
-                  {/* Voice channels */}
-                  {ungroupedVoice.length > 0 && (
+                  {/* Voice channels (hidden when satellite disables voice) */}
+                  {ungroupedVoice.length > 0 && !voiceHidden && (
                     <>
                       <div className="mt-4 mb-2 flex items-center justify-between pl-2">
                         <h2 className="text-sm font-semibold text-text-subtle">
@@ -1019,6 +1029,11 @@ function ServerIcon({
     return channels.some((ch) => (s.byChannel[ch.id]?.unreadCount ?? 0) > 0);
   });
 
+  const instanceUrl = useServerInstanceUrl(serverId);
+  const satelliteStatus = useSatelliteStatus(instanceUrl);
+  const isReconnecting = satelliteStatus === 'reconnecting';
+  const isError = satelliteStatus === 'error';
+
   const token = useAuthStore((s) => s.accessToken);
   const authQuery = token ? `?token=${encodeURIComponent(token)}` : '';
   // Show the static thumbnail by default; swap to the full (possibly animated) URL on hover.
@@ -1034,13 +1049,25 @@ function ServerIcon({
       <button
         type="button"
         className={`relative flex h-12 w-12 md:h-10 md:w-10 items-center justify-center overflow-hidden rounded-[10px] text-sm font-semibold transition-colors ${
+          isError
+            ? 'opacity-50 grayscale'
+            : isReconnecting
+              ? 'animate-pulse'
+              : ''
+        } ${
           isSelected
             ? iconSrc
               ? ''
               : 'bg-accent text-black'
             : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
         }`}
-        title={serverName}
+        title={
+          isError
+            ? `${serverName} (offline)`
+            : isReconnecting
+              ? `${serverName} (reconnecting…)`
+              : serverName
+        }
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         onClick={onSelect}
@@ -1054,8 +1081,13 @@ function ServerIcon({
         ) : (
           serverName.charAt(0).toUpperCase()
         )}
-        {hasUnread && !isSelected && (
+        {/* Unread dot */}
+        {hasUnread && !isSelected && !isError && (
           <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
+        )}
+        {/* Satellite error indicator */}
+        {isError && (
+          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-error ring-2 ring-bg-overlay" />
         )}
       </button>
     </div>
