@@ -419,23 +419,24 @@ func (x *Server) GetDefaultChannelPrivacy() bool {
 }
 
 type Channel struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ServerId        string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
-	Name            string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Type            ChannelType            `protobuf:"varint,4,opt,name=type,proto3,enum=meza.v1.ChannelType" json:"type,omitempty"`
-	Position        int32                  `protobuf:"varint,5,opt,name=position,proto3" json:"position,omitempty"`
-	Topic           string                 `protobuf:"bytes,6,opt,name=topic,proto3" json:"topic,omitempty"`
-	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	IsPrivate       bool                   `protobuf:"varint,8,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`
-	SlowModeSeconds *int32                 `protobuf:"varint,9,opt,name=slow_mode_seconds,json=slowModeSeconds,proto3,oneof" json:"slow_mode_seconds,omitempty"` // NULL=off, 0=read-only, >0=interval
-	IsDefault       bool                   `protobuf:"varint,10,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
-	ChannelGroupId  *string                `protobuf:"bytes,11,opt,name=channel_group_id,json=channelGroupId,proto3,oneof" json:"channel_group_id,omitempty"`
-	DmStatus        *string                `protobuf:"bytes,12,opt,name=dm_status,json=dmStatus,proto3,oneof" json:"dm_status,omitempty"`                   // "active", "pending", "declined" (DM channels only)
-	DmInitiatorId   *string                `protobuf:"bytes,13,opt,name=dm_initiator_id,json=dmInitiatorId,proto3,oneof" json:"dm_initiator_id,omitempty"`  // user who initiated the DM request
-	ContentWarning  *string                `protobuf:"bytes,14,opt,name=content_warning,json=contentWarning,proto3,oneof" json:"content_warning,omitempty"` // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ServerId           string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Name               string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Type               ChannelType            `protobuf:"varint,4,opt,name=type,proto3,enum=meza.v1.ChannelType" json:"type,omitempty"`
+	Position           int32                  `protobuf:"varint,5,opt,name=position,proto3" json:"position,omitempty"`
+	Topic              string                 `protobuf:"bytes,6,opt,name=topic,proto3" json:"topic,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsPrivate          bool                   `protobuf:"varint,8,opt,name=is_private,json=isPrivate,proto3" json:"is_private,omitempty"`
+	SlowModeSeconds    *int32                 `protobuf:"varint,9,opt,name=slow_mode_seconds,json=slowModeSeconds,proto3,oneof" json:"slow_mode_seconds,omitempty"` // NULL=off, 0=read-only, >0=interval
+	IsDefault          bool                   `protobuf:"varint,10,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	ChannelGroupId     *string                `protobuf:"bytes,11,opt,name=channel_group_id,json=channelGroupId,proto3,oneof" json:"channel_group_id,omitempty"`
+	DmStatus           *string                `protobuf:"bytes,12,opt,name=dm_status,json=dmStatus,proto3,oneof" json:"dm_status,omitempty"`                                   // "active", "pending", "declined" (DM channels only)
+	DmInitiatorId      *string                `protobuf:"bytes,13,opt,name=dm_initiator_id,json=dmInitiatorId,proto3,oneof" json:"dm_initiator_id,omitempty"`                  // user who initiated the DM request
+	ContentWarning     *string                `protobuf:"bytes,14,opt,name=content_warning,json=contentWarning,proto3,oneof" json:"content_warning,omitempty"`                 // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
+	VoiceTextChannelId *string                `protobuf:"bytes,15,opt,name=voice_text_channel_id,json=voiceTextChannelId,proto3,oneof" json:"voice_text_channel_id,omitempty"` // companion text channel ID (VOICE channels only)
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Channel) Reset() {
@@ -562,6 +563,13 @@ func (x *Channel) GetDmInitiatorId() string {
 func (x *Channel) GetContentWarning() string {
 	if x != nil && x.ContentWarning != nil {
 		return *x.ContentWarning
+	}
+	return ""
+}
+
+func (x *Channel) GetVoiceTextChannelId() string {
+	if x != nil && x.VoiceTextChannelId != nil {
+		return *x.VoiceTextChannelId
 	}
 	return ""
 }
@@ -2199,7 +2207,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12onboarding_enabled\x18\b \x01(\bR\x11onboardingEnabled\x12%\n" +
 	"\x0erules_required\x18\t \x01(\bR\rrulesRequired\x126\n" +
 	"\x17default_channel_privacy\x18\n" +
-	" \x01(\bR\x15defaultChannelPrivacy\"\xdd\x04\n" +
+	" \x01(\bR\x15defaultChannelPrivacy\"\xaf\x05\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -2218,13 +2226,15 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x10channel_group_id\x18\v \x01(\tH\x01R\x0echannelGroupId\x88\x01\x01\x12 \n" +
 	"\tdm_status\x18\f \x01(\tH\x02R\bdmStatus\x88\x01\x01\x12+\n" +
 	"\x0fdm_initiator_id\x18\r \x01(\tH\x03R\rdmInitiatorId\x88\x01\x01\x12,\n" +
-	"\x0fcontent_warning\x18\x0e \x01(\tH\x04R\x0econtentWarning\x88\x01\x01B\x14\n" +
+	"\x0fcontent_warning\x18\x0e \x01(\tH\x04R\x0econtentWarning\x88\x01\x01\x126\n" +
+	"\x15voice_text_channel_id\x18\x0f \x01(\tH\x05R\x12voiceTextChannelId\x88\x01\x01B\x14\n" +
 	"\x12_slow_mode_secondsB\x13\n" +
 	"\x11_channel_group_idB\f\n" +
 	"\n" +
 	"_dm_statusB\x12\n" +
 	"\x10_dm_initiator_idB\x12\n" +
-	"\x10_content_warning\"\xa6\x01\n" +
+	"\x10_content_warningB\x18\n" +
+	"\x16_voice_text_channel_id\"\xa6\x01\n" +
 	"\fChannelGroup\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +

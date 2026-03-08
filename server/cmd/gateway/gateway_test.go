@@ -174,6 +174,18 @@ func (m *mockChatStoreGW) ListChannelParticipantIDs(_ context.Context, _ string)
 func (m *mockChatStoreGW) UpdateChannelPrivacy(_ context.Context, _ string, _, _ *string, _ *int, _ *bool, _ *int, _ *bool, _, _ *string, _ bool, _ string, _ int64) (*models.Channel, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *mockChatStoreGW) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
+	return nil, nil, nil
+}
+func (m *mockChatStoreGW) DeleteChannelWithCompanion(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStoreGW) IsVoiceTextCompanion(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+func (m *mockChatStoreGW) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
+	return nil
+}
 
 // mockReadStateStoreGW implements store.ReadStateStorer for gateway tests.
 type mockReadStateStoreGW struct{}

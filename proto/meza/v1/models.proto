@@ -60,6 +60,7 @@ message Channel {
   optional string dm_status = 12;         // "active", "pending", "declined" (DM channels only)
   optional string dm_initiator_id = 13;   // user who initiated the DM request
   optional string content_warning = 14;   // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
+  optional string voice_text_channel_id = 15; // companion text channel ID (VOICE channels only)
 }
 
 message ChannelGroup {
