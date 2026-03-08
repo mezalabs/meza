@@ -1,6 +1,11 @@
 import { ConnectError } from '@connectrpc/connect';
 import { FederationService } from '@meza/gen/meza/v1/federation_pb.ts';
 import { createInstanceClient } from './client.ts';
+import {
+  scheduleTokenRefresh,
+  clearTokenRefreshTimer,
+  clearAllTokenRefreshTimers,
+} from './federation-refresh.ts';
 import { useInstanceStore } from '../store/instances.ts';
 import { useServerStore } from '../store/servers.ts';
 import { useChannelStore } from '../store/channels.ts';
@@ -171,6 +176,9 @@ export async function joinSatelliteGuild(
   // 8. Open WebSocket connection to the satellite
   connectInstance(normalizedUrl, accessToken, userId);
 
+  // 9. Schedule proactive token refresh at 75% of TTL
+  scheduleTokenRefresh(normalizedUrl, accessToken);
+
   // TODO: Phase C2 — push profile to satellite via UpdateFederatedProfile RPC
   // (RPC not yet defined in proto)
 
@@ -230,6 +238,7 @@ export async function leaveSatelliteGuild(
   const remainingServers = useServerStore.getState().getServers(normalizedUrl);
   if (Object.keys(remainingServers).length === 0) {
     // No more guilds on this satellite — disconnect and clean up
+    clearTokenRefreshTimer(normalizedUrl);
     disconnectInstance(normalizedUrl);
     useInstanceStore.getState().removeInstance(normalizedUrl);
     removeTransport(normalizedUrl);
@@ -251,6 +260,177 @@ export async function listFederatedMemberships() {
     );
   }
 }
+
+/**
+ * Reconnect to all federated satellite instances on app open or new device.
+ *
+ * Fetches memberships from the home server (source of truth), groups by
+ * satellite URL, and connects to each in parallel via FederationRefresh
+ * (not Join — we already have an account on the satellite).
+ *
+ * Call this after successful home login / auth restore.
+ */
+export async function reconnectFederatedInstances(): Promise<void> {
+  let memberships: Awaited<ReturnType<typeof listFederatedMemberships>>;
+  try {
+    memberships = await listFederatedMemberships();
+  } catch (err) {
+    console.warn(
+      '[Federation] failed to fetch memberships for reconnect:',
+      err,
+    );
+    return;
+  }
+
+  if (memberships.length === 0) return;
+
+  // Group by satellite URL
+  const bySatellite = new Map<
+    string,
+    typeof memberships
+  >();
+  for (const m of memberships) {
+    const url = normalizeInstanceUrl(m.instanceUrl);
+    let group = bySatellite.get(url);
+    if (!group) {
+      group = [];
+      bySatellite.set(url, group);
+    }
+    group.push(m);
+  }
+
+  await Promise.allSettled(
+    [...bySatellite.entries()].map(async ([url, _members]) => {
+      try {
+        // Ensure instance is registered
+        useInstanceStore.getState().addInstance(url);
+
+        // Request assertion from the home server
+        const assertionRes = await homeClient().createFederationAssertion({
+          targetInstanceUrl: url,
+        });
+
+        // Get the existing instance state for refresh token
+        const instance = useInstanceStore.getState().getInstance(url);
+        const existingRefreshToken =
+          instance &&
+          (instance.status === 'connected' ||
+            instance.status === 'reconnecting')
+            ? instance.refreshToken
+            : '';
+
+        // Connect to satellite via FederationRefresh (or Join if no refresh token)
+        let accessToken: string;
+        let refreshToken: string;
+        let userId: string;
+
+        if (existingRefreshToken) {
+          // Refresh existing session
+          const refreshRes = await satelliteClient(url).federationRefresh({
+            assertionToken: assertionRes.assertionToken,
+            refreshToken: existingRefreshToken,
+          });
+          accessToken = refreshRes.accessToken;
+          refreshToken = refreshRes.refreshToken;
+          // userId not returned from refresh — we don't need it for reconnect
+          userId = '';
+        } else {
+          // No refresh token — this is a new device. We need to re-join
+          // using the first membership's server context. The satellite will
+          // recognize us by our federation identity and return existing state.
+          // For now, skip instances without a refresh token — they'll need
+          // a fresh invite or manual rejoin.
+          console.warn(
+            `[Federation] no refresh token for ${url}, skipping reconnect`,
+          );
+          return;
+        }
+
+        // Update instance store with fresh tokens
+        useInstanceStore.getState().updateInstanceStatus(url, {
+          status: 'connected',
+          url,
+          accessToken,
+          refreshToken,
+          capabilities: {
+            protocolVersion: 1,
+            mediaEnabled: true,
+            voiceEnabled: false,
+            notificationsEnabled: false,
+          },
+        });
+
+        // Schedule proactive token refresh
+        scheduleTokenRefresh(url, accessToken);
+
+        // Open WebSocket connection
+        connectInstance(url, accessToken, userId);
+      } catch (err) {
+        console.warn(
+          `[Federation] reconnect failed for satellite ${url}:`,
+          err,
+        );
+        // Update instance status to error but don't remove — user may retry
+        useInstanceStore.getState().updateInstanceStatus(url, {
+          status: 'error',
+          url,
+          error: err instanceof Error ? err.message : 'Reconnect failed',
+        });
+      }
+    }),
+  );
+}
+
+/**
+ * Handle a FEDERATION_REMOVED event from a satellite (ban/kick).
+ *
+ * Cleans up all local state for the removed guild and notifies the
+ * home server to remove the membership record.
+ */
+export async function handleFederationRemoved(
+  instanceUrl: string,
+  serverId: string,
+  reason: string,
+): Promise<void> {
+  const normalizedUrl = normalizeInstanceUrl(instanceUrl);
+
+  console.warn(
+    `[Federation] removed from server ${serverId} on ${normalizedUrl}: ${reason}`,
+  );
+
+  // 1. Remove guild data from stores
+  useServerStore.getState().removeServer(serverId, normalizedUrl);
+  useChannelStore.getState().removeServerChannels(serverId, normalizedUrl);
+  useMemberStore.getState().removeInstanceData(normalizedUrl);
+
+  // 2. Remove membership from home server (non-critical)
+  homeClient()
+    .removeFederatedMembership({
+      satelliteUrl: normalizedUrl,
+      serverId,
+    })
+    .catch((err) => {
+      console.warn(
+        'Failed to remove federation membership from home server:',
+        err,
+      );
+    });
+
+  // 3. Check if other guilds remain on this satellite
+  const remainingServers = useServerStore.getState().getServers(normalizedUrl);
+  if (Object.keys(remainingServers).length === 0) {
+    // No more guilds — disconnect and clean up
+    clearTokenRefreshTimer(normalizedUrl);
+    disconnectInstance(normalizedUrl);
+    useInstanceStore.getState().removeInstance(normalizedUrl);
+    removeTransport(normalizedUrl);
+  }
+}
+
+/**
+ * Clean up all federation refresh timers. Called during logout.
+ */
+export { clearAllTokenRefreshTimers };
 
 /**
  * Detect whether an invite URL points to a remote (federated) instance

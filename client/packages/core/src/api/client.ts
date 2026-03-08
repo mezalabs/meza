@@ -44,9 +44,13 @@ async function refreshTokensForInstance(
     }
   }
 
-  // Satellite instances: refresh will be wired in Phase C2.
-  // For now, reject on auth failure.
-  return false;
+  // Satellite instances: refresh via federation assertion flow
+  try {
+    const { refreshSatelliteToken } = await import('./federation-refresh.ts');
+    return await refreshSatelliteToken(instanceUrl);
+  } catch {
+    return false;
+  }
 }
 
 function createAuthInterceptor(instanceUrl: string): Interceptor {

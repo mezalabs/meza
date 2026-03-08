@@ -8,6 +8,7 @@ import {
   gatewayDisconnect,
   isCapacitor,
   isElectron,
+  reconnectFederatedInstances,
   subscribeToPush,
   teardownSession,
   useAuthStore,
@@ -52,6 +53,8 @@ if (initialAuth.isAuthenticated && initialAuth.accessToken) {
   gatewayConnect(initialAuth.accessToken);
   // Bootstrap E2EE session from IndexedDB (async, non-blocking)
   bootstrapSession();
+  // Reconnect to federated satellite instances (async, non-blocking)
+  reconnectFederatedInstances().catch(() => {});
 }
 
 useAuthStore.subscribe((state, prevState) => {
@@ -61,6 +64,8 @@ useAuthStore.subscribe((state, prevState) => {
     !prevState.isAuthenticated
   ) {
     gatewayConnect(state.accessToken);
+    // Reconnect to federated satellite instances after login
+    reconnectFederatedInstances().catch(() => {});
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();

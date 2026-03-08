@@ -14,6 +14,7 @@ import {
   listChannels as fetchChannels,
   listDMChannels as fetchDMChannels,
 } from '../api/chat.ts';
+import { useInstanceStore } from '../store/instances.ts';
 import { getPublicKeys } from '../api/keys.ts';
 import {
   clearStatusOverride,
@@ -434,10 +435,28 @@ const homeCallbacks: ConnectionCallbacks = {
     } else {
       usePresenceStore.getState().setMyStatus(PresenceStatus.ONLINE);
     }
+
+    // Home recovered — resume any paused satellite refreshes
+    import('../api/federation-refresh.ts').then(
+      ({ onHomeConnectionRecovered }) => {
+        onHomeConnectionRecovered().catch((err) => {
+          console.warn(
+            '[Gateway] satellite refresh cascade after home recovery failed:',
+            err,
+          );
+        });
+      },
+    );
   },
 
   onClose: (_conn, reason) => {
     useGatewayStore.getState().setLastError(reason);
+    // Pause satellite refreshes while home is down
+    import('../api/federation-refresh.ts').then(
+      ({ onHomeConnectionLost }) => {
+        onHomeConnectionLost();
+      },
+    );
     scheduleReconnect();
   },
 
@@ -922,8 +941,22 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         event.payload.case === 'federationRemoved' &&
         event.payload.value
       ) {
-        const { serverId } = event.payload.value;
-        if (serverId) {
+        const { serverId, instanceUrl: removedInstanceUrl, reason } =
+          event.payload.value;
+        if (removedInstanceUrl && serverId) {
+          // Federation removal event received on the home connection —
+          // clean up satellite state
+          import('../api/federation.ts').then(
+            ({ handleFederationRemoved }) => {
+              handleFederationRemoved(
+                removedInstanceUrl,
+                serverId,
+                reason,
+              );
+            },
+          );
+        } else if (serverId) {
+          // Fallback: re-fetch channels if no instance URL
           fetchChannels(serverId).catch(() => {});
         }
       } else if (
@@ -1123,8 +1156,39 @@ function dispatchWithInstance(
     // Guard: if the connection was removed while the event was in flight, drop it
     if (!connections.has(instanceUrl)) return;
 
-    // MVP: log satellite events. Full dispatch routing to instance-scoped
-    // stores will be added in a later phase.
+    // Handle satellite-specific events
+    if (op === GatewayOpCode.GATEWAY_OP_EVENT) {
+      try {
+        const event = fromBinary(EventSchema, payload);
+
+        // Ban/kick: the satellite tells us we've been removed
+        if (
+          event.payload.case === 'federationRemoved' &&
+          event.payload.value
+        ) {
+          const { serverId, reason } = event.payload.value;
+          // Dynamic import to avoid circular dependency
+          import('../api/federation.ts').then(
+            ({ handleFederationRemoved }) => {
+              handleFederationRemoved(instanceUrl, serverId, reason);
+            },
+          );
+          return;
+        }
+      } catch (err) {
+        console.error(
+          `[Gateway] failed to parse satellite event from ${instanceUrl}:`,
+          err,
+        );
+      }
+    } else if (op === GatewayOpCode.GATEWAY_OP_HEARTBEAT_ACK) {
+      const conn = connections.get(instanceUrl);
+      if (conn) ackHeartbeat(conn);
+      return;
+    }
+
+    // Log other satellite events for debugging. Full dispatch routing
+    // to instance-scoped stores will be added in a later phase.
     console.debug(
       `[Gateway] satellite event from ${instanceUrl}: op=${op}, ${payload.byteLength}B`,
     );
@@ -1198,8 +1262,51 @@ export function connectInstance(
       if (capturedGen !== globalGeneration) return;
       if (!connections.has(key)) return;
       console.warn(`[Gateway] satellite disconnected (${key}): ${reason}`);
-      // For MVP, no automatic reconnect for satellites. The caller can
-      // re-invoke connectInstance() to retry.
+
+      // Update instance status to reconnecting
+      const inst = useInstanceStore.getState().getInstance(key);
+      if (inst && (inst.status === 'connected' || inst.status === 'reconnecting')) {
+        const attempt = inst.status === 'reconnecting' ? (inst.attempt + 1) : 1;
+        useInstanceStore.getState().updateInstanceStatus(key, {
+          status: 'reconnecting',
+          url: key,
+          accessToken: inst.accessToken,
+          refreshToken: inst.refreshToken,
+          attempt,
+        });
+      }
+
+      // Schedule reconnect with exponential backoff
+      const satelliteConn = connections.get(key);
+      if (satelliteConn && !isShuttingDown) {
+        scheduleReconnectTimer(satelliteConn, () => {
+          if (!connections.has(key)) return;
+          if (isShuttingDown) return;
+          // Re-authenticate via FederationRefresh, then reconnect
+          import('../api/federation-refresh.ts').then(
+            ({ refreshSatelliteToken }) => {
+              refreshSatelliteToken(key)
+                .then((success) => {
+                  if (!success || !connections.has(key)) return;
+                  const freshInst = useInstanceStore.getState().getInstance(key);
+                  if (
+                    freshInst &&
+                    (freshInst.status === 'connected' ||
+                      freshInst.status === 'reconnecting')
+                  ) {
+                    connectInstance(key, freshInst.accessToken, '');
+                  }
+                })
+                .catch((err) => {
+                  console.warn(
+                    `[Gateway] satellite reconnect refresh failed (${key}):`,
+                    err,
+                  );
+                });
+            },
+          );
+        });
+      }
     },
     sendIdentify: (c) => {
       const identifyJson = JSON.stringify({ token: c.token });

@@ -135,11 +135,19 @@ export {
 // API — federation
 export {
   type FederationJoinResult,
+  clearAllTokenRefreshTimers,
+  handleFederationRemoved,
   isFederatedInvite,
   joinSatelliteGuild,
   leaveSatelliteGuild,
   listFederatedMemberships,
+  reconnectFederatedInstances,
 } from './api/federation.ts';
+// API — federation refresh
+export {
+  refreshAllSatelliteTokens,
+  refreshSatelliteToken,
+} from './api/federation-refresh.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
