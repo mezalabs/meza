@@ -27,12 +27,16 @@ func (s *chatService) publishSystemMessage(ctx context.Context, channelID string
 	}
 
 	// Rate limit: at most 1 system message per type per 5 seconds per channel.
+	// Uses a Lua script to atomically INCR and set TTL on first increment,
+	// preventing orphaned keys if the process crashes between INCR and EXPIRE.
 	rateKey := fmt.Sprintf("sys_msg_rate:%s:%d", channelID, msgType)
-	count, _ := s.rdb.Incr(ctx, rateKey).Result()
-	if count == 1 {
-		s.rdb.Expire(ctx, rateKey, 5*time.Second)
-	}
-	if count > 1 {
+	rateLimitScript := `local count = redis.call('INCR', KEYS[1])
+if count == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+return count`
+	count, err := s.rdb.Eval(ctx, rateLimitScript, []string{rateKey}, 5).Int64()
+	if err != nil {
+		slog.Warn("system message rate limit check failed, allowing message", "key", rateKey, "err", err)
+	} else if count > 1 {
 		return nil // suppress duplicate within rate window
 	}
 

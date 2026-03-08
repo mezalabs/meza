@@ -1637,6 +1637,9 @@ func (s *chatService) EditMessage(ctx context.Context, req *connect.Request[v1.E
 	if msg.Deleted {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("message not found"))
 	}
+	if msg.Type != 0 {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot edit system messages"))
+	}
 	if msg.AuthorID != userID {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not the message author"))
 	}
