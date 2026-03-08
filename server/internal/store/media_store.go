@@ -23,13 +23,13 @@ func NewMediaStore(pool *pgxpool.Pool) *MediaStore {
 }
 
 // attachmentColumns is the canonical column list for attachment queries.
-const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, channel_id, created_at, updated_at, completed_at, expires_at, linked_at`
+const attachmentColumns = `id, uploader_id, upload_purpose, object_key, thumbnail_key, filename, content_type, original_content_type, size_bytes, width, height, status, micro_thumbnail_data, encrypted_key, is_spoiler, channel_id, created_at, updated_at, completed_at, expires_at, linked_at`
 
 func scanAttachment(row interface{ Scan(dest ...any) error }, a *models.Attachment) error {
 	return row.Scan(
 		&a.ID, &a.UploaderID, &a.UploadPurpose, &a.ObjectKey, &a.ThumbnailKey,
 		&a.Filename, &a.ContentType, &a.OriginalContentType, &a.SizeBytes, &a.Width, &a.Height,
-		&a.Status, &a.MicroThumbnailData, &a.EncryptedKey, &a.ChannelID, &a.CreatedAt, &a.UpdatedAt, &a.CompletedAt, &a.ExpiresAt,
+		&a.Status, &a.MicroThumbnailData, &a.EncryptedKey, &a.IsSpoiler, &a.ChannelID, &a.CreatedAt, &a.UpdatedAt, &a.CompletedAt, &a.ExpiresAt,
 		&a.LinkedAt,
 	)
 }
@@ -138,14 +138,14 @@ func (s *MediaStore) TransitionToProcessing(ctx context.Context, id, uploaderID 
 	return &a, nil
 }
 
-func (s *MediaStore) UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte) error {
+func (s *MediaStore) UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte, isSpoiler bool) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	tag, err := s.pool.Exec(ctx,
-		`UPDATE attachments SET status = 'completed', size_bytes = $2, content_type = $3, width = $4, height = $5, thumbnail_key = $6, micro_thumbnail_data = $7, encrypted_key = $8, completed_at = now(), expires_at = NULL, updated_at = now()
+		`UPDATE attachments SET status = 'completed', size_bytes = $2, content_type = $3, width = $4, height = $5, thumbnail_key = $6, micro_thumbnail_data = $7, encrypted_key = $8, is_spoiler = $9, completed_at = now(), expires_at = NULL, updated_at = now()
 		 WHERE id = $1 AND status = 'processing'`,
-		id, sizeBytes, contentType, width, height, thumbnailKey, microThumbnailData, encryptedKey,
+		id, sizeBytes, contentType, width, height, thumbnailKey, microThumbnailData, encryptedKey, isSpoiler,
 	)
 	if err != nil {
 		return fmt.Errorf("update attachment completed: %w", err)
