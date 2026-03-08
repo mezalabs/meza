@@ -20,7 +20,7 @@ export type {
   User,
 } from '@meza/gen/meza/v1/models_pb.ts';
 // Re-export protobuf enums used by UI
-export { ChannelType } from '@meza/gen/meza/v1/models_pb.ts';
+export { ChannelType, MessageType } from '@meza/gen/meza/v1/models_pb.ts';
 export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
 // API — auth
 export {
