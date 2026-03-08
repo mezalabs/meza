@@ -232,6 +232,10 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 	if senderID == "" {
 		return
 	}
+	// Skip push notifications for system messages.
+	if senderID == models.SystemUserID {
+		return
+	}
 
 	// Resolve channel to get server context.
 	channel, err := s.chatStore.GetChannel(ctx, channelID)

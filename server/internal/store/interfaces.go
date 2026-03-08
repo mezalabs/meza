@@ -216,9 +216,10 @@ type SearchMessagesOpts struct {
 	AuthorID        string
 	HasAttachment   *bool
 	MentionedUserID string
-	BeforeID        string // ULID cursor — only messages with ID < this
-	AfterID         string // ULID cursor — only messages with ID > this (forward)
-	Limit           int    // default 25, max 100
+	MessageTypes    []uint32 // filter by message type (empty = all types)
+	BeforeID        string   // ULID cursor — only messages with ID < this
+	AfterID         string   // ULID cursor — only messages with ID > this (forward)
+	Limit           int      // default 25, max 100
 }
 
 // MessageStorer provides access to message data in ScyllaDB.

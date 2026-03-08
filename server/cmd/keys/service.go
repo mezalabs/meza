@@ -304,6 +304,18 @@ func (s *keyService) RotateChannelKey(
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to rotate channel key"))
 	}
 
+	// Publish internal key rotation event for the chat service to create a system message.
+	rotationEvent := &v1.KeyRotationInternalEvent{
+		ChannelId:     channelID,
+		ActorId:       userID,
+		NewKeyVersion: newVersion,
+	}
+	if rotData, err := proto.Marshal(rotationEvent); err != nil {
+		slog.Error("marshal key rotation event", "channel_id", channelID, "err", err)
+	} else if err := s.nc.Publish(subjects.InternalKeyRotation(), rotData); err != nil {
+		slog.Warn("publish key rotation event failed", "channel_id", channelID, "err", err)
+	}
+
 	return connect.NewResponse(&v1.RotateChannelKeyResponse{NewVersion: newVersion}), nil
 }
 

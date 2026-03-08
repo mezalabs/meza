@@ -955,6 +955,10 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
 	}
+	// Prevent impersonation of the system user via the public API.
+	if userID == models.SystemUserID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("system user cannot send messages via API"))
+	}
 	if req.Msg.ChannelId == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
@@ -1089,6 +1093,9 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 		}
 		if parent.Deleted {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("reply_to_id references a deleted message"))
+		}
+		if parent.Type != 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot reply to system messages"))
 		}
 	}
 
@@ -1457,6 +1464,11 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid after_id"))
 		}
 		opts.AfterID = *req.Msg.AfterId
+	}
+	if len(req.Msg.MessageTypes) > 0 {
+		for _, mt := range req.Msg.MessageTypes {
+			opts.MessageTypes = append(opts.MessageTypes, uint32(mt))
+		}
 	}
 
 	messages, hasMore, err := s.messageStore.SearchMessages(ctx, opts)
@@ -2049,6 +2061,28 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		s.nc.Publish(subjects.ServerChannel(updated.ServerID), subjects.EncodeServerChannelEvent(eventData, privateChID))
 	}
 
+	// Emit system messages for name and topic changes.
+	if req.Msg.Name != nil && *req.Msg.Name != ch.Name {
+		if err := s.publishSystemMessage(ctx, updated.ID, uint32(v1.MessageType_MESSAGE_TYPE_CHANNEL_UPDATE), ChannelUpdateContent{
+			ActorID:  userID,
+			Field:    "name",
+			OldValue: truncate(ch.Name, 1024),
+			NewValue: truncate(*req.Msg.Name, 1024),
+		}); err != nil {
+			slog.Warn("system message: channel name update failed", "channel", updated.ID, "err", err)
+		}
+	}
+	if req.Msg.Topic != nil && *req.Msg.Topic != ch.Topic {
+		if err := s.publishSystemMessage(ctx, updated.ID, uint32(v1.MessageType_MESSAGE_TYPE_CHANNEL_UPDATE), ChannelUpdateContent{
+			ActorID:  userID,
+			Field:    "topic",
+			OldValue: truncate(ch.Topic, 1024),
+			NewValue: truncate(*req.Msg.Topic, 1024),
+		}); err != nil {
+			slog.Warn("system message: channel topic update failed", "channel", updated.ID, "err", err)
+		}
+	}
+
 	return connect.NewResponse(&v1.UpdateChannelResponse{
 		Channel: channelToProto(updated),
 	}), nil
@@ -2421,6 +2455,19 @@ func (s *chatService) JoinServer(ctx context.Context, req *connect.Request[v1.Jo
 	// Signal gateway to refresh channel subscriptions for this user.
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
 
+	// Emit system message to the default text channel.
+	if ch, err := s.getDefaultTextChannel(ctx, consumed.ServerID); err != nil {
+		slog.Warn("system message: default channel lookup failed", "server", consumed.ServerID, "err", err)
+	} else if ch != nil {
+		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_JOIN), MemberEventContent{
+			UserID: userID,
+		}); err != nil {
+			slog.Warn("system message: member join failed", "channel", ch.ID, "err", err)
+		}
+	} else {
+		slog.Warn("system message: no default text channel", "server", consumed.ServerID)
+	}
+
 	return connect.NewResponse(&v1.JoinServerResponse{
 		Server:               serverToProto(srv),
 		EncryptedChannelKeys: inv.EncryptedChannelKeys,
@@ -2488,6 +2535,19 @@ func (s *chatService) LeaveServer(ctx context.Context, req *connect.Request[v1.L
 
 	// Signal gateway to refresh channel subscriptions for this user.
 	s.nc.Publish(subjects.UserSubscription(userID), nil)
+
+	// Emit system message to the default text channel.
+	if ch, err := s.getDefaultTextChannel(ctx, req.Msg.ServerId); err != nil {
+		slog.Warn("system message: default channel lookup failed", "server", req.Msg.ServerId, "err", err)
+	} else if ch != nil {
+		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_LEAVE), MemberEventContent{
+			UserID: userID,
+		}); err != nil {
+			slog.Warn("system message: member leave failed", "channel", ch.ID, "err", err)
+		}
+	} else {
+		slog.Warn("system message: no default text channel", "server", req.Msg.ServerId)
+	}
 
 	return connect.NewResponse(&v1.LeaveServerResponse{}), nil
 }

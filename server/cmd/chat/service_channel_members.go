@@ -114,6 +114,14 @@ func (s *chatService) addGroupDMMember(ctx context.Context, ch *models.Channel, 
 	// Publish event and refresh subscriptions.
 	s.publishChannelMemberEvent(ch, targetID, callerID, v1.EventType_EVENT_TYPE_CHANNEL_MEMBER_ADD)
 
+	// Emit system message to the group DM channel.
+	if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_JOIN), MemberEventContent{
+		UserID:  targetID,
+		ActorID: callerID,
+	}); err != nil {
+		slog.Warn("system message: group DM member add failed", "channel", ch.ID, "err", err)
+	}
+
 	return connect.NewResponse(&v1.AddChannelMemberResponse{}), nil
 }
 
@@ -192,6 +200,15 @@ func (s *chatService) removeGroupDMMember(ctx context.Context, ch *models.Channe
 
 	// Publish event and refresh subscriptions.
 	s.publishChannelMemberEvent(ch, targetID, callerID, v1.EventType_EVENT_TYPE_CHANNEL_MEMBER_REMOVE)
+
+	// Emit system message to the group DM channel.
+	content := MemberEventContent{UserID: targetID}
+	if callerID != targetID {
+		content.ActorID = callerID // removed by another user
+	}
+	if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_LEAVE), content); err != nil {
+		slog.Warn("system message: group DM member remove failed", "channel", ch.ID, "err", err)
+	}
 
 	return connect.NewResponse(&v1.RemoveChannelMemberResponse{}), nil
 }
