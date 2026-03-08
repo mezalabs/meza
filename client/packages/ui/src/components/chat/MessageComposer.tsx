@@ -9,6 +9,7 @@ import {
   useMessageStore,
 } from '@meza/core';
 import {
+  EyeSlashIcon,
   FileIcon,
   PaperclipIcon,
   PaperPlaneRightIcon,
@@ -38,6 +39,7 @@ interface PendingFile {
   preview: string | null;
   progress: number; // 0-100
   error: string | null;
+  isSpoiler: boolean;
 }
 
 interface MessageComposerProps {
@@ -171,6 +173,7 @@ export function MessageComposer({
         preview,
         progress: 0,
         error: null,
+        isSpoiler: false,
       });
     }
 
@@ -185,6 +188,12 @@ export function MessageComposer({
       if (removed?.preview) URL.revokeObjectURL(removed.preview);
       return prev.filter((f) => f.id !== id);
     });
+  }
+
+  function toggleSpoiler(id: string) {
+    setPendingFiles((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, isSpoiler: !f.isSpoiler } : f)),
+    );
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -354,6 +363,7 @@ export function MessageComposer({
                 ),
               );
             },
+            pf.isSpoiler,
           );
           encryptedResults.push(result);
           uploadedFiles.push({
@@ -585,6 +595,20 @@ export function MessageComposer({
                 title="Remove"
               >
                 <XIcon weight="regular" size={14} aria-hidden="true" />
+              </button>
+
+              {/* Spoiler toggle */}
+              <button
+                type="button"
+                onClick={() => toggleSpoiler(pf.id)}
+                className={`absolute top-0.5 left-0.5 z-10 rounded-full p-0.5 transition-opacity ${
+                  pf.isSpoiler
+                    ? 'bg-accent text-black opacity-100'
+                    : 'bg-bg-elevated/80 text-text-muted opacity-0 group-hover:opacity-100'
+                }`}
+                title={pf.isSpoiler ? 'Remove spoiler' : 'Mark as spoiler'}
+              >
+                <EyeSlashIcon weight="regular" size={14} aria-hidden="true" />
               </button>
 
               {pf.preview ? (

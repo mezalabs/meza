@@ -9,8 +9,9 @@ import {
   releaseBlobURL,
   unwrapFileKey,
 } from '@meza/core';
-import { FileTextIcon } from '@phosphor-icons/react';
+import { EyeSlashIcon, FileTextIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useContentWarningStore } from '../../stores/contentWarnings.ts';
 import { useImageViewerStore } from '../../stores/imageViewer.ts';
 
 function formatFileSize(bytes: bigint): string {
@@ -570,6 +571,34 @@ function FileIcon() {
   );
 }
 
+// --- Spoiler overlay ---
+
+function SpoilerOverlay({ attachmentId, children }: { attachmentId: string; children: React.ReactNode }) {
+  const revealed = useContentWarningStore((s) => s.isSpoilerRevealed(attachmentId));
+  const reveal = useContentWarningStore((s) => s.revealSpoiler);
+
+  if (revealed) return <>{children}</>;
+
+  return (
+    <div className="relative">
+      <div className="blur-xl pointer-events-none select-none" aria-hidden="true">
+        {children}
+      </div>
+      <button
+        type="button"
+        onClick={() => reveal(attachmentId)}
+        className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-md cursor-pointer"
+        aria-label="Reveal spoiler image"
+      >
+        <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white">
+          <EyeSlashIcon size={16} aria-hidden="true" />
+          Spoiler
+        </div>
+      </button>
+    </div>
+  );
+}
+
 // --- Main renderer ---
 
 export function AttachmentRenderer({
@@ -588,40 +617,73 @@ export function AttachmentRenderer({
     [attachments],
   );
 
+  // Split images into spoiler and non-spoiler groups
+  const spoilerImages = useMemo(
+    () => imageAttachments.filter((a) => a.isSpoiler),
+    [imageAttachments],
+  );
+  const normalImages = useMemo(
+    () => imageAttachments.filter((a) => !a.isSpoiler),
+    [imageAttachments],
+  );
+
   if (attachments.length === 0) return null;
+
+  function renderVideoOrFile(att: Attachment) {
+    const video = att.contentType.startsWith('video/');
+    const inner = video ? (
+      isEncrypted(att) ? (
+        <EncryptedVideoAttachment attachment={att} channelId={channelId} />
+      ) : (
+        <VideoAttachment attachment={att} />
+      )
+    ) : isEncrypted(att) ? (
+      <EncryptedFileAttachment attachment={att} channelId={channelId} />
+    ) : (
+      <FileAttachment attachment={att} />
+    );
+
+    if (att.isSpoiler && (video || att.contentType.startsWith('image/'))) {
+      return (
+        <SpoilerOverlay key={att.id} attachmentId={att.id}>
+          {inner}
+        </SpoilerOverlay>
+      );
+    }
+    return <div key={att.id}>{inner}</div>;
+  }
 
   return (
     <div className="mt-1 flex flex-col gap-2">
-      {imageAttachments.length > 0 && (
+      {normalImages.length > 0 && (
         <ImageGrid
-          images={imageAttachments}
+          images={normalImages}
           allImageAttachments={imageAttachments}
           channelId={channelId}
         />
       )}
+      {spoilerImages.map((att) => (
+        <SpoilerOverlay key={att.id} attachmentId={att.id}>
+          {isEncrypted(att) ? (
+            <EncryptedImageAttachment
+              attachment={att}
+              allImageAttachments={imageAttachments}
+              indexInGroup={imageAttachments.indexOf(att)}
+              channelId={channelId}
+            />
+          ) : (
+            <ImageAttachment
+              attachment={att}
+              allImageAttachments={imageAttachments}
+              indexInGroup={imageAttachments.indexOf(att)}
+              channelId={channelId}
+            />
+          )}
+        </SpoilerOverlay>
+      ))}
       {nonImageAttachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {nonImageAttachments.map((att) =>
-            att.contentType.startsWith('video/') ? (
-              isEncrypted(att) ? (
-                <EncryptedVideoAttachment
-                  key={att.id}
-                  attachment={att}
-                  channelId={channelId}
-                />
-              ) : (
-                <VideoAttachment key={att.id} attachment={att} />
-              )
-            ) : isEncrypted(att) ? (
-              <EncryptedFileAttachment
-                key={att.id}
-                attachment={att}
-                channelId={channelId}
-              />
-            ) : (
-              <FileAttachment key={att.id} attachment={att} />
-            ),
-          )}
+          {nonImageAttachments.map(renderVideoOrFile)}
         </div>
       )}
     </div>
