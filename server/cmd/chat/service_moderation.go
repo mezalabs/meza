@@ -1174,6 +1174,9 @@ func (s *chatService) ListAuditLog(context.Context, *connect.Request[v1.ListAudi
 // emits a FEDERATION_REMOVED event via NATS so the user's home instance
 // can clean up their membership record.
 func (s *chatService) emitFederationRemovedIfNeeded(ctx context.Context, userID, serverID, reason string) {
+	if s.authStore == nil {
+		return
+	}
 	user, err := s.authStore.GetUserByID(ctx, userID)
 	if err != nil {
 		slog.Warn("check federated status for federation removed", "err", err, "user", userID)
