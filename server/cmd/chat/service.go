@@ -9,6 +9,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 	"time"
 
 	"connectrpc.com/connect"

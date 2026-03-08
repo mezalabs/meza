@@ -45,17 +45,19 @@ export async function validateImageFile(file: File): Promise<void> {
 export async function isAnimatedImage(file: File): Promise<boolean> {
   if (file.type === 'image/jpeg') return false
 
-  const chunkSize = Math.min(file.size, 4096)
+  const chunkSize = Math.min(file.size, 32768)
   const buffer = await file.slice(0, chunkSize).arrayBuffer()
   const bytes = new Uint8Array(buffer)
 
   if (file.type === 'image/gif') {
-    // Count image descriptor bytes (0x2C). More than one means animated.
-    let imageDescriptorCount = 0
-    for (let i = 0; i < bytes.length; i++) {
-      if (bytes[i] === 0x2c) {
-        imageDescriptorCount++
-        if (imageDescriptorCount > 1) return true
+    // Look for Graphic Control Extension (0x21 0xF9) which precedes each frame.
+    // More than one occurrence means animated. This avoids false positives from
+    // 0x2C appearing inside LZW data or extension blocks.
+    let gceCount = 0
+    for (let i = 0; i < bytes.length - 1; i++) {
+      if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9) {
+        gceCount++
+        if (gceCount > 1) return true
       }
     }
     return false

@@ -25,27 +25,20 @@ export function CreateServerDialog({
     onUploadComplete: (url) => {
       setIconUrl(url);
       const attachmentId = url.replace('/media/', '');
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(getMediaURL(attachmentId, true));
     },
   });
 
+  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       setName('');
       setIconUrl(null);
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setError(null);
       setLoading(false);
     }
-  }, [open, previewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+  }, [open]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -116,7 +109,6 @@ export function CreateServerDialog({
                 <button
                   type="button"
                   onClick={() => {
-                    if (previewUrl) URL.revokeObjectURL(previewUrl);
                     setPreviewUrl(null);
                     setIconUrl(null);
                   }}

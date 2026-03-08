@@ -1,5 +1,5 @@
 import { UploadPurpose, getMediaURL } from '@meza/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ImageCropper } from '../../shared/ImageCropper.tsx';
 import { useImageCropUpload } from '../../../hooks/useImageCropUpload.ts';
 
@@ -23,17 +23,9 @@ export function NameIconStep({
     onUploadComplete: (url) => {
       onIconUrlChange(url);
       const attachmentId = url.replace('/media/', '');
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(getMediaURL(attachmentId, true));
     },
   });
-
-  // Revoke blob URL on unmount or when replaced
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
 
   return (
     <div className="space-y-6">
@@ -82,7 +74,6 @@ export function NameIconStep({
           <button
             type="button"
             onClick={() => {
-              if (previewUrl) URL.revokeObjectURL(previewUrl);
               setPreviewUrl(null);
               onIconUrlChange(null);
             }}

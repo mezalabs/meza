@@ -32,6 +32,9 @@ export function useImageCropUpload({
   cropShape,
   onUploadComplete,
 }: UseImageCropUploadOptions): UseImageCropUploadReturn {
+  // Use ref to avoid stale closures and unnecessary callback re-creation
+  const onUploadCompleteRef = useRef(onUploadComplete);
+  onUploadCompleteRef.current = onUploadComplete;
   const [state, setState] = useState<PipelineState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -108,7 +111,7 @@ export function useImageCropUpload({
           const result = await uploadFile(file, purpose, setUploadProgress);
           if (token.canceled) return;
           const mediaUrl = `/media/${result.attachmentId}`;
-          await onUploadComplete(mediaUrl);
+          await onUploadCompleteRef.current(mediaUrl);
           if (token.canceled) return;
           setState('idle');
           setUploadProgress(null);
@@ -130,11 +133,11 @@ export function useImageCropUpload({
         setState('idle');
       }
     },
-    [purpose, onUploadComplete],
+    [purpose],
   );
 
   const handleCrop = useCallback(
-    async (croppedBlob: Blob) => {
+    async (croppedFile: File) => {
       if (state !== 'cropping') return;
       const token = cancelTokenRef.current;
 
@@ -148,10 +151,6 @@ export function useImageCropUpload({
       }
 
       try {
-        const croppedFile = new File([croppedBlob], 'cropped.jpg', {
-          type: croppedBlob.type || 'image/jpeg',
-        });
-
         const result = await uploadFile(croppedFile, purpose, setUploadProgress);
         if (token.canceled) return;
 
@@ -168,7 +167,7 @@ export function useImageCropUpload({
         setUploadProgress(null);
       }
     },
-    [state, cropperImageSrc, purpose, onUploadComplete],
+    [state, cropperImageSrc, purpose],
   );
 
   const handleCropCancel = useCallback(() => {

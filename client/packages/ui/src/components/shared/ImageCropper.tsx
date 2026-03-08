@@ -9,7 +9,7 @@ export interface ImageCropperProps {
   imageSrc: string;
   aspectRatio: number;
   cropShape: 'round' | 'rect';
-  onCrop: (croppedBlob: Blob) => void;
+  onCrop: (croppedFile: File) => void;
   onCancel: () => void;
 }
 
@@ -35,16 +35,19 @@ export function ImageCropper({
     [],
   );
 
+  const [cropError, setCropError] = useState<string | null>(null);
+
   const handleCrop = useCallback(async () => {
     if (!croppedAreaPixels) return;
 
-    const file = await getCroppedImage(imageSrc, croppedAreaPixels, 'crop.jpg');
-    onCrop(file);
+    try {
+      setCropError(null);
+      const file = await getCroppedImage(imageSrc, croppedAreaPixels, 'crop.jpg');
+      onCrop(file);
+    } catch {
+      setCropError('Failed to crop image. Please try again.');
+    }
   }, [imageSrc, croppedAreaPixels, onCrop]);
-
-  const handleCancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -106,11 +109,15 @@ export function ImageCropper({
             </button>
           </div>
 
+          {cropError && (
+            <p className="mt-2 text-xs text-error">{cropError}</p>
+          )}
+
           {/* Action buttons */}
           <div className="mt-4 flex justify-end gap-2">
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={onCancel}
               className="rounded-md bg-bg-surface px-3 py-1.5 text-sm text-text-muted hover:bg-bg-elevated hover:text-text"
             >
               Cancel
@@ -118,6 +125,7 @@ export function ImageCropper({
             <button
               type="button"
               onClick={handleCrop}
+              disabled={!croppedAreaPixels}
               className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black hover:bg-accent-hover disabled:opacity-50"
             >
               Crop
