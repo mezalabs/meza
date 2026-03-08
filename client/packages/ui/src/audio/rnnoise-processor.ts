@@ -15,8 +15,8 @@ import type {
   TrackProcessor,
 } from 'livekit-client';
 
-// Resolve worklet URL at build time via Vite's ?url import
-import rnnoiseWorkletUrl from './rnnoise-worklet.ts?url';
+// ?worker&url bundles dependencies (unlike plain ?url which breaks bare imports in production).
+import rnnoiseWorkletUrl from './rnnoise-worklet.ts?worker&url';
 
 /** Singleton: whether the worklet module has been registered on an AudioContext. */
 const registeredContexts = new WeakSet<AudioContext>();

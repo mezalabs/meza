@@ -7,8 +7,10 @@ import {
 import {
   soundManager,
   useAudioSettingsStore,
+  useGatewayStore,
   useNotificationSettingsStore,
   useStreamSettingsStore,
+  useToastStore,
   useVoiceParticipantsStore,
   useVoiceStore,
 } from '@meza/core';
@@ -24,7 +26,7 @@ import type {
 } from 'livekit-client';
 import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import { RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
+import { preloadRnnoiseWorklet, RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
@@ -419,9 +421,14 @@ function AudioSettingsSync() {
             useAudioSettingsStore.getState().gigaThreshold / 100,
           );
           processorRef.current = processor;
-        } catch {
-          // WASM load failed — fall back to Standard
+        } catch (err) {
+          // WASM/worklet load failed — fall back to Standard
+          console.error('[GIGA] RNNoise processor failed to load:', err);
           useAudioSettingsStore.getState().setNoiseCancellationMode('standard');
+          useToastStore.getState().addToast(
+            'GIGA noise cancellation unavailable \u2014 using Standard mode',
+            'warning',
+          );
         }
       } else {
         // Detach processor if active
@@ -553,6 +560,17 @@ export function PersistentVoiceConnection({
   const noiseCancellationMode = useAudioSettingsStore(
     (s) => s.noiseCancellationMode,
   );
+
+  // Preload the 1.9MB RNNoise worklet when the gateway connects and GIGA
+  // mode is enabled, so the WASM module is already cached when the user
+  // joins a voice channel.
+  const gatewayStatus = useGatewayStore((s) => s.status);
+  useEffect(() => {
+    if (gatewayStatus === 'connected' && noiseCancellationMode === 'giga') {
+      preloadRnnoiseWorklet();
+    }
+  }, [gatewayStatus, noiseCancellationMode]);
+
   const echoCancellation = useAudioSettingsStore((s) => s.echoCancellation);
   const autoGainControl = useAudioSettingsStore((s) => s.autoGainControl);
 

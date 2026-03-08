@@ -34,6 +34,7 @@ import { computeDropZone } from './computeDropZone.ts';
 import { MobileShell } from './MobileShell.tsx';
 import { ShortcutHelpOverlay } from './ShortcutHelpOverlay.tsx';
 import { Sidebar } from './Sidebar.tsx';
+import { ToastContainer } from './ToastContainer.tsx';
 
 // --- Type-safe drag data parsing ---
 type PaneDragData = { type: 'pane'; paneId: string };
@@ -326,6 +327,7 @@ function DesktopShell() {
         </div>
         <ShortcutHelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
         <ImageViewer />
+        <ToastContainer />
       </div>
     </IconContext.Provider>
   );
