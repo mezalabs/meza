@@ -19,6 +19,7 @@ import {
   useVoiceParticipantsStore,
   useVoiceStore,
 } from '@meza/core';
+import { ChannelView } from '../chat/ChannelView.tsx';
 import {
   EarIcon,
   EarSlashIcon,
@@ -68,20 +69,29 @@ export function VoicePanel({ channelId }: VoicePanelProps) {
     voiceStatus === 'connected' && voiceChannelId !== channelId;
   const isConnecting = voiceStatus === 'connecting';
 
-  // Resolve channel name and serverId from store
+  // Resolve channel name, serverId, and companion text channel from store
   const channelsByServer = useChannelStore((s) => s.byServer);
-  const { channelName, serverId } = (() => {
+  const { channelName, serverId, voiceTextChannelId } = (() => {
     for (const [sId, channels] of Object.entries(channelsByServer)) {
       const match = channels.find((c) => c.id === channelId);
-      if (match) return { channelName: match.name, serverId: sId };
+      if (match)
+        return {
+          channelName: match.name,
+          serverId: sId,
+          voiceTextChannelId: match.voiceTextChannelId,
+        };
     }
-    return { channelName: channelId, serverId: undefined };
+    return {
+      channelName: channelId,
+      serverId: undefined,
+      voiceTextChannelId: undefined,
+    };
   })();
 
   return (
     <div className="flex h-full flex-col bg-bg-base">
-      {/* Body */}
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
+      {/* Voice controls */}
+      <div className="flex shrink-0 flex-col items-center justify-center gap-4 p-4">
         {(isConnectedHere || isConnecting) && (
           <span
             className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -110,6 +120,13 @@ export function VoicePanel({ channelId }: VoicePanelProps) {
           />
         )}
       </div>
+
+      {/* Companion text chat */}
+      {voiceTextChannelId && (
+        <div className="flex min-h-0 flex-1 flex-col border-t border-border">
+          <ChannelView channelId={voiceTextChannelId} serverId={serverId} />
+        </div>
+      )}
     </div>
   );
 }

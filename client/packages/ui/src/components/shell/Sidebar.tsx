@@ -84,6 +84,7 @@ const EMPTY_CHANNELS: {
   type: ChannelType;
   isPrivate: boolean;
   channelGroupId?: string;
+  voiceTextChannelId?: string;
 }[] = [];
 
 const EMPTY_GROUPS: { id: string; name: string; position: number }[] = [];
@@ -657,6 +658,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                           channelType={channel.type}
                           isPrivate={channel.isPrivate}
                           serverId={selectedServerId ?? undefined}
+                          voiceTextChannelId={channel.voiceTextChannelId}
                         />
                       ))}
                     </>
@@ -1076,6 +1078,7 @@ function SidebarChannelGroup({
     name: string;
     type: ChannelType;
     isPrivate: boolean;
+    voiceTextChannelId?: string;
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
@@ -1124,6 +1127,7 @@ function SidebarChannelGroup({
               isPrivate={channel.isPrivate}
               serverId={serverId}
               channelGroupId={groupId}
+              voiceTextChannelId={channel.voiceTextChannelId}
             />
           ))}
         </div>
@@ -1139,6 +1143,7 @@ function SidebarChannelItem({
   isPrivate,
   serverId,
   channelGroupId: _channelGroupId,
+  voiceTextChannelId,
 }: {
   channelId: string;
   channelName: string;
@@ -1146,12 +1151,15 @@ function SidebarChannelItem({
   isPrivate: boolean;
   serverId?: string;
   channelGroupId?: string;
+  voiceTextChannelId?: string;
 }) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
   const focusedContent = useTilingStore((s) => s.panes[s.focusedPaneId]);
+  // For voice channels, show unread count from the companion text channel.
+  const unreadChannelId = voiceTextChannelId || channelId;
   const unreadCount = useReadStateStore(
-    (s) => s.byChannel[channelId]?.unreadCount ?? 0,
+    (s) => s.byChannel[unreadChannelId]?.unreadCount ?? 0,
   );
 
   const { connect: voiceConnect } = useVoiceConnection();
