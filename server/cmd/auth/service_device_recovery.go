@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -81,7 +82,6 @@ func (s *authService) VerifyRecoveryEmail(ctx context.Context, req *connect.Requ
 			"code_hash", codeHashHex,
 			"attempts", 0,
 			"user_id", userID,
-			"created_at", time.Now().Unix(),
 		)
 		pipe.Expire(ctx, otpKey, 5*time.Minute)
 		if _, err := pipe.Exec(ctx); err != nil {
@@ -134,8 +134,7 @@ func (s *authService) VerifyRecoveryEmail(ctx context.Context, req *connect.Requ
 	submittedHash := sha256.Sum256([]byte(r.Code))
 	submittedHashHex := hex.EncodeToString(submittedHash[:])
 	if !hmac.Equal([]byte(storedHash), []byte(submittedHashHex)) {
-		remaining := 5 - attempts
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("invalid code, %d attempts remaining", remaining))
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid code"))
 	}
 
 	// Generate session token
@@ -150,9 +149,9 @@ func (s *authService) VerifyRecoveryEmail(ctx context.Context, req *connect.Requ
 	tokenHashHex := hex.EncodeToString(tokenHash[:])
 	tokenIndexKey := fmt.Sprintf("recovery:otp:token:%s", tokenHashHex)
 
-	// Store token and mark as verified; refresh TTL to 5 minutes
+	// Store hashed token (not plaintext) and mark as verified; refresh TTL to 5 minutes
 	pipe := s.redisClient.Pipeline()
-	pipe.HSet(ctx, otpKey, "session_token", sessionToken, "verified", "true")
+	pipe.HSet(ctx, otpKey, "session_token_hash", tokenHashHex, "verified", "true")
 	pipe.Expire(ctx, otpKey, 5*time.Minute)
 	pipe.Set(ctx, tokenIndexKey, r.Email, 5*time.Minute)
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -167,15 +166,16 @@ func (s *authService) VerifyRecoveryEmail(ctx context.Context, req *connect.Requ
 
 // Lua script for atomic OTP validate-and-consume in InitiateDeviceRecovery.
 // Checks verified=true and consumed not set, then sets consumed=true.
+// ARGV[1] is the SHA-256 hash of the session token (not the raw token).
 var otpConsumeScript = redis.NewScript(`
 local key = KEYS[1]
-local token = ARGV[1]
+local tokenHash = ARGV[1]
 local verified = redis.call('HGET', key, 'verified')
 if verified ~= 'true' then return 'not_verified' end
 local consumed = redis.call('HGET', key, 'consumed')
 if consumed == 'true' then return 'already_consumed' end
-local stored = redis.call('HGET', key, 'session_token')
-if stored ~= token then return 'invalid_token' end
+local stored = redis.call('HGET', key, 'session_token_hash')
+if stored ~= tokenHash then return 'invalid_token' end
 redis.call('HSET', key, 'consumed', 'true')
 local uid = redis.call('HGET', key, 'user_id')
 return 'ok:' .. (uid or '')
@@ -229,8 +229,8 @@ func (s *authService) InitiateDeviceRecovery(ctx context.Context, req *connect.R
 
 	otpKey := fmt.Sprintf("recovery:otp:%s", emailAddr)
 
-	// Atomic validate-and-consume
-	result, err := otpConsumeScript.Run(ctx, s.redisClient, []string{otpKey}, r.OtpSessionToken).Text()
+	// Atomic validate-and-consume (pass token hash, not raw token)
+	result, err := otpConsumeScript.Run(ctx, s.redisClient, []string{otpKey}, tokenHashHex).Text()
 	if err != nil {
 		slog.Error("otp consume script", "err", err)
 		return connect.NewResponse(&v1.InitiateDeviceRecoveryResponse{
@@ -245,10 +245,7 @@ func (s *authService) InitiateDeviceRecovery(ctx context.Context, req *connect.R
 	}
 
 	// result is "ok:<user_id>"
-	userID := ""
-	if len(result) > 3 {
-		userID = result[3:]
-	}
+	_, userID, _ := strings.Cut(result, ":")
 	if userID == "" {
 		// Email doesn't exist — anti-enumeration: return fake session
 		return connect.NewResponse(&v1.InitiateDeviceRecoveryResponse{
@@ -293,7 +290,6 @@ func (s *authService) InitiateDeviceRecovery(ctx context.Context, req *connect.R
 		"user_id", userID,
 		"ephemeral_pub", hex.EncodeToString(r.EphemeralPublicKey),
 		"state", "pending",
-		"created_at", time.Now().Unix(),
 	)
 	pipe.Expire(ctx, sessionKey, 5*time.Minute)
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -499,19 +495,8 @@ func (s *authService) CompleteDeviceRecovery(ctx context.Context, req *connect.R
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("recovery already completed"))
 	case len(result) > 4 && result[:3] == "ok:":
 		// Parse "ok:<userID>:<approverDeviceID>"
-		parts := result[3:]
-		colonIdx := -1
-		for i, c := range parts {
-			if c == ':' {
-				colonIdx = i
-				break
-			}
-		}
-		if colonIdx == -1 {
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		userID := parts[:colonIdx]
-		approverDeviceID := parts[colonIdx+1:]
+		rest, _ := strings.CutPrefix(result, "ok:")
+		userID, approverDeviceID, _ := strings.Cut(rest, ":")
 
 		// Hash new auth key
 		newAuthKeyHash, err := auth.HashPassword(string(r.NewAuthKey))
@@ -551,11 +536,15 @@ func (s *authService) CompleteDeviceRecovery(ctx context.Context, req *connect.R
 		}
 
 		// Create new device + JWT for requesting device
+		platform := r.Platform
+		if platform == "" {
+			platform = "web"
+		}
 		deviceID := models.NewID()
 		if err := s.deviceStore.UpsertDevice(ctx, &models.Device{
 			ID:       deviceID,
 			UserID:   userID,
-			Platform: "web",
+			Platform: platform,
 		}); err != nil {
 			slog.Error("create device on device recovery", "err", err, "user", userID)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

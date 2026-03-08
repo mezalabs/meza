@@ -3,7 +3,6 @@ package email
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/wneessen/go-mail"
 )
@@ -53,13 +52,6 @@ func (s *SMTPSender) SendOTP(ctx context.Context, to string, code string) error 
 	if err != nil {
 		return fmt.Errorf("create mail client: %w", err)
 	}
-
-	// Use the context deadline or default 10s timeout
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		deadline = time.Now().Add(10 * time.Second)
-	}
-	_ = deadline // go-mail handles context internally
 
 	if err := c.DialAndSendWithContext(ctx, m); err != nil {
 		return fmt.Errorf("send email: %w", err)

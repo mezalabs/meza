@@ -246,6 +246,7 @@ message CompleteDeviceRecoveryRequest {
   bytes new_recovery_encrypted_key_bundle = 6;
   bytes new_recovery_key_bundle_iv = 7;
   bytes new_recovery_verifier = 8;
+  string platform = 9; // "web", "android", "ios", "electron" — defaults to "web"
 }
 
 message CompleteDeviceRecoveryResponse {

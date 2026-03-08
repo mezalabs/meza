@@ -2074,6 +2074,7 @@ type CompleteDeviceRecoveryRequest struct {
 	NewRecoveryEncryptedKeyBundle []byte                 `protobuf:"bytes,6,opt,name=new_recovery_encrypted_key_bundle,json=newRecoveryEncryptedKeyBundle,proto3" json:"new_recovery_encrypted_key_bundle,omitempty"`
 	NewRecoveryKeyBundleIv        []byte                 `protobuf:"bytes,7,opt,name=new_recovery_key_bundle_iv,json=newRecoveryKeyBundleIv,proto3" json:"new_recovery_key_bundle_iv,omitempty"`
 	NewRecoveryVerifier           []byte                 `protobuf:"bytes,8,opt,name=new_recovery_verifier,json=newRecoveryVerifier,proto3" json:"new_recovery_verifier,omitempty"`
+	Platform                      string                 `protobuf:"bytes,9,opt,name=platform,proto3" json:"platform,omitempty"` // "web", "android", "ios", "electron" — defaults to "web"
 	unknownFields                 protoimpl.UnknownFields
 	sizeCache                     protoimpl.SizeCache
 }
@@ -2162,6 +2163,13 @@ func (x *CompleteDeviceRecoveryRequest) GetNewRecoveryVerifier() []byte {
 		return x.NewRecoveryVerifier
 	}
 	return nil
+}
+
+func (x *CompleteDeviceRecoveryRequest) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
 }
 
 type CompleteDeviceRecoveryResponse struct {
@@ -2488,7 +2496,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12%\n" +
 	"\x0ewrapped_bundle\x18\x02 \x01(\fR\rwrappedBundle\"\x1f\n" +
-	"\x1dApproveDeviceRecoveryResponse\"\x99\x03\n" +
+	"\x1dApproveDeviceRecoveryResponse\"\xb5\x03\n" +
 	"\x1dCompleteDeviceRecoveryRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12 \n" +
@@ -2499,7 +2507,8 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x11new_key_bundle_iv\x18\x05 \x01(\fR\x0enewKeyBundleIv\x12H\n" +
 	"!new_recovery_encrypted_key_bundle\x18\x06 \x01(\fR\x1dnewRecoveryEncryptedKeyBundle\x12:\n" +
 	"\x1anew_recovery_key_bundle_iv\x18\a \x01(\fR\x16newRecoveryKeyBundleIv\x122\n" +
-	"\x15new_recovery_verifier\x18\b \x01(\fR\x13newRecoveryVerifier\"\x8b\x01\n" +
+	"\x15new_recovery_verifier\x18\b \x01(\fR\x13newRecoveryVerifier\x12\x1a\n" +
+	"\bplatform\x18\t \x01(\tR\bplatform\"\x8b\x01\n" +
 	"\x1eCompleteDeviceRecoveryResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12!\n" +
