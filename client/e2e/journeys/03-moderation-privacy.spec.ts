@@ -9,7 +9,7 @@
 
 import { expect, test } from '@playwright/test';
 import { ChannelPage } from '../pages/ChannelPage';
-import { chapter, createContext, reportFailures } from './helpers';
+import { chapter, createContext, reportFailures, softStep } from './helpers';
 
 const SERVER = 'Test Server';
 const ts = () => `${Date.now()}`;
@@ -89,6 +89,16 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
   await chapter(alicePage, testInfo, 'Moderation Actions', async () => {
     await alice.selectChannel('general');
     await bob.selectChannel('general');
+
+    // Verify system messages from Journey 1 persisted and render correctly
+    await softStep(
+      alicePage,
+      testInfo,
+      'System messages persist across sessions',
+      async () => {
+        await alice.expectSystemMessage(/joined.*server/i);
+      },
+    );
 
     // Bob sends a message, alice deletes it (owner privilege)
     const modMsg = `mod-test ${ts()}`;
