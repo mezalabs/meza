@@ -15,6 +15,35 @@ import (
 	"github.com/meza-chat/meza/internal/subjects"
 )
 
+// cachedSystemMessageConfig wraps a config with expiry for in-process caching.
+type cachedSystemMessageConfig struct {
+	config    *models.ServerSystemMessageConfig // nil means no config row
+	expiresAt time.Time
+}
+
+const systemMessageConfigCacheTTL = 5 * time.Minute
+
+// getSystemMessageConfigCached loads config from cache or DB.
+func (s *chatService) getSystemMessageConfigCached(ctx context.Context, serverID string) *models.ServerSystemMessageConfig {
+	if val, ok := s.systemMessageConfigCache.Load(serverID); ok {
+		cached := val.(*cachedSystemMessageConfig)
+		if time.Now().Before(cached.expiresAt) {
+			return cached.config
+		}
+		s.systemMessageConfigCache.Delete(serverID)
+	}
+	cfg, err := s.chatStore.GetSystemMessageConfig(ctx, serverID)
+	if err != nil {
+		slog.Warn("failed to load system message config, using defaults", "server", serverID, "err", err)
+		return nil
+	}
+	s.systemMessageConfigCache.Store(serverID, &cachedSystemMessageConfig{
+		config:    cfg,
+		expiresAt: time.Now().Add(systemMessageConfigCacheTTL),
+	})
+	return cfg
+}
+
 // publishSystemMessage creates a system message, persists it, and delivers it
 // via NATS. The content parameter must be one of the typed content structs
 // (MemberEventContent, MemberKickContent, ChannelUpdateContent, KeyRotationContent).
@@ -75,6 +104,112 @@ return count`
 	return nil
 }
 
+// publishServerSystemMessage resolves the target channel from config (or default),
+// checks if the event is enabled, applies custom templates, and publishes.
+// eventAction is "join", "leave", "kick", "ban", or "timeout".
+func (s *chatService) publishServerSystemMessage(ctx context.Context, serverID string, msgType uint32, eventAction string, content any, templateVars map[string]string) {
+	cfg := s.getSystemMessageConfigCached(ctx, serverID)
+
+	// Check if event is enabled.
+	if cfg != nil && !isEventEnabled(cfg, eventAction) {
+		return
+	}
+
+	// Resolve target channel.
+	channelID := resolveChannelID(cfg, eventAction)
+	if channelID == "" {
+		// Fall back to default text channel.
+		ch, err := s.getDefaultTextChannel(ctx, serverID)
+		if err != nil || ch == nil {
+			if err != nil {
+				slog.Warn("system message: failed to get default channel", "server", serverID, "err", err)
+			}
+			return
+		}
+		channelID = ch.ID
+	}
+
+	// Apply custom template if configured.
+	tmpl := getTemplate(cfg, eventAction)
+	if tmpl != "" {
+		rendered := renderTemplate(tmpl, templateVars)
+		// Wrap content with rendered field by marshaling, adding rendered, re-wrapping.
+		contentBytes, _ := json.Marshal(content)
+		var contentMap map[string]any
+		if err := json.Unmarshal(contentBytes, &contentMap); err == nil {
+			contentMap["rendered"] = rendered
+			content = contentMap
+		}
+	}
+
+	if err := s.publishSystemMessage(ctx, channelID, msgType, content); err != nil {
+		slog.Warn("system message failed", "server", serverID, "action", eventAction, "err", err)
+	}
+}
+
+func isEventEnabled(cfg *models.ServerSystemMessageConfig, action string) bool {
+	switch action {
+	case "join":
+		return cfg.JoinEnabled
+	case "leave":
+		return cfg.LeaveEnabled
+	case "kick":
+		return cfg.KickEnabled
+	case "ban":
+		return cfg.BanEnabled
+	case "timeout":
+		return cfg.TimeoutEnabled
+	default:
+		return true
+	}
+}
+
+func resolveChannelID(cfg *models.ServerSystemMessageConfig, action string) string {
+	if cfg == nil {
+		return ""
+	}
+	switch action {
+	case "join", "leave":
+		if cfg.WelcomeChannelID != nil {
+			return *cfg.WelcomeChannelID
+		}
+	case "kick", "ban", "timeout":
+		if cfg.ModLogChannelID != nil {
+			return *cfg.ModLogChannelID
+		}
+	}
+	return ""
+}
+
+func getTemplate(cfg *models.ServerSystemMessageConfig, action string) string {
+	if cfg == nil {
+		return ""
+	}
+	switch action {
+	case "join":
+		if cfg.JoinTemplate != nil {
+			return *cfg.JoinTemplate
+		}
+	case "leave":
+		if cfg.LeaveTemplate != nil {
+			return *cfg.LeaveTemplate
+		}
+	case "kick":
+		if cfg.KickTemplate != nil {
+			return *cfg.KickTemplate
+		}
+	case "ban":
+		if cfg.BanTemplate != nil {
+			return *cfg.BanTemplate
+		}
+	case "timeout":
+		if cfg.TimeoutTemplate != nil {
+			return *cfg.TimeoutTemplate
+		}
+	}
+	return ""
+}
+
 // getDefaultTextChannel returns the first public, default, text channel for a server.
 // Returns nil if no suitable channel exists.
 func (s *chatService) getDefaultTextChannel(ctx context.Context, serverID string) (*models.Channel, error) {
@@ -88,6 +223,23 @@ func (s *chatService) getDefaultTextChannel(ctx context.Context, serverID string
 		}
 	}
 	return nil, nil
+}
+
+// resolveDisplayName returns the best display name for a user in a server context.
+// Priority: member nickname > user display name > username.
+func (s *chatService) resolveDisplayName(ctx context.Context, userID, serverID string) string {
+	member, err := s.chatStore.GetMember(ctx, userID, serverID)
+	if err == nil && member != nil && member.Nickname != "" {
+		return member.Nickname
+	}
+	user, err := s.authStore.GetUserByID(ctx, userID)
+	if err == nil && user != nil {
+		if user.DisplayName != "" {
+			return user.DisplayName
+		}
+		return user.Username
+	}
+	return userID // fallback to raw ID
 }
 
 // subscribeKeyRotation sets up a NATS QueueSubscribe for internal key rotation
