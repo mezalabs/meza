@@ -118,7 +118,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 		g.Go(func() error {
 			// Messages <= target (native DESC order, includes target)
 			msgs, err := s.scanMessages(gctx,
-				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 				 FROM messages WHERE channel_id = ? AND message_id <= ? LIMIT ?`,
 				channelID, opts.Around, halfLimit+1,
 			)
@@ -132,7 +132,7 @@ func (s *MessageStore) GetMessages(ctx context.Context, channelID string, opts G
 		g.Go(func() error {
 			// Messages > target (reverse scan, ASC)
 			msgs, err := s.scanMessages(gctx,
-				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version
+				`SELECT channel_id, message_id, author_id, encrypted_content, attachment_ids, reply_to_id, mentioned_user_ids, mentioned_role_ids, mention_everyone, created_at, edited_at, deleted, key_version, message_type
 				 FROM messages WHERE channel_id = ? AND message_id > ? ORDER BY message_id ASC LIMIT ?`,
 				channelID, opts.Around, halfLimit,
 			)
