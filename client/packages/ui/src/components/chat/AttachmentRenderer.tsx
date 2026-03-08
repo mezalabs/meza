@@ -580,7 +580,7 @@ function SpoilerOverlay({ attachmentId, children }: { attachmentId: string; chil
   if (revealed) return <>{children}</>;
 
   return (
-    <div className="relative inline-block rounded-md overflow-hidden">
+    <div className="relative w-fit rounded-md overflow-hidden">
       <div className="blur-xl pointer-events-none select-none" aria-hidden="true">
         {children}
       </div>
