@@ -2006,7 +2006,7 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		if trimmed == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot be empty"))
 		}
-		if len(trimmed) > 100 {
+		if utf8.RuneCountInString(trimmed) > 100 {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server name cannot exceed 100 characters"))
 		}
 	}
