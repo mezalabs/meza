@@ -7,6 +7,7 @@ const msg3 = { id: 'm3', channelId: 'c1', authorId: 'u1' } as never;
 
 beforeEach(() => {
   useMessageStore.setState({
+    byInstance: {},
     byChannel: {},
     byId: {},
     hasMore: {},
@@ -14,6 +15,7 @@ beforeEach(() => {
     error: {},
     viewMode: {},
     pendingMessages: {},
+    replyingTo: {},
   });
 });
 

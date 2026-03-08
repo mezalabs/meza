@@ -24,7 +24,7 @@ const member3: any = {
 };
 
 beforeEach(() => {
-  useMemberStore.setState({ byServer: {}, isLoading: false, error: null });
+  useMemberStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
 });
 
 describe('member store', () => {

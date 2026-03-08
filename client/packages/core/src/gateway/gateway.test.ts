@@ -151,11 +151,15 @@ beforeEach(() => {
 
   // Reset stores
   useMessageStore.setState({
+    byInstance: {},
     byChannel: {},
     byId: {},
     hasMore: {},
     isLoading: {},
     error: {},
+    viewMode: {},
+    pendingMessages: {},
+    replyingTo: {},
   });
   useAuthStore.setState({
     accessToken: null,
@@ -166,15 +170,17 @@ beforeEach(() => {
     error: null,
   });
   useChannelStore.setState({
+    byInstance: {},
     byServer: {},
+    channelToServer: {},
     isLoading: false,
     error: null,
   });
   useTypingStore.setState({
     byChannel: {},
   });
-  useMemberStore.setState({ byServer: {}, isLoading: false, error: null });
-  useRoleStore.setState({ byServer: {}, isLoading: false, error: null });
+  useMemberStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
+  useRoleStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
   useEmojiStore.setState({ byServer: {}, isLoading: false, error: null });
   usePinStore.setState({
     byChannel: {},
@@ -190,7 +196,7 @@ beforeEach(() => {
     isLoading: false,
     error: null,
   });
-  useServerStore.setState({ servers: {}, isLoading: false, error: null });
+  useServerStore.setState({ byInstance: {}, servers: {}, isLoading: false, error: null });
   useVoiceStore.setState({
     status: 'idle',
     livekitUrl: null,

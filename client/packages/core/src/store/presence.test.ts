@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { usePresenceStore } from './presence.ts';
 
 beforeEach(() => {
-  usePresenceStore.setState({ byUser: {} });
+  usePresenceStore.setState({ byInstance: {}, byUser: {} });
 });
 
 describe('presence store', () => {

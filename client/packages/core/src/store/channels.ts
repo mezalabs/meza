@@ -1,91 +1,160 @@
 import type { Channel } from '@meza/gen/meza/v1/models_pb.ts';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { HOME_INSTANCE } from '../gateway/gateway.ts';
+
+type InstanceBucket = {
+  byServer: Record<string, Channel[]>;
+  channelToServer: Record<string, string>;
+};
 
 export interface ChannelState {
+  /** Two-level nesting: byInstance[instanceUrl] = { byServer, channelToServer } */
+  byInstance: Record<string, InstanceBucket>;
+  /**
+   * Backward-compatible mirror of byInstance[HOME_INSTANCE].byServer.
+   * Kept in sync automatically.
+   */
   byServer: Record<string, Channel[]>;
+  /**
+   * Backward-compatible mirror of byInstance[HOME_INSTANCE].channelToServer.
+   * Kept in sync automatically.
+   */
   channelToServer: Record<string, string>;
   isLoading: boolean;
   error: string | null;
 }
 
 export interface ChannelActions {
-  setChannels: (serverId: string, channels: Channel[]) => void;
-  addChannel: (channel: Channel) => void;
-  updateChannel: (channel: Channel) => void;
-  removeChannel: (channelId: string) => void;
-  removeServerChannels: (serverId: string) => void;
+  getByServer: (instanceUrl?: string) => Record<string, Channel[]>;
+  getChannelToServer: (instanceUrl?: string) => Record<string, string>;
+  setChannels: (
+    serverId: string,
+    channels: Channel[],
+    instanceUrl?: string,
+  ) => void;
+  addChannel: (channel: Channel, instanceUrl?: string) => void;
+  updateChannel: (channel: Channel, instanceUrl?: string) => void;
+  removeChannel: (channelId: string, instanceUrl?: string) => void;
+  removeServerChannels: (serverId: string, instanceUrl?: string) => void;
+  removeInstanceData: (instanceUrl: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
 
+function ensureBucket(
+  state: { byInstance: ChannelState['byInstance'] },
+  instanceUrl: string,
+): InstanceBucket {
+  if (!state.byInstance[instanceUrl]) {
+    state.byInstance[instanceUrl] = { byServer: {}, channelToServer: {} };
+  }
+  return state.byInstance[instanceUrl];
+}
+
+/** Sync backward-compat properties from byInstance[HOME_INSTANCE]. */
+function syncCompat(state: ChannelState) {
+  const home = state.byInstance[HOME_INSTANCE];
+  state.byServer = home?.byServer ?? {};
+  state.channelToServer = home?.channelToServer ?? {};
+}
+
 export const useChannelStore = create<ChannelState & ChannelActions>()(
-  immer((set) => ({
+  immer((set, get) => ({
+    byInstance: {},
     byServer: {},
     channelToServer: {},
     isLoading: false,
     error: null,
 
-    setChannels: (serverId, channels) => {
+    getByServer: (instanceUrl = HOME_INSTANCE) => {
+      return get().byInstance[instanceUrl]?.byServer ?? {};
+    },
+
+    getChannelToServer: (instanceUrl = HOME_INSTANCE) => {
+      return get().byInstance[instanceUrl]?.channelToServer ?? {};
+    },
+
+    setChannels: (serverId, channels, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        state.byServer[serverId] = [...channels].sort(
+        const bucket = ensureBucket(state, instanceUrl);
+        bucket.byServer[serverId] = [...channels].sort(
           (a, b) => a.position - b.position,
         );
         for (const ch of channels) {
-          state.channelToServer[ch.id] = serverId;
+          bucket.channelToServer[ch.id] = serverId;
         }
         state.isLoading = false;
+        syncCompat(state);
       });
     },
 
-    addChannel: (channel) => {
+    addChannel: (channel, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[channel.serverId] ?? [];
+        const bucket = ensureBucket(state, instanceUrl);
+        const list = bucket.byServer[channel.serverId] ?? [];
         if (list.some((c) => c.id === channel.id)) return;
         list.push(channel);
         list.sort((a, b) => a.position - b.position);
-        state.byServer[channel.serverId] = list;
-        state.channelToServer[channel.id] = channel.serverId;
+        bucket.byServer[channel.serverId] = list;
+        bucket.channelToServer[channel.id] = channel.serverId;
+        syncCompat(state);
       });
     },
 
-    updateChannel: (channel) => {
+    updateChannel: (channel, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[channel.serverId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        const list = bucket.byServer[channel.serverId];
         if (!list) return;
         const idx = list.findIndex((c) => c.id === channel.id);
         if (idx !== -1) {
           list[idx] = channel;
           list.sort((a, b) => a.position - b.position);
         }
+        syncCompat(state);
       });
     },
 
-    removeChannel: (channelId) => {
+    removeChannel: (channelId, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const serverId = state.channelToServer[channelId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        const serverId = bucket.channelToServer[channelId];
         if (!serverId) return;
-        const list = state.byServer[serverId];
+        const list = bucket.byServer[serverId];
         if (list) {
           const idx = list.findIndex((c) => c.id === channelId);
           if (idx !== -1) {
             list.splice(idx, 1);
           }
         }
-        delete state.channelToServer[channelId];
+        delete bucket.channelToServer[channelId];
+        syncCompat(state);
       });
     },
 
-    removeServerChannels: (serverId) => {
+    removeServerChannels: (serverId, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[serverId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        const list = bucket.byServer[serverId];
         if (list) {
           for (const ch of list) {
-            delete state.channelToServer[ch.id];
+            delete bucket.channelToServer[ch.id];
           }
         }
-        delete state.byServer[serverId];
+        delete bucket.byServer[serverId];
+        syncCompat(state);
+      });
+    },
+
+    removeInstanceData: (instanceUrl) => {
+      set((state) => {
+        delete state.byInstance[instanceUrl];
+        syncCompat(state);
       });
     },
 
@@ -104,6 +173,7 @@ export const useChannelStore = create<ChannelState & ChannelActions>()(
 
     reset: () => {
       set((state) => {
+        state.byInstance = {};
         state.byServer = {};
         state.channelToServer = {};
         state.isLoading = false;

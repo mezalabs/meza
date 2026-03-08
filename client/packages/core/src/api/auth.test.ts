@@ -33,6 +33,7 @@ vi.mock('./client.ts', () => ({
 
 vi.mock('../gateway/gateway.ts', () => ({
   disconnect: vi.fn(),
+  HOME_INSTANCE: '__home__',
 }));
 
 const mockStorage = new Map<string, string>();
@@ -53,18 +54,20 @@ beforeEach(() => {
     isLoading: false,
     error: null,
   });
-  useServerStore.setState({ servers: {}, isLoading: false, error: null });
-  useChannelStore.setState({ byServer: {}, isLoading: false, error: null });
+  useServerStore.setState({ byInstance: {}, servers: {}, isLoading: false, error: null });
+  useChannelStore.setState({ byInstance: {}, byServer: {}, channelToServer: {}, isLoading: false, error: null });
   useMessageStore.setState({
+    byInstance: {},
     byChannel: {},
     byId: {},
     hasMore: {},
     isLoading: {},
     error: {},
     viewMode: {},
+    pendingMessages: {},
     replyingTo: {},
   });
-  usePresenceStore.setState({ byUser: {} });
+  usePresenceStore.setState({ byInstance: {}, byUser: {} });
   useTypingStore.setState({ byChannel: {} });
   useVoiceStore.setState({
     status: 'idle',

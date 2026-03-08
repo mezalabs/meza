@@ -16,6 +16,7 @@ const server2 = {
 
 beforeEach(() => {
   useServerStore.setState({
+    byInstance: {},
     servers: {},
     isLoading: false,
     error: null,

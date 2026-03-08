@@ -24,7 +24,7 @@ vi.mock('./client.ts', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  usePresenceStore.setState({ byUser: {} });
+  usePresenceStore.setState({ byInstance: {}, byUser: {} });
 });
 
 // ---------------------------------------------------------------------------

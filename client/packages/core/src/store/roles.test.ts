@@ -30,7 +30,7 @@ const role3: any = {
 };
 
 beforeEach(() => {
-  useRoleStore.setState({ byServer: {}, isLoading: false, error: null });
+  useRoleStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
 });
 
 describe('role store', () => {

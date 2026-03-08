@@ -309,6 +309,13 @@ export type {
   GatewayStatus,
 } from './store/gateway.ts';
 export { useGatewayStore } from './store/gateway.ts';
+export type {
+  Instance,
+  InstanceActions,
+  InstanceCapabilities,
+  InstanceState,
+} from './store/instances.ts';
+export { useInstanceStore } from './store/instances.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
 export type {

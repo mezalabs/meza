@@ -97,19 +97,21 @@ vi.mock('../crypto/index.ts', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useServerStore.setState({ servers: {}, isLoading: false, error: null });
-  useChannelStore.setState({ byServer: {}, isLoading: false, error: null });
+  useServerStore.setState({ byInstance: {}, servers: {}, isLoading: false, error: null });
+  useChannelStore.setState({ byInstance: {}, byServer: {}, channelToServer: {}, isLoading: false, error: null });
   useMessageStore.setState({
+    byInstance: {},
     byChannel: {},
     byId: {},
     hasMore: {},
     isLoading: {},
     error: {},
     viewMode: {},
+    pendingMessages: {},
     replyingTo: {},
   });
-  useMemberStore.setState({ byServer: {}, isLoading: false, error: null });
-  useRoleStore.setState({ byServer: {}, isLoading: false, error: null });
+  useMemberStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
+  useRoleStore.setState({ byInstance: {}, byServer: {}, isLoading: false, error: null });
   useEmojiStore.setState({ byServer: {}, isLoading: false, error: null });
   usePinStore.setState({
     byChannel: {},

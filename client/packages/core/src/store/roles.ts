@@ -1,9 +1,16 @@
 import type { Role } from '@meza/gen/meza/v1/models_pb.ts';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { HOME_INSTANCE } from '../gateway/gateway.ts';
 import { reorderRoles as apiReorderRoles } from '../api/chat.ts';
 
 export interface RoleState {
+  /** Two-level nesting: byInstance[instanceUrl][serverId] = Role[] */
+  byInstance: Record<string, Record<string, Role[]>>;
+  /**
+   * Backward-compatible mirror of byInstance[HOME_INSTANCE].
+   * Kept in sync automatically.
+   */
   byServer: Record<string, Role[]>;
   isLoading: boolean;
   isReordering: boolean;
@@ -11,78 +18,115 @@ export interface RoleState {
 }
 
 export interface RoleActions {
-  setRoles: (serverId: string, roles: Role[]) => void;
-  addRole: (role: Role) => void;
-  updateRole: (role: Role) => void;
-  removeRole: (serverId: string, roleId: string) => void;
-  removeServerRoles: (serverId: string) => void;
+  getByServer: (instanceUrl?: string) => Record<string, Role[]>;
+  setRoles: (serverId: string, roles: Role[], instanceUrl?: string) => void;
+  addRole: (role: Role, instanceUrl?: string) => void;
+  updateRole: (role: Role, instanceUrl?: string) => void;
+  removeRole: (
+    serverId: string,
+    roleId: string,
+    instanceUrl?: string,
+  ) => void;
+  removeServerRoles: (serverId: string, instanceUrl?: string) => void;
   reorderRoles: (serverId: string, roleIds: string[]) => Promise<void>;
+  removeInstanceData: (instanceUrl: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   reset: () => void;
 }
 
+/** Sync backward-compat property from byInstance[HOME_INSTANCE]. */
+function syncCompat(state: RoleState) {
+  state.byServer = state.byInstance[HOME_INSTANCE] ?? {};
+}
+
 export const useRoleStore = create<RoleState & RoleActions>()(
   immer((set, get) => ({
+    byInstance: {},
     byServer: {},
     isLoading: false,
     isReordering: false,
     error: null,
 
-    setRoles: (serverId, roles) => {
+    getByServer: (instanceUrl = HOME_INSTANCE) => {
+      return get().byInstance[instanceUrl] ?? {};
+    },
+
+    setRoles: (serverId, roles, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        state.byServer[serverId] = [...roles].sort(
+        if (!state.byInstance[instanceUrl]) {
+          state.byInstance[instanceUrl] = {};
+        }
+        state.byInstance[instanceUrl][serverId] = [...roles].sort(
           (a, b) => b.position - a.position,
         );
         state.isLoading = false;
+        syncCompat(state);
       });
     },
 
-    addRole: (role) => {
+    addRole: (role, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[role.serverId] ?? [];
+        if (!state.byInstance[instanceUrl]) {
+          state.byInstance[instanceUrl] = {};
+        }
+        const bucket = state.byInstance[instanceUrl];
+        const list = bucket[role.serverId] ?? [];
         if (list.some((r) => r.id === role.id)) return;
         list.push(role);
         list.sort((a, b) => b.position - a.position);
-        state.byServer[role.serverId] = list;
+        bucket[role.serverId] = list;
+        syncCompat(state);
       });
     },
 
-    updateRole: (role) => {
+    updateRole: (role, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[role.serverId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        const list = bucket[role.serverId];
         if (!list) return;
         const idx = list.findIndex((r) => r.id === role.id);
         if (idx !== -1) {
           list[idx] = role;
           list.sort((a, b) => b.position - a.position);
         }
+        syncCompat(state);
       });
     },
 
-    removeRole: (serverId, roleId) => {
+    removeRole: (serverId, roleId, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        const list = state.byServer[serverId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        const list = bucket[serverId];
         if (!list) return;
-        state.byServer[serverId] = list.filter((r) => r.id !== roleId);
+        bucket[serverId] = list.filter((r) => r.id !== roleId);
+        syncCompat(state);
       });
     },
 
-    removeServerRoles: (serverId) => {
+    removeServerRoles: (serverId, instanceUrl = HOME_INSTANCE) => {
       set((state) => {
-        delete state.byServer[serverId];
+        const bucket = state.byInstance[instanceUrl];
+        if (!bucket) return;
+        delete bucket[serverId];
+        syncCompat(state);
       });
     },
 
     reorderRoles: async (serverId, roleIds) => {
       if (get().isReordering) return;
-      const previous = get().byServer[serverId];
+      // reorderRoles only works on home instance (API call is home-bound)
+      const previous = get().byInstance[HOME_INSTANCE]?.[serverId];
       if (!previous) return;
 
       // Optimistically reorder: assign new positions based on roleIds order
       set((state) => {
         state.isReordering = true;
-        const list = state.byServer[serverId];
+        const bucket = state.byInstance[HOME_INSTANCE];
+        if (!bucket) return;
+        const list = bucket[serverId];
         if (!list) return;
 
         // Build a map of roleId -> new position (higher index = lower position)
@@ -101,6 +145,7 @@ export const useRoleStore = create<RoleState & RoleActions>()(
         }
 
         list.sort((a, b) => b.position - a.position);
+        syncCompat(state);
       });
 
       try {
@@ -108,13 +153,24 @@ export const useRoleStore = create<RoleState & RoleActions>()(
       } catch {
         // Revert optimistic update by restoring previous state
         set((state) => {
-          state.byServer[serverId] = previous;
+          if (!state.byInstance[HOME_INSTANCE]) {
+            state.byInstance[HOME_INSTANCE] = {};
+          }
+          state.byInstance[HOME_INSTANCE][serverId] = previous;
+          syncCompat(state);
         });
       } finally {
         set((state) => {
           state.isReordering = false;
         });
       }
+    },
+
+    removeInstanceData: (instanceUrl) => {
+      set((state) => {
+        delete state.byInstance[instanceUrl];
+        syncCompat(state);
+      });
     },
 
     setLoading: (loading) => {
@@ -132,6 +188,7 @@ export const useRoleStore = create<RoleState & RoleActions>()(
 
     reset: () => {
       set((state) => {
+        state.byInstance = {};
         state.byServer = {};
         state.isLoading = false;
         state.isReordering = false;

@@ -28,7 +28,9 @@ const chan3 = {
 
 beforeEach(() => {
   useChannelStore.setState({
+    byInstance: {},
     byServer: {},
+    channelToServer: {},
     isLoading: false,
     error: null,
   });
