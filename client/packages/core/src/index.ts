@@ -22,6 +22,12 @@ export type {
 // Re-export protobuf enums used by UI
 export { ChannelType } from '@meza/gen/meza/v1/models_pb.ts';
 export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
+// API — client (per-instance transports)
+export {
+  createInstanceClient,
+  getTransport,
+  removeTransport,
+} from './api/client.ts';
 // API — auth
 export {
   changePassword,
