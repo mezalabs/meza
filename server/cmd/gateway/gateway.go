@@ -71,10 +71,20 @@ func (c *Client) closeSend() {
 	})
 }
 
+// instanceCapabilities describes which optional features this satellite
+// supports. Advertised in the READY payload so clients can adapt their UI.
+type instanceCapabilities struct {
+	ProtocolVersion      uint32 `json:"protocol_version"`
+	MediaEnabled         bool   `json:"media_enabled"`
+	VoiceEnabled         bool   `json:"voice_enabled"`
+	NotificationsEnabled bool   `json:"notifications_enabled"`
+}
+
 type Gateway struct {
 	ed25519Keys       *auth.Ed25519Keys       // Ed25519 keys for JWT signing/verification
 	instanceURL       string                  // This instance's URL for iss claim
 	verificationCache *auth.VerificationCache // Caches validated JWT claims to avoid repeated Ed25519 verification
+	capabilities      instanceCapabilities    // Feature flags advertised in READY
 	originPatterns    []string
 	chatStore      store.ChatStorer
 	readStateStore store.ReadStateStorer
@@ -519,9 +529,10 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// inside the protobuf envelope (same JSON-in-protobuf pattern as IDENTIFY).
 	// Contains { user_id, channel_ids, read_states } for the client's initial state.
 	readyPayload, _ := json.Marshal(map[string]any{
-		"user_id":     claims.UserID,
-		"channel_ids": channelIDs,
-		"read_states": readStates,
+		"user_id":      claims.UserID,
+		"channel_ids":  channelIDs,
+		"read_states":  readStates,
+		"capabilities": gw.capabilities,
 	})
 	readyEnvelope, err := makeEnvelope(v1.GatewayOpCode_GATEWAY_OP_READY, readyPayload)
 	if err != nil {

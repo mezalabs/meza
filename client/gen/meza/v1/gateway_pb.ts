@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meza/v1/gateway.proto.
  */
 export const file_meza_v1_gateway: GenFile = /*@__PURE__*/
-  fileDesc("ChVtZXphL3YxL2dhdGV3YXkucHJvdG8SB21lemEudjEiWAoPR2F0ZXdheUVudmVsb3BlEiIKAm9wGAEgASgOMhYubWV6YS52MS5HYXRld2F5T3BDb2RlEg8KB3BheWxvYWQYAiABKAwSEAoIc2VxdWVuY2UYAyABKAMq+QEKDUdhdGV3YXlPcENvZGUSGgoWR0FURVdBWV9PUF9VTlNQRUNJRklFRBAAEhQKEEdBVEVXQVlfT1BfRVZFTlQQARIYChRHQVRFV0FZX09QX0hFQVJUQkVBVBACEhwKGEdBVEVXQVlfT1BfSEVBUlRCRUFUX0FDSxADEhcKE0dBVEVXQVlfT1BfSURFTlRJRlkQBBIVChFHQVRFV0FZX09QX1JFU1VNRRAFEhQKEEdBVEVXQVlfT1BfUkVBRFkQBhIbChdHQVRFV0FZX09QX1NFTkRfTUVTU0FHRRAHEhsKF0dBVEVXQVlfT1BfVFlQSU5HX1NUQVJUEAhChgEKC2NvbS5tZXphLnYxQgxHYXRld2F5UHJvdG9QAVosZ2l0aHViLmNvbS9tZXphLWNoYXQvbWV6YS9nZW4vbWV6YS92MTttZXphdjGiAgNNWFiqAgdNZXphLlYxygIHTWV6YVxWMeICE01lemFcVjFcR1BCTWV0YWRhdGHqAghNZXphOjpWMWIGcHJvdG8z");
+  fileDesc("ChVtZXphL3YxL2dhdGV3YXkucHJvdG8SB21lemEudjEiWAoPR2F0ZXdheUVudmVsb3BlEiIKAm9wGAEgASgOMhYubWV6YS52MS5HYXRld2F5T3BDb2RlEg8KB3BheWxvYWQYAiABKAwSEAoIc2VxdWVuY2UYAyABKAMifQoUSW5zdGFuY2VDYXBhYmlsaXRpZXMSGAoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDRIVCg1tZWRpYV9lbmFibGVkGAIgASgIEhUKDXZvaWNlX2VuYWJsZWQYAyABKAgSHQoVbm90aWZpY2F0aW9uc19lbmFibGVkGAQgASgIKvkBCg1HYXRld2F5T3BDb2RlEhoKFkdBVEVXQVlfT1BfVU5TUEVDSUZJRUQQABIUChBHQVRFV0FZX09QX0VWRU5UEAESGAoUR0FURVdBWV9PUF9IRUFSVEJFQVQQAhIcChhHQVRFV0FZX09QX0hFQVJUQkVBVF9BQ0sQAxIXChNHQVRFV0FZX09QX0lERU5USUZZEAQSFQoRR0FURVdBWV9PUF9SRVNVTUUQBRIUChBHQVRFV0FZX09QX1JFQURZEAYSGwoXR0FURVdBWV9PUF9TRU5EX01FU1NBR0UQBxIbChdHQVRFV0FZX09QX1RZUElOR19TVEFSVBAIQoYBCgtjb20ubWV6YS52MUIMR2F0ZXdheVByb3RvUAFaLGdpdGh1Yi5jb20vbWV6YS1jaGF0L21lemEvZ2VuL21lemEvdjE7bWV6YXYxogIDTVhYqgIHTWV6YS5WMcoCB01lemFcVjHiAhNNZXphXFYxXEdQQk1ldGFkYXRh6gIITWV6YTo6VjFiBnByb3RvMw");
 
 /**
  * @generated from message meza.v1.GatewayEnvelope
@@ -38,6 +38,44 @@ export type GatewayEnvelope = Message<"meza.v1.GatewayEnvelope"> & {
  */
 export const GatewayEnvelopeSchema: GenMessage<GatewayEnvelope> = /*@__PURE__*/
   messageDesc(file_meza_v1_gateway, 0);
+
+/**
+ * InstanceCapabilities advertises which optional features this satellite
+ * supports. Included in the READY payload so clients can adapt their UI
+ * (e.g. hide voice buttons when voice is unavailable).
+ * NOTE: The READY payload currently uses JSON-in-protobuf encoding;
+ * this message documents the shape but is not directly marshalled.
+ *
+ * @generated from message meza.v1.InstanceCapabilities
+ */
+export type InstanceCapabilities = Message<"meza.v1.InstanceCapabilities"> & {
+  /**
+   * @generated from field: uint32 protocol_version = 1;
+   */
+  protocolVersion: number;
+
+  /**
+   * @generated from field: bool media_enabled = 2;
+   */
+  mediaEnabled: boolean;
+
+  /**
+   * @generated from field: bool voice_enabled = 3;
+   */
+  voiceEnabled: boolean;
+
+  /**
+   * @generated from field: bool notifications_enabled = 4;
+   */
+  notificationsEnabled: boolean;
+};
+
+/**
+ * Describes the message meza.v1.InstanceCapabilities.
+ * Use `create(InstanceCapabilitiesSchema)` to create a new message.
+ */
+export const InstanceCapabilitiesSchema: GenMessage<InstanceCapabilities> = /*@__PURE__*/
+  messageDesc(file_meza_v1_gateway, 1);
 
 /**
  * @generated from enum meza.v1.GatewayOpCode

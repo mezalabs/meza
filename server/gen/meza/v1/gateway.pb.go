@@ -148,6 +148,79 @@ func (x *GatewayEnvelope) GetSequence() int64 {
 	return 0
 }
 
+// InstanceCapabilities advertises which optional features this satellite
+// supports. Included in the READY payload so clients can adapt their UI
+// (e.g. hide voice buttons when voice is unavailable).
+// NOTE: The READY payload currently uses JSON-in-protobuf encoding;
+// this message documents the shape but is not directly marshalled.
+type InstanceCapabilities struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ProtocolVersion      uint32                 `protobuf:"varint,1,opt,name=protocol_version,json=protocolVersion,proto3" json:"protocol_version,omitempty"`
+	MediaEnabled         bool                   `protobuf:"varint,2,opt,name=media_enabled,json=mediaEnabled,proto3" json:"media_enabled,omitempty"`
+	VoiceEnabled         bool                   `protobuf:"varint,3,opt,name=voice_enabled,json=voiceEnabled,proto3" json:"voice_enabled,omitempty"`
+	NotificationsEnabled bool                   `protobuf:"varint,4,opt,name=notifications_enabled,json=notificationsEnabled,proto3" json:"notifications_enabled,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *InstanceCapabilities) Reset() {
+	*x = InstanceCapabilities{}
+	mi := &file_meza_v1_gateway_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceCapabilities) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceCapabilities) ProtoMessage() {}
+
+func (x *InstanceCapabilities) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_gateway_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceCapabilities.ProtoReflect.Descriptor instead.
+func (*InstanceCapabilities) Descriptor() ([]byte, []int) {
+	return file_meza_v1_gateway_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *InstanceCapabilities) GetProtocolVersion() uint32 {
+	if x != nil {
+		return x.ProtocolVersion
+	}
+	return 0
+}
+
+func (x *InstanceCapabilities) GetMediaEnabled() bool {
+	if x != nil {
+		return x.MediaEnabled
+	}
+	return false
+}
+
+func (x *InstanceCapabilities) GetVoiceEnabled() bool {
+	if x != nil {
+		return x.VoiceEnabled
+	}
+	return false
+}
+
+func (x *InstanceCapabilities) GetNotificationsEnabled() bool {
+	if x != nil {
+		return x.NotificationsEnabled
+	}
+	return false
+}
+
 var File_meza_v1_gateway_proto protoreflect.FileDescriptor
 
 const file_meza_v1_gateway_proto_rawDesc = "" +
@@ -156,7 +229,12 @@ const file_meza_v1_gateway_proto_rawDesc = "" +
 	"\x0fGatewayEnvelope\x12&\n" +
 	"\x02op\x18\x01 \x01(\x0e2\x16.meza.v1.GatewayOpCodeR\x02op\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\fR\apayload\x12\x1a\n" +
-	"\bsequence\x18\x03 \x01(\x03R\bsequence*\xf9\x01\n" +
+	"\bsequence\x18\x03 \x01(\x03R\bsequence\"\xc0\x01\n" +
+	"\x14InstanceCapabilities\x12)\n" +
+	"\x10protocol_version\x18\x01 \x01(\rR\x0fprotocolVersion\x12#\n" +
+	"\rmedia_enabled\x18\x02 \x01(\bR\fmediaEnabled\x12#\n" +
+	"\rvoice_enabled\x18\x03 \x01(\bR\fvoiceEnabled\x123\n" +
+	"\x15notifications_enabled\x18\x04 \x01(\bR\x14notificationsEnabled*\xf9\x01\n" +
 	"\rGatewayOpCode\x12\x1a\n" +
 	"\x16GATEWAY_OP_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10GATEWAY_OP_EVENT\x10\x01\x12\x18\n" +
@@ -182,10 +260,11 @@ func file_meza_v1_gateway_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_gateway_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meza_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_meza_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_meza_v1_gateway_proto_goTypes = []any{
-	(GatewayOpCode)(0),      // 0: meza.v1.GatewayOpCode
-	(*GatewayEnvelope)(nil), // 1: meza.v1.GatewayEnvelope
+	(GatewayOpCode)(0),           // 0: meza.v1.GatewayOpCode
+	(*GatewayEnvelope)(nil),      // 1: meza.v1.GatewayEnvelope
+	(*InstanceCapabilities)(nil), // 2: meza.v1.InstanceCapabilities
 }
 var file_meza_v1_gateway_proto_depIdxs = []int32{
 	0, // 0: meza.v1.GatewayEnvelope.op:type_name -> meza.v1.GatewayOpCode
@@ -207,7 +286,7 @@ func file_meza_v1_gateway_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_gateway_proto_rawDesc), len(file_meza_v1_gateway_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

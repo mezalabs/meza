@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateFederationAssertionRequest, CreateFederationAssertionResponse, FederationJoinRequest, FederationJoinResponse, FederationLeaveRequest, FederationLeaveResponse, FederationRefreshRequest, FederationRefreshResponse, ListFederatedMembershipsRequest, ListFederatedMembershipsResponse, ResolveRemoteInviteRequest, ResolveRemoteInviteResponse } from "./federation_pb.js";
+import { CreateFederationAssertionRequest, CreateFederationAssertionResponse, FederationJoinRequest, FederationJoinResponse, FederationLeaveRequest, FederationLeaveResponse, FederationRefreshRequest, FederationRefreshResponse, ListFederatedMembershipsRequest, ListFederatedMembershipsResponse, RemoveFederatedMembershipRequest, RemoveFederatedMembershipResponse, ResolveRemoteInviteRequest, ResolveRemoteInviteResponse, StoreFederatedMembershipRequest, StoreFederatedMembershipResponse } from "./federation_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -76,6 +76,28 @@ export const FederationService = {
       name: "ListFederatedMemberships",
       I: ListFederatedMembershipsRequest,
       O: ListFederatedMembershipsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Store a federated membership on the home server
+     *
+     * @generated from rpc meza.v1.FederationService.StoreFederatedMembership
+     */
+    storeFederatedMembership: {
+      name: "StoreFederatedMembership",
+      I: StoreFederatedMembershipRequest,
+      O: StoreFederatedMembershipResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Remove a federated membership from the home server
+     *
+     * @generated from rpc meza.v1.FederationService.RemoveFederatedMembership
+     */
+    removeFederatedMembership: {
+      name: "RemoveFederatedMembership",
+      I: RemoveFederatedMembershipRequest,
+      O: RemoveFederatedMembershipResponse,
       kind: MethodKind.Unary,
     },
   }

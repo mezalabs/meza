@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meza/v1/federation.proto.
  */
 export const file_meza_v1_federation: GenFile = /*@__PURE__*/
-  fileDesc("ChhtZXphL3YxL2ZlZGVyYXRpb24ucHJvdG8SB21lemEudjEiPwogQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvblJlcXVlc3QSGwoTdGFyZ2V0X2luc3RhbmNlX3VybBgBIAEoCSI8CiFDcmVhdGVGZWRlcmF0aW9uQXNzZXJ0aW9uUmVzcG9uc2USFwoPYXNzZXJ0aW9uX3Rva2VuGAEgASgJIkUKFUZlZGVyYXRpb25Kb2luUmVxdWVzdBIXCg9hc3NlcnRpb25fdG9rZW4YASABKAkSEwoLaW52aXRlX2NvZGUYAiABKAkivQEKFkZlZGVyYXRpb25Kb2luUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSHwoGc2VydmVyGAMgASgLMg8ubWV6YS52MS5TZXJ2ZXISIgoIY2hhbm5lbHMYBCADKAsyEC5tZXphLnYxLkNoYW5uZWwSIAoHbWVtYmVycxgFIAMoCzIPLm1lemEudjEuTWVtYmVyEg8KB3VzZXJfaWQYBiABKAkiSgoYRmVkZXJhdGlvblJlZnJlc2hSZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSFwoPYXNzZXJ0aW9uX3Rva2VuGAIgASgJIkgKGUZlZGVyYXRpb25SZWZyZXNoUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiKwoWRmVkZXJhdGlvbkxlYXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiGQoXRmVkZXJhdGlvbkxlYXZlUmVzcG9uc2UiMAoaUmVzb2x2ZVJlbW90ZUludml0ZVJlcXVlc3QSEgoKaW52aXRlX3VybBgBIAEoCSJIChtSZXNvbHZlUmVtb3RlSW52aXRlUmVzcG9uc2USFAoMaW5zdGFuY2VfdXJsGAEgASgJEhMKC2ludml0ZV9jb2RlGAIgASgJIiEKH0xpc3RGZWRlcmF0ZWRNZW1iZXJzaGlwc1JlcXVlc3QiVQogTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVzcG9uc2USMQoLbWVtYmVyc2hpcHMYASADKAsyHC5tZXphLnYxLkZlZGVyYXRlZE1lbWJlcnNoaXAimwEKE0ZlZGVyYXRlZE1lbWJlcnNoaXASFAoMaW5zdGFuY2VfdXJsGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRITCgtzZXJ2ZXJfbmFtZRgDIAEoCRIXCg9zZXJ2ZXJfaWNvbl91cmwYBCABKAkSLQoJam9pbmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcDLfBAoRRmVkZXJhdGlvblNlcnZpY2UScgoZQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvbhIpLm1lemEudjEuQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvblJlcXVlc3QaKi5tZXphLnYxLkNyZWF0ZUZlZGVyYXRpb25Bc3NlcnRpb25SZXNwb25zZRJRCg5GZWRlcmF0aW9uSm9pbhIeLm1lemEudjEuRmVkZXJhdGlvbkpvaW5SZXF1ZXN0Gh8ubWV6YS52MS5GZWRlcmF0aW9uSm9pblJlc3BvbnNlEloKEUZlZGVyYXRpb25SZWZyZXNoEiEubWV6YS52MS5GZWRlcmF0aW9uUmVmcmVzaFJlcXVlc3QaIi5tZXphLnYxLkZlZGVyYXRpb25SZWZyZXNoUmVzcG9uc2USVAoPRmVkZXJhdGlvbkxlYXZlEh8ubWV6YS52MS5GZWRlcmF0aW9uTGVhdmVSZXF1ZXN0GiAubWV6YS52MS5GZWRlcmF0aW9uTGVhdmVSZXNwb25zZRJgChNSZXNvbHZlUmVtb3RlSW52aXRlEiMubWV6YS52MS5SZXNvbHZlUmVtb3RlSW52aXRlUmVxdWVzdBokLm1lemEudjEuUmVzb2x2ZVJlbW90ZUludml0ZVJlc3BvbnNlEm8KGExpc3RGZWRlcmF0ZWRNZW1iZXJzaGlwcxIoLm1lemEudjEuTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVxdWVzdBopLm1lemEudjEuTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVzcG9uc2VCiQEKC2NvbS5tZXphLnYxQg9GZWRlcmF0aW9uUHJvdG9QAVosZ2l0aHViLmNvbS9tZXphLWNoYXQvbWV6YS9nZW4vbWV6YS92MTttZXphdjGiAgNNWFiqAgdNZXphLlYxygIHTWV6YVxWMeICE01lemFcVjFcR1BCTWV0YWRhdGHqAghNZXphOjpWMWIGcHJvdG8z", [file_meza_v1_models, file_google_protobuf_timestamp]);
+  fileDesc("ChhtZXphL3YxL2ZlZGVyYXRpb24ucHJvdG8SB21lemEudjEiPwogQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvblJlcXVlc3QSGwoTdGFyZ2V0X2luc3RhbmNlX3VybBgBIAEoCSI8CiFDcmVhdGVGZWRlcmF0aW9uQXNzZXJ0aW9uUmVzcG9uc2USFwoPYXNzZXJ0aW9uX3Rva2VuGAEgASgJIkUKFUZlZGVyYXRpb25Kb2luUmVxdWVzdBIXCg9hc3NlcnRpb25fdG9rZW4YASABKAkSEwoLaW52aXRlX2NvZGUYAiABKAkivQEKFkZlZGVyYXRpb25Kb2luUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSHwoGc2VydmVyGAMgASgLMg8ubWV6YS52MS5TZXJ2ZXISIgoIY2hhbm5lbHMYBCADKAsyEC5tZXphLnYxLkNoYW5uZWwSIAoHbWVtYmVycxgFIAMoCzIPLm1lemEudjEuTWVtYmVyEg8KB3VzZXJfaWQYBiABKAkiSgoYRmVkZXJhdGlvblJlZnJlc2hSZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkSFwoPYXNzZXJ0aW9uX3Rva2VuGAIgASgJIkgKGUZlZGVyYXRpb25SZWZyZXNoUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiKwoWRmVkZXJhdGlvbkxlYXZlUmVxdWVzdBIRCglzZXJ2ZXJfaWQYASABKAkiGQoXRmVkZXJhdGlvbkxlYXZlUmVzcG9uc2UiMAoaUmVzb2x2ZVJlbW90ZUludml0ZVJlcXVlc3QSEgoKaW52aXRlX3VybBgBIAEoCSJIChtSZXNvbHZlUmVtb3RlSW52aXRlUmVzcG9uc2USFAoMaW5zdGFuY2VfdXJsGAEgASgJEhMKC2ludml0ZV9jb2RlGAIgASgJIiEKH0xpc3RGZWRlcmF0ZWRNZW1iZXJzaGlwc1JlcXVlc3QiVQogTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVzcG9uc2USMQoLbWVtYmVyc2hpcHMYASADKAsyHC5tZXphLnYxLkZlZGVyYXRlZE1lbWJlcnNoaXAimwEKE0ZlZGVyYXRlZE1lbWJlcnNoaXASFAoMaW5zdGFuY2VfdXJsGAEgASgJEhEKCXNlcnZlcl9pZBgCIAEoCRITCgtzZXJ2ZXJfbmFtZRgDIAEoCRIXCg9zZXJ2ZXJfaWNvbl91cmwYBCABKAkSLQoJam9pbmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJLCh9TdG9yZUZlZGVyYXRlZE1lbWJlcnNoaXBSZXF1ZXN0EhUKDXNhdGVsbGl0ZV91cmwYASABKAkSEQoJc2VydmVyX2lkGAIgASgJIiIKIFN0b3JlRmVkZXJhdGVkTWVtYmVyc2hpcFJlc3BvbnNlIkwKIFJlbW92ZUZlZGVyYXRlZE1lbWJlcnNoaXBSZXF1ZXN0EhUKDXNhdGVsbGl0ZV91cmwYASABKAkSEQoJc2VydmVyX2lkGAIgASgJIiMKIVJlbW92ZUZlZGVyYXRlZE1lbWJlcnNoaXBSZXNwb25zZTLEBgoRRmVkZXJhdGlvblNlcnZpY2UScgoZQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvbhIpLm1lemEudjEuQ3JlYXRlRmVkZXJhdGlvbkFzc2VydGlvblJlcXVlc3QaKi5tZXphLnYxLkNyZWF0ZUZlZGVyYXRpb25Bc3NlcnRpb25SZXNwb25zZRJRCg5GZWRlcmF0aW9uSm9pbhIeLm1lemEudjEuRmVkZXJhdGlvbkpvaW5SZXF1ZXN0Gh8ubWV6YS52MS5GZWRlcmF0aW9uSm9pblJlc3BvbnNlEloKEUZlZGVyYXRpb25SZWZyZXNoEiEubWV6YS52MS5GZWRlcmF0aW9uUmVmcmVzaFJlcXVlc3QaIi5tZXphLnYxLkZlZGVyYXRpb25SZWZyZXNoUmVzcG9uc2USVAoPRmVkZXJhdGlvbkxlYXZlEh8ubWV6YS52MS5GZWRlcmF0aW9uTGVhdmVSZXF1ZXN0GiAubWV6YS52MS5GZWRlcmF0aW9uTGVhdmVSZXNwb25zZRJgChNSZXNvbHZlUmVtb3RlSW52aXRlEiMubWV6YS52MS5SZXNvbHZlUmVtb3RlSW52aXRlUmVxdWVzdBokLm1lemEudjEuUmVzb2x2ZVJlbW90ZUludml0ZVJlc3BvbnNlEm8KGExpc3RGZWRlcmF0ZWRNZW1iZXJzaGlwcxIoLm1lemEudjEuTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVxdWVzdBopLm1lemEudjEuTGlzdEZlZGVyYXRlZE1lbWJlcnNoaXBzUmVzcG9uc2USbwoYU3RvcmVGZWRlcmF0ZWRNZW1iZXJzaGlwEigubWV6YS52MS5TdG9yZUZlZGVyYXRlZE1lbWJlcnNoaXBSZXF1ZXN0GikubWV6YS52MS5TdG9yZUZlZGVyYXRlZE1lbWJlcnNoaXBSZXNwb25zZRJyChlSZW1vdmVGZWRlcmF0ZWRNZW1iZXJzaGlwEikubWV6YS52MS5SZW1vdmVGZWRlcmF0ZWRNZW1iZXJzaGlwUmVxdWVzdBoqLm1lemEudjEuUmVtb3ZlRmVkZXJhdGVkTWVtYmVyc2hpcFJlc3BvbnNlQokBCgtjb20ubWV6YS52MUIPRmVkZXJhdGlvblByb3RvUAFaLGdpdGh1Yi5jb20vbWV6YS1jaGF0L21lemEvZ2VuL21lemEvdjE7bWV6YXYxogIDTVhYqgIHTWV6YS5WMcoCB01lemFcVjHiAhNNZXphXFYxXEdQQk1ldGFkYXRh6gIITWV6YTo6VjFiBnByb3RvMw", [file_meza_v1_models, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message meza.v1.CreateFederationAssertionRequest
@@ -315,6 +315,80 @@ export const FederatedMembershipSchema: GenMessage<FederatedMembership> = /*@__P
   messageDesc(file_meza_v1_federation, 12);
 
 /**
+ * @generated from message meza.v1.StoreFederatedMembershipRequest
+ */
+export type StoreFederatedMembershipRequest = Message<"meza.v1.StoreFederatedMembershipRequest"> & {
+  /**
+   * e.g. "https://coolgroup.org"
+   *
+   * @generated from field: string satellite_url = 1;
+   */
+  satelliteUrl: string;
+
+  /**
+   * Server ID on the satellite
+   *
+   * @generated from field: string server_id = 2;
+   */
+  serverId: string;
+};
+
+/**
+ * Describes the message meza.v1.StoreFederatedMembershipRequest.
+ * Use `create(StoreFederatedMembershipRequestSchema)` to create a new message.
+ */
+export const StoreFederatedMembershipRequestSchema: GenMessage<StoreFederatedMembershipRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_federation, 13);
+
+/**
+ * @generated from message meza.v1.StoreFederatedMembershipResponse
+ */
+export type StoreFederatedMembershipResponse = Message<"meza.v1.StoreFederatedMembershipResponse"> & {
+};
+
+/**
+ * Describes the message meza.v1.StoreFederatedMembershipResponse.
+ * Use `create(StoreFederatedMembershipResponseSchema)` to create a new message.
+ */
+export const StoreFederatedMembershipResponseSchema: GenMessage<StoreFederatedMembershipResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_federation, 14);
+
+/**
+ * @generated from message meza.v1.RemoveFederatedMembershipRequest
+ */
+export type RemoveFederatedMembershipRequest = Message<"meza.v1.RemoveFederatedMembershipRequest"> & {
+  /**
+   * @generated from field: string satellite_url = 1;
+   */
+  satelliteUrl: string;
+
+  /**
+   * @generated from field: string server_id = 2;
+   */
+  serverId: string;
+};
+
+/**
+ * Describes the message meza.v1.RemoveFederatedMembershipRequest.
+ * Use `create(RemoveFederatedMembershipRequestSchema)` to create a new message.
+ */
+export const RemoveFederatedMembershipRequestSchema: GenMessage<RemoveFederatedMembershipRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_federation, 15);
+
+/**
+ * @generated from message meza.v1.RemoveFederatedMembershipResponse
+ */
+export type RemoveFederatedMembershipResponse = Message<"meza.v1.RemoveFederatedMembershipResponse"> & {
+};
+
+/**
+ * Describes the message meza.v1.RemoveFederatedMembershipResponse.
+ * Use `create(RemoveFederatedMembershipResponseSchema)` to create a new message.
+ */
+export const RemoveFederatedMembershipResponseSchema: GenMessage<RemoveFederatedMembershipResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_federation, 16);
+
+/**
  * @generated from service meza.v1.FederationService
  */
 export const FederationService: GenService<{
@@ -377,6 +451,26 @@ export const FederationService: GenService<{
     methodKind: "unary";
     input: typeof ListFederatedMembershipsRequestSchema;
     output: typeof ListFederatedMembershipsResponseSchema;
+  },
+  /**
+   * Store a federated membership on the home server
+   *
+   * @generated from rpc meza.v1.FederationService.StoreFederatedMembership
+   */
+  storeFederatedMembership: {
+    methodKind: "unary";
+    input: typeof StoreFederatedMembershipRequestSchema;
+    output: typeof StoreFederatedMembershipResponseSchema;
+  },
+  /**
+   * Remove a federated membership from the home server
+   *
+   * @generated from rpc meza.v1.FederationService.RemoveFederatedMembership
+   */
+  removeFederatedMembership: {
+    methodKind: "unary";
+    input: typeof RemoveFederatedMembershipRequestSchema;
+    output: typeof RemoveFederatedMembershipResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_meza_v1_federation, 0);

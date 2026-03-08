@@ -51,6 +51,12 @@ const (
 	// FederationServiceListFederatedMembershipsProcedure is the fully-qualified name of the
 	// FederationService's ListFederatedMemberships RPC.
 	FederationServiceListFederatedMembershipsProcedure = "/meza.v1.FederationService/ListFederatedMemberships"
+	// FederationServiceStoreFederatedMembershipProcedure is the fully-qualified name of the
+	// FederationService's StoreFederatedMembership RPC.
+	FederationServiceStoreFederatedMembershipProcedure = "/meza.v1.FederationService/StoreFederatedMembership"
+	// FederationServiceRemoveFederatedMembershipProcedure is the fully-qualified name of the
+	// FederationService's RemoveFederatedMembership RPC.
+	FederationServiceRemoveFederatedMembershipProcedure = "/meza.v1.FederationService/RemoveFederatedMembership"
 )
 
 // FederationServiceClient is a client for the meza.v1.FederationService service.
@@ -67,6 +73,10 @@ type FederationServiceClient interface {
 	ResolveRemoteInvite(context.Context, *connect.Request[v1.ResolveRemoteInviteRequest]) (*connect.Response[v1.ResolveRemoteInviteResponse], error)
 	// List all remote instance memberships for the authenticated user
 	ListFederatedMemberships(context.Context, *connect.Request[v1.ListFederatedMembershipsRequest]) (*connect.Response[v1.ListFederatedMembershipsResponse], error)
+	// Store a federated membership on the home server
+	StoreFederatedMembership(context.Context, *connect.Request[v1.StoreFederatedMembershipRequest]) (*connect.Response[v1.StoreFederatedMembershipResponse], error)
+	// Remove a federated membership from the home server
+	RemoveFederatedMembership(context.Context, *connect.Request[v1.RemoveFederatedMembershipRequest]) (*connect.Response[v1.RemoveFederatedMembershipResponse], error)
 }
 
 // NewFederationServiceClient constructs a client for the meza.v1.FederationService service. By
@@ -116,6 +126,18 @@ func NewFederationServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			connect.WithSchema(federationServiceMethods.ByName("ListFederatedMemberships")),
 			connect.WithClientOptions(opts...),
 		),
+		storeFederatedMembership: connect.NewClient[v1.StoreFederatedMembershipRequest, v1.StoreFederatedMembershipResponse](
+			httpClient,
+			baseURL+FederationServiceStoreFederatedMembershipProcedure,
+			connect.WithSchema(federationServiceMethods.ByName("StoreFederatedMembership")),
+			connect.WithClientOptions(opts...),
+		),
+		removeFederatedMembership: connect.NewClient[v1.RemoveFederatedMembershipRequest, v1.RemoveFederatedMembershipResponse](
+			httpClient,
+			baseURL+FederationServiceRemoveFederatedMembershipProcedure,
+			connect.WithSchema(federationServiceMethods.ByName("RemoveFederatedMembership")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -127,6 +149,8 @@ type federationServiceClient struct {
 	federationLeave           *connect.Client[v1.FederationLeaveRequest, v1.FederationLeaveResponse]
 	resolveRemoteInvite       *connect.Client[v1.ResolveRemoteInviteRequest, v1.ResolveRemoteInviteResponse]
 	listFederatedMemberships  *connect.Client[v1.ListFederatedMembershipsRequest, v1.ListFederatedMembershipsResponse]
+	storeFederatedMembership  *connect.Client[v1.StoreFederatedMembershipRequest, v1.StoreFederatedMembershipResponse]
+	removeFederatedMembership *connect.Client[v1.RemoveFederatedMembershipRequest, v1.RemoveFederatedMembershipResponse]
 }
 
 // CreateFederationAssertion calls meza.v1.FederationService.CreateFederationAssertion.
@@ -159,6 +183,16 @@ func (c *federationServiceClient) ListFederatedMemberships(ctx context.Context, 
 	return c.listFederatedMemberships.CallUnary(ctx, req)
 }
 
+// StoreFederatedMembership calls meza.v1.FederationService.StoreFederatedMembership.
+func (c *federationServiceClient) StoreFederatedMembership(ctx context.Context, req *connect.Request[v1.StoreFederatedMembershipRequest]) (*connect.Response[v1.StoreFederatedMembershipResponse], error) {
+	return c.storeFederatedMembership.CallUnary(ctx, req)
+}
+
+// RemoveFederatedMembership calls meza.v1.FederationService.RemoveFederatedMembership.
+func (c *federationServiceClient) RemoveFederatedMembership(ctx context.Context, req *connect.Request[v1.RemoveFederatedMembershipRequest]) (*connect.Response[v1.RemoveFederatedMembershipResponse], error) {
+	return c.removeFederatedMembership.CallUnary(ctx, req)
+}
+
 // FederationServiceHandler is an implementation of the meza.v1.FederationService service.
 type FederationServiceHandler interface {
 	// Home server only: create a scoped assertion for a target instance
@@ -173,6 +207,10 @@ type FederationServiceHandler interface {
 	ResolveRemoteInvite(context.Context, *connect.Request[v1.ResolveRemoteInviteRequest]) (*connect.Response[v1.ResolveRemoteInviteResponse], error)
 	// List all remote instance memberships for the authenticated user
 	ListFederatedMemberships(context.Context, *connect.Request[v1.ListFederatedMembershipsRequest]) (*connect.Response[v1.ListFederatedMembershipsResponse], error)
+	// Store a federated membership on the home server
+	StoreFederatedMembership(context.Context, *connect.Request[v1.StoreFederatedMembershipRequest]) (*connect.Response[v1.StoreFederatedMembershipResponse], error)
+	// Remove a federated membership from the home server
+	RemoveFederatedMembership(context.Context, *connect.Request[v1.RemoveFederatedMembershipRequest]) (*connect.Response[v1.RemoveFederatedMembershipResponse], error)
 }
 
 // NewFederationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -218,6 +256,18 @@ func NewFederationServiceHandler(svc FederationServiceHandler, opts ...connect.H
 		connect.WithSchema(federationServiceMethods.ByName("ListFederatedMemberships")),
 		connect.WithHandlerOptions(opts...),
 	)
+	federationServiceStoreFederatedMembershipHandler := connect.NewUnaryHandler(
+		FederationServiceStoreFederatedMembershipProcedure,
+		svc.StoreFederatedMembership,
+		connect.WithSchema(federationServiceMethods.ByName("StoreFederatedMembership")),
+		connect.WithHandlerOptions(opts...),
+	)
+	federationServiceRemoveFederatedMembershipHandler := connect.NewUnaryHandler(
+		FederationServiceRemoveFederatedMembershipProcedure,
+		svc.RemoveFederatedMembership,
+		connect.WithSchema(federationServiceMethods.ByName("RemoveFederatedMembership")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.FederationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case FederationServiceCreateFederationAssertionProcedure:
@@ -232,6 +282,10 @@ func NewFederationServiceHandler(svc FederationServiceHandler, opts ...connect.H
 			federationServiceResolveRemoteInviteHandler.ServeHTTP(w, r)
 		case FederationServiceListFederatedMembershipsProcedure:
 			federationServiceListFederatedMembershipsHandler.ServeHTTP(w, r)
+		case FederationServiceStoreFederatedMembershipProcedure:
+			federationServiceStoreFederatedMembershipHandler.ServeHTTP(w, r)
+		case FederationServiceRemoveFederatedMembershipProcedure:
+			federationServiceRemoveFederatedMembershipHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -263,4 +317,12 @@ func (UnimplementedFederationServiceHandler) ResolveRemoteInvite(context.Context
 
 func (UnimplementedFederationServiceHandler) ListFederatedMemberships(context.Context, *connect.Request[v1.ListFederatedMembershipsRequest]) (*connect.Response[v1.ListFederatedMembershipsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.FederationService.ListFederatedMemberships is not implemented"))
+}
+
+func (UnimplementedFederationServiceHandler) StoreFederatedMembership(context.Context, *connect.Request[v1.StoreFederatedMembershipRequest]) (*connect.Response[v1.StoreFederatedMembershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.FederationService.StoreFederatedMembership is not implemented"))
+}
+
+func (UnimplementedFederationServiceHandler) RemoveFederatedMembership(context.Context, *connect.Request[v1.RemoveFederatedMembershipRequest]) (*connect.Response[v1.RemoveFederatedMembershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.FederationService.RemoveFederatedMembership is not implemented"))
 }

@@ -10,14 +10,17 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/config"
 	"github.com/meza-chat/meza/internal/database"
+	"github.com/meza-chat/meza/internal/federation"
 	"github.com/meza-chat/meza/internal/middleware"
 	bfnats "github.com/meza-chat/meza/internal/nats"
 	"github.com/meza-chat/meza/internal/observability"
 	"github.com/meza-chat/meza/internal/ratelimit"
+	mezaRedis "github.com/meza-chat/meza/internal/redis"
 	"github.com/meza-chat/meza/internal/store"
 )
 
@@ -80,10 +83,57 @@ func main() {
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.FederationInstanceURL
 	gw.verificationCache = auth.NewVerificationCache()
+	gw.capabilities = instanceCapabilities{
+		ProtocolVersion:      1,
+		MediaEnabled:         cfg.S3Endpoint != "",
+		VoiceEnabled:         cfg.LiveKitHost != "",
+		NotificationsEnabled: false, // Phase D
+	}
 
 	if err := gw.Start(ctx); err != nil {
 		slog.Error("start gateway", "err", err)
 		os.Exit(1)
+	}
+
+	// Federation service setup
+	authStore := store.NewAuthStore(pool)
+	federationStore := store.NewFederationStore(pool)
+	inviteStore := store.NewInviteStore(pool)
+
+	fedSvc := &gatewayFederationService{
+		authStore:       authStore,
+		federationStore: federationStore,
+		chatStore:       chatStore,
+		inviteStore:     inviteStore,
+		ed25519Keys:     ed25519Keys,
+		instanceURL:     cfg.FederationInstanceURL,
+	}
+
+	// Set up federation verifier and Redis if federation is enabled
+	if cfg.FederationEnabled && ed25519Keys != nil {
+		trustedServers := auth.ParseTrustedHomeServers(cfg.TrustedHomeServers)
+		jwksClient := federation.NewJWKSClient()
+		if err := jwksClient.EagerLoad(ctx, trustedServers); err != nil {
+			slog.Error("eager loading JWKS", "err", err)
+			os.Exit(1)
+		}
+		jwksClient.StartBackgroundRefresh(ctx, trustedServers)
+		fedSvc.verifier = federation.NewVerifier(jwksClient, cfg.FederationInstanceURL, trustedServers)
+
+		// Connect Redis for jti replay protection and token blocklisting
+		if cfg.RedisURL != "" {
+			rdb, err := mezaRedis.NewClient(ctx, cfg.RedisURL)
+			if err != nil {
+				slog.Error("connect redis for federation", "err", err)
+				os.Exit(1)
+			}
+			defer rdb.Close()
+			fedSvc.redisClient = rdb
+			fedSvc.tokenBlocklist = auth.NewTokenBlocklist(rdb)
+		} else {
+			slog.Error("federation requires Redis for jti replay protection and token blocklisting")
+			os.Exit(1)
+		}
 	}
 
 	// Rate limit: 10 req/s burst 3 per IP for WebSocket connections
@@ -93,6 +143,17 @@ func main() {
 	mux.Handle("/ws", wsLimiter.WrapFunc(gw.HandleWebSocket))
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())
+
+	// Federation ConnectRPC handler with CORS and rate limiting.
+	// Uses the optional interceptor (join/refresh are unauthenticated, leave requires JWT).
+	fedInterceptorOpts := []auth.InterceptorOption{
+		auth.WithVerificationCache(auth.NewVerificationCache()),
+	}
+	fedPath, fedHandler := mezav1connect.NewFederationServiceHandler(fedSvc,
+		connect.WithInterceptors(auth.NewOptionalConnectInterceptor(ed25519Keys.PublicKey, fedInterceptorOpts...)),
+	)
+	fedLimiter := ratelimit.New(3, 5) // Tighter limits for federation endpoints
+	mux.Handle(fedPath, federationCORS(fedLimiter.Wrap(fedHandler)))
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
@@ -123,6 +184,23 @@ func main() {
 	}
 
 	slog.Info("server stopped gracefully")
+}
+
+// federationCORS wraps a handler with CORS headers for cross-origin federation
+// ConnectRPC calls. Allows all origins since federation endpoints are designed
+// to be called from any trusted instance's client.
+func federationCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "86400")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {

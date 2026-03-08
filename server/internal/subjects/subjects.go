@@ -157,6 +157,12 @@ func UserRecoveryWildcard() string {
 	return "meza.user.recovery.>"
 }
 
+// Federation event subjects.
+
+func FederationRemoved(serverID string) string {
+	return fmt.Sprintf("meza.federation.removed.%s", serverID)
+}
+
 // Device connectivity subjects — notification service subscribes,
 // gateway publishes on WebSocket connect/disconnect.
 

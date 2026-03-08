@@ -48,31 +48,55 @@ func (s *FederationStore) IsFederatedUser(ctx context.Context, userID string) (b
 	return isFederated, nil
 }
 
-// FederationJoinTx atomically upserts a shadow user and adds guild membership
-// within a single PostgreSQL transaction. This prevents orphaned shadow users
-// on partial failure and ensures idempotent re-join behaviour:
+// FederationJoinTx atomically consumes an invite, upserts a shadow user, and
+// adds guild membership within a single PostgreSQL transaction. This prevents
+// orphaned shadow users on partial failure and ensures invite consumption is
+// rolled back if the join fails:
 //
+//   - Invite: consumed atomically — if join fails, the invite use is not burned.
 //   - Shadow user: ON CONFLICT (home_server, remote_user_id) refreshes
 //     display_name and avatar_url so re-joins pick up profile changes.
 //   - Member row: ON CONFLICT (user_id, server_id) refreshes joined_at
 //     so a re-join after leave (or admin kick) is recorded correctly.
 //
 // Shadow user rows are never deleted (kept for message attribution).
-func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remoteUserID, displayName, avatarURL, serverID string) (*models.User, error) {
+// Returns the shadow user and the invite (with server_id) on success.
+// Returns (nil, nil, nil) if the invite is invalid/expired/maxed.
+func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remoteUserID, displayName, avatarURL, inviteCode string) (*models.User, *models.Invite, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("begin tx: %w", err)
+		return nil, nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
+
+	// Step 1: Consume invite atomically within the transaction.
+	// If the join fails later, the transaction rolls back and the invite use is not burned.
+	var inv models.Invite
+	err = tx.QueryRow(ctx,
+		`UPDATE invites
+		 SET use_count = use_count + 1
+		 WHERE code = $1
+		   AND revoked = false
+		   AND (expires_at IS NULL OR expires_at > now())
+		   AND (max_uses = 0 OR use_count < max_uses)
+		 RETURNING code, server_id, creator_id, max_uses, use_count, expires_at, revoked, created_at`,
+		inviteCode,
+	).Scan(&inv.Code, &inv.ServerID, &inv.CreatorID, &inv.MaxUses, &inv.UseCount, &inv.ExpiresAt, &inv.Revoked, &inv.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, nil // invite invalid/expired/maxed
+		}
+		return nil, nil, fmt.Errorf("consume invite in tx: %w", err)
+	}
 
 	id := models.NewID()
 	now := time.Now()
 	username := shadowUsername(remoteUserID)
 
-	// Step 1: Upsert shadow user — idempotent via partial unique index
+	// Step 2: Upsert shadow user — idempotent via partial unique index
 	// idx_users_federated_identity ON (home_server, remote_user_id) WHERE is_federated = true.
 	// On conflict the existing row's profile is refreshed; the RETURNING clause
 	// always gives back the canonical row regardless of insert vs update.
@@ -86,26 +110,26 @@ func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remo
 		id, username, displayName, avatarURL, homeServer, remoteUserID, now,
 	).Scan(&u.ID, &u.Username, &u.DisplayName, &u.AvatarURL, &u.IsFederated, &u.HomeServer, &u.RemoteUserID, &u.CreatedAt)
 	if err != nil {
-		return nil, fmt.Errorf("upsert shadow user: %w", err)
+		return nil, nil, fmt.Errorf("upsert shadow user: %w", err)
 	}
 
-	// Step 2: Add guild membership — idempotent via PK (user_id, server_id).
+	// Step 3: Add guild membership — idempotent via PK (user_id, server_id).
 	// On conflict (user already a member), refresh joined_at so a re-join
 	// after leave or admin kick is properly timestamped.
 	_, err = tx.Exec(ctx,
 		`INSERT INTO members (user_id, server_id, joined_at) VALUES ($1, $2, $3)
 		 ON CONFLICT (user_id, server_id) DO UPDATE SET joined_at = EXCLUDED.joined_at`,
-		u.ID, serverID, now,
+		u.ID, inv.ServerID, now,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("add member: %w", err)
+		return nil, nil, fmt.Errorf("add member: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("commit tx: %w", err)
+		return nil, nil, fmt.Errorf("commit tx: %w", err)
 	}
 
-	return &u, nil
+	return &u, &inv, nil
 }
 
 // ErrShadowUserNotFound is returned when UpdateShadowUserProfile matches no rows.

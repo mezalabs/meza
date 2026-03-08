@@ -384,6 +384,10 @@ func (s *chatService) KickMember(ctx context.Context, req *connect.Request[v1.Ki
 	// Signal gateway to refresh channel subscriptions for the kicked user.
 	s.nc.Publish(subjects.UserSubscription(req.Msg.UserId), nil)
 
+	// If the kicked user is federated, emit FEDERATION_REMOVED so their home
+	// instance is notified and can clean up the membership record.
+	s.emitFederationRemovedIfNeeded(ctx, req.Msg.UserId, req.Msg.ServerId, "kicked")
+
 	return connect.NewResponse(&v1.KickMemberResponse{}), nil
 }
 
@@ -485,6 +489,10 @@ func (s *chatService) BanMember(ctx context.Context, req *connect.Request[v1.Ban
 
 		// Signal gateway to refresh channel subscriptions for the banned user.
 		s.nc.Publish(subjects.UserSubscription(req.Msg.UserId), nil)
+
+		// If the banned user is federated, emit FEDERATION_REMOVED so their home
+		// instance is notified and can clean up the membership record.
+		s.emitFederationRemovedIfNeeded(ctx, req.Msg.UserId, req.Msg.ServerId, "banned")
 	} else {
 		// Pre-emptive ban — no hierarchy check needed.
 		created, err := s.banStore.CreateBan(ctx, ban)
@@ -1160,4 +1168,40 @@ func (s *chatService) RemoveTimeout(ctx context.Context, req *connect.Request[v1
 
 func (s *chatService) ListAuditLog(context.Context, *connect.Request[v1.ListAuditLogRequest]) (*connect.Response[v1.ListAuditLogResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("not implemented"))
+}
+
+// emitFederationRemovedIfNeeded checks if a user is federated and, if so,
+// emits a FEDERATION_REMOVED event via NATS so the user's home instance
+// can clean up their membership record.
+func (s *chatService) emitFederationRemovedIfNeeded(ctx context.Context, userID, serverID, reason string) {
+	user, err := s.authStore.GetUserByID(ctx, userID)
+	if err != nil {
+		slog.Warn("check federated status for federation removed", "err", err, "user", userID)
+		return
+	}
+	if !user.IsFederated {
+		return
+	}
+
+	event := &v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_FEDERATION_REMOVED,
+		Timestamp: timestamppb.New(time.Now()),
+		Payload: &v1.Event_FederationRemoved{
+			FederationRemoved: &v1.FederationRemovedEvent{
+				ServerId:    serverID,
+				InstanceUrl: user.HomeServer,
+				Reason:      reason,
+			},
+		},
+	}
+	eventData, err := proto.Marshal(event)
+	if err != nil {
+		slog.Error("marshaling federation removed event", "err", err)
+		return
+	}
+	if err := s.nc.Publish(subjects.FederationRemoved(serverID), eventData); err != nil {
+		slog.Warn("nats publish federation removed failed", "subject", subjects.FederationRemoved(serverID), "err", err)
+	}
+	slog.Info("emitted federation removed", "user", userID, "server", serverID, "reason", reason, "home_server", user.HomeServer)
 }

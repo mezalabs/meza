@@ -17,6 +17,10 @@ service FederationService {
   rpc ResolveRemoteInvite(ResolveRemoteInviteRequest) returns (ResolveRemoteInviteResponse);
   // List all remote instance memberships for the authenticated user
   rpc ListFederatedMemberships(ListFederatedMembershipsRequest) returns (ListFederatedMembershipsResponse);
+  // Store a federated membership on the home server
+  rpc StoreFederatedMembership(StoreFederatedMembershipRequest) returns (StoreFederatedMembershipResponse);
+  // Remove a federated membership from the home server
+  rpc RemoveFederatedMembership(RemoveFederatedMembershipRequest) returns (RemoveFederatedMembershipResponse);
 }
 
 // CreateFederationAssertion - the home server issues a scoped, short-lived assertion
@@ -96,3 +100,21 @@ message FederatedMembership {
   string server_icon_url = 4;
   google.protobuf.Timestamp joined_at = 5;
 }
+
+// StoreFederatedMembership - Record a remote instance membership on the home server.
+
+message StoreFederatedMembershipRequest {
+  string satellite_url = 1; // e.g. "https://coolgroup.org"
+  string server_id = 2;     // Server ID on the satellite
+}
+
+message StoreFederatedMembershipResponse {}
+
+// RemoveFederatedMembership - Remove a remote instance membership from the home server.
+
+message RemoveFederatedMembershipRequest {
+  string satellite_url = 1;
+  string server_id = 2;
+}
+
+message RemoveFederatedMembershipResponse {}

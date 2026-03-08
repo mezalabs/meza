@@ -21,3 +21,15 @@ enum GatewayOpCode {
   GATEWAY_OP_SEND_MESSAGE = 7;
   GATEWAY_OP_TYPING_START = 8;
 }
+
+// InstanceCapabilities advertises which optional features this satellite
+// supports. Included in the READY payload so clients can adapt their UI
+// (e.g. hide voice buttons when voice is unavailable).
+// NOTE: The READY payload currently uses JSON-in-protobuf encoding;
+// this message documents the shape but is not directly marshalled.
+message InstanceCapabilities {
+  uint32 protocol_version = 1;
+  bool media_enabled = 2;
+  bool voice_enabled = 3;
+  bool notifications_enabled = 4;
+}

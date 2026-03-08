@@ -307,13 +307,29 @@ type PermissionOverrideStorer interface {
 	GetAllOverridesForChannels(ctx context.Context, channelIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error)
 }
 
+// FederatedMembership represents a user's membership in a remote federated server.
+type FederatedMembership struct {
+	UserID       string
+	SatelliteURL string
+	ServerID     string
+	JoinedAt     time.Time
+}
+
+// FederatedMembershipStorer provides access to federated membership data in Postgres.
+type FederatedMembershipStorer interface {
+	AddFederatedMembership(ctx context.Context, userID, satelliteURL, serverID string) error
+	RemoveFederatedMembership(ctx context.Context, userID, satelliteURL, serverID string) error
+	ListFederatedMemberships(ctx context.Context, userID string) ([]FederatedMembership, error)
+}
+
 // FederationStorer provides access to federation data in Postgres.
 type FederationStorer interface {
 	// IsFederatedUser checks if a user ID belongs to a federated shadow user.
 	IsFederatedUser(ctx context.Context, userID string) (bool, error)
 
-	// FederationJoinTx atomically creates/updates a shadow user and adds guild membership.
-	FederationJoinTx(ctx context.Context, homeServer, remoteUserID, displayName, avatarURL, serverID string) (*models.User, error)
+	// FederationJoinTx atomically consumes an invite, creates/updates a shadow user,
+	// and adds guild membership. Returns (nil, nil, nil) if invite is invalid.
+	FederationJoinTx(ctx context.Context, homeServer, remoteUserID, displayName, avatarURL, inviteCode string) (*models.User, *models.Invite, error)
 
 	// UpdateShadowUserProfile updates the display name and avatar URL on a shadow user.
 	UpdateShadowUserProfile(ctx context.Context, userID, displayName, avatarURL string) error

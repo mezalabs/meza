@@ -128,6 +128,13 @@ func (k *Ed25519Keys) KeyFingerprint() string {
 // When isFederated is true, the "is_federated" claim is embedded so services can
 // reject federated users without a DB query.
 func GenerateTokenPairEd25519(userID, deviceID string, keys *Ed25519Keys, issuer string, isFederated bool) (accessToken, refreshToken string, err error) {
+	return GenerateTokenPairEd25519WithExpiry(userID, deviceID, keys, issuer, isFederated, refreshTokenExpiry)
+}
+
+// GenerateTokenPairEd25519WithExpiry creates an Ed25519 signed access + refresh JWT pair
+// with a custom refresh token expiry. This allows callers (e.g. federation) to use
+// shorter-lived refresh tokens than the default 30-day TTL.
+func GenerateTokenPairEd25519WithExpiry(userID, deviceID string, keys *Ed25519Keys, issuer string, isFederated bool, refreshExpiry time.Duration) (accessToken, refreshToken string, err error) {
 	now := time.Now()
 
 	accessClaims := jwt.MapClaims{
@@ -155,7 +162,7 @@ func GenerateTokenPairEd25519(userID, deviceID string, keys *Ed25519Keys, issuer
 		"typ":       "refresh",
 		"jti":       randomID(),
 		"iat":       now.Unix(),
-		"exp":       now.Add(refreshTokenExpiry).Unix(),
+		"exp":       now.Add(refreshExpiry).Unix(),
 	}
 	if isFederated {
 		refreshClaims["is_federated"] = true

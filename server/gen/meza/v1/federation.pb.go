@@ -682,6 +682,182 @@ func (x *FederatedMembership) GetJoinedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type StoreFederatedMembershipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SatelliteUrl  string                 `protobuf:"bytes,1,opt,name=satellite_url,json=satelliteUrl,proto3" json:"satellite_url,omitempty"` // e.g. "https://coolgroup.org"
+	ServerId      string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`             // Server ID on the satellite
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StoreFederatedMembershipRequest) Reset() {
+	*x = StoreFederatedMembershipRequest{}
+	mi := &file_meza_v1_federation_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StoreFederatedMembershipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreFederatedMembershipRequest) ProtoMessage() {}
+
+func (x *StoreFederatedMembershipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_federation_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreFederatedMembershipRequest.ProtoReflect.Descriptor instead.
+func (*StoreFederatedMembershipRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_federation_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *StoreFederatedMembershipRequest) GetSatelliteUrl() string {
+	if x != nil {
+		return x.SatelliteUrl
+	}
+	return ""
+}
+
+func (x *StoreFederatedMembershipRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+type StoreFederatedMembershipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StoreFederatedMembershipResponse) Reset() {
+	*x = StoreFederatedMembershipResponse{}
+	mi := &file_meza_v1_federation_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StoreFederatedMembershipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreFederatedMembershipResponse) ProtoMessage() {}
+
+func (x *StoreFederatedMembershipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_federation_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreFederatedMembershipResponse.ProtoReflect.Descriptor instead.
+func (*StoreFederatedMembershipResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_federation_proto_rawDescGZIP(), []int{14}
+}
+
+type RemoveFederatedMembershipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SatelliteUrl  string                 `protobuf:"bytes,1,opt,name=satellite_url,json=satelliteUrl,proto3" json:"satellite_url,omitempty"`
+	ServerId      string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveFederatedMembershipRequest) Reset() {
+	*x = RemoveFederatedMembershipRequest{}
+	mi := &file_meza_v1_federation_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveFederatedMembershipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveFederatedMembershipRequest) ProtoMessage() {}
+
+func (x *RemoveFederatedMembershipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_federation_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveFederatedMembershipRequest.ProtoReflect.Descriptor instead.
+func (*RemoveFederatedMembershipRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_federation_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RemoveFederatedMembershipRequest) GetSatelliteUrl() string {
+	if x != nil {
+		return x.SatelliteUrl
+	}
+	return ""
+}
+
+func (x *RemoveFederatedMembershipRequest) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+type RemoveFederatedMembershipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoveFederatedMembershipResponse) Reset() {
+	*x = RemoveFederatedMembershipResponse{}
+	mi := &file_meza_v1_federation_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoveFederatedMembershipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoveFederatedMembershipResponse) ProtoMessage() {}
+
+func (x *RemoveFederatedMembershipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_federation_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoveFederatedMembershipResponse.ProtoReflect.Descriptor instead.
+func (*RemoveFederatedMembershipResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_federation_proto_rawDescGZIP(), []int{16}
+}
+
 var File_meza_v1_federation_proto protoreflect.FileDescriptor
 
 const file_meza_v1_federation_proto_rawDesc = "" +
@@ -727,14 +903,24 @@ const file_meza_v1_federation_proto_rawDesc = "" +
 	"\vserver_name\x18\x03 \x01(\tR\n" +
 	"serverName\x12&\n" +
 	"\x0fserver_icon_url\x18\x04 \x01(\tR\rserverIconUrl\x127\n" +
-	"\tjoined_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt2\xdf\x04\n" +
+	"\tjoined_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt\"c\n" +
+	"\x1fStoreFederatedMembershipRequest\x12#\n" +
+	"\rsatellite_url\x18\x01 \x01(\tR\fsatelliteUrl\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\"\"\n" +
+	" StoreFederatedMembershipResponse\"d\n" +
+	" RemoveFederatedMembershipRequest\x12#\n" +
+	"\rsatellite_url\x18\x01 \x01(\tR\fsatelliteUrl\x12\x1b\n" +
+	"\tserver_id\x18\x02 \x01(\tR\bserverId\"#\n" +
+	"!RemoveFederatedMembershipResponse2\xc4\x06\n" +
 	"\x11FederationService\x12r\n" +
 	"\x19CreateFederationAssertion\x12).meza.v1.CreateFederationAssertionRequest\x1a*.meza.v1.CreateFederationAssertionResponse\x12Q\n" +
 	"\x0eFederationJoin\x12\x1e.meza.v1.FederationJoinRequest\x1a\x1f.meza.v1.FederationJoinResponse\x12Z\n" +
 	"\x11FederationRefresh\x12!.meza.v1.FederationRefreshRequest\x1a\".meza.v1.FederationRefreshResponse\x12T\n" +
 	"\x0fFederationLeave\x12\x1f.meza.v1.FederationLeaveRequest\x1a .meza.v1.FederationLeaveResponse\x12`\n" +
 	"\x13ResolveRemoteInvite\x12#.meza.v1.ResolveRemoteInviteRequest\x1a$.meza.v1.ResolveRemoteInviteResponse\x12o\n" +
-	"\x18ListFederatedMemberships\x12(.meza.v1.ListFederatedMembershipsRequest\x1a).meza.v1.ListFederatedMembershipsResponseB\x89\x01\n" +
+	"\x18ListFederatedMemberships\x12(.meza.v1.ListFederatedMembershipsRequest\x1a).meza.v1.ListFederatedMembershipsResponse\x12o\n" +
+	"\x18StoreFederatedMembership\x12(.meza.v1.StoreFederatedMembershipRequest\x1a).meza.v1.StoreFederatedMembershipResponse\x12r\n" +
+	"\x19RemoveFederatedMembership\x12).meza.v1.RemoveFederatedMembershipRequest\x1a*.meza.v1.RemoveFederatedMembershipResponseB\x89\x01\n" +
 	"\vcom.meza.v1B\x0fFederationProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
@@ -749,7 +935,7 @@ func file_meza_v1_federation_proto_rawDescGZIP() []byte {
 	return file_meza_v1_federation_proto_rawDescData
 }
 
-var file_meza_v1_federation_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_meza_v1_federation_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_meza_v1_federation_proto_goTypes = []any{
 	(*CreateFederationAssertionRequest)(nil),  // 0: meza.v1.CreateFederationAssertionRequest
 	(*CreateFederationAssertionResponse)(nil), // 1: meza.v1.CreateFederationAssertionResponse
@@ -764,31 +950,39 @@ var file_meza_v1_federation_proto_goTypes = []any{
 	(*ListFederatedMembershipsRequest)(nil),   // 10: meza.v1.ListFederatedMembershipsRequest
 	(*ListFederatedMembershipsResponse)(nil),  // 11: meza.v1.ListFederatedMembershipsResponse
 	(*FederatedMembership)(nil),               // 12: meza.v1.FederatedMembership
-	(*Server)(nil),                            // 13: meza.v1.Server
-	(*Channel)(nil),                           // 14: meza.v1.Channel
-	(*Member)(nil),                            // 15: meza.v1.Member
-	(*timestamppb.Timestamp)(nil),             // 16: google.protobuf.Timestamp
+	(*StoreFederatedMembershipRequest)(nil),   // 13: meza.v1.StoreFederatedMembershipRequest
+	(*StoreFederatedMembershipResponse)(nil),  // 14: meza.v1.StoreFederatedMembershipResponse
+	(*RemoveFederatedMembershipRequest)(nil),  // 15: meza.v1.RemoveFederatedMembershipRequest
+	(*RemoveFederatedMembershipResponse)(nil), // 16: meza.v1.RemoveFederatedMembershipResponse
+	(*Server)(nil),                // 17: meza.v1.Server
+	(*Channel)(nil),               // 18: meza.v1.Channel
+	(*Member)(nil),                // 19: meza.v1.Member
+	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
 }
 var file_meza_v1_federation_proto_depIdxs = []int32{
-	13, // 0: meza.v1.FederationJoinResponse.server:type_name -> meza.v1.Server
-	14, // 1: meza.v1.FederationJoinResponse.channels:type_name -> meza.v1.Channel
-	15, // 2: meza.v1.FederationJoinResponse.members:type_name -> meza.v1.Member
+	17, // 0: meza.v1.FederationJoinResponse.server:type_name -> meza.v1.Server
+	18, // 1: meza.v1.FederationJoinResponse.channels:type_name -> meza.v1.Channel
+	19, // 2: meza.v1.FederationJoinResponse.members:type_name -> meza.v1.Member
 	12, // 3: meza.v1.ListFederatedMembershipsResponse.memberships:type_name -> meza.v1.FederatedMembership
-	16, // 4: meza.v1.FederatedMembership.joined_at:type_name -> google.protobuf.Timestamp
+	20, // 4: meza.v1.FederatedMembership.joined_at:type_name -> google.protobuf.Timestamp
 	0,  // 5: meza.v1.FederationService.CreateFederationAssertion:input_type -> meza.v1.CreateFederationAssertionRequest
 	2,  // 6: meza.v1.FederationService.FederationJoin:input_type -> meza.v1.FederationJoinRequest
 	4,  // 7: meza.v1.FederationService.FederationRefresh:input_type -> meza.v1.FederationRefreshRequest
 	6,  // 8: meza.v1.FederationService.FederationLeave:input_type -> meza.v1.FederationLeaveRequest
 	8,  // 9: meza.v1.FederationService.ResolveRemoteInvite:input_type -> meza.v1.ResolveRemoteInviteRequest
 	10, // 10: meza.v1.FederationService.ListFederatedMemberships:input_type -> meza.v1.ListFederatedMembershipsRequest
-	1,  // 11: meza.v1.FederationService.CreateFederationAssertion:output_type -> meza.v1.CreateFederationAssertionResponse
-	3,  // 12: meza.v1.FederationService.FederationJoin:output_type -> meza.v1.FederationJoinResponse
-	5,  // 13: meza.v1.FederationService.FederationRefresh:output_type -> meza.v1.FederationRefreshResponse
-	7,  // 14: meza.v1.FederationService.FederationLeave:output_type -> meza.v1.FederationLeaveResponse
-	9,  // 15: meza.v1.FederationService.ResolveRemoteInvite:output_type -> meza.v1.ResolveRemoteInviteResponse
-	11, // 16: meza.v1.FederationService.ListFederatedMemberships:output_type -> meza.v1.ListFederatedMembershipsResponse
-	11, // [11:17] is the sub-list for method output_type
-	5,  // [5:11] is the sub-list for method input_type
+	13, // 11: meza.v1.FederationService.StoreFederatedMembership:input_type -> meza.v1.StoreFederatedMembershipRequest
+	15, // 12: meza.v1.FederationService.RemoveFederatedMembership:input_type -> meza.v1.RemoveFederatedMembershipRequest
+	1,  // 13: meza.v1.FederationService.CreateFederationAssertion:output_type -> meza.v1.CreateFederationAssertionResponse
+	3,  // 14: meza.v1.FederationService.FederationJoin:output_type -> meza.v1.FederationJoinResponse
+	5,  // 15: meza.v1.FederationService.FederationRefresh:output_type -> meza.v1.FederationRefreshResponse
+	7,  // 16: meza.v1.FederationService.FederationLeave:output_type -> meza.v1.FederationLeaveResponse
+	9,  // 17: meza.v1.FederationService.ResolveRemoteInvite:output_type -> meza.v1.ResolveRemoteInviteResponse
+	11, // 18: meza.v1.FederationService.ListFederatedMemberships:output_type -> meza.v1.ListFederatedMembershipsResponse
+	14, // 19: meza.v1.FederationService.StoreFederatedMembership:output_type -> meza.v1.StoreFederatedMembershipResponse
+	16, // 20: meza.v1.FederationService.RemoveFederatedMembership:output_type -> meza.v1.RemoveFederatedMembershipResponse
+	13, // [13:21] is the sub-list for method output_type
+	5,  // [5:13] is the sub-list for method input_type
 	5,  // [5:5] is the sub-list for extension type_name
 	5,  // [5:5] is the sub-list for extension extendee
 	0,  // [0:5] is the sub-list for field type_name
@@ -806,7 +1000,7 @@ func file_meza_v1_federation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_federation_proto_rawDesc), len(file_meza_v1_federation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

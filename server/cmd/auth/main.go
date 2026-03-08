@@ -16,7 +16,6 @@ import (
 	"github.com/meza-chat/meza/internal/config"
 	"github.com/meza-chat/meza/internal/database"
 	"github.com/meza-chat/meza/internal/email"
-	"github.com/meza-chat/meza/internal/federation"
 	"github.com/meza-chat/meza/internal/middleware"
 	bfnats "github.com/meza-chat/meza/internal/nats"
 	"github.com/meza-chat/meza/internal/observability"
@@ -51,8 +50,8 @@ func main() {
 	authStore := store.NewAuthStore(pool)
 	chatStore := store.NewChatStore(pool)
 	deviceStore := store.NewDeviceStore(pool)
-	inviteStore := store.NewInviteStore(pool)
 	federationStore := store.NewFederationStore(pool)
+	federatedMembershipStore := store.NewFederatedMembershipStore(pool)
 	svc := newAuthService(authStore, deviceStore, cfg.HMACSecret, ed25519Keys)
 	svc.chatStore = chatStore
 	svc.instanceURL = cfg.FederationInstanceURL
@@ -112,31 +111,21 @@ func main() {
 	)
 	mux.Handle(path, authLimiter.Wrap(handler))
 
-	// Federation service
+	// Federation service — CreateFederationAssertion, ResolveRemoteInvite,
+	// ListFederatedMemberships, StoreFederatedMembership, RemoveFederatedMembership
+	// stay here. FederationJoin/Refresh/Leave have moved to the gateway service.
 	fedSvc := &federationService{
-		authStore:       authStore,
-		federationStore: federationStore,
-		chatStore:       chatStore,
-		inviteStore:     inviteStore,
-		ed25519Keys:     ed25519Keys,
-		instanceURL:     cfg.FederationInstanceURL,
-		redisClient:     svc.redisClient, // Shared Redis for jti replay protection
+		authStore:                authStore,
+		federationStore:          federationStore,
+		federatedMembershipStore: federatedMembershipStore,
+		ed25519Keys:              ed25519Keys,
+		instanceURL:              cfg.FederationInstanceURL,
+		devMode:                  cfg.DevMode,
+		redisClient:              svc.redisClient,
 	}
 
-	// Set up federation verifier if federation is enabled
-	if cfg.FederationEnabled && ed25519Keys != nil {
-		trustedServers := auth.ParseTrustedHomeServers(cfg.TrustedHomeServers)
-		jwksClient := federation.NewJWKSClient()
-		if err := jwksClient.EagerLoad(ctx, trustedServers); err != nil {
-			slog.Error("eager loading JWKS", "err", err)
-			os.Exit(1)
-		}
-		jwksClient.StartBackgroundRefresh(ctx, trustedServers)
-		fedSvc.verifier = federation.NewVerifier(jwksClient, cfg.FederationInstanceURL, trustedServers)
-	}
-
-	// Federation endpoints use the optional interceptor WITHOUT federation blocking
-	// (join/refresh/leave are meant for federated users). Rate limited separately.
+	// Federation endpoints use the optional interceptor WITHOUT federation blocking.
+	// Rate limited separately.
 	fedPath, fedHandler := mezav1connect.NewFederationServiceHandler(fedSvc,
 		connect.WithInterceptors(auth.NewOptionalConnectInterceptor(ed25519Keys.PublicKey, baseOpts...)),
 	)

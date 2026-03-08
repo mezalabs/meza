@@ -30,6 +30,9 @@ type Config struct {
 	SMTPUsername string `envconfig:"SMTP_USERNAME"`
 	SMTPPassword string `envconfig:"SMTP_PASSWORD"`
 
+	// Dev mode — relaxes security checks (e.g. allows http:// in federation URLs)
+	DevMode bool `envconfig:"DEV_MODE" default:"false"`
+
 	// Federation
 	FederationEnabled    bool   `envconfig:"FEDERATION_ENABLED" default:"false"`
 	TrustedHomeServers   string `envconfig:"TRUSTED_HOME_SERVERS" default:"https://meza.chat"` // Comma-separated
