@@ -36,6 +36,7 @@ message CompleteUploadRequest {
   int32 width = 2;                  // Client-provided dimensions (encrypted uploads)
   int32 height = 3;
   bytes encrypted_key = 4;          // Per-file AES key wrapped with channel key (60 bytes)
+  bool is_spoiler = 5;              // Content warning: blur image until user reveals it
 }
 
 message CompleteUploadResponse {

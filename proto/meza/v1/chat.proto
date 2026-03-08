@@ -178,6 +178,7 @@ message UpdateChannelRequest {
   optional int32 slow_mode_seconds = 6; // NULL=off, 0=read-only, >0=interval
   optional bool is_default = 7;
   optional string channel_group_id = 8;
+  optional string content_warning = 9;    // Set to empty string to clear. Omit to leave unchanged.
 }
 
 message UpdateChannelResponse {

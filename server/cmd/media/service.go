@@ -470,7 +470,7 @@ func (s *mediaService) CompleteUpload(ctx context.Context, req *connect.Request[
 		actualSize = objectSize
 	}
 
-	if err := s.store.UpdateAttachmentCompleted(ctx, attachment.ID, actualSize, detectedType, width, height, thumbnailKey, microThumbnailData, req.Msg.EncryptedKey); err != nil {
+	if err := s.store.UpdateAttachmentCompleted(ctx, attachment.ID, actualSize, detectedType, width, height, thumbnailKey, microThumbnailData, req.Msg.EncryptedKey, req.Msg.IsSpoiler); err != nil {
 		slog.Error("marking attachment completed", "err", err, "upload", attachment.ID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}

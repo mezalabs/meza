@@ -921,6 +921,7 @@ type UpdateChannelRequest struct {
 	SlowModeSeconds *int32                 `protobuf:"varint,6,opt,name=slow_mode_seconds,json=slowModeSeconds,proto3,oneof" json:"slow_mode_seconds,omitempty"` // NULL=off, 0=read-only, >0=interval
 	IsDefault       *bool                  `protobuf:"varint,7,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
 	ChannelGroupId  *string                `protobuf:"bytes,8,opt,name=channel_group_id,json=channelGroupId,proto3,oneof" json:"channel_group_id,omitempty"`
+	ContentWarning  *string                `protobuf:"bytes,9,opt,name=content_warning,json=contentWarning,proto3,oneof" json:"content_warning,omitempty"` // Set to empty string to clear. Omit to leave unchanged.
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1007,6 +1008,13 @@ func (x *UpdateChannelRequest) GetIsDefault() bool {
 func (x *UpdateChannelRequest) GetChannelGroupId() string {
 	if x != nil && x.ChannelGroupId != nil {
 		return *x.ChannelGroupId
+	}
+	return ""
+}
+
+func (x *UpdateChannelRequest) GetContentWarning() string {
+	if x != nil && x.ContentWarning != nil {
+		return *x.ContentWarning
 	}
 	return ""
 }
@@ -11530,7 +11538,7 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x10channel_group_id\x18\x05 \x01(\tH\x00R\x0echannelGroupId\x88\x01\x01B\x13\n" +
 	"\x11_channel_group_id\"C\n" +
 	"\x15CreateChannelResponse\x12*\n" +
-	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\"\x9b\x03\n" +
+	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\"\xdd\x03\n" +
 	"\x14UpdateChannelRequest\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x17\n" +
@@ -11542,14 +11550,16 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x11slow_mode_seconds\x18\x06 \x01(\x05H\x04R\x0fslowModeSeconds\x88\x01\x01\x12\"\n" +
 	"\n" +
 	"is_default\x18\a \x01(\bH\x05R\tisDefault\x88\x01\x01\x12-\n" +
-	"\x10channel_group_id\x18\b \x01(\tH\x06R\x0echannelGroupId\x88\x01\x01B\a\n" +
+	"\x10channel_group_id\x18\b \x01(\tH\x06R\x0echannelGroupId\x88\x01\x01\x12,\n" +
+	"\x0fcontent_warning\x18\t \x01(\tH\aR\x0econtentWarning\x88\x01\x01B\a\n" +
 	"\x05_nameB\b\n" +
 	"\x06_topicB\v\n" +
 	"\t_positionB\r\n" +
 	"\v_is_privateB\x14\n" +
 	"\x12_slow_mode_secondsB\r\n" +
 	"\v_is_defaultB\x13\n" +
-	"\x11_channel_group_id\"C\n" +
+	"\x11_channel_group_idB\x12\n" +
+	"\x10_content_warning\"C\n" +
 	"\x15UpdateChannelResponse\x12*\n" +
 	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\"5\n" +
 	"\x14DeleteChannelRequest\x12\x1d\n" +
