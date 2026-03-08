@@ -246,9 +246,17 @@ export {
   wrapKeyForMembers,
 } from './crypto/index.ts';
 // Gateway
+export type { ConnectionStatus } from './gateway/connection.ts';
 export {
   connect as gatewayConnect,
+  connectInstance as gatewayConnectInstance,
   disconnect as gatewayDisconnect,
+  disconnectAll as gatewayDisconnectAll,
+  disconnectInstance as gatewayDisconnectInstance,
+  getConnectionStatus as gatewayGetConnectionStatus,
+  HOME_INSTANCE,
+  normalizeInstanceUrl,
+  sendToInstance as gatewaySendToInstance,
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
 export * from './keybinds/index.ts';

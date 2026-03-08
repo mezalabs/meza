@@ -160,8 +160,15 @@ function validateReadyPayload(data: unknown): data is {
   return true;
 }
 
-// The home connection (single instance, will become one of N for federation)
-let homeConn: Connection = makeConnection('', '', '');
+// Initialize the home connection placeholder in the map
+connections.set(HOME_INSTANCE, makeConnection('', '', ''));
+
+/** Convenience accessor — returns the home connection (always present). */
+function getHomeConn(): Connection {
+  // biome-ignore lint/style/noNonNullAssertion: HOME_INSTANCE is always set in module init and re-created in disconnectAll()
+  return connections.get(HOME_INSTANCE)!;
+}
+
 let hasConnectedBefore = false;
 let lastRedistributeTime = 0;
 const REDISTRIBUTE_COOLDOWN_MS = 60_000; // 1 minute between reconnect redistributions
@@ -401,7 +408,7 @@ function sendEnvelope(
   payload: Uint8Array = new Uint8Array(),
 ) {
   const env = create(GatewayEnvelopeSchema, { op, payload, sequence: 0n });
-  sendOnConnection(homeConn, toBinary(GatewayEnvelopeSchema, env));
+  sendOnConnection(getHomeConn(), toBinary(GatewayEnvelopeSchema, env));
 }
 
 // ---------------------------------------------------------------------------
@@ -455,6 +462,7 @@ const homeCallbacks: ConnectionCallbacks = {
 // ---------------------------------------------------------------------------
 
 export function connect(token: string) {
+  isShuttingDown = false;
   disconnect();
 
   const gw = useGatewayStore.getState();
@@ -472,8 +480,9 @@ export function connect(token: string) {
     wsUrl = `${wsProto}//${location.host}/ws`;
   }
 
-  homeConn = makeConnection(wsUrl, token, '');
-  openConnection(homeConn, homeCallbacks);
+  const newHomeConn = makeConnection(wsUrl, token, '');
+  connections.set(HOME_INSTANCE, newHomeConn);
+  openConnection(newHomeConn, homeCallbacks);
 }
 
 function dispatch(op: GatewayOpCode, payload: Uint8Array) {
@@ -559,7 +568,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
       break;
     }
     case GatewayOpCode.GATEWAY_OP_HEARTBEAT_ACK:
-      ackHeartbeat(homeConn);
+      ackHeartbeat(getHomeConn());
       break;
     case GatewayOpCode.GATEWAY_OP_EVENT: {
       const event = fromBinary(EventSchema, payload);
@@ -1068,19 +1077,19 @@ function scheduleReconnect() {
     useGatewayStore.getState().setStatus('reconnecting');
     return;
   }
-  scheduleReconnectTimer(homeConn, () => {
+  scheduleReconnectTimer(getHomeConn(), () => {
     const freshToken = useAuthStore.getState().accessToken;
     if (freshToken) connect(freshToken);
   });
   const gw = useGatewayStore.getState();
   gw.setStatus('reconnecting');
-  gw.setReconnectAttempt(homeConn.reconnectAttempt);
+  gw.setReconnectAttempt(getHomeConn().reconnectAttempt);
 }
 
 export function disconnect() {
   updatePresence(PresenceStatus.OFFLINE);
   usePresenceStore.getState().setMyStatus(PresenceStatus.OFFLINE);
-  closeConnection(homeConn);
+  closeConnection(getHomeConn());
   if (overrideExpiryTimer) {
     clearTimeout(overrideExpiryTimer);
     overrideExpiryTimer = null;
@@ -1092,6 +1101,195 @@ export function disconnect() {
   useGatewayStore.getState().setStatus('disconnected');
 }
 
+// ---------------------------------------------------------------------------
+// Multi-instance (federation satellite) API
+// ---------------------------------------------------------------------------
+
+/**
+ * Dispatch an event with instance context. For satellite connections the
+ * dispatch logic is intentionally minimal for MVP — we log the event and
+ * can later route to instance-scoped stores.
+ */
+function dispatchWithInstance(
+  instanceUrl: string,
+  op: GatewayOpCode,
+  payload: Uint8Array,
+): void {
+  try {
+    if (instanceUrl === HOME_INSTANCE) {
+      dispatch(op, payload);
+      return;
+    }
+    // Guard: if the connection was removed while the event was in flight, drop it
+    if (!connections.has(instanceUrl)) return;
+
+    // MVP: log satellite events. Full dispatch routing to instance-scoped
+    // stores will be added in a later phase.
+    console.debug(
+      `[Gateway] satellite event from ${instanceUrl}: op=${op}, ${payload.byteLength}B`,
+    );
+  } catch (err) {
+    // One instance's error must not affect others
+    console.error(
+      `[Gateway] dispatchWithInstance error for ${instanceUrl}:`,
+      err,
+    );
+  }
+}
+
+/**
+ * Connect to a federation satellite instance.
+ */
+export function connectInstance(
+  instanceUrl: string,
+  token: string,
+  deviceId: string,
+): void {
+  if (isShuttingDown) return;
+
+  const key =
+    instanceUrl === HOME_INSTANCE
+      ? HOME_INSTANCE
+      : normalizeInstanceUrl(instanceUrl);
+
+  // Disconnect existing connection to this instance if any
+  const existing = connections.get(key);
+  if (existing) {
+    closeConnection(existing);
+  }
+
+  // Capture the global generation at the time of connection creation.
+  // Callbacks will check this to detect stale connections after disconnectAll().
+  const capturedGen = globalGeneration;
+
+  // Build the WebSocket URL from the instance URL
+  let wsUrl: string;
+  if (key === HOME_INSTANCE) {
+    const base = getBaseUrl();
+    if (base) {
+      const parsed = new URL(base);
+      const wsProto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${wsProto}//${parsed.host}/ws`;
+    } else {
+      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${wsProto}//${location.host}/ws`;
+    }
+  } else {
+    const parsed = new URL(key);
+    wsUrl = `wss://${parsed.host}/ws`;
+  }
+
+  const conn = makeConnection(wsUrl, token, deviceId);
+  connections.set(key, conn);
+
+  const callbacks: ConnectionCallbacks = {
+    onMessage: (_conn, data) => {
+      if (capturedGen !== globalGeneration) return;
+      if (!connections.has(key)) return;
+      const env = fromBinary(GatewayEnvelopeSchema, data);
+      dispatchWithInstance(key, env.op, env.payload);
+    },
+    onOpen: (_conn) => {
+      if (capturedGen !== globalGeneration) return;
+      if (!connections.has(key)) return;
+      console.info(`[Gateway] satellite connected: ${key}`);
+    },
+    onClose: (_conn, reason) => {
+      if (capturedGen !== globalGeneration) return;
+      if (!connections.has(key)) return;
+      console.warn(`[Gateway] satellite disconnected (${key}): ${reason}`);
+      // For MVP, no automatic reconnect for satellites. The caller can
+      // re-invoke connectInstance() to retry.
+    },
+    sendIdentify: (c) => {
+      const identifyJson = JSON.stringify({ token: c.token });
+      const env = create(GatewayEnvelopeSchema, {
+        op: GatewayOpCode.GATEWAY_OP_IDENTIFY,
+        payload: new TextEncoder().encode(identifyJson),
+        sequence: 0n,
+      });
+      sendOnConnection(c, toBinary(GatewayEnvelopeSchema, env));
+    },
+    onHeartbeatTick: (c) => {
+      const env = create(GatewayEnvelopeSchema, {
+        op: GatewayOpCode.GATEWAY_OP_HEARTBEAT,
+        payload: new Uint8Array(),
+        sequence: 0n,
+      });
+      sendOnConnection(c, toBinary(GatewayEnvelopeSchema, env));
+    },
+  };
+
+  openConnection(conn, callbacks);
+}
+
+/**
+ * Disconnect a specific federation satellite instance.
+ */
+export function disconnectInstance(instanceUrl: string): void {
+  const key =
+    instanceUrl === HOME_INSTANCE
+      ? HOME_INSTANCE
+      : normalizeInstanceUrl(instanceUrl);
+  const conn = connections.get(key);
+  if (!conn) return;
+  closeConnection(conn);
+  connections.delete(key);
+}
+
+/**
+ * Disconnect all connections (home + all satellites). Used during logout.
+ */
+export function disconnectAll(): void {
+  isShuttingDown = true;
+  globalGeneration++;
+  for (const [key, conn] of connections) {
+    closeConnection(conn);
+    connections.delete(key);
+  }
+  // Re-create the home placeholder so getHomeConn() never returns undefined
+  connections.set(HOME_INSTANCE, makeConnection('', '', ''));
+}
+
+/**
+ * Send a binary-encoded envelope to a specific instance.
+ */
+export function sendToInstance(
+  instanceUrl: string,
+  op: number,
+  payload: unknown,
+): void {
+  const key =
+    instanceUrl === HOME_INSTANCE
+      ? HOME_INSTANCE
+      : normalizeInstanceUrl(instanceUrl);
+  const conn = connections.get(key);
+  if (!conn) return;
+  const env = create(GatewayEnvelopeSchema, {
+    op: op as GatewayOpCode,
+    payload:
+      payload instanceof Uint8Array
+        ? payload
+        : new TextEncoder().encode(JSON.stringify(payload)),
+    sequence: 0n,
+  });
+  sendOnConnection(conn, toBinary(GatewayEnvelopeSchema, env));
+}
+
+/**
+ * Get the connection status for a specific instance, or null if not connected.
+ */
+export function getConnectionStatus(
+  instanceUrl: string,
+): ConnectionStatus | null {
+  const key =
+    instanceUrl === HOME_INSTANCE
+      ? HOME_INSTANCE
+      : normalizeInstanceUrl(instanceUrl);
+  const conn = connections.get(key);
+  return conn?.status ?? null;
+}
+
 // --- Browser connectivity listeners ---
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
@@ -1099,8 +1297,8 @@ if (typeof window !== 'undefined') {
     const { status } = useGatewayStore.getState();
     if (status === 'reconnecting') {
       // Network returned — reset backoff and attempt immediately
-      resetReconnectDelay(homeConn);
-      cancelReconnectTimer(homeConn);
+      resetReconnectDelay(getHomeConn());
+      cancelReconnectTimer(getHomeConn());
       const freshToken = useAuthStore.getState().accessToken;
       if (freshToken) connect(freshToken);
     }
@@ -1109,7 +1307,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => {
     isOnline = false;
     // Pause scheduled reconnect attempts
-    cancelReconnectTimer(homeConn);
+    cancelReconnectTimer(getHomeConn());
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -1117,17 +1315,17 @@ if (typeof window !== 'undefined') {
     const { status } = useGatewayStore.getState();
     if (status === 'reconnecting') {
       // Tab became visible while reconnecting — reset backoff for fast retry
-      resetReconnectDelay(homeConn);
-      cancelReconnectTimer(homeConn);
+      resetReconnectDelay(getHomeConn());
+      cancelReconnectTimer(getHomeConn());
       const freshToken = useAuthStore.getState().accessToken;
       if (freshToken) connect(freshToken);
-    } else if (status === 'connected' && homeConn.ws) {
+    } else if (status === 'connected' && getHomeConn().ws) {
       // If connected but heartbeat ACK is stale, force reconnect
-      if (isHeartbeatStale(homeConn)) {
+      if (isHeartbeatStale(getHomeConn())) {
         console.warn(
           '[Gateway] Stale heartbeat ACK on visibility change, forcing reconnect',
         );
-        forceClose(homeConn);
+        forceClose(getHomeConn());
       }
     }
   });
