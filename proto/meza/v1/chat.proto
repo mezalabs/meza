@@ -96,6 +96,8 @@ service ChatService {
   rpc StreamEvents(StreamEventsRequest) returns (stream Event);
   rpc GetMutualServers(GetMutualServersRequest) returns (GetMutualServersResponse);
   rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
+  rpc GetSystemMessageConfig(GetSystemMessageConfigRequest) returns (GetSystemMessageConfigResponse);
+  rpc UpdateSystemMessageConfig(UpdateSystemMessageConfigRequest) returns (UpdateSystemMessageConfigResponse);
 }
 
 // Messages
@@ -1250,4 +1252,34 @@ message GetMutualFriendsRequest {
 
 message GetMutualFriendsResponse {
   repeated User users = 1;
+}
+
+// System Message Configuration
+
+message GetSystemMessageConfigRequest {
+  string server_id = 1;
+}
+
+message GetSystemMessageConfigResponse {
+  ServerSystemMessageConfig config = 1;
+}
+
+message UpdateSystemMessageConfigRequest {
+  string server_id = 1;
+  optional string welcome_channel_id = 2;
+  optional string mod_log_channel_id = 3;
+  optional bool join_enabled = 4;
+  optional string join_template = 5;
+  optional bool leave_enabled = 6;
+  optional string leave_template = 7;
+  optional bool kick_enabled = 8;
+  optional string kick_template = 9;
+  optional bool ban_enabled = 10;
+  optional string ban_template = 11;
+  optional bool timeout_enabled = 12;
+  optional string timeout_template = 13;
+}
+
+message UpdateSystemMessageConfigResponse {
+  ServerSystemMessageConfig config = 1;
 }

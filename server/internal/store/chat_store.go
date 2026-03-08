@@ -1813,3 +1813,102 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 
 	return srv, channels, roles, nil
 }
+
+// scanSystemMessageConfig is a helper column list for consistent scanning.
+var systemMessageConfigColumns = `server_id, welcome_channel_id, mod_log_channel_id,
+	join_enabled, join_template, leave_enabled, leave_template,
+	kick_enabled, kick_template, ban_enabled, ban_template,
+	timeout_enabled, timeout_template, updated_at`
+
+func scanSystemMessageConfig(row interface{ Scan(...any) error }) (*models.ServerSystemMessageConfig, error) {
+	var cfg models.ServerSystemMessageConfig
+	err := row.Scan(
+		&cfg.ServerID, &cfg.WelcomeChannelID, &cfg.ModLogChannelID,
+		&cfg.JoinEnabled, &cfg.JoinTemplate, &cfg.LeaveEnabled, &cfg.LeaveTemplate,
+		&cfg.KickEnabled, &cfg.KickTemplate, &cfg.BanEnabled, &cfg.BanTemplate,
+		&cfg.TimeoutEnabled, &cfg.TimeoutTemplate, &cfg.UpdatedAt,
+	)
+	return &cfg, err
+}
+
+func (s *ChatStore) GetSystemMessageConfig(ctx context.Context, serverID string) (*models.ServerSystemMessageConfig, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	query := fmt.Sprintf("SELECT %s FROM server_system_message_config WHERE server_id = $1", systemMessageConfigColumns)
+	cfg, err := scanSystemMessageConfig(s.pool.QueryRow(ctx, query, serverID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // no config row — use defaults
+		}
+		return nil, fmt.Errorf("get system message config: %w", err)
+	}
+	return cfg, nil
+}
+
+func (s *ChatStore) UpsertSystemMessageConfig(ctx context.Context, serverID string, opts UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	// Build dynamic SET clause for the ON CONFLICT UPDATE.
+	setClauses := []string{"updated_at = now()"}
+	args := []any{serverID}
+	argIdx := 2
+
+	addOpt := func(col string, val any) {
+		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", col, argIdx))
+		args = append(args, val)
+		argIdx++
+	}
+
+	if opts.WelcomeChannelID != nil {
+		addOpt("welcome_channel_id", *opts.WelcomeChannelID)
+	}
+	if opts.ModLogChannelID != nil {
+		addOpt("mod_log_channel_id", *opts.ModLogChannelID)
+	}
+	if opts.JoinEnabled != nil {
+		addOpt("join_enabled", *opts.JoinEnabled)
+	}
+	if opts.JoinTemplate != nil {
+		addOpt("join_template", *opts.JoinTemplate)
+	}
+	if opts.LeaveEnabled != nil {
+		addOpt("leave_enabled", *opts.LeaveEnabled)
+	}
+	if opts.LeaveTemplate != nil {
+		addOpt("leave_template", *opts.LeaveTemplate)
+	}
+	if opts.KickEnabled != nil {
+		addOpt("kick_enabled", *opts.KickEnabled)
+	}
+	if opts.KickTemplate != nil {
+		addOpt("kick_template", *opts.KickTemplate)
+	}
+	if opts.BanEnabled != nil {
+		addOpt("ban_enabled", *opts.BanEnabled)
+	}
+	if opts.BanTemplate != nil {
+		addOpt("ban_template", *opts.BanTemplate)
+	}
+	if opts.TimeoutEnabled != nil {
+		addOpt("timeout_enabled", *opts.TimeoutEnabled)
+	}
+	if opts.TimeoutTemplate != nil {
+		addOpt("timeout_template", *opts.TimeoutTemplate)
+	}
+
+	query := fmt.Sprintf(
+		`INSERT INTO server_system_message_config (server_id) VALUES ($1)
+		 ON CONFLICT (server_id) DO UPDATE SET %s
+		 RETURNING %s`,
+		strings.Join(setClauses, ", "),
+		systemMessageConfigColumns,
+	)
+
+	cfg, err := scanSystemMessageConfig(s.pool.QueryRow(ctx, query, args...))
+	if err != nil {
+		return nil, fmt.Errorf("upsert system message config: %w", err)
+	}
+	return cfg, nil
+}

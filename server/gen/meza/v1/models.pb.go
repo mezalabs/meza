@@ -2229,6 +2229,146 @@ func (x *AudioPreferences) GetNoiseCancellationMode() string {
 	return ""
 }
 
+type ServerSystemMessageConfig struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ServerId         string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	WelcomeChannelId *string                `protobuf:"bytes,2,opt,name=welcome_channel_id,json=welcomeChannelId,proto3,oneof" json:"welcome_channel_id,omitempty"`
+	ModLogChannelId  *string                `protobuf:"bytes,3,opt,name=mod_log_channel_id,json=modLogChannelId,proto3,oneof" json:"mod_log_channel_id,omitempty"`
+	JoinEnabled      bool                   `protobuf:"varint,4,opt,name=join_enabled,json=joinEnabled,proto3" json:"join_enabled,omitempty"`
+	JoinTemplate     *string                `protobuf:"bytes,5,opt,name=join_template,json=joinTemplate,proto3,oneof" json:"join_template,omitempty"`
+	LeaveEnabled     bool                   `protobuf:"varint,6,opt,name=leave_enabled,json=leaveEnabled,proto3" json:"leave_enabled,omitempty"`
+	LeaveTemplate    *string                `protobuf:"bytes,7,opt,name=leave_template,json=leaveTemplate,proto3,oneof" json:"leave_template,omitempty"`
+	KickEnabled      bool                   `protobuf:"varint,8,opt,name=kick_enabled,json=kickEnabled,proto3" json:"kick_enabled,omitempty"`
+	KickTemplate     *string                `protobuf:"bytes,9,opt,name=kick_template,json=kickTemplate,proto3,oneof" json:"kick_template,omitempty"`
+	BanEnabled       bool                   `protobuf:"varint,10,opt,name=ban_enabled,json=banEnabled,proto3" json:"ban_enabled,omitempty"`
+	BanTemplate      *string                `protobuf:"bytes,11,opt,name=ban_template,json=banTemplate,proto3,oneof" json:"ban_template,omitempty"`
+	TimeoutEnabled   bool                   `protobuf:"varint,12,opt,name=timeout_enabled,json=timeoutEnabled,proto3" json:"timeout_enabled,omitempty"`
+	TimeoutTemplate  *string                `protobuf:"bytes,13,opt,name=timeout_template,json=timeoutTemplate,proto3,oneof" json:"timeout_template,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ServerSystemMessageConfig) Reset() {
+	*x = ServerSystemMessageConfig{}
+	mi := &file_meza_v1_models_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerSystemMessageConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerSystemMessageConfig) ProtoMessage() {}
+
+func (x *ServerSystemMessageConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerSystemMessageConfig.ProtoReflect.Descriptor instead.
+func (*ServerSystemMessageConfig) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ServerSystemMessageConfig) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetWelcomeChannelId() string {
+	if x != nil && x.WelcomeChannelId != nil {
+		return *x.WelcomeChannelId
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetModLogChannelId() string {
+	if x != nil && x.ModLogChannelId != nil {
+		return *x.ModLogChannelId
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetJoinEnabled() bool {
+	if x != nil {
+		return x.JoinEnabled
+	}
+	return false
+}
+
+func (x *ServerSystemMessageConfig) GetJoinTemplate() string {
+	if x != nil && x.JoinTemplate != nil {
+		return *x.JoinTemplate
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetLeaveEnabled() bool {
+	if x != nil {
+		return x.LeaveEnabled
+	}
+	return false
+}
+
+func (x *ServerSystemMessageConfig) GetLeaveTemplate() string {
+	if x != nil && x.LeaveTemplate != nil {
+		return *x.LeaveTemplate
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetKickEnabled() bool {
+	if x != nil {
+		return x.KickEnabled
+	}
+	return false
+}
+
+func (x *ServerSystemMessageConfig) GetKickTemplate() string {
+	if x != nil && x.KickTemplate != nil {
+		return *x.KickTemplate
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetBanEnabled() bool {
+	if x != nil {
+		return x.BanEnabled
+	}
+	return false
+}
+
+func (x *ServerSystemMessageConfig) GetBanTemplate() string {
+	if x != nil && x.BanTemplate != nil {
+		return *x.BanTemplate
+	}
+	return ""
+}
+
+func (x *ServerSystemMessageConfig) GetTimeoutEnabled() bool {
+	if x != nil {
+		return x.TimeoutEnabled
+	}
+	return false
+}
+
+func (x *ServerSystemMessageConfig) GetTimeoutTemplate() string {
+	if x != nil && x.TimeoutTemplate != nil {
+		return *x.TimeoutTemplate
+	}
+	return ""
+}
+
 var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
@@ -2469,7 +2609,30 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x11noise_suppression\x18\x01 \x01(\bR\x10noiseSuppression\x12+\n" +
 	"\x11echo_cancellation\x18\x02 \x01(\bR\x10echoCancellation\x12*\n" +
 	"\x11auto_gain_control\x18\x03 \x01(\bR\x0fautoGainControl\x126\n" +
-	"\x17noise_cancellation_mode\x18\x04 \x01(\tR\x15noiseCancellationMode*\x8a\x01\n" +
+	"\x17noise_cancellation_mode\x18\x04 \x01(\tR\x15noiseCancellationMode\"\xb5\x05\n" +
+	"\x19ServerSystemMessageConfig\x12\x1b\n" +
+	"\tserver_id\x18\x01 \x01(\tR\bserverId\x121\n" +
+	"\x12welcome_channel_id\x18\x02 \x01(\tH\x00R\x10welcomeChannelId\x88\x01\x01\x120\n" +
+	"\x12mod_log_channel_id\x18\x03 \x01(\tH\x01R\x0fmodLogChannelId\x88\x01\x01\x12!\n" +
+	"\fjoin_enabled\x18\x04 \x01(\bR\vjoinEnabled\x12(\n" +
+	"\rjoin_template\x18\x05 \x01(\tH\x02R\fjoinTemplate\x88\x01\x01\x12#\n" +
+	"\rleave_enabled\x18\x06 \x01(\bR\fleaveEnabled\x12*\n" +
+	"\x0eleave_template\x18\a \x01(\tH\x03R\rleaveTemplate\x88\x01\x01\x12!\n" +
+	"\fkick_enabled\x18\b \x01(\bR\vkickEnabled\x12(\n" +
+	"\rkick_template\x18\t \x01(\tH\x04R\fkickTemplate\x88\x01\x01\x12\x1f\n" +
+	"\vban_enabled\x18\n" +
+	" \x01(\bR\n" +
+	"banEnabled\x12&\n" +
+	"\fban_template\x18\v \x01(\tH\x05R\vbanTemplate\x88\x01\x01\x12'\n" +
+	"\x0ftimeout_enabled\x18\f \x01(\bR\x0etimeoutEnabled\x12.\n" +
+	"\x10timeout_template\x18\r \x01(\tH\x06R\x0ftimeoutTemplate\x88\x01\x01B\x15\n" +
+	"\x13_welcome_channel_idB\x15\n" +
+	"\x13_mod_log_channel_idB\x10\n" +
+	"\x0e_join_templateB\x11\n" +
+	"\x0f_leave_templateB\x10\n" +
+	"\x0e_kick_templateB\x0f\n" +
+	"\r_ban_templateB\x13\n" +
+	"\x11_timeout_template*\x8a\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -2498,62 +2661,63 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_meza_v1_models_proto_goTypes = []any{
-	(ChannelType)(0),              // 0: meza.v1.ChannelType
-	(MessageType)(0),              // 1: meza.v1.MessageType
-	(*User)(nil),                  // 2: meza.v1.User
-	(*UserConnection)(nil),        // 3: meza.v1.UserConnection
-	(*Server)(nil),                // 4: meza.v1.Server
-	(*Channel)(nil),               // 5: meza.v1.Channel
-	(*ChannelGroup)(nil),          // 6: meza.v1.ChannelGroup
-	(*PermissionOverride)(nil),    // 7: meza.v1.PermissionOverride
-	(*DMChannel)(nil),             // 8: meza.v1.DMChannel
-	(*Message)(nil),               // 9: meza.v1.Message
-	(*LinkEmbed)(nil),             // 10: meza.v1.LinkEmbed
-	(*Attachment)(nil),            // 11: meza.v1.Attachment
-	(*Member)(nil),                // 12: meza.v1.Member
-	(*Role)(nil),                  // 13: meza.v1.Role
-	(*Ban)(nil),                   // 14: meza.v1.Ban
-	(*Invite)(nil),                // 15: meza.v1.Invite
-	(*PinnedMessage)(nil),         // 16: meza.v1.PinnedMessage
-	(*CustomEmoji)(nil),           // 17: meza.v1.CustomEmoji
-	(*SoundboardSound)(nil),       // 18: meza.v1.SoundboardSound
-	(*AuditLogEntry)(nil),         // 19: meza.v1.AuditLogEntry
-	(*Reaction)(nil),              // 20: meza.v1.Reaction
-	(*ReactionGroup)(nil),         // 21: meza.v1.ReactionGroup
-	(*ReadState)(nil),             // 22: meza.v1.ReadState
-	(*AudioPreferences)(nil),      // 23: meza.v1.AudioPreferences
-	(*timestamppb.Timestamp)(nil), // 24: google.protobuf.Timestamp
+	(ChannelType)(0),                  // 0: meza.v1.ChannelType
+	(MessageType)(0),                  // 1: meza.v1.MessageType
+	(*User)(nil),                      // 2: meza.v1.User
+	(*UserConnection)(nil),            // 3: meza.v1.UserConnection
+	(*Server)(nil),                    // 4: meza.v1.Server
+	(*Channel)(nil),                   // 5: meza.v1.Channel
+	(*ChannelGroup)(nil),              // 6: meza.v1.ChannelGroup
+	(*PermissionOverride)(nil),        // 7: meza.v1.PermissionOverride
+	(*DMChannel)(nil),                 // 8: meza.v1.DMChannel
+	(*Message)(nil),                   // 9: meza.v1.Message
+	(*LinkEmbed)(nil),                 // 10: meza.v1.LinkEmbed
+	(*Attachment)(nil),                // 11: meza.v1.Attachment
+	(*Member)(nil),                    // 12: meza.v1.Member
+	(*Role)(nil),                      // 13: meza.v1.Role
+	(*Ban)(nil),                       // 14: meza.v1.Ban
+	(*Invite)(nil),                    // 15: meza.v1.Invite
+	(*PinnedMessage)(nil),             // 16: meza.v1.PinnedMessage
+	(*CustomEmoji)(nil),               // 17: meza.v1.CustomEmoji
+	(*SoundboardSound)(nil),           // 18: meza.v1.SoundboardSound
+	(*AuditLogEntry)(nil),             // 19: meza.v1.AuditLogEntry
+	(*Reaction)(nil),                  // 20: meza.v1.Reaction
+	(*ReactionGroup)(nil),             // 21: meza.v1.ReactionGroup
+	(*ReadState)(nil),                 // 22: meza.v1.ReadState
+	(*AudioPreferences)(nil),          // 23: meza.v1.AudioPreferences
+	(*ServerSystemMessageConfig)(nil), // 24: meza.v1.ServerSystemMessageConfig
+	(*timestamppb.Timestamp)(nil),     // 25: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	24, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	25, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	23, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
 	3,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
-	24, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	25, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	24, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	24, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	25, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	25, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
 	5,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
 	2,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
 	11, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	24, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	24, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	25, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	25, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
 	10, // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
 	1,  // 13: meza.v1.Message.type:type_name -> meza.v1.MessageType
-	24, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	24, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	24, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	24, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	24, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	24, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	24, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	25, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	25, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	25, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	25, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	25, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	25, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	25, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 21: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	24, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	24, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	24, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	24, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	24, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	25, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	25, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	25, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	25, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	25, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
 	27, // [27:27] is the sub-list for method output_type
 	27, // [27:27] is the sub-list for method input_type
 	27, // [27:27] is the sub-list for extension type_name
@@ -2570,13 +2734,14 @@ func file_meza_v1_models_proto_init() {
 	file_meza_v1_models_proto_msgTypes[3].OneofWrappers = []any{}
 	file_meza_v1_models_proto_msgTypes[7].OneofWrappers = []any{}
 	file_meza_v1_models_proto_msgTypes[10].OneofWrappers = []any{}
+	file_meza_v1_models_proto_msgTypes[22].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

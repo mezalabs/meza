@@ -307,7 +307,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
 
     // Verify alice sees bob in member list
     await alicePage.getByLabel('Show members').click();
-    await expect(alicePage.getByText('e2e_bob')).toBeVisible({
+    await expect(alicePage.getByText('e2e_bob').last()).toBeVisible({
       timeout: 30_000,
     });
   });

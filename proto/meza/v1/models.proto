@@ -271,4 +271,22 @@ message AudioPreferences {
   string noise_cancellation_mode = 4;  // "off", "standard", "giga" — empty means legacy/unset
 }
 
+// Server System Message Configuration
+
+message ServerSystemMessageConfig {
+  string server_id = 1;
+  optional string welcome_channel_id = 2;
+  optional string mod_log_channel_id = 3;
+  bool join_enabled = 4;
+  optional string join_template = 5;
+  bool leave_enabled = 6;
+  optional string leave_template = 7;
+  bool kick_enabled = 8;
+  optional string kick_template = 9;
+  bool ban_enabled = 10;
+  optional string ban_template = 11;
+  bool timeout_enabled = 12;
+  optional string timeout_template = 13;
+}
+
 // E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.
