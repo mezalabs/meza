@@ -47,7 +47,7 @@ func (s *SMTPSender) SendOTP(ctx context.Context, to string, code string) error 
 		mail.WithSMTPAuth(mail.SMTPAuthPlain),
 		mail.WithUsername(s.username),
 		mail.WithPassword(s.password),
-		mail.WithTLSPolicy(mail.TLSOpportunistic),
+		mail.WithTLSPolicy(mail.TLSMandatory),
 	)
 	if err != nil {
 		return fmt.Errorf("create mail client: %w", err)

@@ -330,6 +330,15 @@ func (s *authService) InitiateDeviceRecovery(ctx context.Context, req *connect.R
 	}), nil
 }
 
+// validSessionID checks that a session ID is a 64-character hex string (32 bytes).
+func validSessionID(id string) bool {
+	if len(id) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(id)
+	return err == nil
+}
+
 // generateFakeSessionID produces a deterministic fake session ID for anti-enumeration.
 func generateFakeSessionID(secret, input string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
@@ -355,8 +364,8 @@ return state
 `)
 
 func (s *authService) PollDeviceRecovery(ctx context.Context, req *connect.Request[v1.PollDeviceRecoveryRequest]) (*connect.Response[v1.PollDeviceRecoveryResponse], error) {
-	if req.Msg.SessionId == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id is required"))
+	if !validSessionID(req.Msg.SessionId) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid session_id"))
 	}
 	if s.redisClient == nil {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("recovery temporarily unavailable"))
@@ -380,8 +389,8 @@ func (s *authService) PollDeviceRecovery(ctx context.Context, req *connect.Reque
 		return connect.NewResponse(&v1.PollDeviceRecoveryResponse{Status: "pending"}), nil
 	case result == "completed":
 		return connect.NewResponse(&v1.PollDeviceRecoveryResponse{Status: "completed"}), nil
-	case len(result) > 9 && result[:9] == "approved:":
-		bundleHex := result[9:]
+	case strings.HasPrefix(result, "approved:"):
+		bundleHex, _ := strings.CutPrefix(result, "approved:")
 		bundle, err := hex.DecodeString(bundleHex)
 		if err != nil {
 			slog.Error("decode wrapped bundle", "err", err)
@@ -414,8 +423,8 @@ return 'ok'
 
 func (s *authService) ApproveDeviceRecovery(ctx context.Context, req *connect.Request[v1.ApproveDeviceRecoveryRequest]) (*connect.Response[v1.ApproveDeviceRecoveryResponse], error) {
 	r := req.Msg
-	if r.SessionId == "" || len(r.WrappedBundle) != 124 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id and 124-byte wrapped_bundle are required"))
+	if !validSessionID(r.SessionId) || len(r.WrappedBundle) != 124 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("valid session_id and 124-byte wrapped_bundle are required"))
 	}
 
 	userID, ok := auth.UserIDFromContext(ctx)
@@ -466,7 +475,7 @@ return 'ok:' .. (uid or '') .. ':' .. (approver or '')
 
 func (s *authService) CompleteDeviceRecovery(ctx context.Context, req *connect.Request[v1.CompleteDeviceRecoveryRequest]) (*connect.Response[v1.CompleteDeviceRecoveryResponse], error) {
 	r := req.Msg
-	if r.SessionId == "" || len(r.NewAuthKey) == 0 || len(r.NewSalt) == 0 {
+	if !validSessionID(r.SessionId) || len(r.NewAuthKey) == 0 || len(r.NewSalt) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("session_id, new_auth_key, and new_salt are required"))
 	}
 	if len(r.NewEncryptedKeyBundle) == 0 || len(r.NewKeyBundleIv) == 0 {
@@ -587,8 +596,8 @@ func (s *authService) CompleteDeviceRecovery(ctx context.Context, req *connect.R
 		}), nil
 
 	default:
-		if len(result) > 10 && result[:10] == "not_ready:" {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("session not ready: %s", result[10:]))
+		if strings.HasPrefix(result, "not_ready:") {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("recovery session not ready"))
 		}
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
