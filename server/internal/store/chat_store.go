@@ -151,7 +151,7 @@ func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, ch
 		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
 		 SELECT $1, $2, $3, $4, COALESCE(MAX(position), -1) + 1, $5, $6, $7
 		 FROM channels WHERE server_id = $8
-		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at`,
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at`,
 		channelID, serverID, name, channelType, isPrivate, groupID, now, serverID,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Position, &ch.IsPrivate, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err != nil {
@@ -171,7 +171,7 @@ func (s *ChatStore) GetChannel(ctx context.Context, channelID string) (*models.C
 
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at FROM channels WHERE id = $1`, channelID,
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at FROM channels WHERE id = $1`, channelID,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -269,7 +269,7 @@ func (s *ChatStore) UpdateChannel(ctx context.Context, channelID string, name, t
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at",
+		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -355,7 +355,7 @@ func (s *ChatStore) UpdateChannelPrivacy(ctx context.Context, channelID string, 
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at",
+		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -416,6 +416,144 @@ func (s *ChatStore) DeleteChannel(ctx context.Context, channelID string) error {
 	}
 	if result.RowsAffected() == 0 {
 		return fmt.Errorf("channel not found")
+	}
+	return nil
+}
+
+func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverID, name string, isPrivate bool, channelGroupID string) (*models.Channel, *models.Channel, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	voiceID := models.NewID()
+	textID := models.NewID()
+	now := time.Now()
+
+	var groupID *string
+	if channelGroupID != "" {
+		groupID = &channelGroupID
+	}
+
+	// Create the companion text channel FIRST so the FK reference from the voice
+	// channel is valid (PostgreSQL checks FK constraints at statement time).
+	var textCh models.Channel
+	err = tx.QueryRow(ctx,
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
+		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $6
+		 FROM channels WHERE server_id = $7
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
+		textID, serverID, name, isPrivate, groupID, now, serverID,
+	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.CreatedAt)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, nil, fmt.Errorf("channel %w", ErrAlreadyExists)
+		}
+		return nil, nil, fmt.Errorf("insert companion text channel: %w", err)
+	}
+
+	// Create the voice channel with FK reference to the companion.
+	var voiceCh models.Channel
+	err = tx.QueryRow(ctx,
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, created_at)
+		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $8)
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
+		voiceID, serverID, name, textCh.Position, isPrivate, groupID, textID, now,
+	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.CreatedAt)
+	if err != nil {
+		return nil, nil, fmt.Errorf("insert voice channel: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit tx: %w", err)
+	}
+	return &voiceCh, &textCh, nil
+}
+
+func (s *ChatStore) DeleteChannelWithCompanion(ctx context.Context, voiceChannelID, companionChannelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Delete companion first (FK on voice channel points to it).
+	_, err = tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, companionChannelID)
+	if err != nil {
+		return fmt.Errorf("delete companion channel: %w", err)
+	}
+
+	result, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, voiceChannelID)
+	if err != nil {
+		return fmt.Errorf("delete voice channel: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("voice channel not found")
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (s *ChatStore) IsVoiceTextCompanion(ctx context.Context, channelID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var exists bool
+	err := s.pool.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM channels WHERE voice_text_channel_id = $1)`, channelID,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check voice text companion: %w", err)
+	}
+	return exists, nil
+}
+
+func (s *ChatStore) UpdateCompanionChannel(ctx context.Context, companionID string, name, topic *string, channelGroupID *string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	setClauses := []string{}
+	args := []any{}
+	argIdx := 1
+
+	if name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, *name)
+		argIdx++
+	}
+	if topic != nil {
+		setClauses = append(setClauses, fmt.Sprintf("topic = $%d", argIdx))
+		args = append(args, *topic)
+		argIdx++
+	}
+	if channelGroupID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("channel_group_id = $%d", argIdx))
+		if *channelGroupID == "" {
+			args = append(args, nil)
+		} else {
+			args = append(args, *channelGroupID)
+		}
+		argIdx++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	query := fmt.Sprintf("UPDATE channels SET %s WHERE id = $%d", strings.Join(setClauses, ", "), argIdx)
+	args = append(args, companionID)
+
+	_, err := s.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("update companion channel: %w", err)
 	}
 	return nil
 }
@@ -926,7 +1064,7 @@ func (s *ChatStore) CreateDMChannel(ctx context.Context, userID1, userID2, dmSta
 	// Try to find existing DM channel first (fast path, no transaction needed).
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at
 		 FROM channels WHERE dm_pair_key = $1`, pairKey,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err == nil {
@@ -956,7 +1094,7 @@ func (s *ChatStore) CreateDMChannel(ctx context.Context, userID1, userID2, dmSta
 		 VALUES ($1, 'dm', 3, true, $2, $3, $4, $5)
 		 ON CONFLICT (dm_pair_key) WHERE dm_pair_key IS NOT NULL
 		 DO UPDATE SET id = channels.id
-		 RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at`,
+		 RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at`,
 		channelID, pairKey, dmStatus, initiatorParam, now,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err != nil {
@@ -1001,7 +1139,7 @@ func (s *ChatStore) CreateGroupDMChannel(ctx context.Context, creatorID, name st
 	err = tx.QueryRow(ctx,
 		`INSERT INTO channels (id, name, type, is_private, dm_status, dm_initiator_id, created_at)
 		 VALUES ($1, $2, 4, true, 'active', $3, $4)
-		 RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at`,
+		 RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at`,
 		channelID, name, creatorID, now,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err != nil {
@@ -1031,7 +1169,7 @@ func (s *ChatStore) GetDMChannelByPairKey(ctx context.Context, userID1, userID2 
 	pairKey := dmPairKey(userID1, userID2)
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at
 		 FROM channels WHERE dm_pair_key = $1`, pairKey,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt)
 	if err != nil {
@@ -1416,7 +1554,7 @@ func (s *ChatStore) GetDefaultChannels(ctx context.Context, serverID string) ([]
 	defer cancel()
 
 	rows, err := s.pool.Query(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, created_at
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at
 		 FROM channels WHERE server_id = $1 AND is_default = true AND is_private = false
 		 ORDER BY position`, serverID,
 	)
@@ -1539,24 +1677,67 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 	var channels []*models.Channel
 	for i, spec := range params.Channels {
 		chID := models.NewID()
-		_, err = tx.Exec(ctx,
-			`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8)`,
-			chID, serverID, spec.Name, spec.Type, i, spec.IsPrivate, spec.IsDefault, now,
-		)
-		if err != nil {
-			return nil, nil, nil, fmt.Errorf("insert channel %q: %w", spec.Name, err)
+
+		if spec.Type == 2 { // CHANNEL_TYPE_VOICE — create with companion text channel.
+			textID := models.NewID()
+			// Create companion text channel FIRST so the FK reference from the voice channel is valid.
+			_, err = tx.Exec(ctx,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
+				 VALUES ($1, $2, $3, 1, $4, $5, false, NULL, $6)`,
+				textID, serverID, spec.Name, i, spec.IsPrivate, now,
+			)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("insert companion text channel for %q: %w", spec.Name, err)
+			}
+			_, err = tx.Exec(ctx,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, voice_text_channel_id, created_at)
+				 VALUES ($1, $2, $3, 2, $4, $5, $6, NULL, $7, $8)`,
+				chID, serverID, spec.Name, i, spec.IsPrivate, spec.IsDefault, textID, now,
+			)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("insert voice channel %q: %w", spec.Name, err)
+			}
+			channels = append(channels, &models.Channel{
+				ID:                 chID,
+				ServerID:           serverID,
+				Name:               spec.Name,
+				Type:               2,
+				Position:           i,
+				IsPrivate:          spec.IsPrivate,
+				IsDefault:          spec.IsDefault,
+				VoiceTextChannelID: textID,
+				CreatedAt:          now,
+			})
+			// Include companion in returned channels for key distribution.
+			channels = append(channels, &models.Channel{
+				ID:        textID,
+				ServerID:  serverID,
+				Name:      spec.Name,
+				Type:      1,
+				Position:  i,
+				IsPrivate: spec.IsPrivate,
+				CreatedAt: now,
+			})
+		} else {
+			_, err = tx.Exec(ctx,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8)`,
+				chID, serverID, spec.Name, spec.Type, i, spec.IsPrivate, spec.IsDefault, now,
+			)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("insert channel %q: %w", spec.Name, err)
+			}
+			channels = append(channels, &models.Channel{
+				ID:        chID,
+				ServerID:  serverID,
+				Name:      spec.Name,
+				Type:      spec.Type,
+				Position:  i,
+				IsPrivate: spec.IsPrivate,
+				IsDefault: spec.IsDefault,
+				CreatedAt: now,
+			})
 		}
-		channels = append(channels, &models.Channel{
-			ID:        chID,
-			ServerID:  serverID,
-			Name:      spec.Name,
-			Type:      spec.Type,
-			Position:  i,
-			IsPrivate: spec.IsPrivate,
-			IsDefault: spec.IsDefault,
-			CreatedAt: now,
-		})
 	}
 
 	// Insert roles.

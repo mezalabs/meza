@@ -445,6 +445,18 @@ func (m *mockChatStore) GetSelfAssignableRoles(_ context.Context, _ string) ([]*
 func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
 	return nil, nil, nil, nil
 }
+func (m *mockChatStore) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
+	return nil, nil, nil
+}
+func (m *mockChatStore) DeleteChannelWithCompanion(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStore) IsVoiceTextCompanion(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+func (m *mockChatStore) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
+	return nil
+}
 
 // mockMessageStore implements models.MessageStorer for testing.
 type mockMessageStore struct {

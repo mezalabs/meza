@@ -85,6 +85,17 @@ func (s *chatService) SetPermissionOverride(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("target not found"))
 	}
 
+	if !isGroup {
+		isCompanion, compErr := s.chatStore.IsVoiceTextCompanion(ctx, req.Msg.TargetId)
+		if compErr != nil {
+			slog.Error("checking voice text companion for override", "err", compErr, "target", req.Msg.TargetId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if isCompanion {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("set overrides on the parent voice channel; they are mirrored automatically"))
+		}
+	}
+
 	if err := s.requireMembership(ctx, userID, serverID); err != nil {
 		return nil, err
 	}
@@ -172,6 +183,24 @@ func (s *chatService) SetPermissionOverride(ctx context.Context, req *connect.Re
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Mirror override to companion text channel if target is a voice channel.
+	if !isGroup && override.ChannelID != "" {
+		targetCh, chErr := s.chatStore.GetChannel(ctx, override.ChannelID)
+		if chErr == nil && targetCh.VoiceTextChannelID != "" {
+			companionOverride := &models.PermissionOverride{
+				ID:        models.NewID(),
+				ChannelID: targetCh.VoiceTextChannelID,
+				RoleID:    override.RoleID,
+				UserID:    override.UserID,
+				Allow:     override.Allow,
+				Deny:      override.Deny,
+			}
+			if _, mirrorErr := s.permissionOverrideStore.SetOverride(ctx, companionOverride); mirrorErr != nil {
+				slog.Error("mirroring override to companion channel", "err", mirrorErr, "companion", targetCh.VoiceTextChannelID)
+			}
+		}
+	}
+
 	// Invalidate permission cache for entire server (override change affects all members with this role).
 	s.permCache.InvalidateServer(ctx, serverID)
 
@@ -216,9 +245,20 @@ func (s *chatService) DeletePermissionOverride(ctx context.Context, req *connect
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("exactly one of role_id or user_id is required"))
 	}
 
-	serverID, _, err := s.resolveTargetServerID(ctx, req.Msg.TargetId)
+	serverID, isGroup, err := s.resolveTargetServerID(ctx, req.Msg.TargetId)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("target not found"))
+	}
+
+	if !isGroup {
+		isCompanion, compErr := s.chatStore.IsVoiceTextCompanion(ctx, req.Msg.TargetId)
+		if compErr != nil {
+			slog.Error("checking voice text companion for override deletion", "err", compErr, "target", req.Msg.TargetId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if isCompanion {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("delete overrides on the parent voice channel; they are mirrored automatically"))
+		}
 	}
 
 	if err := s.requireMembership(ctx, userID, serverID); err != nil {
@@ -279,6 +319,22 @@ func (s *chatService) DeletePermissionOverride(ctx context.Context, req *connect
 		if err := s.permissionOverrideStore.DeleteOverrideByUser(ctx, req.Msg.TargetId, req.Msg.UserId); err != nil {
 			slog.Error("deleting user permission override", "err", err, "user", userID, "target", req.Msg.TargetId)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+	}
+
+	// Mirror override deletion to companion text channel if target is a voice channel.
+	if !isGroup {
+		targetCh, chErr := s.chatStore.GetChannel(ctx, req.Msg.TargetId)
+		if chErr == nil && targetCh.VoiceTextChannelID != "" {
+			if isRoleOverride {
+				if err := s.permissionOverrideStore.DeleteOverride(ctx, targetCh.VoiceTextChannelID, req.Msg.RoleId); err != nil {
+					slog.Error("mirroring override deletion to companion channel", "err", err, "companion", targetCh.VoiceTextChannelID)
+				}
+			} else {
+				if err := s.permissionOverrideStore.DeleteOverrideByUser(ctx, targetCh.VoiceTextChannelID, req.Msg.UserId); err != nil {
+					slog.Error("mirroring user override deletion to companion channel", "err", err, "companion", targetCh.VoiceTextChannelID)
+				}
+			}
 		}
 	}
 

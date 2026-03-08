@@ -84,6 +84,7 @@ const EMPTY_CHANNELS: {
   type: ChannelType;
   isPrivate: boolean;
   channelGroupId?: string;
+  voiceTextChannelId?: string;
 }[] = [];
 
 const EMPTY_GROUPS: { id: string; name: string; position: number }[] = [];
@@ -250,10 +251,20 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
 
   // Single-pass channel grouping + text/voice split for stable references
   const { ungroupedText, ungroupedVoice, groupedChannels } = useMemo(() => {
+    // Build set of companion text channel IDs to exclude from the sidebar.
+    // Companions are discovered via the voice channel's voiceTextChannelId field.
+    const companionIds = new Set<string>();
+    for (const ch of channels) {
+      if (ch.voiceTextChannelId) {
+        companionIds.add(ch.voiceTextChannelId);
+      }
+    }
+
     const grouped = new Map<string, typeof channels>();
     const text: typeof channels = [];
     const voice: typeof channels = [];
     for (const ch of channels) {
+      if (companionIds.has(ch.id)) continue; // Hide companion text channels
       if (ch.channelGroupId) {
         let list = grouped.get(ch.channelGroupId);
         if (!list) {
@@ -657,6 +668,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                           channelType={channel.type}
                           isPrivate={channel.isPrivate}
                           serverId={selectedServerId ?? undefined}
+                          voiceTextChannelId={channel.voiceTextChannelId}
                         />
                       ))}
                     </>
@@ -1076,6 +1088,7 @@ function SidebarChannelGroup({
     name: string;
     type: ChannelType;
     isPrivate: boolean;
+    voiceTextChannelId?: string;
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
@@ -1124,6 +1137,7 @@ function SidebarChannelGroup({
               isPrivate={channel.isPrivate}
               serverId={serverId}
               channelGroupId={groupId}
+              voiceTextChannelId={channel.voiceTextChannelId}
             />
           ))}
         </div>
@@ -1139,6 +1153,7 @@ function SidebarChannelItem({
   isPrivate,
   serverId,
   channelGroupId: _channelGroupId,
+  voiceTextChannelId,
 }: {
   channelId: string;
   channelName: string;
@@ -1146,12 +1161,15 @@ function SidebarChannelItem({
   isPrivate: boolean;
   serverId?: string;
   channelGroupId?: string;
+  voiceTextChannelId?: string;
 }) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
   const focusedContent = useTilingStore((s) => s.panes[s.focusedPaneId]);
+  // For voice channels, show unread count from the companion text channel.
+  const unreadChannelId = voiceTextChannelId || channelId;
   const unreadCount = useReadStateStore(
-    (s) => s.byChannel[channelId]?.unreadCount ?? 0,
+    (s) => s.byChannel[unreadChannelId]?.unreadCount ?? 0,
   );
 
   const { connect: voiceConnect } = useVoiceConnection();

@@ -204,6 +204,18 @@ func (m *mockChatStore) ListChannelParticipantIDs(_ context.Context, _ string) (
 func (m *mockChatStore) UpdateChannelPrivacy(context.Context, string, *string, *string, *int, *bool, *int, *bool, *string, *string, bool, string, int64) (*models.Channel, error) {
 	panic("not implemented")
 }
+func (m *mockChatStore) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
+	return nil, nil, nil
+}
+func (m *mockChatStore) DeleteChannelWithCompanion(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStore) IsVoiceTextCompanion(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+func (m *mockChatStore) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
+	return nil
+}
 
 // ---------- mock RoleStorer ----------
 
