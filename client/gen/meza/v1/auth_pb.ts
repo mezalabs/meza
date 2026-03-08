@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file meza/v1/auth.proto.
  */
 export const file_meza_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChJtZXphL3YxL2F1dGgucHJvdG8SB21lemEudjEi7wEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghhdXRoX2tleRgCIAEoDBIMCgRzYWx0GAMgASgMEhwKFGVuY3J5cHRlZF9rZXlfYnVuZGxlGAQgASgMEhUKDWtleV9idW5kbGVfaXYYBSABKAwSEAoIdXNlcm5hbWUYBiABKAkSJQodcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYCCABKAwSHgoWcmVjb3Zlcnlfa2V5X2J1bmRsZV9pdhgJIAEoDBIZChFyZWNvdmVyeV92ZXJpZmllchgKIAEoDEoECAcQCCJcChBSZWdpc3RlclJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhsKBHVzZXIYAyABKAsyDS5tZXphLnYxLlVzZXIiNAoMTG9naW5SZXF1ZXN0EhIKCmlkZW50aWZpZXIYASABKAkSEAoIYXV0aF9rZXkYAiABKAwinAEKDUxvZ2luUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSGwoEdXNlchgDIAEoCzINLm1lemEudjEuVXNlchIcChRlbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIVCg1rZXlfYnVuZGxlX2l2GAUgASgMEgwKBHNhbHQYBiABKAwiJAoOR2V0U2FsdFJlcXVlc3QSEgoKaWRlbnRpZmllchgBIAEoCSIfCg9HZXRTYWx0UmVzcG9uc2USDAoEc2FsdBgBIAEoDCIsChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkiQwoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkimQIKFVJlZ2lzdGVyRGV2aWNlUmVxdWVzdBIZChFkZXZpY2VfcHVibGljX2tleRgBIAEoDBIYChBkZXZpY2Vfc2lnbmF0dXJlGAIgASgMEhMKC2RldmljZV9uYW1lGAMgASgJEhAKCHBsYXRmb3JtGAQgASgJEhoKDXB1c2hfZW5kcG9pbnQYBSABKAlIAIgBARIYCgtwdXNoX3AyNTZkaBgGIAEoCUgBiAEBEhYKCXB1c2hfYXV0aBgHIAEoCUgCiAEBEhcKCnB1c2hfdG9rZW4YCCABKAlIA4gBAUIQCg5fcHVzaF9lbmRwb2ludEIOCgxfcHVzaF9wMjU2ZGhCDAoKX3B1c2hfYXV0aEINCgtfcHVzaF90b2tlbiIrChZSZWdpc3RlckRldmljZVJlc3BvbnNlEhEKCWRldmljZV9pZBgBIAEoCSIoChNSZXZva2VEZXZpY2VSZXF1ZXN0EhEKCWRldmljZV9pZBgBIAEoCSIWChRSZXZva2VEZXZpY2VSZXNwb25zZSIUChJMaXN0RGV2aWNlc1JlcXVlc3QiNwoTTGlzdERldmljZXNSZXNwb25zZRIgCgdkZXZpY2VzGAEgAygLMg8ubWV6YS52MS5EZXZpY2UiwAEKBkRldmljZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEi4KCmNyZWF0ZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGxhc3Rfc2Vlbl9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKaXNfY3VycmVudBgFIAEoCBIQCghwbGF0Zm9ybRgGIAEoCRIUCgxwdXNoX2VuYWJsZWQYByABKAgi3gQKFFVwZGF0ZVByb2ZpbGVSZXF1ZXN0EhkKDGRpc3BsYXlfbmFtZRgBIAEoCUgAiAEBEhcKCmF2YXRhcl91cmwYAiABKAlIAYgBARIYCgtlbW9qaV9zY2FsZRgDIAEoAkgCiAEBEhAKA2JpbxgEIAEoCUgDiAEBEhUKCHByb25vdW5zGAUgASgJSASIAQESFwoKYmFubmVyX3VybBgGIAEoCUgFiAEBEiAKE3RoZW1lX2NvbG9yX3ByaW1hcnkYByABKAlIBogBARIiChV0aGVtZV9jb2xvcl9zZWNvbmRhcnkYCCABKAlIB4gBARIYCgtzaW1wbGVfbW9kZRgJIAEoCEgIiAEBEjkKEWF1ZGlvX3ByZWZlcmVuY2VzGAogASgLMhkubWV6YS52MS5BdWRpb1ByZWZlcmVuY2VzSAmIAQESFwoKZG1fcHJpdmFjeRgLIAEoCUgKiAEBEiwKC2Nvbm5lY3Rpb25zGAwgAygLMhcubWV6YS52MS5Vc2VyQ29ubmVjdGlvbhIZChFjbGVhcl9jb25uZWN0aW9ucxgNIAEoCEIPCg1fZGlzcGxheV9uYW1lQg0KC19hdmF0YXJfdXJsQg4KDF9lbW9qaV9zY2FsZUIGCgRfYmlvQgsKCV9wcm9ub3Vuc0INCgtfYmFubmVyX3VybEIWChRfdGhlbWVfY29sb3JfcHJpbWFyeUIYChZfdGhlbWVfY29sb3Jfc2Vjb25kYXJ5Qg4KDF9zaW1wbGVfbW9kZUIUChJfYXVkaW9fcHJlZmVyZW5jZXNCDQoLX2RtX3ByaXZhY3kiNAoVVXBkYXRlUHJvZmlsZVJlc3BvbnNlEhsKBHVzZXIYASABKAsyDS5tZXphLnYxLlVzZXIigAIKFUNoYW5nZVBhc3N3b3JkUmVxdWVzdBIUCgxvbGRfYXV0aF9rZXkYASABKAwSFAoMbmV3X2F1dGhfa2V5GAIgASgMEhAKCG5ld19zYWx0GAMgASgMEiAKGG5ld19lbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIZChFuZXdfa2V5X2J1bmRsZV9pdhgFIAEoDBIpCiFuZXdfcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYBiABKAwSIgoabmV3X3JlY292ZXJ5X2tleV9idW5kbGVfaXYYByABKAwSHQoVbmV3X3JlY292ZXJ5X3ZlcmlmaWVyGAggASgMIhgKFkNoYW5nZVBhc3N3b3JkUmVzcG9uc2UiFQoTR2V0S2V5QnVuZGxlUmVxdWVzdCJLChRHZXRLZXlCdW5kbGVSZXNwb25zZRIcChRlbmNyeXB0ZWRfa2V5X2J1bmRsZRgBIAEoDBIVCg1rZXlfYnVuZGxlX2l2GAIgASgMIiQKEUdldFByb2ZpbGVSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkiMQoSR2V0UHJvZmlsZVJlc3BvbnNlEhsKBHVzZXIYASABKAsyDS5tZXphLnYxLlVzZXIiKQoYR2V0UmVjb3ZlcnlCdW5kbGVSZXF1ZXN0Eg0KBWVtYWlsGAEgASgJInAKGUdldFJlY292ZXJ5QnVuZGxlUmVzcG9uc2USJQodcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYASABKAwSHgoWcmVjb3Zlcnlfa2V5X2J1bmRsZV9pdhgCIAEoDBIMCgRzYWx0GAMgASgMIpQCChVSZWNvdmVyQWNjb3VudFJlcXVlc3QSDQoFZW1haWwYASABKAkSFAoMbmV3X2F1dGhfa2V5GAIgASgMEhAKCG5ld19zYWx0GAMgASgMEiAKGG5ld19lbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIZChFuZXdfa2V5X2J1bmRsZV9pdhgFIAEoDBIpCiFuZXdfcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYBiABKAwSIgoabmV3X3JlY292ZXJ5X2tleV9idW5kbGVfaXYYByABKAwSGQoRcmVjb3ZlcnlfdmVyaWZpZXIYCCABKAwSHQoVbmV3X3JlY292ZXJ5X3ZlcmlmaWVyGAkgASgMImIKFlJlY292ZXJBY2NvdW50UmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSGwoEdXNlchgDIAEoCzINLm1lemEudjEuVXNlcjLhBwoLQXV0aFNlcnZpY2USPwoIUmVnaXN0ZXISGC5tZXphLnYxLlJlZ2lzdGVyUmVxdWVzdBoZLm1lemEudjEuUmVnaXN0ZXJSZXNwb25zZRI2CgVMb2dpbhIVLm1lemEudjEuTG9naW5SZXF1ZXN0GhYubWV6YS52MS5Mb2dpblJlc3BvbnNlEjwKB0dldFNhbHQSFy5tZXphLnYxLkdldFNhbHRSZXF1ZXN0GhgubWV6YS52MS5HZXRTYWx0UmVzcG9uc2USSwoMUmVmcmVzaFRva2VuEhwubWV6YS52MS5SZWZyZXNoVG9rZW5SZXF1ZXN0Gh0ubWV6YS52MS5SZWZyZXNoVG9rZW5SZXNwb25zZRJRCg5SZWdpc3RlckRldmljZRIeLm1lemEudjEuUmVnaXN0ZXJEZXZpY2VSZXF1ZXN0Gh8ubWV6YS52MS5SZWdpc3RlckRldmljZVJlc3BvbnNlEksKDFJldm9rZURldmljZRIcLm1lemEudjEuUmV2b2tlRGV2aWNlUmVxdWVzdBodLm1lemEudjEuUmV2b2tlRGV2aWNlUmVzcG9uc2USSAoLTGlzdERldmljZXMSGy5tZXphLnYxLkxpc3REZXZpY2VzUmVxdWVzdBocLm1lemEudjEuTGlzdERldmljZXNSZXNwb25zZRJOCg1VcGRhdGVQcm9maWxlEh0ubWV6YS52MS5VcGRhdGVQcm9maWxlUmVxdWVzdBoeLm1lemEudjEuVXBkYXRlUHJvZmlsZVJlc3BvbnNlElEKDkNoYW5nZVBhc3N3b3JkEh4ubWV6YS52MS5DaGFuZ2VQYXNzd29yZFJlcXVlc3QaHy5tZXphLnYxLkNoYW5nZVBhc3N3b3JkUmVzcG9uc2USSwoMR2V0S2V5QnVuZGxlEhwubWV6YS52MS5HZXRLZXlCdW5kbGVSZXF1ZXN0Gh0ubWV6YS52MS5HZXRLZXlCdW5kbGVSZXNwb25zZRJFCgpHZXRQcm9maWxlEhoubWV6YS52MS5HZXRQcm9maWxlUmVxdWVzdBobLm1lemEudjEuR2V0UHJvZmlsZVJlc3BvbnNlEloKEUdldFJlY292ZXJ5QnVuZGxlEiEubWV6YS52MS5HZXRSZWNvdmVyeUJ1bmRsZVJlcXVlc3QaIi5tZXphLnYxLkdldFJlY292ZXJ5QnVuZGxlUmVzcG9uc2USUQoOUmVjb3ZlckFjY291bnQSHi5tZXphLnYxLlJlY292ZXJBY2NvdW50UmVxdWVzdBofLm1lemEudjEuUmVjb3ZlckFjY291bnRSZXNwb25zZUKDAQoLY29tLm1lemEudjFCCUF1dGhQcm90b1ABWixnaXRodWIuY29tL21lemEtY2hhdC9tZXphL2dlbi9tZXphL3YxO21lemF2MaICA01YWKoCB01lemEuVjHKAgdNZXphXFYx4gITTWV6YVxWMVxHUEJNZXRhZGF0YeoCCE1lemE6OlYxYgZwcm90bzM", [file_meza_v1_models, file_google_protobuf_timestamp]);
+  fileDesc("ChJtZXphL3YxL2F1dGgucHJvdG8SB21lemEudjEi7wEKD1JlZ2lzdGVyUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIQCghhdXRoX2tleRgCIAEoDBIMCgRzYWx0GAMgASgMEhwKFGVuY3J5cHRlZF9rZXlfYnVuZGxlGAQgASgMEhUKDWtleV9idW5kbGVfaXYYBSABKAwSEAoIdXNlcm5hbWUYBiABKAkSJQodcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYCCABKAwSHgoWcmVjb3Zlcnlfa2V5X2J1bmRsZV9pdhgJIAEoDBIZChFyZWNvdmVyeV92ZXJpZmllchgKIAEoDEoECAcQCCJcChBSZWdpc3RlclJlc3BvbnNlEhQKDGFjY2Vzc190b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhsKBHVzZXIYAyABKAsyDS5tZXphLnYxLlVzZXIiNAoMTG9naW5SZXF1ZXN0EhIKCmlkZW50aWZpZXIYASABKAkSEAoIYXV0aF9rZXkYAiABKAwinAEKDUxvZ2luUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSGwoEdXNlchgDIAEoCzINLm1lemEudjEuVXNlchIcChRlbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIVCg1rZXlfYnVuZGxlX2l2GAUgASgMEgwKBHNhbHQYBiABKAwiJAoOR2V0U2FsdFJlcXVlc3QSEgoKaWRlbnRpZmllchgBIAEoCSIfCg9HZXRTYWx0UmVzcG9uc2USDAoEc2FsdBgBIAEoDCIsChNSZWZyZXNoVG9rZW5SZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkiQwoUUmVmcmVzaFRva2VuUmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkimQIKFVJlZ2lzdGVyRGV2aWNlUmVxdWVzdBIZChFkZXZpY2VfcHVibGljX2tleRgBIAEoDBIYChBkZXZpY2Vfc2lnbmF0dXJlGAIgASgMEhMKC2RldmljZV9uYW1lGAMgASgJEhAKCHBsYXRmb3JtGAQgASgJEhoKDXB1c2hfZW5kcG9pbnQYBSABKAlIAIgBARIYCgtwdXNoX3AyNTZkaBgGIAEoCUgBiAEBEhYKCXB1c2hfYXV0aBgHIAEoCUgCiAEBEhcKCnB1c2hfdG9rZW4YCCABKAlIA4gBAUIQCg5fcHVzaF9lbmRwb2ludEIOCgxfcHVzaF9wMjU2ZGhCDAoKX3B1c2hfYXV0aEINCgtfcHVzaF90b2tlbiIrChZSZWdpc3RlckRldmljZVJlc3BvbnNlEhEKCWRldmljZV9pZBgBIAEoCSIoChNSZXZva2VEZXZpY2VSZXF1ZXN0EhEKCWRldmljZV9pZBgBIAEoCSIWChRSZXZva2VEZXZpY2VSZXNwb25zZSIUChJMaXN0RGV2aWNlc1JlcXVlc3QiNwoTTGlzdERldmljZXNSZXNwb25zZRIgCgdkZXZpY2VzGAEgAygLMg8ubWV6YS52MS5EZXZpY2UiwAEKBkRldmljZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEi4KCmNyZWF0ZWRfYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGxhc3Rfc2Vlbl9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKaXNfY3VycmVudBgFIAEoCBIQCghwbGF0Zm9ybRgGIAEoCRIUCgxwdXNoX2VuYWJsZWQYByABKAgi3gQKFFVwZGF0ZVByb2ZpbGVSZXF1ZXN0EhkKDGRpc3BsYXlfbmFtZRgBIAEoCUgAiAEBEhcKCmF2YXRhcl91cmwYAiABKAlIAYgBARIYCgtlbW9qaV9zY2FsZRgDIAEoAkgCiAEBEhAKA2JpbxgEIAEoCUgDiAEBEhUKCHByb25vdW5zGAUgASgJSASIAQESFwoKYmFubmVyX3VybBgGIAEoCUgFiAEBEiAKE3RoZW1lX2NvbG9yX3ByaW1hcnkYByABKAlIBogBARIiChV0aGVtZV9jb2xvcl9zZWNvbmRhcnkYCCABKAlIB4gBARIYCgtzaW1wbGVfbW9kZRgJIAEoCEgIiAEBEjkKEWF1ZGlvX3ByZWZlcmVuY2VzGAogASgLMhkubWV6YS52MS5BdWRpb1ByZWZlcmVuY2VzSAmIAQESFwoKZG1fcHJpdmFjeRgLIAEoCUgKiAEBEiwKC2Nvbm5lY3Rpb25zGAwgAygLMhcubWV6YS52MS5Vc2VyQ29ubmVjdGlvbhIZChFjbGVhcl9jb25uZWN0aW9ucxgNIAEoCEIPCg1fZGlzcGxheV9uYW1lQg0KC19hdmF0YXJfdXJsQg4KDF9lbW9qaV9zY2FsZUIGCgRfYmlvQgsKCV9wcm9ub3Vuc0INCgtfYmFubmVyX3VybEIWChRfdGhlbWVfY29sb3JfcHJpbWFyeUIYChZfdGhlbWVfY29sb3Jfc2Vjb25kYXJ5Qg4KDF9zaW1wbGVfbW9kZUIUChJfYXVkaW9fcHJlZmVyZW5jZXNCDQoLX2RtX3ByaXZhY3kiNAoVVXBkYXRlUHJvZmlsZVJlc3BvbnNlEhsKBHVzZXIYASABKAsyDS5tZXphLnYxLlVzZXIigAIKFUNoYW5nZVBhc3N3b3JkUmVxdWVzdBIUCgxvbGRfYXV0aF9rZXkYASABKAwSFAoMbmV3X2F1dGhfa2V5GAIgASgMEhAKCG5ld19zYWx0GAMgASgMEiAKGG5ld19lbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIZChFuZXdfa2V5X2J1bmRsZV9pdhgFIAEoDBIpCiFuZXdfcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYBiABKAwSIgoabmV3X3JlY292ZXJ5X2tleV9idW5kbGVfaXYYByABKAwSHQoVbmV3X3JlY292ZXJ5X3ZlcmlmaWVyGAggASgMIhgKFkNoYW5nZVBhc3N3b3JkUmVzcG9uc2UiFQoTR2V0S2V5QnVuZGxlUmVxdWVzdCJLChRHZXRLZXlCdW5kbGVSZXNwb25zZRIcChRlbmNyeXB0ZWRfa2V5X2J1bmRsZRgBIAEoDBIVCg1rZXlfYnVuZGxlX2l2GAIgASgMIiQKEUdldFByb2ZpbGVSZXF1ZXN0Eg8KB3VzZXJfaWQYASABKAkiMQoSR2V0UHJvZmlsZVJlc3BvbnNlEhsKBHVzZXIYASABKAsyDS5tZXphLnYxLlVzZXIiKQoYR2V0UmVjb3ZlcnlCdW5kbGVSZXF1ZXN0Eg0KBWVtYWlsGAEgASgJInAKGUdldFJlY292ZXJ5QnVuZGxlUmVzcG9uc2USJQodcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYASABKAwSHgoWcmVjb3Zlcnlfa2V5X2J1bmRsZV9pdhgCIAEoDBIMCgRzYWx0GAMgASgMIpQCChVSZWNvdmVyQWNjb3VudFJlcXVlc3QSDQoFZW1haWwYASABKAkSFAoMbmV3X2F1dGhfa2V5GAIgASgMEhAKCG5ld19zYWx0GAMgASgMEiAKGG5ld19lbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIZChFuZXdfa2V5X2J1bmRsZV9pdhgFIAEoDBIpCiFuZXdfcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYBiABKAwSIgoabmV3X3JlY292ZXJ5X2tleV9idW5kbGVfaXYYByABKAwSGQoRcmVjb3ZlcnlfdmVyaWZpZXIYCCABKAwSHQoVbmV3X3JlY292ZXJ5X3ZlcmlmaWVyGAkgASgMImIKFlJlY292ZXJBY2NvdW50UmVzcG9uc2USFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSGwoEdXNlchgDIAEoCzINLm1lemEudjEuVXNlciI5ChpWZXJpZnlSZWNvdmVyeUVtYWlsUmVxdWVzdBINCgVlbWFpbBgBIAEoCRIMCgRjb2RlGAIgASgJIkgKG1ZlcmlmeVJlY292ZXJ5RW1haWxSZXNwb25zZRIOCgZzdGF0dXMYASABKAkSGQoRb3RwX3Nlc3Npb25fdG9rZW4YAiABKAkiWAodSW5pdGlhdGVEZXZpY2VSZWNvdmVyeVJlcXVlc3QSGQoRb3RwX3Nlc3Npb25fdG9rZW4YASABKAkSHAoUZXBoZW1lcmFsX3B1YmxpY19rZXkYAiABKAwiNAoeSW5pdGlhdGVEZXZpY2VSZWNvdmVyeVJlc3BvbnNlEhIKCnNlc3Npb25faWQYASABKAkiLwoZUG9sbERldmljZVJlY292ZXJ5UmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIkQKGlBvbGxEZXZpY2VSZWNvdmVyeVJlc3BvbnNlEg4KBnN0YXR1cxgBIAEoCRIWCg53cmFwcGVkX2J1bmRsZRgCIAEoDCJKChxBcHByb3ZlRGV2aWNlUmVjb3ZlcnlSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSFgoOd3JhcHBlZF9idW5kbGUYAiABKAwiHwodQXBwcm92ZURldmljZVJlY292ZXJ5UmVzcG9uc2UihgIKHUNvbXBsZXRlRGV2aWNlUmVjb3ZlcnlSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSFAoMbmV3X2F1dGhfa2V5GAIgASgMEhAKCG5ld19zYWx0GAMgASgMEiAKGG5ld19lbmNyeXB0ZWRfa2V5X2J1bmRsZRgEIAEoDBIZChFuZXdfa2V5X2J1bmRsZV9pdhgFIAEoDBIpCiFuZXdfcmVjb3ZlcnlfZW5jcnlwdGVkX2tleV9idW5kbGUYBiABKAwSIgoabmV3X3JlY292ZXJ5X2tleV9idW5kbGVfaXYYByABKAwSHQoVbmV3X3JlY292ZXJ5X3ZlcmlmaWVyGAggASgMImoKHkNvbXBsZXRlRGV2aWNlUmVjb3ZlcnlSZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRIbCgR1c2VyGAMgASgLMg0ubWV6YS52MS5Vc2VyIiIKIEdldFBlbmRpbmdSZWNvdmVyeVJlcXVlc3RSZXF1ZXN0IlUKIUdldFBlbmRpbmdSZWNvdmVyeVJlcXVlc3RSZXNwb25zZRISCgpzZXNzaW9uX2lkGAEgASgJEhwKFGVwaGVtZXJhbF9wdWJsaWNfa2V5GAIgASgMMtQMCgtBdXRoU2VydmljZRI/CghSZWdpc3RlchIYLm1lemEudjEuUmVnaXN0ZXJSZXF1ZXN0GhkubWV6YS52MS5SZWdpc3RlclJlc3BvbnNlEjYKBUxvZ2luEhUubWV6YS52MS5Mb2dpblJlcXVlc3QaFi5tZXphLnYxLkxvZ2luUmVzcG9uc2USPAoHR2V0U2FsdBIXLm1lemEudjEuR2V0U2FsdFJlcXVlc3QaGC5tZXphLnYxLkdldFNhbHRSZXNwb25zZRJLCgxSZWZyZXNoVG9rZW4SHC5tZXphLnYxLlJlZnJlc2hUb2tlblJlcXVlc3QaHS5tZXphLnYxLlJlZnJlc2hUb2tlblJlc3BvbnNlElEKDlJlZ2lzdGVyRGV2aWNlEh4ubWV6YS52MS5SZWdpc3RlckRldmljZVJlcXVlc3QaHy5tZXphLnYxLlJlZ2lzdGVyRGV2aWNlUmVzcG9uc2USSwoMUmV2b2tlRGV2aWNlEhwubWV6YS52MS5SZXZva2VEZXZpY2VSZXF1ZXN0Gh0ubWV6YS52MS5SZXZva2VEZXZpY2VSZXNwb25zZRJICgtMaXN0RGV2aWNlcxIbLm1lemEudjEuTGlzdERldmljZXNSZXF1ZXN0GhwubWV6YS52MS5MaXN0RGV2aWNlc1Jlc3BvbnNlEk4KDVVwZGF0ZVByb2ZpbGUSHS5tZXphLnYxLlVwZGF0ZVByb2ZpbGVSZXF1ZXN0Gh4ubWV6YS52MS5VcGRhdGVQcm9maWxlUmVzcG9uc2USUQoOQ2hhbmdlUGFzc3dvcmQSHi5tZXphLnYxLkNoYW5nZVBhc3N3b3JkUmVxdWVzdBofLm1lemEudjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJLCgxHZXRLZXlCdW5kbGUSHC5tZXphLnYxLkdldEtleUJ1bmRsZVJlcXVlc3QaHS5tZXphLnYxLkdldEtleUJ1bmRsZVJlc3BvbnNlEkUKCkdldFByb2ZpbGUSGi5tZXphLnYxLkdldFByb2ZpbGVSZXF1ZXN0GhsubWV6YS52MS5HZXRQcm9maWxlUmVzcG9uc2USWgoRR2V0UmVjb3ZlcnlCdW5kbGUSIS5tZXphLnYxLkdldFJlY292ZXJ5QnVuZGxlUmVxdWVzdBoiLm1lemEudjEuR2V0UmVjb3ZlcnlCdW5kbGVSZXNwb25zZRJRCg5SZWNvdmVyQWNjb3VudBIeLm1lemEudjEuUmVjb3ZlckFjY291bnRSZXF1ZXN0Gh8ubWV6YS52MS5SZWNvdmVyQWNjb3VudFJlc3BvbnNlEmAKE1ZlcmlmeVJlY292ZXJ5RW1haWwSIy5tZXphLnYxLlZlcmlmeVJlY292ZXJ5RW1haWxSZXF1ZXN0GiQubWV6YS52MS5WZXJpZnlSZWNvdmVyeUVtYWlsUmVzcG9uc2USaQoWSW5pdGlhdGVEZXZpY2VSZWNvdmVyeRImLm1lemEudjEuSW5pdGlhdGVEZXZpY2VSZWNvdmVyeVJlcXVlc3QaJy5tZXphLnYxLkluaXRpYXRlRGV2aWNlUmVjb3ZlcnlSZXNwb25zZRJdChJQb2xsRGV2aWNlUmVjb3ZlcnkSIi5tZXphLnYxLlBvbGxEZXZpY2VSZWNvdmVyeVJlcXVlc3QaIy5tZXphLnYxLlBvbGxEZXZpY2VSZWNvdmVyeVJlc3BvbnNlEmYKFUFwcHJvdmVEZXZpY2VSZWNvdmVyeRIlLm1lemEudjEuQXBwcm92ZURldmljZVJlY292ZXJ5UmVxdWVzdBomLm1lemEudjEuQXBwcm92ZURldmljZVJlY292ZXJ5UmVzcG9uc2USaQoWQ29tcGxldGVEZXZpY2VSZWNvdmVyeRImLm1lemEudjEuQ29tcGxldGVEZXZpY2VSZWNvdmVyeVJlcXVlc3QaJy5tZXphLnYxLkNvbXBsZXRlRGV2aWNlUmVjb3ZlcnlSZXNwb25zZRJyChlHZXRQZW5kaW5nUmVjb3ZlcnlSZXF1ZXN0EikubWV6YS52MS5HZXRQZW5kaW5nUmVjb3ZlcnlSZXF1ZXN0UmVxdWVzdBoqLm1lemEudjEuR2V0UGVuZGluZ1JlY292ZXJ5UmVxdWVzdFJlc3BvbnNlQoMBCgtjb20ubWV6YS52MUIJQXV0aFByb3RvUAFaLGdpdGh1Yi5jb20vbWV6YS1jaGF0L21lemEvZ2VuL21lemEvdjE7bWV6YXYxogIDTVhYqgIHTWV6YS5WMcoCB01lemFcVjHiAhNNZXphXFYxXEdQQk1ldGFkYXRh6gIITWV6YTo6VjFiBnByb3RvMw", [file_meza_v1_models, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message meza.v1.RegisterRequest
@@ -800,6 +800,295 @@ export const RecoverAccountResponseSchema: GenMessage<RecoverAccountResponse> = 
   messageDesc(file_meza_v1_auth, 26);
 
 /**
+ * @generated from message meza.v1.VerifyRecoveryEmailRequest
+ */
+export type VerifyRecoveryEmailRequest = Message<"meza.v1.VerifyRecoveryEmailRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * empty for send mode, 6-digit OTP for verify mode
+   *
+   * @generated from field: string code = 2;
+   */
+  code: string;
+};
+
+/**
+ * Describes the message meza.v1.VerifyRecoveryEmailRequest.
+ * Use `create(VerifyRecoveryEmailRequestSchema)` to create a new message.
+ */
+export const VerifyRecoveryEmailRequestSchema: GenMessage<VerifyRecoveryEmailRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 27);
+
+/**
+ * @generated from message meza.v1.VerifyRecoveryEmailResponse
+ */
+export type VerifyRecoveryEmailResponse = Message<"meza.v1.VerifyRecoveryEmailResponse"> & {
+  /**
+   * "otp_sent" or "verified"
+   *
+   * @generated from field: string status = 1;
+   */
+  status: string;
+
+  /**
+   * only set when status="verified"
+   *
+   * @generated from field: string otp_session_token = 2;
+   */
+  otpSessionToken: string;
+};
+
+/**
+ * Describes the message meza.v1.VerifyRecoveryEmailResponse.
+ * Use `create(VerifyRecoveryEmailResponseSchema)` to create a new message.
+ */
+export const VerifyRecoveryEmailResponseSchema: GenMessage<VerifyRecoveryEmailResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 28);
+
+/**
+ * @generated from message meza.v1.InitiateDeviceRecoveryRequest
+ */
+export type InitiateDeviceRecoveryRequest = Message<"meza.v1.InitiateDeviceRecoveryRequest"> & {
+  /**
+   * @generated from field: string otp_session_token = 1;
+   */
+  otpSessionToken: string;
+
+  /**
+   * 32 bytes X25519
+   *
+   * @generated from field: bytes ephemeral_public_key = 2;
+   */
+  ephemeralPublicKey: Uint8Array;
+};
+
+/**
+ * Describes the message meza.v1.InitiateDeviceRecoveryRequest.
+ * Use `create(InitiateDeviceRecoveryRequestSchema)` to create a new message.
+ */
+export const InitiateDeviceRecoveryRequestSchema: GenMessage<InitiateDeviceRecoveryRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 29);
+
+/**
+ * @generated from message meza.v1.InitiateDeviceRecoveryResponse
+ */
+export type InitiateDeviceRecoveryResponse = Message<"meza.v1.InitiateDeviceRecoveryResponse"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+};
+
+/**
+ * Describes the message meza.v1.InitiateDeviceRecoveryResponse.
+ * Use `create(InitiateDeviceRecoveryResponseSchema)` to create a new message.
+ */
+export const InitiateDeviceRecoveryResponseSchema: GenMessage<InitiateDeviceRecoveryResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 30);
+
+/**
+ * @generated from message meza.v1.PollDeviceRecoveryRequest
+ */
+export type PollDeviceRecoveryRequest = Message<"meza.v1.PollDeviceRecoveryRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+};
+
+/**
+ * Describes the message meza.v1.PollDeviceRecoveryRequest.
+ * Use `create(PollDeviceRecoveryRequestSchema)` to create a new message.
+ */
+export const PollDeviceRecoveryRequestSchema: GenMessage<PollDeviceRecoveryRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 31);
+
+/**
+ * @generated from message meza.v1.PollDeviceRecoveryResponse
+ */
+export type PollDeviceRecoveryResponse = Message<"meza.v1.PollDeviceRecoveryResponse"> & {
+  /**
+   * "pending", "approved", "completed", "expired"
+   *
+   * @generated from field: string status = 1;
+   */
+  status: string;
+
+  /**
+   * 124 bytes ECIES envelope (only when status="approved")
+   *
+   * @generated from field: bytes wrapped_bundle = 2;
+   */
+  wrappedBundle: Uint8Array;
+};
+
+/**
+ * Describes the message meza.v1.PollDeviceRecoveryResponse.
+ * Use `create(PollDeviceRecoveryResponseSchema)` to create a new message.
+ */
+export const PollDeviceRecoveryResponseSchema: GenMessage<PollDeviceRecoveryResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 32);
+
+/**
+ * @generated from message meza.v1.ApproveDeviceRecoveryRequest
+ */
+export type ApproveDeviceRecoveryRequest = Message<"meza.v1.ApproveDeviceRecoveryRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * 124 bytes: ephemeral_pub(32) + nonce(12) + ciphertext(80)
+   *
+   * @generated from field: bytes wrapped_bundle = 2;
+   */
+  wrappedBundle: Uint8Array;
+};
+
+/**
+ * Describes the message meza.v1.ApproveDeviceRecoveryRequest.
+ * Use `create(ApproveDeviceRecoveryRequestSchema)` to create a new message.
+ */
+export const ApproveDeviceRecoveryRequestSchema: GenMessage<ApproveDeviceRecoveryRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 33);
+
+/**
+ * @generated from message meza.v1.ApproveDeviceRecoveryResponse
+ */
+export type ApproveDeviceRecoveryResponse = Message<"meza.v1.ApproveDeviceRecoveryResponse"> & {
+};
+
+/**
+ * Describes the message meza.v1.ApproveDeviceRecoveryResponse.
+ * Use `create(ApproveDeviceRecoveryResponseSchema)` to create a new message.
+ */
+export const ApproveDeviceRecoveryResponseSchema: GenMessage<ApproveDeviceRecoveryResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 34);
+
+/**
+ * @generated from message meza.v1.CompleteDeviceRecoveryRequest
+ */
+export type CompleteDeviceRecoveryRequest = Message<"meza.v1.CompleteDeviceRecoveryRequest"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * @generated from field: bytes new_auth_key = 2;
+   */
+  newAuthKey: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_salt = 3;
+   */
+  newSalt: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_encrypted_key_bundle = 4;
+   */
+  newEncryptedKeyBundle: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_key_bundle_iv = 5;
+   */
+  newKeyBundleIv: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_recovery_encrypted_key_bundle = 6;
+   */
+  newRecoveryEncryptedKeyBundle: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_recovery_key_bundle_iv = 7;
+   */
+  newRecoveryKeyBundleIv: Uint8Array;
+
+  /**
+   * @generated from field: bytes new_recovery_verifier = 8;
+   */
+  newRecoveryVerifier: Uint8Array;
+};
+
+/**
+ * Describes the message meza.v1.CompleteDeviceRecoveryRequest.
+ * Use `create(CompleteDeviceRecoveryRequestSchema)` to create a new message.
+ */
+export const CompleteDeviceRecoveryRequestSchema: GenMessage<CompleteDeviceRecoveryRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 35);
+
+/**
+ * @generated from message meza.v1.CompleteDeviceRecoveryResponse
+ */
+export type CompleteDeviceRecoveryResponse = Message<"meza.v1.CompleteDeviceRecoveryResponse"> & {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+
+  /**
+   * @generated from field: meza.v1.User user = 3;
+   */
+  user?: User;
+};
+
+/**
+ * Describes the message meza.v1.CompleteDeviceRecoveryResponse.
+ * Use `create(CompleteDeviceRecoveryResponseSchema)` to create a new message.
+ */
+export const CompleteDeviceRecoveryResponseSchema: GenMessage<CompleteDeviceRecoveryResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 36);
+
+/**
+ * @generated from message meza.v1.GetPendingRecoveryRequestRequest
+ */
+export type GetPendingRecoveryRequestRequest = Message<"meza.v1.GetPendingRecoveryRequestRequest"> & {
+};
+
+/**
+ * Describes the message meza.v1.GetPendingRecoveryRequestRequest.
+ * Use `create(GetPendingRecoveryRequestRequestSchema)` to create a new message.
+ */
+export const GetPendingRecoveryRequestRequestSchema: GenMessage<GetPendingRecoveryRequestRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 37);
+
+/**
+ * @generated from message meza.v1.GetPendingRecoveryRequestResponse
+ */
+export type GetPendingRecoveryRequestResponse = Message<"meza.v1.GetPendingRecoveryRequestResponse"> & {
+  /**
+   * empty if no pending request
+   *
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * 32 bytes X25519
+   *
+   * @generated from field: bytes ephemeral_public_key = 2;
+   */
+  ephemeralPublicKey: Uint8Array;
+};
+
+/**
+ * Describes the message meza.v1.GetPendingRecoveryRequestResponse.
+ * Use `create(GetPendingRecoveryRequestResponseSchema)` to create a new message.
+ */
+export const GetPendingRecoveryRequestResponseSchema: GenMessage<GetPendingRecoveryRequestResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_auth, 38);
+
+/**
  * @generated from service meza.v1.AuthService
  */
 export const AuthService: GenService<{
@@ -908,6 +1197,56 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof RecoverAccountRequestSchema;
     output: typeof RecoverAccountResponseSchema;
+  },
+  /**
+   * Device recovery via another logged-in device
+   *
+   * @generated from rpc meza.v1.AuthService.VerifyRecoveryEmail
+   */
+  verifyRecoveryEmail: {
+    methodKind: "unary";
+    input: typeof VerifyRecoveryEmailRequestSchema;
+    output: typeof VerifyRecoveryEmailResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.AuthService.InitiateDeviceRecovery
+   */
+  initiateDeviceRecovery: {
+    methodKind: "unary";
+    input: typeof InitiateDeviceRecoveryRequestSchema;
+    output: typeof InitiateDeviceRecoveryResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.AuthService.PollDeviceRecovery
+   */
+  pollDeviceRecovery: {
+    methodKind: "unary";
+    input: typeof PollDeviceRecoveryRequestSchema;
+    output: typeof PollDeviceRecoveryResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.AuthService.ApproveDeviceRecovery
+   */
+  approveDeviceRecovery: {
+    methodKind: "unary";
+    input: typeof ApproveDeviceRecoveryRequestSchema;
+    output: typeof ApproveDeviceRecoveryResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.AuthService.CompleteDeviceRecovery
+   */
+  completeDeviceRecovery: {
+    methodKind: "unary";
+    input: typeof CompleteDeviceRecoveryRequestSchema;
+    output: typeof CompleteDeviceRecoveryResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.AuthService.GetPendingRecoveryRequest
+   */
+  getPendingRecoveryRequest: {
+    methodKind: "unary";
+    input: typeof GetPendingRecoveryRequestRequestSchema;
+    output: typeof GetPendingRecoveryRequestResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_meza_v1_auth, 0);

@@ -479,6 +479,7 @@ message Event {
     RolesReorderedEvent roles_reordered = 58;
     // 59 reserved for future voice activity update event
     KeyRequestEvent key_request = 60;
+    DeviceRecoveryRequestEvent device_recovery_request = 61;
   }
 }
 
@@ -535,6 +536,7 @@ enum EventType {
   EVENT_TYPE_ROLES_REORDERED = 49;
   // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
   EVENT_TYPE_KEY_REQUEST = 51;
+  EVENT_TYPE_DEVICE_RECOVERY_REQUEST = 52;
 }
 
 message MessageDeleteEvent {
@@ -566,6 +568,11 @@ message TypingEvent {
 message KeyRequestEvent {
   string channel_id = 1;
   string user_id = 2;  // The user requesting keys
+}
+
+message DeviceRecoveryRequestEvent {
+  string session_id = 1;
+  bytes ephemeral_public_key = 2;  // 32 bytes X25519
 }
 
 message RoleDeleteEvent {

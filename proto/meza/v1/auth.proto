@@ -19,6 +19,13 @@ service AuthService {
   // Account recovery via BIP39 recovery phrase
   rpc GetRecoveryBundle(GetRecoveryBundleRequest) returns (GetRecoveryBundleResponse);
   rpc RecoverAccount(RecoverAccountRequest) returns (RecoverAccountResponse);
+  // Device recovery via another logged-in device
+  rpc VerifyRecoveryEmail(VerifyRecoveryEmailRequest) returns (VerifyRecoveryEmailResponse);
+  rpc InitiateDeviceRecovery(InitiateDeviceRecoveryRequest) returns (InitiateDeviceRecoveryResponse);
+  rpc PollDeviceRecovery(PollDeviceRecoveryRequest) returns (PollDeviceRecoveryResponse);
+  rpc ApproveDeviceRecovery(ApproveDeviceRecoveryRequest) returns (ApproveDeviceRecoveryResponse);
+  rpc CompleteDeviceRecovery(CompleteDeviceRecoveryRequest) returns (CompleteDeviceRecoveryResponse);
+  rpc GetPendingRecoveryRequest(GetPendingRecoveryRequestRequest) returns (GetPendingRecoveryRequestResponse);
 }
 
 message RegisterRequest {
@@ -191,4 +198,65 @@ message RecoverAccountResponse {
   string access_token = 1;
   string refresh_token = 2;
   User user = 3;
+}
+
+// Device Recovery — recover account via another logged-in device
+
+message VerifyRecoveryEmailRequest {
+  string email = 1;
+  string code = 2;  // empty for send mode, 6-digit OTP for verify mode
+}
+
+message VerifyRecoveryEmailResponse {
+  string status = 1;  // "otp_sent" or "verified"
+  string otp_session_token = 2;  // only set when status="verified"
+}
+
+message InitiateDeviceRecoveryRequest {
+  string otp_session_token = 1;
+  bytes ephemeral_public_key = 2;  // 32 bytes X25519
+}
+
+message InitiateDeviceRecoveryResponse {
+  string session_id = 1;
+}
+
+message PollDeviceRecoveryRequest {
+  string session_id = 1;
+}
+
+message PollDeviceRecoveryResponse {
+  string status = 1;  // "pending", "approved", "completed", "expired"
+  bytes wrapped_bundle = 2;  // 124 bytes ECIES envelope (only when status="approved")
+}
+
+message ApproveDeviceRecoveryRequest {
+  string session_id = 1;
+  bytes wrapped_bundle = 2;  // 124 bytes: ephemeral_pub(32) + nonce(12) + ciphertext(80)
+}
+
+message ApproveDeviceRecoveryResponse {}
+
+message CompleteDeviceRecoveryRequest {
+  string session_id = 1;
+  bytes new_auth_key = 2;
+  bytes new_salt = 3;
+  bytes new_encrypted_key_bundle = 4;
+  bytes new_key_bundle_iv = 5;
+  bytes new_recovery_encrypted_key_bundle = 6;
+  bytes new_recovery_key_bundle_iv = 7;
+  bytes new_recovery_verifier = 8;
+}
+
+message CompleteDeviceRecoveryResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  User user = 3;
+}
+
+message GetPendingRecoveryRequestRequest {}
+
+message GetPendingRecoveryRequestResponse {
+  string session_id = 1;  // empty if no pending request
+  bytes ephemeral_public_key = 2;  // 32 bytes X25519
 }

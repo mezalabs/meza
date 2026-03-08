@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ChangePasswordRequest, ChangePasswordResponse, GetKeyBundleRequest, GetKeyBundleResponse, GetProfileRequest, GetProfileResponse, GetRecoveryBundleRequest, GetRecoveryBundleResponse, GetSaltRequest, GetSaltResponse, ListDevicesRequest, ListDevicesResponse, LoginRequest, LoginResponse, RecoverAccountRequest, RecoverAccountResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterDeviceRequest, RegisterDeviceResponse, RegisterRequest, RegisterResponse, RevokeDeviceRequest, RevokeDeviceResponse, UpdateProfileRequest, UpdateProfileResponse } from "./auth_pb.js";
+import { ApproveDeviceRecoveryRequest, ApproveDeviceRecoveryResponse, ChangePasswordRequest, ChangePasswordResponse, CompleteDeviceRecoveryRequest, CompleteDeviceRecoveryResponse, GetKeyBundleRequest, GetKeyBundleResponse, GetPendingRecoveryRequestRequest, GetPendingRecoveryRequestResponse, GetProfileRequest, GetProfileResponse, GetRecoveryBundleRequest, GetRecoveryBundleResponse, GetSaltRequest, GetSaltResponse, InitiateDeviceRecoveryRequest, InitiateDeviceRecoveryResponse, ListDevicesRequest, ListDevicesResponse, LoginRequest, LoginResponse, PollDeviceRecoveryRequest, PollDeviceRecoveryResponse, RecoverAccountRequest, RecoverAccountResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterDeviceRequest, RegisterDeviceResponse, RegisterRequest, RegisterResponse, RevokeDeviceRequest, RevokeDeviceResponse, UpdateProfileRequest, UpdateProfileResponse, VerifyRecoveryEmailRequest, VerifyRecoveryEmailResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -129,6 +129,62 @@ export const AuthService = {
       name: "RecoverAccount",
       I: RecoverAccountRequest,
       O: RecoverAccountResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Device recovery via another logged-in device
+     *
+     * @generated from rpc meza.v1.AuthService.VerifyRecoveryEmail
+     */
+    verifyRecoveryEmail: {
+      name: "VerifyRecoveryEmail",
+      I: VerifyRecoveryEmailRequest,
+      O: VerifyRecoveryEmailResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.InitiateDeviceRecovery
+     */
+    initiateDeviceRecovery: {
+      name: "InitiateDeviceRecovery",
+      I: InitiateDeviceRecoveryRequest,
+      O: InitiateDeviceRecoveryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.PollDeviceRecovery
+     */
+    pollDeviceRecovery: {
+      name: "PollDeviceRecovery",
+      I: PollDeviceRecoveryRequest,
+      O: PollDeviceRecoveryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.ApproveDeviceRecovery
+     */
+    approveDeviceRecovery: {
+      name: "ApproveDeviceRecovery",
+      I: ApproveDeviceRecoveryRequest,
+      O: ApproveDeviceRecoveryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.CompleteDeviceRecovery
+     */
+    completeDeviceRecovery: {
+      name: "CompleteDeviceRecovery",
+      I: CompleteDeviceRecoveryRequest,
+      O: CompleteDeviceRecoveryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.GetPendingRecoveryRequest
+     */
+    getPendingRecoveryRequest: {
+      name: "GetPendingRecoveryRequest",
+      I: GetPendingRecoveryRequestRequest,
+      O: GetPendingRecoveryRequestResponse,
       kind: MethodKind.Unary,
     },
   }
