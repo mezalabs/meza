@@ -91,6 +91,9 @@ func (s *chatService) AddReaction(ctx context.Context, req *connect.Request[v1.A
 	if msg.Deleted {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("message not found"))
 	}
+	if msg.Type != 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot react to system messages"))
+	}
 
 	// Enforce per-message emoji limit.
 	count, err := s.reactionStore.CountUniqueEmojis(ctx, req.Msg.ChannelId, req.Msg.MessageId)

@@ -1209,6 +1209,7 @@ message SearchMessagesRequest {
   optional string before_id = 7;
   optional string mentioned_user_id = 8;
   optional string after_id = 9;
+  repeated MessageType message_types = 10; // filter by message type (empty = all)
 }
 
 message SearchMessagesResponse {
@@ -1223,6 +1224,14 @@ message EmbedFetchJob {
   string channel_id = 1;
   string message_id = 2;
   repeated string urls = 3;
+}
+
+// Internal NATS event published by the keys service after a channel key rotation.
+// The chat service subscribes and creates a system message in the channel.
+message KeyRotationInternalEvent {
+  string channel_id = 1;
+  string actor_id = 2;
+  uint32 new_key_version = 3;
 }
 
 // Mutual data

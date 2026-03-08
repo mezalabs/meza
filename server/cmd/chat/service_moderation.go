@@ -384,6 +384,19 @@ func (s *chatService) KickMember(ctx context.Context, req *connect.Request[v1.Ki
 	// Signal gateway to refresh channel subscriptions for the kicked user.
 	s.nc.Publish(subjects.UserSubscription(req.Msg.UserId), nil)
 
+	// Emit system message to the default text channel.
+	if ch, err := s.getDefaultTextChannel(ctx, req.Msg.ServerId); err != nil {
+		slog.Warn("system message: default channel lookup failed", "server", req.Msg.ServerId, "err", err)
+	} else if ch != nil {
+		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), MemberKickContent{
+			UserID:  req.Msg.UserId,
+			ActorID: userID,
+			Action:  "kick",
+		}); err != nil {
+			slog.Warn("system message: kick failed", "channel", ch.ID, "err", err)
+		}
+	}
+
 	return connect.NewResponse(&v1.KickMemberResponse{}), nil
 }
 
@@ -494,6 +507,20 @@ func (s *chatService) BanMember(ctx context.Context, req *connect.Request[v1.Ban
 		}
 		if !created {
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("user is already banned"))
+		}
+	}
+
+	// Emit system message to the default text channel.
+	if ch, err := s.getDefaultTextChannel(ctx, req.Msg.ServerId); err != nil {
+		slog.Warn("system message: default channel lookup failed", "server", req.Msg.ServerId, "err", err)
+	} else if ch != nil {
+		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), MemberKickContent{
+			UserID:  req.Msg.UserId,
+			ActorID: userID,
+			Action:  "ban",
+			Reason:  truncate(req.Msg.GetReason(), 512),
+		}); err != nil {
+			slog.Warn("system message: ban failed", "channel", ch.ID, "err", err)
 		}
 	}
 
@@ -1076,6 +1103,21 @@ func (s *chatService) TimeoutMember(ctx context.Context, req *connect.Request[v1
 
 	// Publish PERMISSIONS_UPDATED signal (timeout affects permissions).
 	s.publishPermissionsUpdated(ctx, req.Msg.ServerId, "")
+
+	// Emit system message to the default text channel.
+	durationSeconds := int(time.Until(timedOutUntil).Seconds())
+	if ch, err := s.getDefaultTextChannel(ctx, req.Msg.ServerId); err != nil {
+		slog.Warn("system message: default channel lookup failed", "server", req.Msg.ServerId, "err", err)
+	} else if ch != nil {
+		if err := s.publishSystemMessage(ctx, ch.ID, uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), MemberKickContent{
+			UserID:          req.Msg.UserId,
+			ActorID:         userID,
+			Action:          "timeout",
+			DurationSeconds: durationSeconds,
+		}); err != nil {
+			slog.Warn("system message: timeout failed", "channel", ch.ID, "err", err)
+		}
+	}
 
 	return connect.NewResponse(&v1.TimeoutMemberResponse{
 		Member: memberProto,

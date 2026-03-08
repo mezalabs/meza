@@ -181,3 +181,9 @@ func DeviceDisconnectedWildcard() string {
 func EmbedFetch() string {
 	return "meza.embed.fetch"
 }
+
+// Internal key rotation subject — keys service publishes, chat service subscribes.
+
+func InternalKeyRotation() string {
+	return "meza.internal.keyrotation"
+}

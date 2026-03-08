@@ -77,6 +77,66 @@ func (ChannelType) EnumDescriptor() ([]byte, []int) {
 	return file_meza_v1_models_proto_rawDescGZIP(), []int{0}
 }
 
+// MessageType distinguishes regular user messages from server-generated system messages.
+// Sub-flavors (e.g., kick vs ban vs timeout) are differentiated by JSON content payload fields.
+type MessageType int32
+
+const (
+	MessageType_MESSAGE_TYPE_DEFAULT        MessageType = 0 // regular user message
+	MessageType_MESSAGE_TYPE_MEMBER_JOIN    MessageType = 1 // also used for group DM member add
+	MessageType_MESSAGE_TYPE_MEMBER_LEAVE   MessageType = 2 // also used for group DM member remove
+	MessageType_MESSAGE_TYPE_MEMBER_KICK    MessageType = 3 // content.action differentiates kick/ban/timeout
+	MessageType_MESSAGE_TYPE_CHANNEL_UPDATE MessageType = 4 // content.field differentiates name/topic
+	MessageType_MESSAGE_TYPE_KEY_ROTATION   MessageType = 5
+)
+
+// Enum value maps for MessageType.
+var (
+	MessageType_name = map[int32]string{
+		0: "MESSAGE_TYPE_DEFAULT",
+		1: "MESSAGE_TYPE_MEMBER_JOIN",
+		2: "MESSAGE_TYPE_MEMBER_LEAVE",
+		3: "MESSAGE_TYPE_MEMBER_KICK",
+		4: "MESSAGE_TYPE_CHANNEL_UPDATE",
+		5: "MESSAGE_TYPE_KEY_ROTATION",
+	}
+	MessageType_value = map[string]int32{
+		"MESSAGE_TYPE_DEFAULT":        0,
+		"MESSAGE_TYPE_MEMBER_JOIN":    1,
+		"MESSAGE_TYPE_MEMBER_LEAVE":   2,
+		"MESSAGE_TYPE_MEMBER_KICK":    3,
+		"MESSAGE_TYPE_CHANNEL_UPDATE": 4,
+		"MESSAGE_TYPE_KEY_ROTATION":   5,
+	}
+)
+
+func (x MessageType) Enum() *MessageType {
+	p := new(MessageType)
+	*p = x
+	return p
+}
+
+func (x MessageType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MessageType) Descriptor() protoreflect.EnumDescriptor {
+	return file_meza_v1_models_proto_enumTypes[1].Descriptor()
+}
+
+func (MessageType) Type() protoreflect.EnumType {
+	return &file_meza_v1_models_proto_enumTypes[1]
+}
+
+func (x MessageType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MessageType.Descriptor instead.
+func (MessageType) EnumDescriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{1}
+}
+
 type User struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -801,6 +861,7 @@ type Message struct {
 	MentionEveryone  bool                   `protobuf:"varint,12,opt,name=mention_everyone,json=mentionEveryone,proto3" json:"mention_everyone,omitempty"`
 	MentionedRoleIds []string               `protobuf:"bytes,13,rep,name=mentioned_role_ids,json=mentionedRoleIds,proto3" json:"mentioned_role_ids,omitempty"`
 	KeyVersion       uint32                 `protobuf:"varint,14,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"` // Static channel key version used for encryption
+	Type             MessageType            `protobuf:"varint,15,opt,name=type,proto3,enum=meza.v1.MessageType" json:"type,omitempty"`      // 0 = regular message, >0 = system message subtype
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -924,6 +985,13 @@ func (x *Message) GetKeyVersion() uint32 {
 		return x.KeyVersion
 	}
 	return 0
+}
+
+func (x *Message) GetType() MessageType {
+	if x != nil {
+		return x.Type
+	}
+	return MessageType_MESSAGE_TYPE_DEFAULT
 }
 
 type LinkEmbed struct {
@@ -2251,7 +2319,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\auser_id\x18\x06 \x01(\tR\x06userId\"j\n" +
 	"\tDMChannel\x12*\n" +
 	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\x121\n" +
-	"\fparticipants\x18\x02 \x03(\v2\r.meza.v1.UserR\fparticipants\"\xcc\x04\n" +
+	"\fparticipants\x18\x02 \x03(\v2\r.meza.v1.UserR\fparticipants\"\xf6\x04\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -2269,7 +2337,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x10mention_everyone\x18\f \x01(\bR\x0fmentionEveryone\x12,\n" +
 	"\x12mentioned_role_ids\x18\r \x03(\tR\x10mentionedRoleIds\x12\x1f\n" +
 	"\vkey_version\x18\x0e \x01(\rR\n" +
-	"keyVersionB\x0e\n" +
+	"keyVersion\x12(\n" +
+	"\x04type\x18\x0f \x01(\x0e2\x14.meza.v1.MessageTypeR\x04typeB\x0e\n" +
 	"\f_reply_to_idJ\x04\b\x05\x10\x06R\x0eratchet_header\"\xa5\x02\n" +
 	"\tLinkEmbed\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\x12\x14\n" +
@@ -2406,7 +2475,14 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
 	"\x12CHANNEL_TYPE_VOICE\x10\x02\x12\x13\n" +
 	"\x0fCHANNEL_TYPE_DM\x10\x03\x12\x19\n" +
-	"\x15CHANNEL_TYPE_GROUP_DM\x10\x04B\x85\x01\n" +
+	"\x15CHANNEL_TYPE_GROUP_DM\x10\x04*\xc2\x01\n" +
+	"\vMessageType\x12\x18\n" +
+	"\x14MESSAGE_TYPE_DEFAULT\x10\x00\x12\x1c\n" +
+	"\x18MESSAGE_TYPE_MEMBER_JOIN\x10\x01\x12\x1d\n" +
+	"\x19MESSAGE_TYPE_MEMBER_LEAVE\x10\x02\x12\x1c\n" +
+	"\x18MESSAGE_TYPE_MEMBER_KICK\x10\x03\x12\x1f\n" +
+	"\x1bMESSAGE_TYPE_CHANNEL_UPDATE\x10\x04\x12\x1d\n" +
+	"\x19MESSAGE_TYPE_KEY_ROTATION\x10\x05B\x85\x01\n" +
 	"\vcom.meza.v1B\vModelsProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
@@ -2421,66 +2497,68 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 	return file_meza_v1_models_proto_rawDescData
 }
 
-var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_meza_v1_models_proto_goTypes = []any{
 	(ChannelType)(0),              // 0: meza.v1.ChannelType
-	(*User)(nil),                  // 1: meza.v1.User
-	(*UserConnection)(nil),        // 2: meza.v1.UserConnection
-	(*Server)(nil),                // 3: meza.v1.Server
-	(*Channel)(nil),               // 4: meza.v1.Channel
-	(*ChannelGroup)(nil),          // 5: meza.v1.ChannelGroup
-	(*PermissionOverride)(nil),    // 6: meza.v1.PermissionOverride
-	(*DMChannel)(nil),             // 7: meza.v1.DMChannel
-	(*Message)(nil),               // 8: meza.v1.Message
-	(*LinkEmbed)(nil),             // 9: meza.v1.LinkEmbed
-	(*Attachment)(nil),            // 10: meza.v1.Attachment
-	(*Member)(nil),                // 11: meza.v1.Member
-	(*Role)(nil),                  // 12: meza.v1.Role
-	(*Ban)(nil),                   // 13: meza.v1.Ban
-	(*Invite)(nil),                // 14: meza.v1.Invite
-	(*PinnedMessage)(nil),         // 15: meza.v1.PinnedMessage
-	(*CustomEmoji)(nil),           // 16: meza.v1.CustomEmoji
-	(*SoundboardSound)(nil),       // 17: meza.v1.SoundboardSound
-	(*AuditLogEntry)(nil),         // 18: meza.v1.AuditLogEntry
-	(*Reaction)(nil),              // 19: meza.v1.Reaction
-	(*ReactionGroup)(nil),         // 20: meza.v1.ReactionGroup
-	(*ReadState)(nil),             // 21: meza.v1.ReadState
-	(*AudioPreferences)(nil),      // 22: meza.v1.AudioPreferences
-	(*timestamppb.Timestamp)(nil), // 23: google.protobuf.Timestamp
+	(MessageType)(0),              // 1: meza.v1.MessageType
+	(*User)(nil),                  // 2: meza.v1.User
+	(*UserConnection)(nil),        // 3: meza.v1.UserConnection
+	(*Server)(nil),                // 4: meza.v1.Server
+	(*Channel)(nil),               // 5: meza.v1.Channel
+	(*ChannelGroup)(nil),          // 6: meza.v1.ChannelGroup
+	(*PermissionOverride)(nil),    // 7: meza.v1.PermissionOverride
+	(*DMChannel)(nil),             // 8: meza.v1.DMChannel
+	(*Message)(nil),               // 9: meza.v1.Message
+	(*LinkEmbed)(nil),             // 10: meza.v1.LinkEmbed
+	(*Attachment)(nil),            // 11: meza.v1.Attachment
+	(*Member)(nil),                // 12: meza.v1.Member
+	(*Role)(nil),                  // 13: meza.v1.Role
+	(*Ban)(nil),                   // 14: meza.v1.Ban
+	(*Invite)(nil),                // 15: meza.v1.Invite
+	(*PinnedMessage)(nil),         // 16: meza.v1.PinnedMessage
+	(*CustomEmoji)(nil),           // 17: meza.v1.CustomEmoji
+	(*SoundboardSound)(nil),       // 18: meza.v1.SoundboardSound
+	(*AuditLogEntry)(nil),         // 19: meza.v1.AuditLogEntry
+	(*Reaction)(nil),              // 20: meza.v1.Reaction
+	(*ReactionGroup)(nil),         // 21: meza.v1.ReactionGroup
+	(*ReadState)(nil),             // 22: meza.v1.ReadState
+	(*AudioPreferences)(nil),      // 23: meza.v1.AudioPreferences
+	(*timestamppb.Timestamp)(nil), // 24: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	23, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
-	22, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
-	2,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
-	23, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	24, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	23, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
+	3,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
+	24, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	23, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	23, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
-	4,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
-	1,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
-	10, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	23, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	23, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
-	9,  // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
-	23, // 13: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	23, // 14: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	23, // 15: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	23, // 16: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	23, // 17: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	23, // 18: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	23, // 19: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
-	8,  // 20: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	23, // 21: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	23, // 22: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	23, // 23: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	23, // 24: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	23, // 25: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
-	26, // [26:26] is the sub-list for method output_type
-	26, // [26:26] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	24, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	24, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	5,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
+	2,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
+	11, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
+	24, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	24, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	10, // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
+	1,  // 13: meza.v1.Message.type:type_name -> meza.v1.MessageType
+	24, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	24, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	24, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	24, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	24, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	24, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	24, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	9,  // 21: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
+	24, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	24, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	24, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	24, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	24, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	27, // [27:27] is the sub-list for method output_type
+	27, // [27:27] is the sub-list for method input_type
+	27, // [27:27] is the sub-list for extension type_name
+	27, // [27:27] is the sub-list for extension extendee
+	0,  // [0:27] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_models_proto_init() }
@@ -2497,7 +2575,7 @@ func file_meza_v1_models_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,

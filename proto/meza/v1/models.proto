@@ -88,6 +88,17 @@ enum ChannelType {
   CHANNEL_TYPE_GROUP_DM = 4;
 }
 
+// MessageType distinguishes regular user messages from server-generated system messages.
+// Sub-flavors (e.g., kick vs ban vs timeout) are differentiated by JSON content payload fields.
+enum MessageType {
+  MESSAGE_TYPE_DEFAULT        = 0; // regular user message
+  MESSAGE_TYPE_MEMBER_JOIN    = 1; // also used for group DM member add
+  MESSAGE_TYPE_MEMBER_LEAVE   = 2; // also used for group DM member remove
+  MESSAGE_TYPE_MEMBER_KICK    = 3; // content.action differentiates kick/ban/timeout
+  MESSAGE_TYPE_CHANNEL_UPDATE = 4; // content.field differentiates name/topic
+  MESSAGE_TYPE_KEY_ROTATION   = 5;
+}
+
 message DMChannel {
   Channel channel = 1;
   repeated User participants = 2;
@@ -109,6 +120,7 @@ message Message {
   bool mention_everyone = 12;
   repeated string mentioned_role_ids = 13;
   uint32 key_version = 14;  // Static channel key version used for encryption
+  MessageType type = 15;    // 0 = regular message, >0 = system message subtype
 }
 
 message LinkEmbed {
