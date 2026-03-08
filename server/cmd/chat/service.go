@@ -1864,6 +1864,16 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot update DM channels"))
 	}
 
+	// Prevent direct modification of companion text channels.
+	isCompanion, err := s.chatStore.IsVoiceTextCompanion(ctx, req.Msg.ChannelId)
+	if err != nil {
+		slog.Error("checking voice text companion", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if isCompanion {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("cannot update a voice text channel directly; update the parent voice channel instead"))
+	}
+
 	// Require ManageChannels permission.
 	_, _, _, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageChannels)
 	if permErr != nil {
@@ -1950,9 +1960,33 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 				if _, err := s.permissionOverrideStore.SetOverride(ctx, companionDeny); err != nil {
 					slog.Error("setting ViewChannel deny for companion on privacy toggle", "err", err)
 				}
+			} else {
+				// Remove the ViewChannel deny override from the companion when going public.
+				if err := s.permissionOverrideStore.DeleteOverride(ctx, updated.VoiceTextChannelID, everyoneRoleID); err != nil {
+					slog.Error("removing ViewChannel deny from companion on public toggle", "err", err)
+				}
 			}
-			// Public toggle: the companion override will be removed when privacy is removed on the voice channel.
-			// We don't need to explicitly remove it since the companion channel's privacy is also updated.
+		}
+
+		// Broadcast CHANNEL_UPDATE for the companion text channel so clients see the sync.
+		now := time.Now()
+		companionUpdated, compErr := s.chatStore.GetChannel(ctx, updated.VoiceTextChannelID)
+		if compErr == nil {
+			companionEvent := &v1.Event{
+				Id:        models.NewID(),
+				Type:      v1.EventType_EVENT_TYPE_CHANNEL_UPDATE,
+				Timestamp: timestamppb.New(now),
+				Payload: &v1.Event_ChannelUpdate{
+					ChannelUpdate: channelToProto(companionUpdated),
+				},
+			}
+			if eventData, err := proto.Marshal(companionEvent); err == nil {
+				companionPrivateID := ""
+				if companionUpdated.IsPrivate {
+					companionPrivateID = companionUpdated.ID
+				}
+				s.nc.Publish(subjects.ServerChannel(updated.ServerID), subjects.EncodeServerChannelEvent(eventData, companionPrivateID))
+			}
 		}
 	}
 

@@ -429,33 +429,34 @@ func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverI
 		groupID = &channelGroupID
 	}
 
-	// Create the voice channel.
-	var voiceCh models.Channel
+	// Create the companion text channel FIRST so the FK reference from the voice
+	// channel is valid (PostgreSQL checks FK constraints at statement time).
+	var textCh models.Channel
 	err = tx.QueryRow(ctx,
-		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, created_at)
-		 SELECT $1, $2, $3, 2, COALESCE(MAX(position), -1) + 1, $4, $5, $6, $7
-		 FROM channels WHERE server_id = $8
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
+		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $6
+		 FROM channels WHERE server_id = $7
 		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
-		voiceID, serverID, name, isPrivate, groupID, textID, now, serverID,
-	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.CreatedAt)
+		textID, serverID, name, isPrivate, groupID, now, serverID,
+	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, nil, fmt.Errorf("channel %w", ErrAlreadyExists)
 		}
-		return nil, nil, fmt.Errorf("insert voice channel: %w", err)
+		return nil, nil, fmt.Errorf("insert companion text channel: %w", err)
 	}
 
-	// Create the companion text channel (same name, same group, same privacy).
-	var textCh models.Channel
+	// Create the voice channel with FK reference to the companion.
+	var voiceCh models.Channel
 	err = tx.QueryRow(ctx,
-		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
-		 VALUES ($1, $2, $3, 1, $4, $5, $6, $7)
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, created_at)
+		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $8)
 		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
-		textID, serverID, name, voiceCh.Position, isPrivate, groupID, now,
-	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.CreatedAt)
+		voiceID, serverID, name, textCh.Position, isPrivate, groupID, textID, now,
+	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.CreatedAt)
 	if err != nil {
-		return nil, nil, fmt.Errorf("insert companion text channel: %w", err)
+		return nil, nil, fmt.Errorf("insert voice channel: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -1669,15 +1670,7 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 
 		if spec.Type == 2 { // CHANNEL_TYPE_VOICE — create with companion text channel.
 			textID := models.NewID()
-			_, err = tx.Exec(ctx,
-				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, voice_text_channel_id, created_at)
-				 VALUES ($1, $2, $3, 2, $4, $5, $6, NULL, $7, $8)`,
-				chID, serverID, spec.Name, i, spec.IsPrivate, spec.IsDefault, textID, now,
-			)
-			if err != nil {
-				return nil, nil, nil, fmt.Errorf("insert voice channel %q: %w", spec.Name, err)
-			}
-			// Create companion text channel (same name, same position, same privacy).
+			// Create companion text channel FIRST so the FK reference from the voice channel is valid.
 			_, err = tx.Exec(ctx,
 				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
 				 VALUES ($1, $2, $3, 1, $4, $5, false, NULL, $6)`,
@@ -1685,6 +1678,14 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 			)
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("insert companion text channel for %q: %w", spec.Name, err)
+			}
+			_, err = tx.Exec(ctx,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, voice_text_channel_id, created_at)
+				 VALUES ($1, $2, $3, 2, $4, $5, $6, NULL, $7, $8)`,
+				chID, serverID, spec.Name, i, spec.IsPrivate, spec.IsDefault, textID, now,
+			)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("insert voice channel %q: %w", spec.Name, err)
 			}
 			channels = append(channels, &models.Channel{
 				ID:                 chID,

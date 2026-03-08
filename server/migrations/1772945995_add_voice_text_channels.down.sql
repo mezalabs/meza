@@ -1,5 +1,8 @@
--- Remove companion text channels first (they reference voice channels).
-DELETE FROM channels WHERE voice_text_channel_id IS NOT NULL;
+-- Delete companion text channels (referenced BY voice channels via voice_text_channel_id).
+DELETE FROM channels WHERE id IN (SELECT voice_text_channel_id FROM channels WHERE voice_text_channel_id IS NOT NULL);
+
+-- Now clear the FK column and delete the voice channels that had companions.
+UPDATE channels SET voice_text_channel_id = NULL;
 
 -- Drop the new indexes and column.
 DROP INDEX IF EXISTS idx_channels_voice_text_channel_id;
