@@ -5,18 +5,16 @@
  * Call `bootstrapSession()` after login/registration or on app reload
  * when the user is already authenticated.
  *
- * The master key is cached so the encrypted key bundle in IndexedDB can be
- * decrypted without re-entering the password:
- *   - Web: sessionStorage (survives reload, cleared on tab close)
- *   - Mobile (Capacitor): sessionStorage (survives reload within same WebView
- *     lifecycle; cleared when OS kills the process, requiring re-login)
+ * The master key is cached in localStorage so the encrypted key bundle in
+ * IndexedDB can be decrypted without re-entering the password on page
+ * reload or app restart (including Capacitor mobile shells).
  *
- * NOTE: We intentionally use sessionStorage on all platforms. On mobile,
- * the OS may kill the process and clear the key, but using localStorage
- * would persist the master key in plaintext on disk indefinitely — an
- * unacceptable risk for the most sensitive secret in the E2EE system.
- * When Capacitor Secure Storage or iOS Keychain integration is added,
- * mobile can use that for persistence across process restarts.
+ * Trade-off: localStorage persists the master key on disk in plaintext.
+ * The threat model assumes the device itself is trusted — an attacker
+ * with filesystem access to the device can already extract IndexedDB,
+ * browser profile data, etc. A future improvement is to use Capacitor
+ * Secure Storage (iOS Keychain / Android Keystore) on mobile for
+ * hardware-backed key storage.
  */
 
 import {
@@ -38,8 +36,8 @@ const readyListeners: Array<() => void> = [];
 const MK_SESSION_KEY = 'meza-mk';
 
 function mkStorage(): Storage | undefined {
-  if (typeof sessionStorage === 'undefined') return undefined;
-  return sessionStorage;
+  if (typeof localStorage === 'undefined') return undefined;
+  return localStorage;
 }
 
 function storeMasterKey(key: Uint8Array): void {
@@ -70,8 +68,8 @@ function clearMasterKey(): void {
  * Bootstrap the E2EE session from the encrypted key bundle in IndexedDB.
  *
  * If a masterKey is provided (login/registration), it's used to decrypt the
- * key bundle and cached in sessionStorage for page reloads. On page reload,
- * the cached master key from sessionStorage is used.
+ * key bundle and cached in localStorage for page reloads. On page reload,
+ * the cached master key from localStorage is used.
  *
  * Returns true if the session was initialized, false if unable to decrypt.
  */
@@ -96,7 +94,7 @@ async function doBootstrap(masterKey?: Uint8Array): Promise<boolean> {
   const restored = await restoreIdentity(key);
   if (!restored) return false;
 
-  // Cache master key in sessionStorage for page reloads
+  // Cache master key in localStorage for page reloads
   if (masterKey) storeMasterKey(masterKey);
 
   identity = restored;
