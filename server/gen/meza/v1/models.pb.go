@@ -1244,8 +1244,8 @@ type Member struct {
 	TimedOutUntil         *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=timed_out_until,json=timedOutUntil,proto3,oneof" json:"timed_out_until,omitempty"`
 	OnboardingCompletedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=onboarding_completed_at,json=onboardingCompletedAt,proto3,oneof" json:"onboarding_completed_at,omitempty"`
 	RulesAcknowledgedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=rules_acknowledged_at,json=rulesAcknowledgedAt,proto3,oneof" json:"rules_acknowledged_at,omitempty"`
-	// Federation: home server user ID for federated users (empty for local users).
-	// Enables client-side correlation of shadow users to home identities.
+	// Federation: origin user ID for federated users (empty for local users).
+	// Enables client-side correlation of shadow users to origin identities.
 	HomeUserId string `protobuf:"bytes,9,opt,name=home_user_id,json=homeUserId,proto3" json:"home_user_id,omitempty"`
 	// Inviter user ID, populated only on MEMBER_JOIN events for key distribution election.
 	InviterUserId string `protobuf:"bytes,10,opt,name=inviter_user_id,json=inviterUserId,proto3" json:"inviter_user_id,omitempty"`
@@ -2645,8 +2645,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x19MESSAGE_TYPE_MEMBER_LEAVE\x10\x02\x12\x1c\n" +
 	"\x18MESSAGE_TYPE_MEMBER_KICK\x10\x03\x12\x1f\n" +
 	"\x1bMESSAGE_TYPE_CHANNEL_UPDATE\x10\x04\x12\x1d\n" +
-	"\x19MESSAGE_TYPE_KEY_ROTATION\x10\x05B\x85\x01\n" +
-	"\vcom.meza.v1B\vModelsProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\x19MESSAGE_TYPE_KEY_ROTATION\x10\x05B\x84\x01\n" +
+	"\vcom.meza.v1B\vModelsProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_models_proto_rawDescOnce sync.Once

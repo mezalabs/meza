@@ -55,13 +55,13 @@ const (
 
 // FederationServiceClient is a client for the meza.v1.FederationService service.
 type FederationServiceClient interface {
-	// Home server only: create a scoped assertion for a target instance
+	// Origin only: create a scoped assertion for a target host instance
 	CreateFederationAssertion(context.Context, *connect.Request[v1.CreateFederationAssertionRequest]) (*connect.Response[v1.CreateFederationAssertionResponse], error)
-	// Remote instances: join a guild with a federation assertion
+	// Host instances: join a guild with a federation assertion
 	FederationJoin(context.Context, *connect.Request[v1.FederationJoinRequest]) (*connect.Response[v1.FederationJoinResponse], error)
-	// Remote instances: refresh local token (requires fresh assertion)
+	// Host instances: refresh local token (requires fresh assertion)
 	FederationRefresh(context.Context, *connect.Request[v1.FederationRefreshRequest]) (*connect.Response[v1.FederationRefreshResponse], error)
-	// Remote instances: leave a guild
+	// Host instances: leave a guild
 	FederationLeave(context.Context, *connect.Request[v1.FederationLeaveRequest]) (*connect.Response[v1.FederationLeaveResponse], error)
 	// Resolve an invite URL to instance_url + invite_code
 	ResolveRemoteInvite(context.Context, *connect.Request[v1.ResolveRemoteInviteRequest]) (*connect.Response[v1.ResolveRemoteInviteResponse], error)
@@ -161,13 +161,13 @@ func (c *federationServiceClient) ListFederatedMemberships(ctx context.Context, 
 
 // FederationServiceHandler is an implementation of the meza.v1.FederationService service.
 type FederationServiceHandler interface {
-	// Home server only: create a scoped assertion for a target instance
+	// Origin only: create a scoped assertion for a target host instance
 	CreateFederationAssertion(context.Context, *connect.Request[v1.CreateFederationAssertionRequest]) (*connect.Response[v1.CreateFederationAssertionResponse], error)
-	// Remote instances: join a guild with a federation assertion
+	// Host instances: join a guild with a federation assertion
 	FederationJoin(context.Context, *connect.Request[v1.FederationJoinRequest]) (*connect.Response[v1.FederationJoinResponse], error)
-	// Remote instances: refresh local token (requires fresh assertion)
+	// Host instances: refresh local token (requires fresh assertion)
 	FederationRefresh(context.Context, *connect.Request[v1.FederationRefreshRequest]) (*connect.Response[v1.FederationRefreshResponse], error)
-	// Remote instances: leave a guild
+	// Host instances: leave a guild
 	FederationLeave(context.Context, *connect.Request[v1.FederationLeaveRequest]) (*connect.Response[v1.FederationLeaveResponse], error)
 	// Resolve an invite URL to instance_url + invite_code
 	ResolveRemoteInvite(context.Context, *connect.Request[v1.ResolveRemoteInviteRequest]) (*connect.Response[v1.ResolveRemoteInviteResponse], error)

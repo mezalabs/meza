@@ -12786,8 +12786,8 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x10GetMutualServers\x12 .meza.v1.GetMutualServersRequest\x1a!.meza.v1.GetMutualServersResponse\x12W\n" +
 	"\x10GetMutualFriends\x12 .meza.v1.GetMutualFriendsRequest\x1a!.meza.v1.GetMutualFriendsResponse\x12i\n" +
 	"\x16GetSystemMessageConfig\x12&.meza.v1.GetSystemMessageConfigRequest\x1a'.meza.v1.GetSystemMessageConfigResponse\x12r\n" +
-	"\x19UpdateSystemMessageConfig\x12).meza.v1.UpdateSystemMessageConfigRequest\x1a*.meza.v1.UpdateSystemMessageConfigResponseB\x83\x01\n" +
-	"\vcom.meza.v1B\tChatProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\x19UpdateSystemMessageConfig\x12).meza.v1.UpdateSystemMessageConfigRequest\x1a*.meza.v1.UpdateSystemMessageConfigResponseB\x82\x01\n" +
+	"\vcom.meza.v1B\tChatProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_chat_proto_rawDescOnce sync.Once

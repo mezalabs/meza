@@ -363,8 +363,8 @@ const file_meza_v1_notification_proto_rawDesc = "" +
 	"\x13NotificationService\x12u\n" +
 	"\x1aGetNotificationPreferences\x12*.meza.v1.GetNotificationPreferencesRequest\x1a+.meza.v1.GetNotificationPreferencesResponse\x12{\n" +
 	"\x1cUpdateNotificationPreference\x12,.meza.v1.UpdateNotificationPreferenceRequest\x1a-.meza.v1.UpdateNotificationPreferenceResponse\x12Z\n" +
-	"\x11GetVAPIDPublicKey\x12!.meza.v1.GetVAPIDPublicKeyRequest\x1a\".meza.v1.GetVAPIDPublicKeyResponseB\x8b\x01\n" +
-	"\vcom.meza.v1B\x11NotificationProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\x11GetVAPIDPublicKey\x12!.meza.v1.GetVAPIDPublicKeyRequest\x1a\".meza.v1.GetVAPIDPublicKeyResponseB\x8a\x01\n" +
+	"\vcom.meza.v1B\x11NotificationProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_notification_proto_rawDescOnce sync.Once
