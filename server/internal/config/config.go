@@ -1,6 +1,10 @@
 package config
 
-import "github.com/kelseyhightower/envconfig"
+import (
+	"strings"
+
+	"github.com/kelseyhightower/envconfig"
+)
 
 // Config holds all service configuration. Fields are populated from
 // MEZA_* environment variables via envconfig.
@@ -31,9 +35,9 @@ type Config struct {
 	SMTPPassword string `envconfig:"SMTP_PASSWORD"`
 
 	// Federation
-	FederationEnabled    bool   `envconfig:"FEDERATION_ENABLED" default:"false"`
-	TrustedHomeServers   string `envconfig:"TRUSTED_HOME_SERVERS" default:"https://meza.chat"` // Comma-separated
-	FederationInstanceURL string `envconfig:"FEDERATION_INSTANCE_URL"` // This instance's public URL
+	FederationEnabled bool   `envconfig:"FEDERATION_ENABLED" default:"false"`
+	OriginURL         string `envconfig:"ORIGIN_URL" default:"https://meza.chat"` // Single origin (identity provider)
+	InstanceURL       string `envconfig:"INSTANCE_URL"`                           // This instance's public URL
 
 	// Database
 	PostgresURL string `envconfig:"POSTGRES_URL"`
@@ -70,5 +74,8 @@ type Config struct {
 func MustLoad() *Config {
 	var cfg Config
 	envconfig.MustProcess("MEZA", &cfg)
+	// Normalize URLs to prevent trailing-slash mismatch with JWT iss claims
+	cfg.OriginURL = strings.TrimRight(cfg.OriginURL, "/")
+	cfg.InstanceURL = strings.TrimRight(cfg.InstanceURL, "/")
 	return &cfg
 }

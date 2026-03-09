@@ -78,7 +78,7 @@ func main() {
 
 	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc)
 	gw.ed25519Keys = ed25519Keys
-	gw.instanceURL = cfg.FederationInstanceURL
+	gw.instanceURL = cfg.InstanceURL
 	gw.verificationCache = auth.NewVerificationCache()
 
 	if err := gw.Start(ctx); err != nil {

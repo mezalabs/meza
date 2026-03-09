@@ -261,28 +261,52 @@ func TestLoadEd25519KeysInvalidPEM(t *testing.T) {
 	}
 }
 
-func TestParseTrustedHomeServers(t *testing.T) {
-	tests := []struct {
-		input string
-		want  []string
-	}{
-		{"", nil},
-		{"https://home.example.com", []string{"https://home.example.com"}},
-		{"https://a.com, https://b.com", []string{"https://a.com", "https://b.com"}},
-		{"  https://a.com , https://b.com , ", []string{"https://a.com", "https://b.com"}},
+func TestFederationAssertionLeeway(t *testing.T) {
+	keys := generateTestKeys(t)
+	issuer := "https://origin.example.com"
+	audience := "https://host.example.com"
+
+	// Create an assertion that expired 10 seconds ago — within 15s leeway
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"sub":          "user1",
+		"iss":          issuer,
+		"aud":          audience,
+		"purpose":      "federation",
+		"display_name": "Alice",
+		"jti":          "leeway-test",
+		"iat":          now.Add(-70 * time.Second).Unix(),
+		"exp":          now.Add(-10 * time.Second).Unix(), // expired 10s ago
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	token.Header["kid"] = keys.KeyID
+	signed, err := token.SignedString(keys.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	for _, tt := range tests {
-		got := ParseTrustedHomeServers(tt.input)
-		if len(got) != len(tt.want) {
-			t.Errorf("ParseTrustedHomeServers(%q) = %v, want %v", tt.input, got, tt.want)
-			continue
-		}
-		for i := range got {
-			if got[i] != tt.want[i] {
-				t.Errorf("ParseTrustedHomeServers(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.want[i])
-			}
-		}
+	// Should succeed — 10s expired is within 15s leeway
+	result, err := ValidateFederationAssertion(signed, keys.PublicKey, audience)
+	if err != nil {
+		t.Fatalf("expected leeway to accept token expired by 10s, got: %v", err)
+	}
+	if result.UserID != "user1" {
+		t.Errorf("UserID = %q, want %q", result.UserID, "user1")
+	}
+
+	// Create an assertion expired 20s ago — outside 15s leeway
+	claims["exp"] = now.Add(-20 * time.Second).Unix()
+	claims["jti"] = "leeway-test-2"
+	token2 := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
+	token2.Header["kid"] = keys.KeyID
+	signed2, err := token2.SignedString(keys.PrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ValidateFederationAssertion(signed2, keys.PublicKey, audience)
+	if err == nil {
+		t.Fatal("expected error for token expired beyond leeway")
 	}
 }
 

@@ -8,7 +8,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -28,7 +27,7 @@ type Claims struct {
 	DeviceID    string
 	IsRefresh   bool
 	IsFederated bool      // true for federated shadow users (embedded in JWT)
-	Issuer      string    // Home server URL (e.g. "https://home.example.com")
+	Issuer      string    // Origin URL (e.g. "https://meza.chat")
 	ExpiresAt   time.Time // Token expiry, used for verification cache TTL
 }
 
@@ -171,7 +170,7 @@ func GenerateTokenPairEd25519(userID, deviceID string, keys *Ed25519Keys, issuer
 }
 
 // GenerateFederationAssertion creates a short-lived, audience-scoped JWT
-// for federation join/refresh. Cannot be used for any home server API calls.
+// for federation join/refresh. Cannot be used for any origin API calls.
 func GenerateFederationAssertion(userID, displayName, avatarURL string, keys *Ed25519Keys, issuer, audience string) (string, error) {
 	now := time.Now()
 
@@ -213,10 +212,11 @@ type FederationAssertionClaims struct {
 
 // ValidateFederationAssertion validates a federation assertion JWT.
 // Checks purpose=federation, audience matches, and Ed25519 signature.
+// Applies ±15s clock skew leeway for cross-instance clock drift.
 func ValidateFederationAssertion(tokenString string, publicKey ed25519.PublicKey, expectedAudience string) (*FederationAssertionClaims, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		return publicKey, nil
-	}, jwt.WithValidMethods([]string{"EdDSA"}))
+	}, jwt.WithValidMethods([]string{"EdDSA"}), jwt.WithLeeway(15*time.Second))
 	if err != nil {
 		return nil, fmt.Errorf("parsing assertion: %w", err)
 	}
@@ -394,18 +394,3 @@ func randomID() string {
 	return hex.EncodeToString(b)
 }
 
-// ParseTrustedHomeServers splits a comma-separated list of trusted home server URLs.
-func ParseTrustedHomeServers(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			result = append(result, p)
-		}
-	}
-	return result
-}
