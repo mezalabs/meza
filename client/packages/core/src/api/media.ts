@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from '../store/auth.ts';
 import { getBaseUrl, isCapacitor } from '../utils/platform.ts';
 import { transport } from './client.ts';
+import { enqueueMedia } from './media-queue.ts';
 
 /**
  * In Capacitor DEV mode, the phone can't reach the S3 host (localhost:9000)
@@ -106,23 +107,28 @@ export async function getDownloadURL(
 /**
  * Fetch encrypted media bytes from the server.
  * Downloads via presigned URL and returns the raw encrypted bytes.
+ *
+ * Requests are queued through a shared concurrency semaphore to avoid
+ * overwhelming the server rate limit when many thumbnails load at once.
  */
 export async function fetchEncryptedMedia(
   attachmentId: string,
   thumbnail = false,
 ): Promise<Uint8Array> {
-  const url = await getDownloadURL(attachmentId, thumbnail);
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch media: ${response.status}`);
-  }
-  const ct = response.headers.get('content-type') ?? '';
-  if (ct.startsWith('text/html') || ct.startsWith('application/xml')) {
-    throw new Error(
-      `Unexpected content-type "${ct}" for ${attachmentId} (URL: ${url})`,
-    );
-  }
-  return new Uint8Array(await response.arrayBuffer());
+  return enqueueMedia(async () => {
+    const url = await getDownloadURL(attachmentId, thumbnail);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media: ${response.status}`);
+    }
+    const ct = response.headers.get('content-type') ?? '';
+    if (ct.startsWith('text/html') || ct.startsWith('application/xml')) {
+      throw new Error(
+        `Unexpected content-type "${ct}" for ${attachmentId} (URL: ${url})`,
+      );
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  });
 }
 
 /**
