@@ -146,9 +146,6 @@ func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remo
 // ErrBannedFromServer is returned when a banned user tries to join via federation.
 var ErrBannedFromServer = errors.New("user is banned from this server")
 
-// ErrShadowUserNotFound is returned when UpdateShadowUserProfile matches no rows.
-var ErrShadowUserNotFound = errors.New("shadow user not found")
-
 func (s *FederationStore) UpdateShadowUserProfile(ctx context.Context, userID, displayName, avatarURL string) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -161,8 +158,8 @@ func (s *FederationStore) UpdateShadowUserProfile(ctx context.Context, userID, d
 	if err != nil {
 		return fmt.Errorf("update shadow user profile: %w", err)
 	}
-	if result.RowsAffected() == 0 {
-		return ErrShadowUserNotFound
-	}
+	// No rows affected means the shadow user doesn't exist (yet); treat as
+	// a harmless no-op so callers don't need to handle a not-found case.
+	_ = result.RowsAffected()
 	return nil
 }

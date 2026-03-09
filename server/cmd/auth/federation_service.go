@@ -49,6 +49,33 @@ func (s *federationService) consumeJTI(ctx context.Context, jti string) (bool, e
 	return ok, nil
 }
 
+// checkJTIReplay parses the raw assertion token (unverified) to extract the jti
+// claim and ensures it has not been used before. Returns an error if the jti is
+// missing, empty, or has already been consumed.
+func (s *federationService) checkJTIReplay(ctx context.Context, rawToken string) error {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	unverified, _, err := parser.ParseUnverified(rawToken, jwt.MapClaims{})
+	if err != nil || unverified == nil {
+		return fmt.Errorf("failed to parse token for jti: %w", err)
+	}
+	mc, ok := unverified.Claims.(jwt.MapClaims)
+	if !ok {
+		return errors.New("unexpected claims type")
+	}
+	jti, ok := mc["jti"].(string)
+	if !ok || jti == "" {
+		return errors.New("missing or empty jti claim")
+	}
+	consumed, err := s.consumeJTI(ctx, jti)
+	if err != nil {
+		return fmt.Errorf("jti replay check: %w", err)
+	}
+	if !consumed {
+		return errors.New("assertion already consumed")
+	}
+	return nil
+}
+
 // sanitizeFederationProfile validates and cleans federation profile claims.
 func sanitizeFederationProfile(displayName, avatarURL string) (string, string) {
 	// Limit display_name to 64 characters
@@ -160,7 +187,7 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("federation not enabled on this instance"))
 	}
 
-	// Verify the federation assertion from the home server
+	// Verify the federation assertion from the origin
 	assertionClaims, err := s.verifier.VerifyAssertion(ctx, req.Msg.AssertionToken)
 	if err != nil {
 		slog.Warn("federation assertion verification failed", "err", err)
@@ -168,21 +195,12 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 	}
 
 	// Check for assertion replay
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	unverified, _, _ := parser.ParseUnverified(req.Msg.AssertionToken, jwt.MapClaims{})
-	if unverified != nil {
-		if mc, ok := unverified.Claims.(jwt.MapClaims); ok {
-			if jti, ok := mc["jti"].(string); ok && jti != "" {
-				consumed, err := s.consumeJTI(ctx, jti)
-				if err != nil {
-					slog.Error("jti replay check", "err", err)
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				if !consumed {
-					return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
-				}
-			}
+	if err := s.checkJTIReplay(ctx, req.Msg.AssertionToken); err != nil {
+		slog.Error("jti replay check", "err", err)
+		if err.Error() == "assertion already consumed" {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
 		}
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid federation assertion: "+err.Error()))
 	}
 
 	// Sanitize federation profile claims
@@ -209,7 +227,13 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 		}
 	}
 
-	// Resolve invite code to a server
+	// Resolve invite code to a server.
+	// NOTE: ConsumeInvite runs outside the FederationJoinTx transaction, so a
+	// ban applied between the pre-check above and here could waste a single-use
+	// invite (the in-tx ban check in FederationJoinTx will still block
+	// membership creation). This is an accepted trade-off: the race window is
+	// narrow, the impact is limited to invite waste (not a security bypass),
+	// and the pre-check handles the common case.
 	invite, err := s.inviteStore.ConsumeInvite(ctx, req.Msg.InviteCode)
 	if err != nil || invite == nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found or expired"))
@@ -341,21 +365,12 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 	}
 
 	// Check for assertion replay
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	unverified, _, _ := parser.ParseUnverified(req.Msg.AssertionToken, jwt.MapClaims{})
-	if unverified != nil {
-		if mc, ok := unverified.Claims.(jwt.MapClaims); ok {
-			if jti, ok := mc["jti"].(string); ok && jti != "" {
-				consumed, err := s.consumeJTI(ctx, jti)
-				if err != nil {
-					slog.Error("jti replay check", "err", err)
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				if !consumed {
-					return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
-				}
-			}
+	if err := s.checkJTIReplay(ctx, req.Msg.AssertionToken); err != nil {
+		slog.Error("jti replay check", "err", err)
+		if err.Error() == "assertion already consumed" {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
 		}
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid federation assertion: "+err.Error()))
 	}
 
 	// Cross-check: assertion identity must match the shadow user bound to the refresh token.
