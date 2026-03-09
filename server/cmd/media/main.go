@@ -96,8 +96,12 @@ func main() {
 	// Start background cleanup of orphaned uploads.
 	startCleanup(ctx, mediaStore, s3Client)
 
-	// Rate limit: 5 req/s burst 10 per IP.
-	limiter := ratelimit.New(5, 10)
+	// Rate limiters per IP — separate budgets for RPCs vs media redirects.
+	// The redirect endpoint is a lightweight 302 so it can tolerate higher
+	// throughput; channels with many images trigger dozens of thumbnail
+	// requests when first scrolled into view.
+	rpcLimiter := ratelimit.New(10, 20)
+	redirectLimiter := ratelimit.New(30, 50)
 
 	mux := http.NewServeMux()
 
@@ -123,11 +127,11 @@ func main() {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("internal error"))
 		}),
 	)
-	mux.Handle(path, limiter.Wrap(handler))
+	mux.Handle(path, rpcLimiter.Wrap(handler))
 
 	// Stable redirect endpoint for media URLs (requires authentication).
 	authMiddleware := auth.RequireHTTPAuth(ed25519PubKey)
-	mux.Handle("/media/", limiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, accessChk, s3Public))))
+	mux.Handle("/media/", redirectLimiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, accessChk, s3Public))))
 
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())
