@@ -23,4 +23,4 @@ managed:
   enabled: true
   override:
     - file_option: go_package_prefix
-      value: github.com/meza-chat/meza/gen
+      value: github.com/mezalabs/meza/gen

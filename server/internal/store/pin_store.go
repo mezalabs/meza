@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/meza-chat/meza/internal/models"
+	"github.com/mezalabs/meza/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

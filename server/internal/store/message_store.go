@@ -9,7 +9,7 @@ import (
 	"github.com/gocql/gocql"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/meza-chat/meza/internal/models"
+	"github.com/mezalabs/meza/internal/models"
 )
 
 var deletedContentSentinel = []byte{}

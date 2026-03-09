@@ -10,7 +10,7 @@ It supports text messaging, voice, and video — with end-to-end encryption by d
 1. **Dead simple to use** — No key management prompts, no recovery phrases. Users sign up and chat.
 2. **Lean infrastructure** — Minimal services, maximum throughput per node.
 3. **E2EE by default** — Server never sees plaintext messages. Liability is minimized.
-4. **Portable** — Runs in browser, Electron desktop, and (future) mobile.
+4. **Portable** — Runs in browser, Electron desktop, and mobile (iOS/Android via Capacitor).
 5. **Third-party friendly** — ConnectRPC with auto-generated client libraries.
 
 ---
@@ -19,7 +19,7 @@ It supports text messaging, voice, and video — with end-to-end encryption by d
 
 | Layer | Technology | Version Target | Rationale |
 |-------|-----------|----------------|-----------|
-| Server language | Go | 1.23+ | Goroutine-per-connection model, low memory, fast compilation |
+| Server language | Go | 1.25+ | Goroutine-per-connection model, low memory, fast compilation |
 | Client language | TypeScript | 5.x | Type safety, broad ecosystem |
 | Client framework | React | 19+ | Component model, hooks, concurrent rendering |
 | Desktop shell | Electron | 34+ | Cross-platform desktop (Windows, macOS, Linux) |
@@ -353,11 +353,11 @@ meza/
 │   │   ├── core/                # Shared logic: state, API client, crypto, tiling
 │   │   ├── ui/                  # React component library
 │   │   ├── web/                 # Browser app (Vite)
-│   │   └── desktop/             # Electron shell
+│   │   ├── desktop/             # Electron shell
+│   │   └── mobile/              # Capacitor native shell (iOS/Android)
 │   └── gen/                     # Generated ConnectRPC TypeScript code (do not edit)
 ├── deploy/                      # Docker Compose, Caddy configs
-├── Taskfile.yml                 # Development task runner
-└── DESIGN.md                    # Design system documentation
+└── Taskfile.yml                 # Development task runner
 ```
 
 ---

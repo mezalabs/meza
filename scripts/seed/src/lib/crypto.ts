@@ -5,32 +5,9 @@
  * so that seed users are fully loginable through the normal browser UI.
  */
 
-import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, resolve } from 'node:path';
-
 const HKDF_INFO_MASTER = new TextEncoder().encode('meza-master-key');
 const HKDF_INFO_AUTH = new TextEncoder().encode('meza-auth-key');
 const HKDF_SALT = new Uint8Array(32); // Zero-salt (input is already high-entropy Argon2id output)
-
-let wasmInitialized = false;
-
-/**
- * Initialize the OpenMLS WASM module for Node.js.
- * Must be called before generateKeyBundle().
- */
-export async function initWasm(): Promise<void> {
-  if (wasmInitialized) return;
-
-  const mls = await import('openmls-wasm');
-  const require = createRequire(import.meta.url);
-  const pkgDir = dirname(require.resolve('openmls-wasm/package.json'));
-  const wasmPath = resolve(pkgDir, 'openmls_wasm_bg.wasm');
-  const wasmBytes = readFileSync(wasmPath);
-
-  mls.initSync({ module: wasmBytes });
-  wasmInitialized = true;
-}
 
 export interface DerivedKeys {
   masterKey: Uint8Array;
@@ -82,41 +59,6 @@ export async function deriveKeys(
     masterKey: new Uint8Array(masterBits),
     authKey: new Uint8Array(authBits),
   };
-}
-
-/**
- * Generate an MLS Identity key bundle (Ed25519 keypair) and return serialized bytes.
- * Requires initWasm() to have been called first.
- */
-export async function generateKeyBundle(credentialName: string): Promise<Uint8Array> {
-  const mls = await import('openmls-wasm');
-  const provider = new mls.Provider();
-  const identity = new mls.Identity(provider, credentialName);
-  return identity.to_bytes();
-}
-
-/**
- * Encrypt a key bundle with AES-256-GCM using the master key.
- * Matches packages/core/src/crypto/keys.ts encryptKeyBundle().
- */
-export async function encryptKeyBundle(
-  masterKey: Uint8Array,
-  plaintext: Uint8Array,
-): Promise<{ ciphertext: Uint8Array; iv: Uint8Array }> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const aesKey = await crypto.subtle.importKey(
-    'raw',
-    masterKey,
-    'AES-GCM',
-    false,
-    ['encrypt'],
-  );
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
-    aesKey,
-    plaintext,
-  );
-  return { ciphertext: new Uint8Array(ciphertext), iv };
 }
 
 /**

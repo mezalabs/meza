@@ -2646,7 +2646,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x18MESSAGE_TYPE_MEMBER_KICK\x10\x03\x12\x1f\n" +
 	"\x1bMESSAGE_TYPE_CHANNEL_UPDATE\x10\x04\x12\x1d\n" +
 	"\x19MESSAGE_TYPE_KEY_ROTATION\x10\x05B\x85\x01\n" +
-	"\vcom.meza.v1B\vModelsProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\vcom.meza.v1B\vModelsProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_models_proto_rawDescOnce sync.Once

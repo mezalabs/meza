@@ -10,10 +10,10 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/subjects"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/subjects"
 )
 
 var errUnableToMessage = connect.NewError(connect.CodePermissionDenied, errors.New("Unable to message this user"))

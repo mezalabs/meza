@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Meza. This guide covers how to se
 
 ## Prerequisites
 
-- [Go](https://go.dev/) 1.24+
+- [Go](https://go.dev/) 1.25+
 - [Node.js](https://nodejs.org/) 22+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/) 9+
 - [Docker](https://www.docker.com/) and Docker Compose
@@ -14,7 +14,7 @@ Thank you for your interest in contributing to Meza. This guide covers how to se
 ## Getting Started
 
 ```bash
-git clone https://github.com/meza-chat/meza.git
+git clone https://github.com/mezalabs/meza.git
 cd meza
 cp .env.example .env
 task start
@@ -96,5 +96,5 @@ See `docs/ARCHITECTURE.md` for a detailed overview of the system design, service
 
 ## Reporting Issues
 
-- Use [GitHub Issues](https://github.com/meza-chat/meza/issues) for bug reports and feature requests
+- Use [GitHub Issues](https://github.com/mezalabs/meza/issues) for bug reports and feature requests
 - For security vulnerabilities, see [SECURITY.md](SECURITY.md)

@@ -555,7 +555,7 @@ tasks:
   build:prod:
     desc: Build all production Docker images (9 services + client)
     vars:
-      REGISTRY: '{{.REGISTRY | default "ghcr.io/meza-chat/meza"}}'
+      REGISTRY: '{{.REGISTRY | default "ghcr.io/mezalabs/meza"}}'
       IMAGE_TAG:
         sh: echo "{{.CLI_ARGS}}" | grep -q . && echo "{{.CLI_ARGS}}" || git rev-parse --short HEAD
     env:
@@ -567,7 +567,7 @@ tasks:
   build:prod:push:
     desc: Build and push all production images to registry
     vars:
-      REGISTRY: '{{.REGISTRY | default "ghcr.io/meza-chat/meza"}}'
+      REGISTRY: '{{.REGISTRY | default "ghcr.io/mezalabs/meza"}}'
       IMAGE_TAG:
         sh: echo "{{.CLI_ARGS}}" | grep -q . && echo "{{.CLI_ARGS}}" || git rev-parse --short HEAD
     deps: [build:prod]

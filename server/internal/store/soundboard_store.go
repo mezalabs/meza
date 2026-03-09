@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/meza-chat/meza/internal/models"
+	"github.com/mezalabs/meza/internal/models"
 )
 
 // SoundboardStore implements SoundboardStorer using PostgreSQL.

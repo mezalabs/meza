@@ -15,10 +15,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/federation"
-	"github.com/meza-chat/meza/internal/store"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/federation"
+	"github.com/mezalabs/meza/internal/store"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

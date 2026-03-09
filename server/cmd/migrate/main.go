@@ -20,9 +20,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/meza-chat/meza/internal/database"
-	"github.com/meza-chat/meza/internal/observability"
-	"github.com/meza-chat/meza/migrations"
+	"github.com/mezalabs/meza/internal/database"
+	"github.com/mezalabs/meza/internal/observability"
+	"github.com/mezalabs/meza/migrations"
 )
 
 // advisoryLockID is the pg_advisory_lock key used to prevent concurrent migration runs.

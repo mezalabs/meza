@@ -5,7 +5,7 @@ End-to-end encrypted, real-time chat platform. Self-hostable with Docker Compose
 
 [![CI](https://github.com/mezalabs/meza/actions/workflows/ci.yml/badge.svg)](https://github.com/mezalabs/meza/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev/)
 [![Node](https://img.shields.io/badge/Node.js-22-339933.svg)](https://nodejs.org/)
 
 ## Features
@@ -17,6 +17,7 @@ End-to-end encrypted, real-time chat platform. Self-hostable with Docker Compose
 - **Metadata search** — Channel-scoped message filtering by author, date, attachments, and mentions
 - **Federation** — Cross-instance communication via signed JWT assertions
 - **Tiling window manager UI** — i3/sway-inspired pane layout, no traditional page routing
+- **Cross-platform** — Web, desktop (Electron), and mobile (iOS/Android via Capacitor)
 - **Self-hostable** — Docker Compose for development, production-ready with standard infrastructure
 
 ## Architecture
@@ -42,7 +43,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 
 ### Prerequisites
 
-- [Go](https://go.dev/) 1.24+
+- [Go](https://go.dev/) 1.25+
 - [Node.js](https://nodejs.org/) 22+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/) 9+
 - [Docker](https://www.docker.com/) and Docker Compose
@@ -52,7 +53,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 ### Setup
 
 ```bash
-git clone https://github.com/meza-chat/meza.git
+git clone https://github.com/mezalabs/meza.git
 cd meza
 cp .env.example .env
 task start
@@ -120,7 +121,9 @@ meza/
 │   ├── packages/
 │   │   ├── core/     # Platform-agnostic: API clients, Zustand stores, gateway
 │   │   ├── ui/       # React components
-│   │   └── web/      # Browser SPA entry point (Vite)
+│   │   ├── web/      # Browser SPA entry point (Vite)
+│   │   ├── desktop/  # Electron desktop shell
+│   │   └── mobile/   # Capacitor native shell (iOS/Android)
 │   └── gen/          # Generated ConnectRPC TypeScript code
 ├── deploy/           # Docker Compose for development
 ├── docs/             # Architecture and API documentation

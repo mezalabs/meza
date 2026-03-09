@@ -28,7 +28,7 @@ All services have health checks configured. The `notification` service (port 808
 ## Dockerfile
 
 Multi-stage Go build at `deploy/docker/Dockerfile`:
-- Builder: `golang:1.23-alpine`, builds a single service binary via `SERVICE` build arg
+- Builder: `golang:1.24-alpine`, builds a single service binary via `SERVICE` build arg
 - Runtime: `alpine:3.20`, non-root user (`meza:1000`), `CGO_ENABLED=0`, stripped binary
 
 ---
@@ -75,6 +75,7 @@ Intended approach:
 | Presence | Redis operations/sec + CPU | 2 | 10 |
 | Media | Upload throughput + CPU | 2 | 10 |
 | Voice | Active voice rooms | 1 | 5 |
+| Keys | CPU | 1 | 5 |
 | LiveKit | Participant count | 1 | 20 |
 
 ### Database Scaling
@@ -147,4 +148,4 @@ task teardown
 ```
 
 Services started by `task start`:
-- gateway `:8080`, auth `:8081`, chat `:8082`, presence `:8083`, media `:8084`, voice `:8085`, notification `:8086`, web (Vite) `:4080`
+- gateway `:8080`, auth `:8081`, chat `:8082`, presence `:8083`, media `:8084`, voice `:8085`, notification `:8086`, keys `:8088`, web (Vite) `:4080`

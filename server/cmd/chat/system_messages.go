@@ -10,9 +10,9 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/subjects"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/subjects"
 )
 
 // cachedSystemMessageConfig wraps a config with expiry for in-process caching.

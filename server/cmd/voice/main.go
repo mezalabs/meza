@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/config"
-	"github.com/meza-chat/meza/internal/database"
-	"github.com/meza-chat/meza/internal/middleware"
-	"github.com/meza-chat/meza/internal/observability"
-	"github.com/meza-chat/meza/internal/store"
+	"github.com/mezalabs/meza/gen/meza/v1/mezav1connect"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/config"
+	"github.com/mezalabs/meza/internal/database"
+	"github.com/mezalabs/meza/internal/middleware"
+	"github.com/mezalabs/meza/internal/observability"
+	"github.com/mezalabs/meza/internal/store"
 	lksdk "github.com/livekit/server-sdk-go/v2"
 )
 

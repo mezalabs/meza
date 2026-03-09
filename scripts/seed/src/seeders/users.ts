@@ -2,9 +2,6 @@ import { Code, ConnectError } from '@connectrpc/connect';
 import {
   deriveKeys,
   deterministicSalt,
-  encryptKeyBundle,
-  generateKeyBundle,
-  initWasm,
 } from '../lib/crypto.ts';
 import type { SeedConfig } from '../lib/config.ts';
 import { SEED_USERS } from '../lib/ids.ts';
@@ -26,17 +23,12 @@ export interface SeededUser {
 export async function seedUsers(config: SeedConfig): Promise<Record<string, SeededUser>> {
   log('Creating users...');
 
-  await initWasm();
   const authClient = createAuthClient(config);
   const result: Record<string, SeededUser> = {};
 
   for (const [name, userDef] of Object.entries(SEED_USERS)) {
     const salt = await deterministicSalt(userDef.username);
-    const { masterKey, authKey } = await deriveKeys(userDef.password, salt);
-
-    const credentialName = `seed:${userDef.username}`;
-    const identityBytes = await generateKeyBundle(credentialName);
-    const { ciphertext, iv } = await encryptKeyBundle(masterKey, identityBytes);
+    const { authKey } = await deriveKeys(userDef.password, salt);
 
     try {
       const res = await authClient.register({
@@ -44,8 +36,6 @@ export async function seedUsers(config: SeedConfig): Promise<Record<string, Seed
         username: userDef.username,
         authKey,
         salt,
-        encryptedKeyBundle: ciphertext,
-        keyBundleIv: iv,
       });
 
       result[name] = {

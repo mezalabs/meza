@@ -4,10 +4,10 @@
 
 That's it. That's the core promise. The key is that "anyone who can access the server" actually covers quite a lot of ground:
 
-- **The platform selling your data**: Discord reads your messages. they can profile you, sell your behavioral data, serve targeted ads. Meza is **literally** unable to do this, it only stored encrypted ciphertext in the database.
-- **AI Trained on your conversations**: OpenAI, Google, Meta have all trained their models on the collective user content that has been created online that they have plaintext access to. Meza can't feed your mesasges to an AI because it never sees them.
+- **The platform selling your data**: Traditional chat platforms read your messages. They can profile you, sell your behavioral data, serve targeted ads. Meza is unable to do this — it only stores encrypted ciphertext in the database.
+- **AI trained on your conversations**: Large AI companies have trained their models on user content they have plaintext access to. Meza can't feed your messages to an AI because it never sees them.
 - **Data Breaches**: when a chat platform gets hacked, the attackers get not just your account information, but often your entire message history in readable form. With meza, a breach only exposes metadata (who is in what channel, when messages were sent, how many reactions a message got) but message content remains encrypted gibberish.
-- **Law enforcement  / subpoenas**: governments can demand the server hand over messages. The server can comply - and hand over ciphertext it can't decrypt. 
+- **Law enforcement / subpoenas**: governments can demand the server hand over messages. The server can comply — and hand over ciphertext it can't decrypt.
 - **A curious server operator**: even if you self-host and someone else has root on the server, or you use a federated instance run by someone you only half-trust, there is no way for them to snoop on your messages.
 
 This model has one core theme - the server is untrusted by design. Not because server operators are bad people or we expect them to act maliciously, but because the best way to protect your messages is to make it so **no one** can abuse them, regardless of intent, incentive or legal pressure.

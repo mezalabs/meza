@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/meza-chat/meza/internal/models"
+	"github.com/mezalabs/meza/internal/models"
 )
 
 // MediaAccessStore implements MediaAccessChecker using the Postgres pool.

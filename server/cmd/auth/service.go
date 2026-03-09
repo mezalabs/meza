@@ -15,11 +15,11 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/email"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/store"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/email"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/store"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/config"
-	"github.com/meza-chat/meza/internal/database"
-	"github.com/meza-chat/meza/internal/middleware"
-	bfnats "github.com/meza-chat/meza/internal/nats"
-	"github.com/meza-chat/meza/internal/observability"
-	"github.com/meza-chat/meza/internal/ratelimit"
-	"github.com/meza-chat/meza/internal/store"
+	"github.com/mezalabs/meza/gen/meza/v1/mezav1connect"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/config"
+	"github.com/mezalabs/meza/internal/database"
+	"github.com/mezalabs/meza/internal/middleware"
+	bfnats "github.com/mezalabs/meza/internal/nats"
+	"github.com/mezalabs/meza/internal/observability"
+	"github.com/mezalabs/meza/internal/ratelimit"
+	"github.com/mezalabs/meza/internal/store"
 )
 
 func main() {

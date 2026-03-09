@@ -8,8 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
 	"github.com/livekit/protocol/livekit"
 )
 

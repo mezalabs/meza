@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/meza-chat/meza/internal/models"
+	"github.com/mezalabs/meza/internal/models"
 )
 
 // DeviceStore implements DeviceStorer using PostgreSQL.

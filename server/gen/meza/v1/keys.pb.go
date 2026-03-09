@@ -894,7 +894,7 @@ const file_meza_v1_keys_proto_rawDesc = "" +
 	"\x10RotateChannelKey\x12 .meza.v1.RotateChannelKeyRequest\x1a!.meza.v1.RotateChannelKeyResponse\x12u\n" +
 	"\x1aListMembersWithViewChannel\x12*.meza.v1.ListMembersWithViewChannelRequest\x1a+.meza.v1.ListMembersWithViewChannelResponse\x12]\n" +
 	"\x12RequestChannelKeys\x12\".meza.v1.RequestChannelKeysRequest\x1a#.meza.v1.RequestChannelKeysResponseB\x83\x01\n" +
-	"\vcom.meza.v1B\tKeysProtoP\x01Z,github.com/meza-chat/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\vcom.meza.v1B\tKeysProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_keys_proto_rawDescOnce sync.Once

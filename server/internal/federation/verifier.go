@@ -6,7 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/meza-chat/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/auth"
 )
 
 // Verifier validates federation assertion JWTs by fetching the signing key

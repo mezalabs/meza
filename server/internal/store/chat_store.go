@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/permissions"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/permissions"
 )
 
 // ChatStore implements ChatStorer using PostgreSQL.

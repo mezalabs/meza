@@ -1,4 +1,4 @@
-module github.com/meza-chat/meza
+module github.com/mezalabs/meza
 
 go 1.25.0
 

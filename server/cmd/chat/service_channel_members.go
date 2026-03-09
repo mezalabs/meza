@@ -10,11 +10,11 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/permissions"
-	"github.com/meza-chat/meza/internal/subjects"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/permissions"
+	"github.com/mezalabs/meza/internal/subjects"
 )
 
 func (s *chatService) AddChannelMember(ctx context.Context, req *connect.Request[v1.AddChannelMemberRequest]) (*connect.Response[v1.AddChannelMemberResponse], error) {

@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	http "net/http"
 	strings "strings"
 )

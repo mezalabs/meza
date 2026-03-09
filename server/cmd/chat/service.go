@@ -20,13 +20,13 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/embed"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/permissions"
-	"github.com/meza-chat/meza/internal/store"
-	"github.com/meza-chat/meza/internal/subjects"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/embed"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/permissions"
+	"github.com/mezalabs/meza/internal/store"
+	"github.com/mezalabs/meza/internal/subjects"
 )
 
 var validULID = regexp.MustCompile(`^[0-9A-Z]{26}$`)

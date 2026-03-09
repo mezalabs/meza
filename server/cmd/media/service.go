@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/imaging"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/s3"
-	"github.com/meza-chat/meza/internal/store"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/imaging"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/s3"
+	"github.com/mezalabs/meza/internal/store"
 )
 
 const (
@@ -323,7 +323,7 @@ func (s *mediaService) CompleteUpload(ctx context.Context, req *connect.Request[
 	var width, height int
 
 	if attachment.UploadPurpose == "chat_attachment" && len(req.Msg.EncryptedKey) > 0 {
-		// Encrypted chat attachment: server is a dumb blob store.
+		// Encrypted chat attachment: server is an opaque blob store.
 		// Skip all content inspection — the bytes are opaque ciphertext.
 		objectSize, sErr := s.s3.StatObject(ctx, attachment.ObjectKey)
 		if sErr != nil {

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
 )
 
 // TestS3WildcardCORS verifies that MinIO/S3 CORS allows arbitrary origins

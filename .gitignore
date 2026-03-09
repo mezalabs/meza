@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
-client/vendor/*
-!client/vendor/openmls-wasm/
+client/vendor/
 
 # Build output
 dist/

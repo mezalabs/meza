@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/meza-chat/meza/internal/permissions"
+	"github.com/mezalabs/meza/internal/permissions"
 )
 
 // ChannelPermissionStore implements ChannelPermissionChecker using the full

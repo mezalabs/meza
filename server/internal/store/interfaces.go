@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/permissions"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/permissions"
 	"github.com/jackc/pgx/v5"
 )
 

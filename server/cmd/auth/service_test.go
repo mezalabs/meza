@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
-	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
-	"github.com/meza-chat/meza/internal/auth"
-	"github.com/meza-chat/meza/internal/models"
-	"github.com/meza-chat/meza/internal/store"
-	"github.com/meza-chat/meza/internal/testutil"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
+	"github.com/mezalabs/meza/gen/meza/v1/mezav1connect"
+	"github.com/mezalabs/meza/internal/auth"
+	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/store"
+	"github.com/mezalabs/meza/internal/testutil"
 )
 
 // mockAuthStore implements store.AuthStorer for testing.

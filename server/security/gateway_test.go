@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	v1 "github.com/meza-chat/meza/gen/meza/v1"
+	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	"google.golang.org/protobuf/proto"
 )
 

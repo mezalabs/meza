@@ -88,7 +88,7 @@ client/
 | Playwright | E2E testing |
 | Biome | Linting and formatting (single tool, fast) |
 
-**Note:** The project uses Tailwind CSS v4 with OKLCH color tokens defined in `@theme` blocks. See `DESIGN.md` at the repo root for the full design system.
+**Note:** The project uses Tailwind CSS v4 with OKLCH color tokens defined in `@theme` blocks.
 
 Key scripts: `pnpm dev` (web dev server), `pnpm dev:desktop` (Electron), `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm codegen`.
 
