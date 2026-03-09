@@ -1196,9 +1196,19 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 	}
 
 	// Mark attachments as linked so unlinked-attachment cleanup skips them.
+	// Retry on failure since the ScyllaDB message is already committed — if
+	// LinkAttachments fails, the attachment stays unlinked and other users
+	// can't download it despite seeing the message (cross-DB consistency gap).
 	if len(req.Msg.AttachmentIds) > 0 {
-		if lErr := s.mediaStore.LinkAttachments(ctx, req.Msg.AttachmentIds, req.Msg.ChannelId); lErr != nil {
-			slog.Error("linking attachments", "err", lErr, "message", msgID)
+		for attempt := range 3 {
+			if lErr := s.mediaStore.LinkAttachments(ctx, req.Msg.AttachmentIds, req.Msg.ChannelId); lErr != nil {
+				slog.Error("linking attachments", "err", lErr, "message", msgID, "attempt", attempt+1)
+				if attempt < 2 {
+					time.Sleep(time.Duration(attempt+1) * 100 * time.Millisecond)
+					continue
+				}
+			}
+			break
 		}
 	}
 
@@ -2124,6 +2134,13 @@ func (s *chatService) DeleteChannel(ctx context.Context, req *connect.Request[v1
 	_, _, _, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageChannels)
 	if permErr != nil {
 		return nil, permErr
+	}
+
+	// Detach attachments from this channel before deleting it, so media
+	// access checks don't reference a non-existent channel (P2-12).
+	if err := s.mediaStore.NullifyChannelAttachments(ctx, req.Msg.ChannelId); err != nil {
+		slog.Error("nullifying channel attachments", "err", err, "channel", req.Msg.ChannelId)
+		// Non-fatal — proceed with channel deletion.
 	}
 
 	// If this is a voice channel with a companion, delete both atomically.

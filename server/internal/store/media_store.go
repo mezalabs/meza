@@ -199,6 +199,23 @@ func (s *MediaStore) LinkAttachments(ctx context.Context, ids []string, channelI
 	return nil
 }
 
+// NullifyChannelAttachments sets channel_id to NULL for all attachments
+// linked to the given channel. Called when a channel is deleted so that
+// access checks don't reference a non-existent channel.
+func (s *MediaStore) NullifyChannelAttachments(ctx context.Context, channelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	_, err := s.pool.Exec(ctx,
+		`UPDATE attachments SET channel_id = NULL WHERE channel_id = $1`,
+		channelID,
+	)
+	if err != nil {
+		return fmt.Errorf("nullify channel attachments: %w", err)
+	}
+	return nil
+}
+
 func (s *MediaStore) FindUnlinkedAttachments(ctx context.Context, olderThan time.Time, limit int) ([]*models.Attachment, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

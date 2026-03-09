@@ -147,6 +147,17 @@ func (m *mockMediaStore) FindUnlinkedAttachments(_ context.Context, olderThan ti
 	return unlinked, nil
 }
 
+func (m *mockMediaStore) NullifyChannelAttachments(_ context.Context, channelID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, a := range m.attachments {
+		if a.ChannelID != nil && *a.ChannelID == channelID {
+			a.ChannelID = nil
+		}
+	}
+	return nil
+}
+
 func (m *mockMediaStore) FindOrphanedUploads(_ context.Context, before time.Time, limit int) ([]*models.Attachment, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

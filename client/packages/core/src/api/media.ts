@@ -14,13 +14,16 @@ import { getBaseUrl, isCapacitor } from '../utils/platform.ts';
 import { transport } from './client.ts';
 
 /**
- * In mobile dev the server returns presigned S3 URLs with the host from
- * S3_PUBLIC_ENDPOINT (e.g. 192.168.50.183:4081) but the WebView's origin is
- * the Tailscale hostname. Strip the origin so the request goes through the
- * same-origin Vite proxy instead of triggering a CORS preflight.
+ * In Capacitor DEV mode, the phone can't reach the S3 host (localhost:9000)
+ * directly. Strip the origin so requests route through the Vite HTTPS proxy.
+ *
+ * In production Capacitor, use the full S3 URL — there's no proxy, and the
+ * relative path would resolve to https://localhost (the WKWebView origin)
+ * which serves the SPA shell instead of S3 content. S3 CORS must allow
+ * the Capacitor origin (https://localhost) for this to work.
  */
 function normalizePresignedUrl(url: string): string {
-  if (!isCapacitor()) return url;
+  if (!isCapacitor() || !import.meta.env.DEV) return url;
   try {
     const u = new URL(url);
     if (u.pathname.startsWith('/meza-media/')) {
@@ -112,6 +115,12 @@ export async function fetchEncryptedMedia(
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch media: ${response.status}`);
+  }
+  const ct = response.headers.get('content-type') ?? '';
+  if (ct.startsWith('text/html') || ct.startsWith('application/xml')) {
+    throw new Error(
+      `Unexpected content-type "${ct}" for ${attachmentId} (URL: ${url})`,
+    );
   }
   return new Uint8Array(await response.arrayBuffer());
 }

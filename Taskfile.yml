@@ -1,6 +1,6 @@
 version: "3"
 
-dotenv: ['.env']
+dotenv: ['.env', '.env.mobile']
 
 vars:
   COMPOSE_FILE: deploy/docker/docker-compose.yml
@@ -490,6 +490,14 @@ tasks:
         fi
         URL="https://$FQDN:4081"
         echo "Dev server: $URL"
+
+        # Write S3 endpoint config so presigned URLs route through the Vite
+        # HTTPS proxy (phones can't reach localhost:9000 directly).
+        # task start picks this up via dotenv: ['.env.mobile'].
+        printf 'MEZA_S3_PUBLIC_ENDPOINT=%s\nS3_CORS_ORIGINS=%s\n' "$URL" "$URL" > ../.env.mobile
+        echo "Wrote .env.mobile (MEZA_S3_PUBLIC_ENDPOINT=$URL)"
+        echo "  -> Restart 'task start' if it's already running so the media service picks this up."
+
         echo "Syncing Capacitor with dev server URL..."
         cd packages/mobile
         CAPACITOR_DEV_SERVER="$URL" npx cap sync
@@ -500,12 +508,37 @@ tasks:
         MOBILE_DEV=true pnpm --filter @meza/web dev -- --host --port 4081
 
   build:mobile:
-    desc: Build web assets and sync to Capacitor native projects
+    desc: "Build web assets and sync to Capacitor"
     dir: client
     cmds:
+      - rm -rf packages/web/dist
       - pnpm install --frozen-lockfile
-      - pnpm --filter @meza/web... build
+      - '{{if .VITE_API_URL}}VITE_API_URL={{.VITE_API_URL}} {{end}}pnpm --filter @meza/web... build'
       - cd packages/mobile && npx cap sync
+      - |
+        echo ""
+        echo "Build complete. Run the app from Xcode (Cmd+R) or Android Studio."
+        echo "If the device serves a stale bundle, uninstall the app first."
+
+  build:mobile:prod:
+    desc: Build mobile app against production API and sync
+    cmds:
+      - task: build:mobile
+        vars:
+          VITE_API_URL: '{{.VITE_API_URL | default "https://meza.chat"}}'
+
+  build:mobile:clean:
+    desc: "Full clean build — wipe native web assets, rebuild, and sync"
+    dir: client
+    cmds:
+      - rm -rf packages/mobile/android/app/src/main/assets/public
+      - rm -rf packages/mobile/ios/App/App/public
+      - task: build:mobile
+        vars:
+          VITE_API_URL: '{{.VITE_API_URL}}'
+      - |
+        echo ""
+        echo "Clean build complete. Uninstall the app from the device, then run from IDE."
 
   open:ios:
     desc: Open iOS project in Xcode

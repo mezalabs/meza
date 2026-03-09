@@ -5,9 +5,18 @@
  * Call `bootstrapSession()` after login/registration or on app reload
  * when the user is already authenticated.
  *
- * The master key is stored in localStorage so the encrypted key bundle in
- * IndexedDB can be decrypted without re-entering the password, even after
- * the tab is closed and reopened.
+ * The master key is cached so the encrypted key bundle in IndexedDB can be
+ * decrypted without re-entering the password:
+ *   - Web: sessionStorage (survives reload, cleared on tab close)
+ *   - Mobile (Capacitor): sessionStorage (survives reload within same WebView
+ *     lifecycle; cleared when OS kills the process, requiring re-login)
+ *
+ * NOTE: We intentionally use sessionStorage on all platforms. On mobile,
+ * the OS may kill the process and clear the key, but using localStorage
+ * would persist the master key in plaintext on disk indefinitely — an
+ * unacceptable risk for the most sensitive secret in the E2EE system.
+ * When Capacitor Secure Storage or iOS Keychain integration is added,
+ * mobile can use that for persistence across process restarts.
  */
 
 import {
@@ -19,12 +28,18 @@ import {
 import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
+
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;
 let identity: IdentityKeypair | null = null;
 const readyListeners: Array<() => void> = [];
 
 const MK_SESSION_KEY = 'meza-mk';
+
+function mkStorage(): Storage | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return sessionStorage;
+}
 
 function storeMasterKey(key: Uint8Array): void {
   if (typeof localStorage === 'undefined') return;

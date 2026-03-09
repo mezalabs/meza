@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,15 +24,47 @@ import (
 //   - profile_avatar, profile_banner, server_icon, server_banner:
 //     public to any authenticated user (avatars appear in message
 //     lists; icons appear on invite pages)
+type permCacheEntry struct {
+	allowed bool
+	expires time.Time
+}
+
+const permCacheTTL = 5 * time.Minute
+
 type MediaAccessStore struct {
-	pool    *pgxpool.Pool
-	permChk *ChannelPermissionStore
+	pool      *pgxpool.Pool
+	permChk   *ChannelPermissionStore
+	permCache sync.Map // key: "userID:channelID" -> permCacheEntry
 }
 
 // NewMediaAccessStore creates a MediaAccessStore.
 // permChk is used for channel-level ViewChannel checks on chat attachments.
 func NewMediaAccessStore(pool *pgxpool.Pool, permChk *ChannelPermissionStore) *MediaAccessStore {
 	return &MediaAccessStore{pool: pool, permChk: permChk}
+}
+
+// cachedHasViewChannel wraps HasViewChannel with a short-lived in-memory cache
+// to avoid repeated multi-query permission resolution for the same user+channel.
+func (s *MediaAccessStore) cachedHasViewChannel(ctx context.Context, userID, channelID string) (bool, error) {
+	key := userID + ":" + channelID
+	if v, ok := s.permCache.Load(key); ok {
+		entry := v.(permCacheEntry)
+		if time.Now().Before(entry.expires) {
+			return entry.allowed, nil
+		}
+		s.permCache.Delete(key)
+	}
+
+	allowed, err := s.permChk.HasViewChannel(ctx, userID, channelID)
+	if err != nil {
+		return false, err
+	}
+
+	s.permCache.Store(key, permCacheEntry{
+		allowed: allowed,
+		expires: time.Now().Add(permCacheTTL),
+	})
+	return allowed, nil
 }
 
 func (s *MediaAccessStore) CheckAttachmentAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
@@ -55,14 +90,21 @@ func (s *MediaAccessStore) CheckAttachmentAccess(ctx context.Context, attachment
 // If not yet linked (pending upload), only the uploader may access it.
 func (s *MediaAccessStore) checkChatAttachmentAccess(ctx context.Context, attachment *models.Attachment, userID string) error {
 	if attachment.ChannelID == nil || *attachment.ChannelID == "" {
-		// Not yet linked to a message — only the uploader can access.
+		// Uploader can always access their own attachments.
 		if attachment.UploaderID == userID {
 			return nil
+		}
+		// Pre-migration attachments: linked before channel_id column existed.
+		// These have linked_at set but channel_id NULL. Require shared server
+		// membership as a defense-in-depth check (E2EE is the primary control).
+		if attachment.LinkedAt != nil {
+			slog.Warn("pre-migration attachment access (no channel_id)", "attachment", attachment.ID, "uploader", attachment.UploaderID, "requester", userID)
+			return s.checkSharedServerMembership(ctx, attachment.UploaderID, userID)
 		}
 		return ErrNotFound
 	}
 
-	allowed, err := s.permChk.HasViewChannel(ctx, userID, *attachment.ChannelID)
+	allowed, err := s.cachedHasViewChannel(ctx, userID, *attachment.ChannelID)
 	if err != nil {
 		return fmt.Errorf("check channel access: %w", err)
 	}
@@ -137,6 +179,29 @@ func (s *MediaAccessStore) checkSoundboardAccess(ctx context.Context, attachment
 	}
 
 	return s.checkServerMembership(ctx, *serverID, userID)
+}
+
+// checkSharedServerMembership returns nil if both users share at least one server.
+func (s *MediaAccessStore) checkSharedServerMembership(ctx context.Context, uploaderID, userID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var exists bool
+	err := s.pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM members m1
+			JOIN members m2 ON m1.server_id = m2.server_id
+			WHERE m1.user_id = $1 AND m2.user_id = $2
+		)`,
+		uploaderID, userID,
+	).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("check shared server membership: %w", err)
+	}
+	if !exists {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // checkServerMembership returns nil if the user is a member, ErrNotFound otherwise.

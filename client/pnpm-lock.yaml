@@ -252,6 +252,15 @@ importers:
 
   packages/web:
     dependencies:
+      '@capacitor/app':
+        specifier: ^7
+        version: 7.1.2(@capacitor/core@7.5.0)
+      '@capacitor/core':
+        specifier: ^7
+        version: 7.5.0
+      '@capacitor/push-notifications':
+        specifier: ^7
+        version: 7.0.5(@capacitor/core@7.5.0)
       '@capacitor/status-bar':
         specifier: ^7.0.5
         version: 7.0.5(@capacitor/core@7.5.0)
@@ -271,15 +280,6 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
     devDependencies:
-      '@capacitor/app':
-        specifier: ^7
-        version: 7.1.2(@capacitor/core@7.5.0)
-      '@capacitor/core':
-        specifier: ^7
-        version: 7.5.0
-      '@capacitor/push-notifications':
-        specifier: ^7
-        version: 7.0.5(@capacitor/core@7.5.0)
       '@fontsource-variable/geist':
         specifier: ^5.2.8
         version: 5.2.8

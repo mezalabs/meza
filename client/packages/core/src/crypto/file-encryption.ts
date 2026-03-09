@@ -78,12 +78,12 @@ export async function unwrapFileKey(
   if (encryptedKey.length < 5) {
     throw new Error('Invalid encrypted key: too short');
   }
-  const keyVersion = new DataView(
-    encryptedKey.buffer,
-    encryptedKey.byteOffset,
-    4,
-  ).getUint32(0);
-  const wrappedKey = encryptedKey.subarray(4);
+  // Use .slice() to create an owned copy — avoids Safari/iOS issues
+  // with DataView and crypto.subtle on Uint8Array views with non-zero
+  // byteOffset (common when protobuf-es returns pooled buffer views).
+  const ownedKey = encryptedKey.slice();
+  const keyVersion = new DataView(ownedKey.buffer).getUint32(0);
+  const wrappedKey = ownedKey.slice(4);
   const channelKey = await getChannelKey(channelId, keyVersion);
   return decryptPayload(channelKey, wrappedKey);
 }

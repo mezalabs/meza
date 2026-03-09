@@ -148,9 +148,11 @@ function EncryptedViewerImage({
           type: attachment.contentType,
         });
         const url = acquireBlobURL(fullKey, blob);
-        // Store in session cache (extra ref keeps it alive across swipes)
-        cache.set(fullKey, url);
+        // Acquire a second ref for the session cache — the component's ref is
+        // released on effect cleanup while the cache ref survives across swipes
+        // and is released when the viewer closes (see viewer-close effect).
         acquireBlobURL(fullKey, blob);
+        cache.set(fullKey, url);
         if (mountedRef.current) setFullUrl(url);
       } catch (err) {
         console.error(
@@ -286,7 +288,10 @@ export function ImageViewer() {
       el.style.transition = `transform ${SWIPE_ANIMATE_MS}ms ease-out`;
       el.style.transform = `translateX(${direction === 'left' ? '-100vw' : '100vw'})`;
 
+      let finished = false;
       const finish = () => {
+        if (finished) return;
+        finished = true;
         el.removeEventListener('transitionend', finish);
         el.style.transition = '';
         el.style.transform = '';
@@ -480,7 +485,7 @@ export function ImageViewer() {
                 {currentIndex + 1} / {attachments.length}
               </div>
             )}
-            <Dialog.Close className="absolute right-4 top-4 bg-black/50 hover:bg-black/70 text-white/80 hover:text-white rounded-full p-2">
+            <Dialog.Close className="absolute right-4 top-[max(1rem,env(safe-area-inset-top,1rem))] bg-black/50 hover:bg-black/70 text-white/80 hover:text-white rounded-full p-2">
               <XIcon weight="regular" size={14} aria-hidden="true" />
             </Dialog.Close>
           </Dialog.Content>
