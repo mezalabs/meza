@@ -12,21 +12,21 @@ vi.mock('./channel-keys.ts', () => ({
   flushChannelKeys: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock sessionStorage
-const sessionStorageMap = new Map<string, string>();
-const mockSessionStorage = {
-  getItem: vi.fn((key: string) => sessionStorageMap.get(key) ?? null),
+// Mock localStorage
+const localStorageMap = new Map<string, string>();
+const mockLocalStorage = {
+  getItem: vi.fn((key: string) => localStorageMap.get(key) ?? null),
   setItem: vi.fn((key: string, value: string) =>
-    sessionStorageMap.set(key, value),
+    localStorageMap.set(key, value),
   ),
-  removeItem: vi.fn((key: string) => sessionStorageMap.delete(key)),
-  clear: vi.fn(() => sessionStorageMap.clear()),
+  removeItem: vi.fn((key: string) => localStorageMap.delete(key)),
+  clear: vi.fn(() => localStorageMap.clear()),
   get length() {
-    return sessionStorageMap.size;
+    return localStorageMap.size;
   },
   key: vi.fn((_index: number) => null),
 };
-vi.stubGlobal('sessionStorage', mockSessionStorage);
+vi.stubGlobal('localStorage', mockLocalStorage);
 
 // Dynamic imports after mocks
 const {
@@ -52,7 +52,7 @@ const fakeKeypair = {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  sessionStorageMap.clear();
+  localStorageMap.clear();
 
   // Tear down any existing session to reset internal module state
   await teardownSession();
@@ -81,26 +81,26 @@ describe('bootstrapSession', () => {
     expect(getIdentity()).toBe(fakeKeypair);
   });
 
-  it('with master key caches it in sessionStorage', async () => {
+  it('with master key caches it in localStorage', async () => {
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
     await bootstrapSession(masterKey);
 
-    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
       'meza-mk',
       expect.any(String),
     );
   });
 
-  it('without master key falls back to sessionStorage', async () => {
-    // Pre-populate sessionStorage with a base64-encoded master key
+  it('without master key falls back to localStorage', async () => {
+    // Pre-populate localStorage with a base64-encoded master key
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     let binary = '';
     for (let i = 0; i < masterKey.length; i++) {
       binary += String.fromCharCode(masterKey[i]);
     }
-    sessionStorageMap.set('meza-mk', btoa(binary));
+    localStorageMap.set('meza-mk', btoa(binary));
 
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
@@ -111,7 +111,7 @@ describe('bootstrapSession', () => {
     expect(restoreIdentity).toHaveBeenCalled();
   });
 
-  it('without master key and no sessionStorage returns false', async () => {
+  it('without master key and no localStorage returns false', async () => {
     const result = await bootstrapSession();
 
     expect(result).toBe(false);
@@ -197,7 +197,7 @@ describe('teardownSession', () => {
     expect(clearChannelKeyCache).toHaveBeenCalled();
   });
 
-  it('removes master key from sessionStorage', async () => {
+  it('removes master key from localStorage', async () => {
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
@@ -206,7 +206,7 @@ describe('teardownSession', () => {
 
     await teardownSession();
 
-    expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('meza-mk');
+    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('meza-mk');
   });
 });
 

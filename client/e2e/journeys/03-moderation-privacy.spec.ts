@@ -9,7 +9,7 @@
 
 import { expect, test } from '@playwright/test';
 import { ChannelPage } from '../pages/ChannelPage';
-import { chapter, createContext, reportFailures } from './helpers';
+import { chapter, createContext, reportFailures, softStep } from './helpers';
 
 const SERVER = 'Test Server';
 const ts = () => `${Date.now()}`;
@@ -90,6 +90,16 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await alice.selectChannel('general');
     await bob.selectChannel('general');
 
+    // Verify system messages from Journey 1 persisted and render correctly
+    await softStep(
+      alicePage,
+      testInfo,
+      'System messages persist across sessions',
+      async () => {
+        await alice.expectSystemMessage(/joined.*server/i);
+      },
+    );
+
     // Bob sends a message, alice deletes it (owner privilege)
     const modMsg = `mod-test ${ts()}`;
     await bob.sendMessage(modMsg);
@@ -105,14 +115,18 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await alicePage.getByText('e2e_bob').last().click({ button: 'right' });
     await alicePage.getByRole('menuitem', { name: 'Message' }).click();
 
-    // Wait for DM composer to be ready
+    // Wait for DM view to load (placeholder changes from "Message #general" to a DM placeholder)
     const dmComposer = alicePage.locator('main textarea');
-    await expect(dmComposer.first()).toBeVisible({ timeout: 15_000 });
+    await expect(dmComposer.first()).toHaveAttribute(
+      'placeholder',
+      /Type a message|Setting up encryption|Encryption unavailable/,
+      { timeout: 15_000 },
+    );
 
     // Wait for encryption to finish initializing (pending → ready)
     await expect(dmComposer.first()).not.toHaveAttribute(
       'placeholder',
-      /Setting up encryption/,
+      /Setting up encryption|Encryption unavailable/,
       { timeout: 15_000 },
     );
 

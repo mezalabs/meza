@@ -292,9 +292,22 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
       timeout: 15_000,
     });
 
+    // Verify join system message appeared in #general
+    await softStep(
+      alicePage,
+      testInfo,
+      'Join system message visible',
+      async () => {
+        const messageList = alicePage.locator('[data-testid="message-list"]');
+        await expect(
+          messageList.getByText(/e2e_bob.*joined|joined.*server/i),
+        ).toBeVisible({ timeout: 10_000 });
+      },
+    );
+
     // Verify alice sees bob in member list
     await alicePage.getByLabel('Show members').click();
-    await expect(alicePage.getByText('e2e_bob')).toBeVisible({
+    await expect(alicePage.getByText('e2e_bob').last()).toBeVisible({
       timeout: 30_000,
     });
   });

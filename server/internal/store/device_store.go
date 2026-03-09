@@ -29,7 +29,7 @@ func (s *DeviceStore) UpsertDevice(ctx context.Context, device *models.Device) e
 		`INSERT INTO devices (id, user_id, device_name, platform, push_endpoint, push_p256dh, push_auth, push_token, push_enabled, device_public_key, device_signature, created_at, updated_at, last_seen_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now(), now(), now())
 		 ON CONFLICT (id)
-		 DO UPDATE SET device_name = EXCLUDED.device_name,
+		 DO UPDATE SET device_name = CASE WHEN EXCLUDED.device_name != '' THEN EXCLUDED.device_name ELSE devices.device_name END,
 		               platform = EXCLUDED.platform,
 		               push_endpoint = EXCLUDED.push_endpoint,
 		               push_p256dh = EXCLUDED.push_p256dh,
@@ -137,6 +137,33 @@ func (s *DeviceStore) GetPushEnabledDevicesForUsers(ctx context.Context, userIDs
 		result[d.UserID] = append(result[d.UserID], d)
 	}
 	return result, nil
+}
+
+func (s *DeviceStore) DeleteAllOtherDevices(ctx context.Context, userID, currentDeviceID string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`DELETE FROM devices WHERE user_id = $1 AND id != $2 RETURNING id`,
+		userID, currentDeviceID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("delete all other devices: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan deleted device id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("delete all other devices rows: %w", err)
+	}
+	return ids, nil
 }
 
 func (s *DeviceStore) DeleteDevice(ctx context.Context, userID, deviceID string) error {

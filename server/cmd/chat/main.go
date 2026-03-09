@@ -154,6 +154,14 @@ func main() {
 	}
 	defer embedSub.Drain()
 
+	// Subscribe to internal key rotation events for system messages.
+	keyRotSub, err := svc.subscribeKeyRotation()
+	if err != nil {
+		slog.Error("subscribe key rotation", "err", err)
+		os.Exit(1)
+	}
+	defer keyRotSub.Drain()
+
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())
 

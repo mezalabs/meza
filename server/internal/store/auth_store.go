@@ -57,11 +57,12 @@ func (s *AuthStore) CreateUser(ctx context.Context, user *models.User, authKeyHa
 
 	// Insert user_auth with auth credentials and encrypted identity key bundle.
 	_, err = tx.Exec(ctx,
-		`INSERT INTO user_auth (user_id, auth_key_hash, salt, encrypted_key_bundle, key_bundle_iv, recovery_encrypted_key_bundle, recovery_key_bundle_iv)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		`INSERT INTO user_auth (user_id, auth_key_hash, salt, encrypted_key_bundle, key_bundle_iv, recovery_encrypted_key_bundle, recovery_key_bundle_iv, recovery_verifier_hash)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		user.ID, authKeyHash, salt,
 		encryptedBundle.EncryptedKeyBundle, encryptedBundle.KeyBundleIV,
 		encryptedBundle.RecoveryEncryptedKeyBundle, encryptedBundle.RecoveryKeyBundleIV,
+		encryptedBundle.RecoveryVerifierHash,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert user_auth: %w", err)
@@ -179,6 +180,23 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 	unmarshalJSONField(returnedAudioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
 	unmarshalJSONField(returnedConnectionsJSON, &u.Connections, "connections", u.ID)
 	return &u, nil
+}
+
+func (s *AuthStore) GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var a models.AuthData
+	err := s.pool.QueryRow(ctx,
+		`SELECT user_id, auth_key_hash, salt, encrypted_key_bundle, key_bundle_iv FROM user_auth WHERE user_id = $1`, userID,
+	).Scan(&a.UserID, &a.AuthKeyHash, &a.Salt, &a.EncryptedKeyBundle, &a.KeyBundleIV)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("query auth data: %w", err)
+	}
+	return &a, nil
 }
 
 // getUserWithAuth fetches a user and auth data by a dynamic WHERE clause.
@@ -319,11 +337,13 @@ func (s *AuthStore) ChangePassword(ctx context.Context, userID, oldAuthKeyHash, 
 	result, err := s.pool.Exec(ctx,
 		`UPDATE user_auth
 		 SET auth_key_hash = $2, salt = $3, encrypted_key_bundle = $4, key_bundle_iv = $5,
-		     recovery_encrypted_key_bundle = $6, recovery_key_bundle_iv = $7, updated_at = now()
-		 WHERE user_id = $1 AND auth_key_hash = $8`,
+		     recovery_encrypted_key_bundle = $6, recovery_key_bundle_iv = $7,
+		     recovery_verifier_hash = $8, updated_at = now()
+		 WHERE user_id = $1 AND auth_key_hash = $9`,
 		userID, newAuthKeyHash, newSalt,
 		newBundle.EncryptedKeyBundle, newBundle.KeyBundleIV,
 		newBundle.RecoveryEncryptedKeyBundle, newBundle.RecoveryKeyBundleIV,
+		newBundle.RecoveryVerifierHash,
 		oldAuthKeyHash,
 	)
 	if err != nil {
@@ -357,7 +377,10 @@ func (s *AuthStore) GetRecoveryBundle(ctx context.Context, email string) ([]byte
 	return recoveryBundle, recoveryIV, salt, nil
 }
 
-func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) (string, error) {
+// ErrInvalidRecoveryProof is returned when the recovery verifier does not match.
+var ErrInvalidRecoveryProof = errors.New("invalid recovery proof")
+
+func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -367,6 +390,24 @@ func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash st
 	}
 	defer tx.Rollback(ctx)
 
+	// Verify recovery proof inside the transaction with FOR UPDATE to prevent races.
+	var storedHash []byte
+	err = tx.QueryRow(ctx,
+		`SELECT a.recovery_verifier_hash
+		 FROM user_auth a JOIN users u ON u.id = a.user_id
+		 WHERE u.email = $1
+		 FOR UPDATE`, email,
+	).Scan(&storedHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", fmt.Errorf("user not found")
+		}
+		return "", fmt.Errorf("query recovery verifier: %w", err)
+	}
+	if !verifyVerifier(storedHash) {
+		return "", ErrInvalidRecoveryProof
+	}
+
 	// Update credentials and key bundle.
 	var userID string
 	err = tx.QueryRow(ctx,
@@ -374,6 +415,7 @@ func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash st
 		     auth_key_hash = $2, salt = $3,
 		     encrypted_key_bundle = $4, key_bundle_iv = $5,
 		     recovery_encrypted_key_bundle = $6, recovery_key_bundle_iv = $7,
+		     recovery_verifier_hash = $8,
 		     updated_at = now()
 		 FROM users u
 		 WHERE user_auth.user_id = u.id AND u.email = $1
@@ -381,6 +423,7 @@ func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash st
 		email, newAuthKeyHash, newSalt,
 		newBundle.EncryptedKeyBundle, newBundle.KeyBundleIV,
 		newBundle.RecoveryEncryptedKeyBundle, newBundle.RecoveryKeyBundleIV,
+		newBundle.RecoveryVerifierHash,
 	).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -389,8 +432,12 @@ func (s *AuthStore) RecoverAccount(ctx context.Context, email, newAuthKeyHash st
 		return "", fmt.Errorf("recover account: %w", err)
 	}
 
-	// Invalidate all existing sessions by deleting refresh tokens.
-	_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
+	// Invalidate existing sessions by deleting refresh tokens (optionally excluding specific devices).
+	if len(excludeDeviceIDs) > 0 {
+		_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1 AND device_id != ALL($2)`, userID, excludeDeviceIDs)
+	} else {
+		_, err = tx.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1`, userID)
+	}
 	if err != nil {
 		return "", fmt.Errorf("delete refresh tokens during recovery: %w", err)
 	}

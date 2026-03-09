@@ -41,6 +41,12 @@ export {
   decryptAndUpdateMessages,
 } from './decrypt-store.ts';
 export {
+  deriveVerificationCode,
+  generateRecoveryKeypair,
+  unwrapIdentityFromRecovery,
+  wrapIdentityForRecovery,
+} from './device-recovery.ts';
+export {
   decryptFile,
   encryptFile,
   generateFileKey,
@@ -87,6 +93,7 @@ export {
 export {
   decryptRecoveryBundle,
   deriveRecoveryKey,
+  deriveRecoveryVerifier,
   encryptRecoveryBundle,
   generateRecoveryPhrase,
   validateRecoveryPhrase,

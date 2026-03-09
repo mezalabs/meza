@@ -17,10 +17,11 @@ export type {
   PermissionOverride,
   Role,
   Server,
+  ServerSystemMessageConfig,
   User,
 } from '@meza/gen/meza/v1/models_pb.ts';
 // Re-export protobuf enums used by UI
-export { ChannelType } from '@meza/gen/meza/v1/models_pb.ts';
+export { ChannelType, MessageType } from '@meza/gen/meza/v1/models_pb.ts';
 export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
 // API — auth
 export {
@@ -35,6 +36,7 @@ export {
   recoverAccount,
   refreshAccessToken,
   register,
+  revokeAllOtherDevices,
   revokeDevice,
   toStoredUser,
   updateProfile,
@@ -122,8 +124,10 @@ export {
   updateEmoji,
   updateMember,
   updateRole,
+  getSystemMessageConfig,
   updateServer,
   updateSound,
+  updateSystemMessageConfig,
 } from './api/chat.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
@@ -188,6 +192,7 @@ export {
   decryptRecoveryBundle,
   deriveKeys,
   deriveRecoveryKey,
+  deriveRecoveryVerifier,
   deserializeIdentity,
   distributeKeyToMember,
   type EncryptedMessage,
@@ -354,6 +359,13 @@ export type { ServerActions, ServerState } from './store/servers.ts';
 export { useServerStore } from './store/servers.ts';
 export type { SoundActions, SoundState } from './store/sounds.ts';
 export { useSoundStore } from './store/sounds.ts';
+export type {
+  Toast,
+  ToastActions,
+  ToastState,
+  ToastVariant,
+} from './store/toasts.ts';
+export { useToastStore } from './store/toasts.ts';
 export type {
   ContentHint,
   ScreenSharePresetKey,

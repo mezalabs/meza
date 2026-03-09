@@ -270,6 +270,12 @@ const (
 	// ChatServiceGetMutualFriendsProcedure is the fully-qualified name of the ChatService's
 	// GetMutualFriends RPC.
 	ChatServiceGetMutualFriendsProcedure = "/meza.v1.ChatService/GetMutualFriends"
+	// ChatServiceGetSystemMessageConfigProcedure is the fully-qualified name of the ChatService's
+	// GetSystemMessageConfig RPC.
+	ChatServiceGetSystemMessageConfigProcedure = "/meza.v1.ChatService/GetSystemMessageConfig"
+	// ChatServiceUpdateSystemMessageConfigProcedure is the fully-qualified name of the ChatService's
+	// UpdateSystemMessageConfig RPC.
+	ChatServiceUpdateSystemMessageConfigProcedure = "/meza.v1.ChatService/UpdateSystemMessageConfig"
 )
 
 // ChatServiceClient is a client for the meza.v1.ChatService service.
@@ -364,6 +370,8 @@ type ChatServiceClient interface {
 	StreamEvents(context.Context, *connect.Request[v1.StreamEventsRequest]) (*connect.ServerStreamForClient[v1.Event], error)
 	GetMutualServers(context.Context, *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error)
 	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
+	GetSystemMessageConfig(context.Context, *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error)
+	UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the meza.v1.ChatService service. By default, it uses
@@ -917,101 +925,115 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("GetMutualFriends")),
 			connect.WithClientOptions(opts...),
 		),
+		getSystemMessageConfig: connect.NewClient[v1.GetSystemMessageConfigRequest, v1.GetSystemMessageConfigResponse](
+			httpClient,
+			baseURL+ChatServiceGetSystemMessageConfigProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetSystemMessageConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		updateSystemMessageConfig: connect.NewClient[v1.UpdateSystemMessageConfigRequest, v1.UpdateSystemMessageConfigResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateSystemMessageConfigProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateSystemMessageConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // chatServiceClient implements ChatServiceClient.
 type chatServiceClient struct {
-	sendMessage              *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
-	editMessage              *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
-	deleteMessage            *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
-	getMessages              *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
-	createChannel            *connect.Client[v1.CreateChannelRequest, v1.CreateChannelResponse]
-	updateChannel            *connect.Client[v1.UpdateChannelRequest, v1.UpdateChannelResponse]
-	deleteChannel            *connect.Client[v1.DeleteChannelRequest, v1.DeleteChannelResponse]
-	getChannel               *connect.Client[v1.GetChannelRequest, v1.GetChannelResponse]
-	listChannels             *connect.Client[v1.ListChannelsRequest, v1.ListChannelsResponse]
-	createServer             *connect.Client[v1.CreateServerRequest, v1.CreateServerResponse]
-	updateServer             *connect.Client[v1.UpdateServerRequest, v1.UpdateServerResponse]
-	deleteServer             *connect.Client[v1.DeleteServerRequest, v1.DeleteServerResponse]
-	getServer                *connect.Client[v1.GetServerRequest, v1.GetServerResponse]
-	listServers              *connect.Client[v1.ListServersRequest, v1.ListServersResponse]
-	joinServer               *connect.Client[v1.JoinServerRequest, v1.JoinServerResponse]
-	leaveServer              *connect.Client[v1.LeaveServerRequest, v1.LeaveServerResponse]
-	listMembers              *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	updateMember             *connect.Client[v1.UpdateMemberRequest, v1.UpdateMemberResponse]
-	setMemberRoles           *connect.Client[v1.SetMemberRolesRequest, v1.SetMemberRolesResponse]
-	kickMember               *connect.Client[v1.KickMemberRequest, v1.KickMemberResponse]
-	banMember                *connect.Client[v1.BanMemberRequest, v1.BanMemberResponse]
-	createRole               *connect.Client[v1.CreateRoleRequest, v1.CreateRoleResponse]
-	updateRole               *connect.Client[v1.UpdateRoleRequest, v1.UpdateRoleResponse]
-	deleteRole               *connect.Client[v1.DeleteRoleRequest, v1.DeleteRoleResponse]
-	unbanMember              *connect.Client[v1.UnbanMemberRequest, v1.UnbanMemberResponse]
-	listBans                 *connect.Client[v1.ListBansRequest, v1.ListBansResponse]
-	listRoles                *connect.Client[v1.ListRolesRequest, v1.ListRolesResponse]
-	reorderRoles             *connect.Client[v1.ReorderRolesRequest, v1.ReorderRolesResponse]
-	createEmoji              *connect.Client[v1.CreateEmojiRequest, v1.CreateEmojiResponse]
-	deleteEmoji              *connect.Client[v1.DeleteEmojiRequest, v1.DeleteEmojiResponse]
-	updateEmoji              *connect.Client[v1.UpdateEmojiRequest, v1.UpdateEmojiResponse]
-	listEmojis               *connect.Client[v1.ListEmojisRequest, v1.ListEmojisResponse]
-	listUserEmojis           *connect.Client[v1.ListUserEmojisRequest, v1.ListUserEmojisResponse]
-	createInvite             *connect.Client[v1.CreateInviteRequest, v1.CreateInviteResponse]
-	resolveInvite            *connect.Client[v1.ResolveInviteRequest, v1.ResolveInviteResponse]
-	revokeInvite             *connect.Client[v1.RevokeInviteRequest, v1.RevokeInviteResponse]
-	listInvites              *connect.Client[v1.ListInvitesRequest, v1.ListInvitesResponse]
-	pinMessage               *connect.Client[v1.PinMessageRequest, v1.PinMessageResponse]
-	unpinMessage             *connect.Client[v1.UnpinMessageRequest, v1.UnpinMessageResponse]
-	getPinnedMessages        *connect.Client[v1.GetPinnedMessagesRequest, v1.GetPinnedMessagesResponse]
-	addChannelMember         *connect.Client[v1.AddChannelMemberRequest, v1.AddChannelMemberResponse]
-	removeChannelMember      *connect.Client[v1.RemoveChannelMemberRequest, v1.RemoveChannelMemberResponse]
-	listChannelMembers       *connect.Client[v1.ListChannelMembersRequest, v1.ListChannelMembersResponse]
-	createSound              *connect.Client[v1.CreateSoundRequest, v1.CreateSoundResponse]
-	deleteSound              *connect.Client[v1.DeleteSoundRequest, v1.DeleteSoundResponse]
-	updateSound              *connect.Client[v1.UpdateSoundRequest, v1.UpdateSoundResponse]
-	listUserSounds           *connect.Client[v1.ListUserSoundsRequest, v1.ListUserSoundsResponse]
-	listServerSounds         *connect.Client[v1.ListServerSoundsRequest, v1.ListServerSoundsResponse]
-	bulkDeleteMessages       *connect.Client[v1.BulkDeleteMessagesRequest, v1.BulkDeleteMessagesResponse]
-	timeoutMember            *connect.Client[v1.TimeoutMemberRequest, v1.TimeoutMemberResponse]
-	removeTimeout            *connect.Client[v1.RemoveTimeoutRequest, v1.RemoveTimeoutResponse]
-	listAuditLog             *connect.Client[v1.ListAuditLogRequest, v1.ListAuditLogResponse]
-	addReaction              *connect.Client[v1.AddReactionRequest, v1.AddReactionResponse]
-	removeReaction           *connect.Client[v1.RemoveReactionRequest, v1.RemoveReactionResponse]
-	getReactions             *connect.Client[v1.GetReactionsRequest, v1.GetReactionsResponse]
-	ackMessage               *connect.Client[v1.AckMessageRequest, v1.AckMessageResponse]
-	createOrGetDMChannel     *connect.Client[v1.CreateOrGetDMChannelRequest, v1.CreateOrGetDMChannelResponse]
-	listDMChannels           *connect.Client[v1.ListDMChannelsRequest, v1.ListDMChannelsResponse]
-	createGroupDMChannel     *connect.Client[v1.CreateGroupDMChannelRequest, v1.CreateGroupDMChannelResponse]
-	getReplies               *connect.Client[v1.GetRepliesRequest, v1.GetRepliesResponse]
-	getMessagesByIDs         *connect.Client[v1.GetMessagesByIDsRequest, v1.GetMessagesByIDsResponse]
-	acknowledgeRules         *connect.Client[v1.AcknowledgeRulesRequest, v1.AcknowledgeRulesResponse]
-	completeOnboarding       *connect.Client[v1.CompleteOnboardingRequest, v1.CompleteOnboardingResponse]
-	createChannelGroup       *connect.Client[v1.CreateChannelGroupRequest, v1.CreateChannelGroupResponse]
-	updateChannelGroup       *connect.Client[v1.UpdateChannelGroupRequest, v1.UpdateChannelGroupResponse]
-	deleteChannelGroup       *connect.Client[v1.DeleteChannelGroupRequest, v1.DeleteChannelGroupResponse]
-	listChannelGroups        *connect.Client[v1.ListChannelGroupsRequest, v1.ListChannelGroupsResponse]
-	setPermissionOverride    *connect.Client[v1.SetPermissionOverrideRequest, v1.SetPermissionOverrideResponse]
-	deletePermissionOverride *connect.Client[v1.DeletePermissionOverrideRequest, v1.DeletePermissionOverrideResponse]
-	listPermissionOverrides  *connect.Client[v1.ListPermissionOverridesRequest, v1.ListPermissionOverridesResponse]
-	getEffectivePermissions  *connect.Client[v1.GetEffectivePermissionsRequest, v1.GetEffectivePermissionsResponse]
-	acceptMessageRequest     *connect.Client[v1.AcceptMessageRequestReq, v1.AcceptMessageRequestRes]
-	declineMessageRequest    *connect.Client[v1.DeclineMessageRequestReq, v1.DeclineMessageRequestRes]
-	reverseDecline           *connect.Client[v1.ReverseDeclineRequest, v1.ReverseDeclineResponse]
-	listMessageRequests      *connect.Client[v1.ListMessageRequestsRequest, v1.ListMessageRequestsResponse]
-	blockUser                *connect.Client[v1.BlockUserRequest, v1.BlockUserResponse]
-	unblockUser              *connect.Client[v1.UnblockUserRequest, v1.UnblockUserResponse]
-	listBlocks               *connect.Client[v1.ListBlocksRequest, v1.ListBlocksResponse]
-	sendFriendRequest        *connect.Client[v1.SendFriendRequestRequest, v1.SendFriendRequestResponse]
-	acceptFriendRequest      *connect.Client[v1.AcceptFriendRequestRequest, v1.AcceptFriendRequestResponse]
-	declineFriendRequest     *connect.Client[v1.DeclineFriendRequestRequest, v1.DeclineFriendRequestResponse]
-	cancelFriendRequest      *connect.Client[v1.CancelFriendRequestRequest, v1.CancelFriendRequestResponse]
-	removeFriend             *connect.Client[v1.RemoveFriendRequest, v1.RemoveFriendResponse]
-	listFriends              *connect.Client[v1.ListFriendsRequest, v1.ListFriendsResponse]
-	listFriendRequests       *connect.Client[v1.ListFriendRequestsRequest, v1.ListFriendRequestsResponse]
-	createServerFromTemplate *connect.Client[v1.CreateServerFromTemplateRequest, v1.CreateServerFromTemplateResponse]
-	searchMessages           *connect.Client[v1.SearchMessagesRequest, v1.SearchMessagesResponse]
-	streamEvents             *connect.Client[v1.StreamEventsRequest, v1.Event]
-	getMutualServers         *connect.Client[v1.GetMutualServersRequest, v1.GetMutualServersResponse]
-	getMutualFriends         *connect.Client[v1.GetMutualFriendsRequest, v1.GetMutualFriendsResponse]
+	sendMessage               *connect.Client[v1.SendMessageRequest, v1.SendMessageResponse]
+	editMessage               *connect.Client[v1.EditMessageRequest, v1.EditMessageResponse]
+	deleteMessage             *connect.Client[v1.DeleteMessageRequest, v1.DeleteMessageResponse]
+	getMessages               *connect.Client[v1.GetMessagesRequest, v1.GetMessagesResponse]
+	createChannel             *connect.Client[v1.CreateChannelRequest, v1.CreateChannelResponse]
+	updateChannel             *connect.Client[v1.UpdateChannelRequest, v1.UpdateChannelResponse]
+	deleteChannel             *connect.Client[v1.DeleteChannelRequest, v1.DeleteChannelResponse]
+	getChannel                *connect.Client[v1.GetChannelRequest, v1.GetChannelResponse]
+	listChannels              *connect.Client[v1.ListChannelsRequest, v1.ListChannelsResponse]
+	createServer              *connect.Client[v1.CreateServerRequest, v1.CreateServerResponse]
+	updateServer              *connect.Client[v1.UpdateServerRequest, v1.UpdateServerResponse]
+	deleteServer              *connect.Client[v1.DeleteServerRequest, v1.DeleteServerResponse]
+	getServer                 *connect.Client[v1.GetServerRequest, v1.GetServerResponse]
+	listServers               *connect.Client[v1.ListServersRequest, v1.ListServersResponse]
+	joinServer                *connect.Client[v1.JoinServerRequest, v1.JoinServerResponse]
+	leaveServer               *connect.Client[v1.LeaveServerRequest, v1.LeaveServerResponse]
+	listMembers               *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	updateMember              *connect.Client[v1.UpdateMemberRequest, v1.UpdateMemberResponse]
+	setMemberRoles            *connect.Client[v1.SetMemberRolesRequest, v1.SetMemberRolesResponse]
+	kickMember                *connect.Client[v1.KickMemberRequest, v1.KickMemberResponse]
+	banMember                 *connect.Client[v1.BanMemberRequest, v1.BanMemberResponse]
+	createRole                *connect.Client[v1.CreateRoleRequest, v1.CreateRoleResponse]
+	updateRole                *connect.Client[v1.UpdateRoleRequest, v1.UpdateRoleResponse]
+	deleteRole                *connect.Client[v1.DeleteRoleRequest, v1.DeleteRoleResponse]
+	unbanMember               *connect.Client[v1.UnbanMemberRequest, v1.UnbanMemberResponse]
+	listBans                  *connect.Client[v1.ListBansRequest, v1.ListBansResponse]
+	listRoles                 *connect.Client[v1.ListRolesRequest, v1.ListRolesResponse]
+	reorderRoles              *connect.Client[v1.ReorderRolesRequest, v1.ReorderRolesResponse]
+	createEmoji               *connect.Client[v1.CreateEmojiRequest, v1.CreateEmojiResponse]
+	deleteEmoji               *connect.Client[v1.DeleteEmojiRequest, v1.DeleteEmojiResponse]
+	updateEmoji               *connect.Client[v1.UpdateEmojiRequest, v1.UpdateEmojiResponse]
+	listEmojis                *connect.Client[v1.ListEmojisRequest, v1.ListEmojisResponse]
+	listUserEmojis            *connect.Client[v1.ListUserEmojisRequest, v1.ListUserEmojisResponse]
+	createInvite              *connect.Client[v1.CreateInviteRequest, v1.CreateInviteResponse]
+	resolveInvite             *connect.Client[v1.ResolveInviteRequest, v1.ResolveInviteResponse]
+	revokeInvite              *connect.Client[v1.RevokeInviteRequest, v1.RevokeInviteResponse]
+	listInvites               *connect.Client[v1.ListInvitesRequest, v1.ListInvitesResponse]
+	pinMessage                *connect.Client[v1.PinMessageRequest, v1.PinMessageResponse]
+	unpinMessage              *connect.Client[v1.UnpinMessageRequest, v1.UnpinMessageResponse]
+	getPinnedMessages         *connect.Client[v1.GetPinnedMessagesRequest, v1.GetPinnedMessagesResponse]
+	addChannelMember          *connect.Client[v1.AddChannelMemberRequest, v1.AddChannelMemberResponse]
+	removeChannelMember       *connect.Client[v1.RemoveChannelMemberRequest, v1.RemoveChannelMemberResponse]
+	listChannelMembers        *connect.Client[v1.ListChannelMembersRequest, v1.ListChannelMembersResponse]
+	createSound               *connect.Client[v1.CreateSoundRequest, v1.CreateSoundResponse]
+	deleteSound               *connect.Client[v1.DeleteSoundRequest, v1.DeleteSoundResponse]
+	updateSound               *connect.Client[v1.UpdateSoundRequest, v1.UpdateSoundResponse]
+	listUserSounds            *connect.Client[v1.ListUserSoundsRequest, v1.ListUserSoundsResponse]
+	listServerSounds          *connect.Client[v1.ListServerSoundsRequest, v1.ListServerSoundsResponse]
+	bulkDeleteMessages        *connect.Client[v1.BulkDeleteMessagesRequest, v1.BulkDeleteMessagesResponse]
+	timeoutMember             *connect.Client[v1.TimeoutMemberRequest, v1.TimeoutMemberResponse]
+	removeTimeout             *connect.Client[v1.RemoveTimeoutRequest, v1.RemoveTimeoutResponse]
+	listAuditLog              *connect.Client[v1.ListAuditLogRequest, v1.ListAuditLogResponse]
+	addReaction               *connect.Client[v1.AddReactionRequest, v1.AddReactionResponse]
+	removeReaction            *connect.Client[v1.RemoveReactionRequest, v1.RemoveReactionResponse]
+	getReactions              *connect.Client[v1.GetReactionsRequest, v1.GetReactionsResponse]
+	ackMessage                *connect.Client[v1.AckMessageRequest, v1.AckMessageResponse]
+	createOrGetDMChannel      *connect.Client[v1.CreateOrGetDMChannelRequest, v1.CreateOrGetDMChannelResponse]
+	listDMChannels            *connect.Client[v1.ListDMChannelsRequest, v1.ListDMChannelsResponse]
+	createGroupDMChannel      *connect.Client[v1.CreateGroupDMChannelRequest, v1.CreateGroupDMChannelResponse]
+	getReplies                *connect.Client[v1.GetRepliesRequest, v1.GetRepliesResponse]
+	getMessagesByIDs          *connect.Client[v1.GetMessagesByIDsRequest, v1.GetMessagesByIDsResponse]
+	acknowledgeRules          *connect.Client[v1.AcknowledgeRulesRequest, v1.AcknowledgeRulesResponse]
+	completeOnboarding        *connect.Client[v1.CompleteOnboardingRequest, v1.CompleteOnboardingResponse]
+	createChannelGroup        *connect.Client[v1.CreateChannelGroupRequest, v1.CreateChannelGroupResponse]
+	updateChannelGroup        *connect.Client[v1.UpdateChannelGroupRequest, v1.UpdateChannelGroupResponse]
+	deleteChannelGroup        *connect.Client[v1.DeleteChannelGroupRequest, v1.DeleteChannelGroupResponse]
+	listChannelGroups         *connect.Client[v1.ListChannelGroupsRequest, v1.ListChannelGroupsResponse]
+	setPermissionOverride     *connect.Client[v1.SetPermissionOverrideRequest, v1.SetPermissionOverrideResponse]
+	deletePermissionOverride  *connect.Client[v1.DeletePermissionOverrideRequest, v1.DeletePermissionOverrideResponse]
+	listPermissionOverrides   *connect.Client[v1.ListPermissionOverridesRequest, v1.ListPermissionOverridesResponse]
+	getEffectivePermissions   *connect.Client[v1.GetEffectivePermissionsRequest, v1.GetEffectivePermissionsResponse]
+	acceptMessageRequest      *connect.Client[v1.AcceptMessageRequestReq, v1.AcceptMessageRequestRes]
+	declineMessageRequest     *connect.Client[v1.DeclineMessageRequestReq, v1.DeclineMessageRequestRes]
+	reverseDecline            *connect.Client[v1.ReverseDeclineRequest, v1.ReverseDeclineResponse]
+	listMessageRequests       *connect.Client[v1.ListMessageRequestsRequest, v1.ListMessageRequestsResponse]
+	blockUser                 *connect.Client[v1.BlockUserRequest, v1.BlockUserResponse]
+	unblockUser               *connect.Client[v1.UnblockUserRequest, v1.UnblockUserResponse]
+	listBlocks                *connect.Client[v1.ListBlocksRequest, v1.ListBlocksResponse]
+	sendFriendRequest         *connect.Client[v1.SendFriendRequestRequest, v1.SendFriendRequestResponse]
+	acceptFriendRequest       *connect.Client[v1.AcceptFriendRequestRequest, v1.AcceptFriendRequestResponse]
+	declineFriendRequest      *connect.Client[v1.DeclineFriendRequestRequest, v1.DeclineFriendRequestResponse]
+	cancelFriendRequest       *connect.Client[v1.CancelFriendRequestRequest, v1.CancelFriendRequestResponse]
+	removeFriend              *connect.Client[v1.RemoveFriendRequest, v1.RemoveFriendResponse]
+	listFriends               *connect.Client[v1.ListFriendsRequest, v1.ListFriendsResponse]
+	listFriendRequests        *connect.Client[v1.ListFriendRequestsRequest, v1.ListFriendRequestsResponse]
+	createServerFromTemplate  *connect.Client[v1.CreateServerFromTemplateRequest, v1.CreateServerFromTemplateResponse]
+	searchMessages            *connect.Client[v1.SearchMessagesRequest, v1.SearchMessagesResponse]
+	streamEvents              *connect.Client[v1.StreamEventsRequest, v1.Event]
+	getMutualServers          *connect.Client[v1.GetMutualServersRequest, v1.GetMutualServersResponse]
+	getMutualFriends          *connect.Client[v1.GetMutualFriendsRequest, v1.GetMutualFriendsResponse]
+	getSystemMessageConfig    *connect.Client[v1.GetSystemMessageConfigRequest, v1.GetSystemMessageConfigResponse]
+	updateSystemMessageConfig *connect.Client[v1.UpdateSystemMessageConfigRequest, v1.UpdateSystemMessageConfigResponse]
 }
 
 // SendMessage calls meza.v1.ChatService.SendMessage.
@@ -1464,6 +1486,16 @@ func (c *chatServiceClient) GetMutualFriends(ctx context.Context, req *connect.R
 	return c.getMutualFriends.CallUnary(ctx, req)
 }
 
+// GetSystemMessageConfig calls meza.v1.ChatService.GetSystemMessageConfig.
+func (c *chatServiceClient) GetSystemMessageConfig(ctx context.Context, req *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error) {
+	return c.getSystemMessageConfig.CallUnary(ctx, req)
+}
+
+// UpdateSystemMessageConfig calls meza.v1.ChatService.UpdateSystemMessageConfig.
+func (c *chatServiceClient) UpdateSystemMessageConfig(ctx context.Context, req *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error) {
+	return c.updateSystemMessageConfig.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the meza.v1.ChatService service.
 type ChatServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
@@ -1556,6 +1588,8 @@ type ChatServiceHandler interface {
 	StreamEvents(context.Context, *connect.Request[v1.StreamEventsRequest], *connect.ServerStream[v1.Event]) error
 	GetMutualServers(context.Context, *connect.Request[v1.GetMutualServersRequest]) (*connect.Response[v1.GetMutualServersResponse], error)
 	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
+	GetSystemMessageConfig(context.Context, *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error)
+	UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -2105,6 +2139,18 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("GetMutualFriends")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceGetSystemMessageConfigHandler := connect.NewUnaryHandler(
+		ChatServiceGetSystemMessageConfigProcedure,
+		svc.GetSystemMessageConfig,
+		connect.WithSchema(chatServiceMethods.ByName("GetSystemMessageConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateSystemMessageConfigHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateSystemMessageConfigProcedure,
+		svc.UpdateSystemMessageConfig,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateSystemMessageConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceSendMessageProcedure:
@@ -2287,6 +2333,10 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetMutualServersHandler.ServeHTTP(w, r)
 		case ChatServiceGetMutualFriendsProcedure:
 			chatServiceGetMutualFriendsHandler.ServeHTTP(w, r)
+		case ChatServiceGetSystemMessageConfigProcedure:
+			chatServiceGetSystemMessageConfigHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateSystemMessageConfigProcedure:
+			chatServiceUpdateSystemMessageConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2654,4 +2704,12 @@ func (UnimplementedChatServiceHandler) GetMutualServers(context.Context, *connec
 
 func (UnimplementedChatServiceHandler) GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.GetMutualFriends is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetSystemMessageConfig(context.Context, *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.GetSystemMessageConfig is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.UpdateSystemMessageConfig is not implemented"))
 }

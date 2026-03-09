@@ -96,6 +96,8 @@ service ChatService {
   rpc StreamEvents(StreamEventsRequest) returns (stream Event);
   rpc GetMutualServers(GetMutualServersRequest) returns (GetMutualServersResponse);
   rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
+  rpc GetSystemMessageConfig(GetSystemMessageConfigRequest) returns (GetSystemMessageConfigResponse);
+  rpc UpdateSystemMessageConfig(UpdateSystemMessageConfigRequest) returns (UpdateSystemMessageConfigResponse);
 }
 
 // Messages
@@ -178,6 +180,7 @@ message UpdateChannelRequest {
   optional int32 slow_mode_seconds = 6; // NULL=off, 0=read-only, >0=interval
   optional bool is_default = 7;
   optional string channel_group_id = 8;
+  optional string content_warning = 9;    // Set to empty string to clear. Omit to leave unchanged.
 }
 
 message UpdateChannelResponse {
@@ -479,6 +482,7 @@ message Event {
     RolesReorderedEvent roles_reordered = 58;
     // 59 reserved for future voice activity update event
     KeyRequestEvent key_request = 60;
+    DeviceRecoveryRequestEvent device_recovery_request = 61;
   }
 }
 
@@ -535,6 +539,7 @@ enum EventType {
   EVENT_TYPE_ROLES_REORDERED = 49;
   // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
   EVENT_TYPE_KEY_REQUEST = 51;
+  EVENT_TYPE_DEVICE_RECOVERY_REQUEST = 52;
 }
 
 message MessageDeleteEvent {
@@ -566,6 +571,11 @@ message TypingEvent {
 message KeyRequestEvent {
   string channel_id = 1;
   string user_id = 2;  // The user requesting keys
+}
+
+message DeviceRecoveryRequestEvent {
+  string session_id = 1;
+  bytes ephemeral_public_key = 2;  // 32 bytes X25519
 }
 
 message RoleDeleteEvent {
@@ -1201,6 +1211,7 @@ message SearchMessagesRequest {
   optional string before_id = 7;
   optional string mentioned_user_id = 8;
   optional string after_id = 9;
+  repeated MessageType message_types = 10; // filter by message type (empty = all)
 }
 
 message SearchMessagesResponse {
@@ -1215,6 +1226,14 @@ message EmbedFetchJob {
   string channel_id = 1;
   string message_id = 2;
   repeated string urls = 3;
+}
+
+// Internal NATS event published by the keys service after a channel key rotation.
+// The chat service subscribes and creates a system message in the channel.
+message KeyRotationInternalEvent {
+  string channel_id = 1;
+  string actor_id = 2;
+  uint32 new_key_version = 3;
 }
 
 // Mutual data
@@ -1233,4 +1252,34 @@ message GetMutualFriendsRequest {
 
 message GetMutualFriendsResponse {
   repeated User users = 1;
+}
+
+// System Message Configuration
+
+message GetSystemMessageConfigRequest {
+  string server_id = 1;
+}
+
+message GetSystemMessageConfigResponse {
+  ServerSystemMessageConfig config = 1;
+}
+
+message UpdateSystemMessageConfigRequest {
+  string server_id = 1;
+  optional string welcome_channel_id = 2;
+  optional string mod_log_channel_id = 3;
+  optional bool join_enabled = 4;
+  optional string join_template = 5;
+  optional bool leave_enabled = 6;
+  optional string leave_template = 7;
+  optional bool kick_enabled = 8;
+  optional string kick_template = 9;
+  optional bool ban_enabled = 10;
+  optional string ban_template = 11;
+  optional bool timeout_enabled = 12;
+  optional string timeout_template = 13;
+}
+
+message UpdateSystemMessageConfigResponse {
+  ServerSystemMessageConfig config = 1;
 }

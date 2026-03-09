@@ -240,7 +240,7 @@ func (m *mockChatStore) GetChannelAndCheckMembership(_ context.Context, channelI
 	return ch, false, nil
 }
 
-func (m *mockChatStore) UpdateChannel(_ context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string) (*models.Channel, error) {
+func (m *mockChatStore) UpdateChannel(_ context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string) (*models.Channel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -263,11 +263,14 @@ func (m *mockChatStore) UpdateChannel(_ context.Context, channelID string, name,
 	if isDefault != nil {
 		ch.IsDefault = *isDefault
 	}
+	if contentWarning != nil {
+		ch.ContentWarning = *contentWarning
+	}
 	return ch, nil
 }
 
-func (m *mockChatStore) UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string, _ bool, _ string, _ int64) (*models.Channel, error) {
-	return m.UpdateChannel(ctx, channelID, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID)
+func (m *mockChatStore) UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string, _ bool, _ string, _ int64) (*models.Channel, error) {
+	return m.UpdateChannel(ctx, channelID, name, topic, position, isPrivate, slowModeSeconds, isDefault, channelGroupID, contentWarning)
 }
 
 func (m *mockChatStore) DeleteChannel(_ context.Context, channelID string) error {
@@ -441,6 +444,18 @@ func (m *mockChatStore) GetSelfAssignableRoles(_ context.Context, _ string) ([]*
 }
 func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
 	return nil, nil, nil, nil
+}
+func (m *mockChatStore) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
+	return nil, nil, nil
+}
+func (m *mockChatStore) DeleteChannelWithCompanion(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStore) IsVoiceTextCompanion(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+func (m *mockChatStore) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
+	return nil
 }
 
 // mockMessageStore implements models.MessageStorer for testing.
@@ -1089,7 +1104,7 @@ func (s *mockMediaStore) CountPendingByUploader(context.Context, string) (int, e
 func (s *mockMediaStore) TransitionToProcessing(context.Context, string, string) (*models.Attachment, error) {
 	return nil, nil
 }
-func (s *mockMediaStore) UpdateAttachmentCompleted(context.Context, string, int64, string, int, int, string, string, []byte) error {
+func (s *mockMediaStore) UpdateAttachmentCompleted(context.Context, string, int64, string, int, int, string, string, []byte, bool) error {
 	return nil
 }
 func (s *mockMediaStore) DeleteAttachment(context.Context, string) error { return nil }

@@ -59,6 +59,8 @@ message Channel {
   optional string channel_group_id = 11;
   optional string dm_status = 12;         // "active", "pending", "declined" (DM channels only)
   optional string dm_initiator_id = 13;   // user who initiated the DM request
+  optional string content_warning = 14;   // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
+  optional string voice_text_channel_id = 15; // companion text channel ID (VOICE channels only)
 }
 
 message ChannelGroup {
@@ -86,6 +88,17 @@ enum ChannelType {
   CHANNEL_TYPE_GROUP_DM = 4;
 }
 
+// MessageType distinguishes regular user messages from server-generated system messages.
+// Sub-flavors (e.g., kick vs ban vs timeout) are differentiated by JSON content payload fields.
+enum MessageType {
+  MESSAGE_TYPE_DEFAULT        = 0; // regular user message
+  MESSAGE_TYPE_MEMBER_JOIN    = 1; // also used for group DM member add
+  MESSAGE_TYPE_MEMBER_LEAVE   = 2; // also used for group DM member remove
+  MESSAGE_TYPE_MEMBER_KICK    = 3; // content.action differentiates kick/ban/timeout
+  MESSAGE_TYPE_CHANNEL_UPDATE = 4; // content.field differentiates name/topic
+  MESSAGE_TYPE_KEY_ROTATION   = 5;
+}
+
 message DMChannel {
   Channel channel = 1;
   repeated User participants = 2;
@@ -107,6 +120,7 @@ message Message {
   bool mention_everyone = 12;
   repeated string mentioned_role_ids = 13;
   uint32 key_version = 14;  // Static channel key version used for encryption
+  MessageType type = 15;    // 0 = regular message, >0 = system message subtype
 }
 
 message LinkEmbed {
@@ -133,6 +147,7 @@ message Attachment {
   int32 height = 8;
   bool has_thumbnail = 9;
   bytes micro_thumbnail = 10;
+  bool is_spoiler = 11;                   // Content warning: image is blurred until user reveals it. Immutable after send.
 }
 
 message Member {
@@ -254,6 +269,24 @@ message AudioPreferences {
   bool echo_cancellation = 2;
   bool auto_gain_control = 3;
   string noise_cancellation_mode = 4;  // "off", "standard", "giga" — empty means legacy/unset
+}
+
+// Server System Message Configuration
+
+message ServerSystemMessageConfig {
+  string server_id = 1;
+  optional string welcome_channel_id = 2;
+  optional string mod_log_channel_id = 3;
+  bool join_enabled = 4;
+  optional string join_template = 5;
+  bool leave_enabled = 6;
+  optional string leave_template = 7;
+  bool kick_enabled = 8;
+  optional string kick_template = 9;
+  bool ban_enabled = 10;
+  optional string ban_template = 11;
+  bool timeout_enabled = 12;
+  optional string timeout_template = 13;
 }
 
 // E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.

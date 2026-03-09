@@ -271,6 +271,17 @@ export class ChannelPage {
   // E2EE assertions
   // ---------------------------------------------------------------------------
 
+  // ---------------------------------------------------------------------------
+  // System message assertions
+  // ---------------------------------------------------------------------------
+
+  /** Assert a system message with the given text is visible (e.g. "joined the server"). */
+  async expectSystemMessage(text: string | RegExp) {
+    await expect(this.messageList.getByText(text)).toBeVisible({
+      timeout: 10_000,
+    });
+  }
+
   /** Assert no raw JSON content like {"t":"..."} is visible in the message list. */
   async expectNoRawJson() {
     await expect(this.messageList.locator('text=/\\{"t":/')).toHaveCount(0, {

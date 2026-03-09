@@ -14,16 +14,18 @@ import (
 	"github.com/meza-chat/meza/gen/meza/v1/mezav1connect"
 	"github.com/meza-chat/meza/internal/auth"
 	"github.com/meza-chat/meza/internal/models"
+	"github.com/meza-chat/meza/internal/store"
 	"github.com/meza-chat/meza/internal/testutil"
 )
 
 // mockAuthStore implements store.AuthStorer for testing.
 type mockAuthStore struct {
-	mu            sync.Mutex
-	users         map[string]*models.User
-	authData      map[string]*models.AuthData
-	salts         map[string][]byte // email -> salt
-	refreshTokens map[string]refreshEntry
+	mu              sync.Mutex
+	users           map[string]*models.User
+	authData        map[string]*models.AuthData
+	salts           map[string][]byte // email -> salt
+	refreshTokens   map[string]refreshEntry
+	verifierHashes  map[string][]byte // userID -> recovery_verifier_hash
 }
 
 type refreshEntry struct {
@@ -34,10 +36,11 @@ type refreshEntry struct {
 
 func newMockAuthStore() *mockAuthStore {
 	return &mockAuthStore{
-		users:         make(map[string]*models.User),
-		authData:      make(map[string]*models.AuthData),
-		salts:         make(map[string][]byte),
-		refreshTokens: make(map[string]refreshEntry),
+		users:          make(map[string]*models.User),
+		authData:       make(map[string]*models.AuthData),
+		salts:          make(map[string][]byte),
+		refreshTokens:  make(map[string]refreshEntry),
+		verifierHashes: make(map[string][]byte),
 	}
 }
 
@@ -63,7 +66,21 @@ func (m *mockAuthStore) CreateUser(_ context.Context, user *models.User, authKey
 		KeyBundleIV:        encBundle.KeyBundleIV,
 	}
 	m.salts[user.Email] = salt
+	if encBundle.RecoveryVerifierHash != nil {
+		m.verifierHashes[user.ID] = encBundle.RecoveryVerifierHash
+	}
 	return user, nil
+}
+
+func (m *mockAuthStore) GetAuthDataByUserID(_ context.Context, userID string) (*models.AuthData, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	ad, ok := m.authData[userID]
+	if !ok {
+		return nil, fmt.Errorf("user not found")
+	}
+	return ad, nil
 }
 
 func (m *mockAuthStore) GetUserByEmail(_ context.Context, email string) (*models.User, *models.AuthData, error) {
@@ -236,6 +253,9 @@ func (m *mockAuthStore) ChangePassword(_ context.Context, userID, oldAuthKeyHash
 	ad.Salt = newSalt
 	ad.EncryptedKeyBundle = newBundle.EncryptedKeyBundle
 	ad.KeyBundleIV = newBundle.KeyBundleIV
+	if newBundle.RecoveryVerifierHash != nil {
+		m.verifierHashes[userID] = newBundle.RecoveryVerifierHash
+	}
 	return nil
 }
 
@@ -252,17 +272,23 @@ func (m *mockAuthStore) GetRecoveryBundle(_ context.Context, email string) ([]by
 	return nil, nil, nil, fmt.Errorf("user not found")
 }
 
-func (m *mockAuthStore) RecoverAccount(_ context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) (string, error) {
+func (m *mockAuthStore) RecoverAccount(_ context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for _, u := range m.users {
 		if u.Email == email {
+			if !verifyVerifier(m.verifierHashes[u.ID]) {
+				return "", store.ErrInvalidRecoveryProof
+			}
 			ad := m.authData[u.ID]
 			ad.AuthKeyHash = newAuthKeyHash
 			ad.Salt = newSalt
 			ad.EncryptedKeyBundle = newBundle.EncryptedKeyBundle
 			ad.KeyBundleIV = newBundle.KeyBundleIV
+			if newBundle.RecoveryVerifierHash != nil {
+				m.verifierHashes[u.ID] = newBundle.RecoveryVerifierHash
+			}
 			return u.ID, nil
 		}
 	}
@@ -345,6 +371,19 @@ func (m *mockDeviceStore) DeleteDevice(_ context.Context, userID, deviceID strin
 	}
 	delete(m.devices, deviceID)
 	return nil
+}
+
+func (m *mockDeviceStore) DeleteAllOtherDevices(_ context.Context, userID, currentDeviceID string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var deleted []string
+	for id, d := range m.devices {
+		if d.UserID == userID && id != currentDeviceID {
+			deleted = append(deleted, id)
+			delete(m.devices, id)
+		}
+	}
+	return deleted, nil
 }
 
 func (m *mockDeviceStore) TouchLastSeen(_ context.Context, _, _ string) error { return nil }

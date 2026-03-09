@@ -70,7 +70,7 @@ func (m *mockMediaStore) TransitionToProcessing(_ context.Context, id, uploaderI
 	return a, nil
 }
 
-func (m *mockMediaStore) UpdateAttachmentCompleted(_ context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte) error {
+func (m *mockMediaStore) UpdateAttachmentCompleted(_ context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte, isSpoiler bool) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	a, ok := m.attachments[id]
@@ -87,6 +87,7 @@ func (m *mockMediaStore) UpdateAttachmentCompleted(_ context.Context, id string,
 	a.Height = height
 	a.ThumbnailKey = thumbnailKey
 	a.MicroThumbnailData = microThumbnailData
+	a.IsSpoiler = isSpoiler
 	now := time.Now()
 	a.CompletedAt = &now
 	a.ExpiresAt = nil

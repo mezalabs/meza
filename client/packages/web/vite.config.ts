@@ -25,6 +25,9 @@ export default defineConfig(async () => {
     resolve: {
       dedupe: ['@phosphor-icons/react', 'react', 'react-dom'],
     },
+    worker: {
+      format: 'es',
+    },
     optimizeDeps: {
       exclude: ['@jitsi/rnnoise-wasm'],
     },

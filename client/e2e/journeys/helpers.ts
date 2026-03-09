@@ -105,8 +105,8 @@ export function reportFailures() {
 /**
  * Create a new browser context and page. If a storage state file exists at
  * `.auth/{name}.json`, it will be loaded automatically. Also restores the
- * E2EE session (master key + encrypted key bundle) that Playwright's
- * storageState does not persist (sessionStorage and IndexedDB).
+ * E2EE session (encrypted key bundle in IndexedDB) that Playwright's
+ * storageState does not persist.
  */
 export async function createContext(
   browser: Browser,
@@ -120,14 +120,14 @@ export async function createContext(
   );
   const page = await context.newPage();
 
-  // Restore E2EE crypto state (master key → sessionStorage, key bundle → IndexedDB).
-  // Playwright storageState only persists localStorage/cookies.
+  // Restore E2EE crypto state (master key → localStorage, key bundle → IndexedDB).
+  // Playwright storageState persists localStorage/cookies but not IndexedDB.
   if (fs.existsSync(cryptoFile)) {
     const crypto = JSON.parse(fs.readFileSync(cryptoFile, 'utf-8'));
 
-    // Restore sessionStorage master key on every page load.
+    // Restore master key to localStorage on every page load.
     await page.addInitScript((mk: string) => {
-      sessionStorage.setItem('meza-mk', mk);
+      localStorage.setItem('meza-mk', mk);
     }, crypto.mk);
 
     // Write the encrypted key bundle to IndexedDB BEFORE the app loads.
@@ -166,7 +166,7 @@ export async function createContext(
 
 /**
  * Save a browser context's storage state to `.auth/{name}.json`.
- * Also persists the E2EE crypto state (master key from sessionStorage,
+ * Also persists the E2EE crypto state (master key from localStorage,
  * encrypted key bundle from IndexedDB) for cross-journey restoration.
  */
 export async function saveAuth(
@@ -181,7 +181,7 @@ export async function saveAuth(
   if (pages.length > 0) {
     const crypto = await pages[0]
       .evaluate(async () => {
-        const mk = sessionStorage.getItem('meza-mk');
+        const mk = localStorage.getItem('meza-mk');
         if (!mk) return null;
 
         // Read key bundle from IndexedDB

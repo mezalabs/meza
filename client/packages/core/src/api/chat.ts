@@ -346,6 +346,7 @@ export async function updateChannel(
     slowModeSeconds?: number;
     isDefault?: boolean;
     channelGroupId?: string;
+    contentWarning?: string;
   },
 ) {
   const store = useChannelStore.getState();
@@ -1560,4 +1561,35 @@ function distributeKeysForOverrideTarget(targetId: string): void {
   redistributeChannelKeys(channelIds).catch((err: unknown) =>
     console.error('[E2EE] distributeKeysForOverrideTarget failed:', err),
   );
+}
+
+// --- System Message Config ---
+
+export async function getSystemMessageConfig(serverId: string) {
+  const resp = await chatClient.getSystemMessageConfig({ serverId });
+  return resp.config;
+}
+
+export async function updateSystemMessageConfig(
+  serverId: string,
+  config: {
+    welcomeChannelId?: string;
+    modLogChannelId?: string;
+    joinEnabled?: boolean;
+    joinTemplate?: string;
+    leaveEnabled?: boolean;
+    leaveTemplate?: string;
+    kickEnabled?: boolean;
+    kickTemplate?: string;
+    banEnabled?: boolean;
+    banTemplate?: string;
+    timeoutEnabled?: boolean;
+    timeoutTemplate?: string;
+  },
+) {
+  const resp = await chatClient.updateSystemMessageConfig({
+    serverId,
+    ...config,
+  });
+  return resp.config;
 }

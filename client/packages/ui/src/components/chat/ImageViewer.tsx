@@ -9,7 +9,12 @@ import {
   releaseBlobURL,
   unwrapFileKey,
 } from '@meza/core';
-import { CaretLeftIcon, CaretRightIcon, XIcon } from '@phosphor-icons/react';
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  EyeSlashIcon,
+  XIcon,
+} from '@phosphor-icons/react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {
   createContext,
@@ -19,6 +24,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useContentWarningStore } from '../../stores/contentWarnings.ts';
 import { useImageViewerStore } from '../../stores/imageViewer.ts';
 
 const SWIPE_THRESHOLD = 50;
@@ -198,6 +204,47 @@ function EncryptedViewerImage({
         </div>
       )}
     </div>
+  );
+}
+
+function ViewerSpoilerGate({
+  attachment,
+  channelId,
+}: {
+  attachment: Attachment;
+  channelId: string;
+}) {
+  const revealed = useContentWarningStore((s) =>
+    s.isSpoilerRevealed(attachment.id),
+  );
+  const reveal = useContentWarningStore((s) => s.revealSpoiler);
+
+  if (attachment.isSpoiler && !revealed) {
+    return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation wrapper
+      <div
+        className="flex items-center justify-center"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <button
+          type="button"
+          onClick={() => reveal(attachment.id)}
+          className="flex flex-col items-center gap-3 rounded-xl bg-bg-elevated/80 px-8 py-6 text-text-muted hover:text-text transition-colors"
+          aria-label="Reveal spoiler image"
+        >
+          <EyeSlashIcon size={32} aria-hidden="true" />
+          <span className="text-sm font-medium">Spoiler — click to reveal</span>
+        </button>
+      </div>
+    );
+  }
+
+  return isEncrypted(attachment) ? (
+    <EncryptedViewerImage attachment={attachment} channelId={channelId} />
+  ) : (
+    <ViewerImage attachment={attachment} />
   );
 }
 
@@ -419,14 +466,7 @@ export function ImageViewer() {
                 <CaretLeftIcon size={20} aria-hidden="true" />
               </button>
             )}
-            {isEncrypted(current) ? (
-              <EncryptedViewerImage
-                attachment={current}
-                channelId={channelId}
-              />
-            ) : (
-              <ViewerImage attachment={current} />
-            )}
+            <ViewerSpoilerGate attachment={current} channelId={channelId} />
             {hasMultiple && hasNext && (
               <button
                 type="button"

@@ -15,7 +15,7 @@ export async function subscribeToPush(adapter: PushAdapter): Promise<void> {
   await authClient.registerDevice({
     devicePublicKey: new Uint8Array(0),
     deviceSignature: new Uint8Array(0),
-    deviceName: adapter.deviceName,
+    deviceName: '',
     platform: adapter.platform,
     pushEndpoint: details?.pushEndpoint ?? '',
     pushP256dh: details?.pushP256dh ?? '',

@@ -9,12 +9,14 @@ import { EmojisSection } from './EmojisSection.tsx';
 import { KeybindsSection } from './KeybindsSection.tsx';
 import { NotificationsSection } from './NotificationsSection.tsx';
 import { PrivacySection } from './PrivacySection.tsx';
+import { SecuritySection } from './SecuritySection.tsx';
 import { SoundsSection } from './SoundsSection.tsx';
 import { StreamingSection } from './StreamingSection.tsx';
 import { VoiceAudioSection } from './VoiceAudioSection.tsx';
 
 const SETTINGS_SECTIONS = [
   { id: 'account', label: 'Account & Profile' },
+  { id: 'security', label: 'Security' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'keybinds', label: 'Keybinds' },
   { id: 'notifications', label: 'Notifications' },
@@ -152,6 +154,8 @@ function renderSettingsContent(section: SectionId | null) {
   switch (section) {
     case 'account':
       return <AccountSection />;
+    case 'security':
+      return <SecuritySection />;
     case 'appearance':
       return <AppearanceSection />;
     case 'keybinds':

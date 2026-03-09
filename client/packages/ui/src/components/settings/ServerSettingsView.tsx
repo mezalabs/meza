@@ -5,16 +5,20 @@ import { BansSection } from './BansSection.tsx';
 import { DefaultPrivacySection } from './DefaultPrivacySection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
 import { OnboardingSection } from './OnboardingSection.tsx';
+import { OverviewSection } from './OverviewSection.tsx';
 import { RolesSection } from './RolesSection.tsx';
 import { SoundsSection } from './SoundsSection.tsx';
+import { SystemMessagesSection } from './SystemMessagesSection.tsx';
 
 const SERVER_SETTINGS_SECTIONS = [
+  { id: 'overview', label: 'Overview' },
   { id: 'roles', label: 'Roles' },
   { id: 'privacy', label: 'Channel Privacy' },
   { id: 'emojis', label: 'Emojis' },
   { id: 'soundboard', label: 'Soundboard' },
   { id: 'bans', label: 'Bans' },
   { id: 'onboarding', label: 'Onboarding' },
+  { id: 'system-messages', label: 'System Messages' },
 ] as const;
 
 type SectionId = (typeof SERVER_SETTINGS_SECTIONS)[number]['id'];
@@ -26,7 +30,7 @@ interface ServerSettingsViewProps {
 export function ServerSettingsView({ serverId }: ServerSettingsViewProps) {
   const isMobile = useMobile();
   const [activeSection, setActiveSection] = useState<SectionId | null>(
-    isMobile ? null : 'roles',
+    isMobile ? null : 'overview',
   );
 
   const activeSectionLabel = SERVER_SETTINGS_SECTIONS.find(
@@ -120,6 +124,8 @@ function renderServerSettingsContent(
   serverId: string,
 ) {
   switch (section) {
+    case 'overview':
+      return <OverviewSection serverId={serverId} />;
     case 'roles':
       return <RolesSection serverId={serverId} />;
     case 'privacy':
@@ -132,6 +138,8 @@ function renderServerSettingsContent(
       return <BansSection serverId={serverId} />;
     case 'onboarding':
       return <OnboardingSection serverId={serverId} />;
+    case 'system-messages':
+      return <SystemMessagesSection serverId={serverId} />;
     default:
       return null;
   }

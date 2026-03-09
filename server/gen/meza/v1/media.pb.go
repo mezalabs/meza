@@ -224,6 +224,7 @@ type CompleteUploadRequest struct {
 	Width         int32                  `protobuf:"varint,2,opt,name=width,proto3" json:"width,omitempty"` // Client-provided dimensions (encrypted uploads)
 	Height        int32                  `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
 	EncryptedKey  []byte                 `protobuf:"bytes,4,opt,name=encrypted_key,json=encryptedKey,proto3" json:"encrypted_key,omitempty"` // Per-file AES key wrapped with channel key (60 bytes)
+	IsSpoiler     bool                   `protobuf:"varint,5,opt,name=is_spoiler,json=isSpoiler,proto3" json:"is_spoiler,omitempty"`         // Content warning: blur image until user reveals it
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -284,6 +285,13 @@ func (x *CompleteUploadRequest) GetEncryptedKey() []byte {
 		return x.EncryptedKey
 	}
 	return nil
+}
+
+func (x *CompleteUploadRequest) GetIsSpoiler() bool {
+	if x != nil {
+		return x.IsSpoiler
+	}
+	return false
 }
 
 type CompleteUploadResponse struct {
@@ -482,12 +490,14 @@ const file_meza_v1_media_proto_rawDesc = "" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x1d\n" +
 	"\n" +
 	"upload_url\x18\x02 \x01(\tR\tuploadUrl\x120\n" +
-	"\x14thumbnail_upload_url\x18\x03 \x01(\tR\x12thumbnailUploadUrl\"\x87\x01\n" +
+	"\x14thumbnail_upload_url\x18\x03 \x01(\tR\x12thumbnailUploadUrl\"\xa6\x01\n" +
 	"\x15CompleteUploadRequest\x12\x1b\n" +
 	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x14\n" +
 	"\x05width\x18\x02 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x03 \x01(\x05R\x06height\x12#\n" +
-	"\rencrypted_key\x18\x04 \x01(\fR\fencryptedKey\"\xcb\x01\n" +
+	"\rencrypted_key\x18\x04 \x01(\fR\fencryptedKey\x12\x1d\n" +
+	"\n" +
+	"is_spoiler\x18\x05 \x01(\bR\tisSpoiler\"\xcb\x01\n" +
 	"\x16CompleteUploadResponse\x12#\n" +
 	"\rattachment_id\x18\x01 \x01(\tR\fattachmentId\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12#\n" +

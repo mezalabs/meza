@@ -68,6 +68,7 @@ export async function completeUpload(
     width?: number;
     height?: number;
     encryptedKey?: Uint8Array;
+    isSpoiler?: boolean;
   },
 ): Promise<{
   attachmentId: string;
@@ -82,6 +83,7 @@ export async function completeUpload(
     width: opts?.width ?? 0,
     height: opts?.height ?? 0,
     encryptedKey: opts?.encryptedKey ?? new Uint8Array(),
+    isSpoiler: opts?.isSpoiler ?? false,
   });
   return {
     attachmentId: res.attachmentId,
@@ -178,6 +180,7 @@ export async function uploadEncryptedFile(
   file: File,
   channelId: string,
   onProgress?: (percent: number) => void,
+  isSpoiler?: boolean,
 ): Promise<EncryptedUploadResult> {
   // 1. Read file bytes
   const fileBytes = new Uint8Array(await file.arrayBuffer());
@@ -245,6 +248,7 @@ export async function uploadEncryptedFile(
     width,
     height,
     encryptedKey,
+    isSpoiler,
   });
 
   // 10. Read micro-thumbnail bytes for message JSON

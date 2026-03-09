@@ -6,7 +6,6 @@ import type { PushAdapter, PushSubscriptionDetails } from '@meza/core';
  */
 export class ElectronPushAdapter implements PushAdapter {
   platform = 'electron' as const;
-  deviceName = 'Meza Desktop';
 
   async subscribe(): Promise<PushSubscriptionDetails | null> {
     // Electron uses native notifications via IPC, not Web Push.

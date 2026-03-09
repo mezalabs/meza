@@ -32,6 +32,7 @@ import { GatewayConnectionBanner } from './GatewayConnectionBanner.tsx';
 import { MobileOverlay } from './MobileOverlay.tsx';
 import { MobileSlideOver } from './MobileSlideOver.tsx';
 import { Sidebar } from './Sidebar.tsx';
+import { ToastContainer } from './ToastContainer.tsx';
 
 /**
  * Top-level mobile layout component. Renders instead of Shell on viewports < 768px.
@@ -191,6 +192,7 @@ export function MobileShell() {
         </MobileOverlay>
 
         <ImageViewer />
+        <ToastContainer />
       </div>
     </IconContext.Provider>
   );

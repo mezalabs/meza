@@ -145,6 +145,18 @@ func UserSubscription(userID string) string {
 	return fmt.Sprintf("meza.user.subscription.%s", userID)
 }
 
+// User recovery subjects — auth service publishes, notification service subscribes.
+// Separate from UserSubscription because the notification service does NOT subscribe
+// to UserSubscription — it subscribes to DeliverChannel/DeviceConnected/DeviceDisconnected.
+
+func UserRecovery(userID string) string {
+	return fmt.Sprintf("meza.user.recovery.%s", userID)
+}
+
+func UserRecoveryWildcard() string {
+	return "meza.user.recovery.>"
+}
+
 // Device connectivity subjects — notification service subscribes,
 // gateway publishes on WebSocket connect/disconnect.
 
@@ -168,4 +180,10 @@ func DeviceDisconnectedWildcard() string {
 
 func EmbedFetch() string {
 	return "meza.embed.fetch"
+}
+
+// Internal key rotation subject — keys service publishes, chat service subscribes.
+
+func InternalKeyRotation() string {
+	return "meza.internal.keyrotation"
 }

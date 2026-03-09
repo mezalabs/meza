@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -384,6 +385,16 @@ func (s *chatService) KickMember(ctx context.Context, req *connect.Request[v1.Ki
 	// Signal gateway to refresh channel subscriptions for the kicked user.
 	s.nc.Publish(subjects.UserSubscription(req.Msg.UserId), nil)
 
+	// Emit system message (config-aware: channel routing, enable/disable, templates).
+	s.publishServerSystemMessage(ctx, req.Msg.ServerId,
+		uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), "kick",
+		MemberKickContent{UserID: req.Msg.UserId, ActorID: userID, Action: "kick"},
+		map[string]string{
+			"user":  s.resolveDisplayName(ctx, req.Msg.UserId, req.Msg.ServerId),
+			"actor": s.resolveDisplayName(ctx, userID, req.Msg.ServerId),
+		},
+	)
+
 	return connect.NewResponse(&v1.KickMemberResponse{}), nil
 }
 
@@ -496,6 +507,18 @@ func (s *chatService) BanMember(ctx context.Context, req *connect.Request[v1.Ban
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("user is already banned"))
 		}
 	}
+
+	// Emit system message (config-aware: channel routing, enable/disable, templates).
+	reason := truncate(req.Msg.GetReason(), 512)
+	s.publishServerSystemMessage(ctx, req.Msg.ServerId,
+		uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), "ban",
+		MemberKickContent{UserID: req.Msg.UserId, ActorID: userID, Action: "ban", Reason: reason},
+		map[string]string{
+			"user":   s.resolveDisplayName(ctx, req.Msg.UserId, req.Msg.ServerId),
+			"actor":  s.resolveDisplayName(ctx, userID, req.Msg.ServerId),
+			"reason": reason,
+		},
+	)
 
 	return connect.NewResponse(&v1.BanMemberResponse{}), nil
 }
@@ -1076,6 +1099,18 @@ func (s *chatService) TimeoutMember(ctx context.Context, req *connect.Request[v1
 
 	// Publish PERMISSIONS_UPDATED signal (timeout affects permissions).
 	s.publishPermissionsUpdated(ctx, req.Msg.ServerId, "")
+
+	// Emit system message (config-aware: channel routing, enable/disable, templates).
+	durationSeconds := int(time.Until(timedOutUntil).Seconds())
+	s.publishServerSystemMessage(ctx, req.Msg.ServerId,
+		uint32(v1.MessageType_MESSAGE_TYPE_MEMBER_KICK), "timeout",
+		MemberKickContent{UserID: req.Msg.UserId, ActorID: userID, Action: "timeout", DurationSeconds: durationSeconds},
+		map[string]string{
+			"user":     s.resolveDisplayName(ctx, req.Msg.UserId, req.Msg.ServerId),
+			"actor":    s.resolveDisplayName(ctx, userID, req.Msg.ServerId),
+			"duration": fmt.Sprintf("%ds", durationSeconds),
+		},
+	)
 
 	return connect.NewResponse(&v1.TimeoutMemberResponse{
 		Member: memberProto,

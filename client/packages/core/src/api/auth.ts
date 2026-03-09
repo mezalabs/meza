@@ -79,6 +79,7 @@ export async function register(
     initialKeyPackages?: Uint8Array[];
     recoveryEncryptedKeyBundle?: Uint8Array;
     recoveryKeyBundleIv?: Uint8Array;
+    recoveryVerifier?: Uint8Array;
   },
   opts?: { deferAuth?: boolean },
 ) {
@@ -115,7 +116,7 @@ export function finalizeRegistration(
     import('../crypto/session.ts').then(({ getIdentity }) => {
       const id = getIdentity();
       if (id) registerPublicKey(id.publicKey).catch(() => {});
-    });
+    }).catch(() => {});
   }
 }
 
@@ -219,6 +220,7 @@ export async function changePassword(params: {
   newKeyBundleIv: Uint8Array;
   newRecoveryEncryptedKeyBundle: Uint8Array;
   newRecoveryKeyBundleIv: Uint8Array;
+  newRecoveryVerifier?: Uint8Array;
 }) {
   try {
     await authClient.changePassword(params);
@@ -239,6 +241,15 @@ export async function listDevices() {
 export async function revokeDevice(deviceId: string) {
   try {
     await authClient.revokeDevice({ deviceId });
+  } catch (err) {
+    throw new Error(mapAuthError(err), { cause: err });
+  }
+}
+
+export async function revokeAllOtherDevices(): Promise<number> {
+  try {
+    const res = await authClient.revokeAllOtherDevices({});
+    return res.revokedCount;
   } catch (err) {
     throw new Error(mapAuthError(err), { cause: err });
   }
@@ -266,6 +277,8 @@ export async function recoverAccount(
     newKeyBundleIv: Uint8Array;
     newRecoveryEncryptedKeyBundle: Uint8Array;
     newRecoveryKeyBundleIv: Uint8Array;
+    recoveryVerifier?: Uint8Array;
+    newRecoveryVerifier?: Uint8Array;
   },
   opts?: { deferAuth?: boolean },
 ) {

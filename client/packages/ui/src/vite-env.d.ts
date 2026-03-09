@@ -3,3 +3,9 @@ declare module '*?url' {
   const src: string;
   export default src;
 }
+
+// Vite worker URL imports: bundles the file as a worker entry point and returns the URL.
+declare module '*?worker&url' {
+  const src: string;
+  export default src;
+}

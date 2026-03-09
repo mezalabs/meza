@@ -21,6 +21,7 @@ type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error)
+	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error)
 	GetSalt(ctx context.Context, email string) ([]byte, error)
@@ -31,7 +32,10 @@ type AuthStorer interface {
 	GetKeyBundle(ctx context.Context, userID string) (*models.EncryptedBundle, error)
 	ChangePassword(ctx context.Context, userID, oldAuthKeyHash, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) error
 	GetRecoveryBundle(ctx context.Context, email string) (recoveryBundle, recoveryIV, salt []byte, err error)
-	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) (userID string, err error)
+	// RecoverAccount atomically verifies the recovery verifier and resets credentials.
+	// verifyVerifier is called with the stored hash inside the transaction; if it returns
+	// false, the transaction is rolled back and ErrInvalidRecoveryProof is returned.
+	RecoverAccount(ctx context.Context, email, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle, verifyVerifier func(storedHash []byte) bool, excludeDeviceIDs ...string) (userID string, err error)
 }
 
 // ChatStorer provides access to server/channel/member data in Postgres.
@@ -44,14 +48,22 @@ type ChatStorer interface {
 	GetChannel(ctx context.Context, channelID string) (*models.Channel, error)
 	GetChannelAndCheckMembership(ctx context.Context, channelID, userID string) (*models.Channel, bool, error)
 	ListChannels(ctx context.Context, serverID, userID string) ([]*models.Channel, error)
-	UpdateChannel(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string) (*models.Channel, error)
+	UpdateChannel(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string) (*models.Channel, error)
 	// UpdateChannelPrivacy atomically updates the channel and manages the
 	// ViewChannel permission override on @everyone. When toggling to private it
 	// upserts a deny override; when toggling to public it removes it. Both
 	// operations run in a single transaction so the channel state and permission
 	// overrides are always consistent.
-	UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID *string, oldIsPrivate bool, everyoneRoleID string, viewChannelPerm int64) (*models.Channel, error)
+	UpdateChannelPrivacy(ctx context.Context, channelID string, name, topic *string, position *int, isPrivate *bool, slowModeSeconds *int, isDefault *bool, channelGroupID, contentWarning *string, oldIsPrivate bool, everyoneRoleID string, viewChannelPerm int64) (*models.Channel, error)
 	DeleteChannel(ctx context.Context, channelID string) error
+	// CreateVoiceChannelWithCompanion atomically creates a voice channel and its companion text channel.
+	CreateVoiceChannelWithCompanion(ctx context.Context, serverID, name string, isPrivate bool, channelGroupID string) (voiceCh *models.Channel, textCh *models.Channel, err error)
+	// DeleteChannelWithCompanion deletes a voice channel and its companion text channel atomically.
+	DeleteChannelWithCompanion(ctx context.Context, voiceChannelID, companionChannelID string) error
+	// IsVoiceTextCompanion checks if a channel is a companion text channel for a voice channel.
+	IsVoiceTextCompanion(ctx context.Context, channelID string) (bool, error)
+	// UpdateCompanionChannel syncs fields from a voice channel to its companion text channel.
+	UpdateCompanionChannel(ctx context.Context, companionID string, name, topic *string, channelGroupID *string) error
 	AddMember(ctx context.Context, userID, serverID string) error
 	RemoveMember(ctx context.Context, userID, serverID string) error
 	IsMember(ctx context.Context, userID, serverID string) (bool, error)
@@ -88,6 +100,25 @@ type ChatStorer interface {
 	GetDefaultChannels(ctx context.Context, serverID string) ([]*models.Channel, error)
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
 	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
+	// System message configuration.
+	GetSystemMessageConfig(ctx context.Context, serverID string) (*models.ServerSystemMessageConfig, error)
+	UpsertSystemMessageConfig(ctx context.Context, serverID string, opts UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error)
+}
+
+// UpsertSystemMessageConfigOpts holds optional fields for upserting system message config.
+type UpsertSystemMessageConfigOpts struct {
+	WelcomeChannelID *string
+	ModLogChannelID  *string
+	JoinEnabled      *bool
+	JoinTemplate     *string
+	LeaveEnabled     *bool
+	LeaveTemplate    *string
+	KickEnabled      *bool
+	KickTemplate     *string
+	BanEnabled       *bool
+	BanTemplate      *string
+	TimeoutEnabled   *bool
+	TimeoutTemplate  *string
 }
 
 // InviteStorer provides access to invite data in Postgres.
@@ -204,9 +235,10 @@ type SearchMessagesOpts struct {
 	AuthorID        string
 	HasAttachment   *bool
 	MentionedUserID string
-	BeforeID        string // ULID cursor — only messages with ID < this
-	AfterID         string // ULID cursor — only messages with ID > this (forward)
-	Limit           int    // default 25, max 100
+	MessageTypes    []uint32 // filter by message type (empty = all types)
+	BeforeID        string   // ULID cursor — only messages with ID < this
+	AfterID         string   // ULID cursor — only messages with ID > this (forward)
+	Limit           int      // default 25, max 100
 }
 
 // MessageStorer provides access to message data in ScyllaDB.
@@ -247,6 +279,7 @@ type DeviceStorer interface {
 	GetPushEnabledDevices(ctx context.Context, userID string) ([]*models.Device, error)
 	GetPushEnabledDevicesForUsers(ctx context.Context, userIDs []string) (map[string][]*models.Device, error)
 	DeleteDevice(ctx context.Context, userID, deviceID string) error
+	DeleteAllOtherDevices(ctx context.Context, userID, currentDeviceID string) ([]string, error)
 	TouchLastSeen(ctx context.Context, userID, deviceID string) error
 	PruneStaleDevices(ctx context.Context, olderThan time.Duration) (int64, error)
 }
@@ -354,7 +387,7 @@ type MediaStorer interface {
 	GetAttachmentsByIDs(ctx context.Context, attachmentIDs []string) (map[string]*models.Attachment, error)
 	CountPendingByUploader(ctx context.Context, uploaderID string) (int, error)
 	TransitionToProcessing(ctx context.Context, id, uploaderID string) (*models.Attachment, error)
-	UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte) error
+	UpdateAttachmentCompleted(ctx context.Context, id string, sizeBytes int64, contentType string, width, height int, thumbnailKey string, microThumbnailData string, encryptedKey []byte, isSpoiler bool) error
 	DeleteAttachment(ctx context.Context, id string) error
 	FindOrphanedUploads(ctx context.Context, before time.Time, limit int) ([]*models.Attachment, error)
 	ResetAttachmentToPending(ctx context.Context, id string) error
