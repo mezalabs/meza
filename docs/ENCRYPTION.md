@@ -195,6 +195,7 @@ The Key Service (`proto/meza/v1/keys.proto`) manages public keys and channel key
 | `GetKeyEnvelopes` | Retrieve all channel key envelopes for the calling user |
 | `RotateChannelKey` | Atomically increment key version + store new envelopes (optimistic concurrency) |
 | `ListMembersWithViewChannel` | Paginated list of user IDs + public keys for members with `ViewChannel` on a channel |
+| `RequestChannelKeys` | Broadcast a key request so online members can distribute keys to the caller (throttled per user+channel, server channels only) |
 
 The Key Service runs on port 8088. Authorization uses `ViewChannel` permission (not `channel_members` membership) for all envelope operations.
 
@@ -205,22 +206,23 @@ The Key Service runs on port 8088. Authorization uses `ViewChannel` permission (
 ### Bootstrap (login / page reload)
 
 ```
-1. Derive masterKey from password (or load from sessionStorage on reload)
+1. Derive masterKey from password (or load from localStorage on reload)
 2. Decrypt identity keypair from IndexedDB using masterKey
 3. Initialize channel key module with identity + masterKey
 4. Load cached channel keys from IndexedDB (blob-encrypted with masterKey)
 5. Session is ready — messages can be encrypted/decrypted
 ```
 
-The master key is cached in `sessionStorage` (survives page reload, cleared on tab close) so users don't need to re-enter their password on refresh.
+The master key is cached in `localStorage` so users don't need to re-enter their password on page reload or app restart (including Capacitor mobile shells).
 
 ### Teardown (logout)
 
 ```
 1. Flush pending channel key persistence to IndexedDB
 2. Clear channel key cache (memory)
-3. Clear master key from sessionStorage
-4. Clear identity reference
+3. Clear master key from localStorage
+4. Clear all IndexedDB crypto state (key bundles + channel key cache)
+5. Clear identity reference
 ```
 
 ---
@@ -295,7 +297,7 @@ Meza does **not** provide forward secrecy. All messages within a channel version
 
 ### Memory Hygiene
 - JavaScript's garbage collector manages memory; explicit zeroing via `Uint8Array.fill(0)` is best-effort and does not guarantee the runtime won't retain copies (the GC may have already copied the buffer during compaction). We do not claim cryptographic memory erasure.
-- Master key stored in `sessionStorage` (not `localStorage`) — cleared on tab close
+- Master key stored in `localStorage` for persistence across reloads and app restarts; cleared on logout via `teardownSession()`
 - Non-extractable `CryptoKey` objects used where possible
 
 

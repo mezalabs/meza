@@ -32,3 +32,22 @@ And because of E2EE, even you (with full access to the server) can't read your u
 Probably use Signal.
 
 Meza's threat model assumes a passive adversary - someone who can read the database, not someone who can compromise your device, intercept or impersonate your network traffic, or exploit your browser. Nation states can and do all of these things. Meza has no forward secrecy, no key verification ceremony, and runs in a JavaScript runtime that can't guarantee memory erasure. Signal is purpose built for this threat model. Meza was not.
+
+# Explicit Trust Assumptions
+
+For security researchers and contributors, here are the explicit boundaries of the E2EE model:
+
+## Server trust model
+The server is assumed to be an **honest-but-curious passive adversary**. It stores encrypted data faithfully but may attempt to read it. The server is **trusted not to substitute public keys** — there is no key transparency log or out-of-band verification (safety numbers). A fully compromised server that actively substitutes keys could perform a man-in-the-middle attack on key distribution. Key transparency is a planned future addition.
+
+## Forward secrecy
+Meza does **not** provide per-message forward secrecy. All messages within a channel key version use the same static AES-256-GCM key. Key rotation creates a new version that excluded members do not receive, but old messages encrypted with prior key versions remain decryptable by anyone who possessed those keys. Forward secrecy is bounded by key rotation events, not individual messages.
+
+## Member removal
+When a user is removed from a channel, they lose gateway access and cannot receive new messages. However, they retain any channel keys cached on their device. Key rotation after member removal prevents the removed user from decrypting future messages, but does not retroactively revoke access to messages encrypted before their removal. This is an inherent property of the static channel key model.
+
+## Key derivation layers
+The system uses two independent layers of Argon2id. The **client** derives a master key and auth key from the user's password (Argon2id with `p=4, t=2, m=64MB`, 64-byte output, split via HKDF-SHA256). The auth key is sent to the **server**, which treats it as a password and stores an Argon2id hash of it (`p=4, t=3, m=64MB`, 32-byte output). These are separate layers serving different purposes — the client layer protects the master key, the server layer protects against auth key database leaks.
+
+## Memory hygiene
+JavaScript's garbage collector manages memory; explicit zeroing via `Uint8Array.fill(0)` is best-effort and does not guarantee the runtime won't retain copies. We do not claim cryptographic memory erasure. The master key is stored in `localStorage` to persist across page reloads and app restarts (including Capacitor mobile shells). The threat model assumes the device itself is trusted — an attacker with filesystem access can already extract browser storage, IndexedDB, and profile data.

@@ -20,6 +20,7 @@ vi.mock('../api/keys.ts', () => ({
 vi.mock('./storage.ts', () => ({
   storeChannelKeys: vi.fn(),
   loadChannelKeys: vi.fn().mockResolvedValue(null),
+  clearChannelKeysStorage: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Must import AFTER mocks are set up

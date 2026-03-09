@@ -5,18 +5,16 @@
  * Call `bootstrapSession()` after login/registration or on app reload
  * when the user is already authenticated.
  *
- * The master key is cached so the encrypted key bundle in IndexedDB can be
- * decrypted without re-entering the password:
- *   - Web: sessionStorage (survives reload, cleared on tab close)
- *   - Mobile (Capacitor): sessionStorage (survives reload within same WebView
- *     lifecycle; cleared when OS kills the process, requiring re-login)
+ * The master key is cached in localStorage so the encrypted key bundle in
+ * IndexedDB can be decrypted without re-entering the password on page
+ * reload or app restart (including Capacitor mobile shells).
  *
- * NOTE: We intentionally use sessionStorage on all platforms. On mobile,
- * the OS may kill the process and clear the key, but using localStorage
- * would persist the master key in plaintext on disk indefinitely — an
- * unacceptable risk for the most sensitive secret in the E2EE system.
- * When Capacitor Secure Storage or iOS Keychain integration is added,
- * mobile can use that for persistence across process restarts.
+ * Trade-off: localStorage persists the master key on disk in plaintext.
+ * The threat model assumes the device itself is trusted — an attacker
+ * with filesystem access to the device can already extract IndexedDB,
+ * browser profile data, etc. A future improvement is to use Capacitor
+ * Secure Storage (iOS Keychain / Android Keystore) on mobile for
+ * hardware-backed key storage.
  */
 
 import {
@@ -28,6 +26,7 @@ import {
 import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
+import { clearCryptoStorage } from './storage.ts';
 
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;
@@ -37,29 +36,32 @@ const readyListeners: Array<() => void> = [];
 const MK_SESSION_KEY = 'meza-mk';
 
 function mkStorage(): Storage | undefined {
-  if (typeof window === 'undefined') return undefined;
-  return sessionStorage;
+  if (typeof localStorage === 'undefined') return undefined;
+  return localStorage;
 }
 
 function storeMasterKey(key: Uint8Array): void {
-  if (typeof localStorage === 'undefined') return;
+  const storage = mkStorage();
+  if (!storage) return;
   let binary = '';
   for (let i = 0; i < key.length; i++) {
     binary += String.fromCharCode(key[i]);
   }
-  localStorage.setItem(MK_SESSION_KEY, btoa(binary));
+  storage.setItem(MK_SESSION_KEY, btoa(binary));
 }
 
 function loadMasterKey(): Uint8Array | null {
-  if (typeof localStorage === 'undefined') return null;
-  const stored = localStorage.getItem(MK_SESSION_KEY);
+  const storage = mkStorage();
+  if (!storage) return null;
+  const stored = storage.getItem(MK_SESSION_KEY);
   if (!stored) return null;
   return Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
 }
 
 function clearMasterKey(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(MK_SESSION_KEY);
+  const storage = mkStorage();
+  if (!storage) return;
+  storage.removeItem(MK_SESSION_KEY);
 }
 
 /**
@@ -136,6 +138,12 @@ export async function teardownSession(): Promise<void> {
   clearChannelKeyCache();
   clearAesKeyCache();
   clearMasterKey();
+  // Wipe IndexedDB crypto state (encrypted bundles + channel key cache)
+  try {
+    await clearCryptoStorage();
+  } catch {
+    // Best-effort — IndexedDB may not be available
+  }
   identity = null;
   sessionReady = false;
   readyListeners.length = 0;

@@ -84,15 +84,19 @@ export async function decryptAndUpdateMessages(
   >,
   pubKeys: Record<string, Uint8Array>,
 ): Promise<number> {
+  const settled = await Promise.allSettled(
+    msgs
+      .filter((msg) => pubKeys[msg.authorId])
+      .map((msg) =>
+        decryptMessageInPlace(channelId, msg, pubKeys[msg.authorId]),
+      ),
+  );
   const results: Message[] = [];
-  for (const msg of msgs) {
-    const pk = pubKeys[msg.authorId];
-    if (!pk) continue;
-    try {
-      const result = await decryptMessageInPlace(channelId, msg, pk);
-      if (result) results.push(result);
-    } catch (err) {
-      console.error(`[E2EE] batch decrypt failed for ${msg.id}:`, err);
+  for (const entry of settled) {
+    if (entry.status === 'fulfilled' && entry.value) {
+      results.push(entry.value);
+    } else if (entry.status === 'rejected') {
+      console.error('[E2EE] batch decrypt failed:', entry.reason);
     }
   }
   if (results.length > 0) {

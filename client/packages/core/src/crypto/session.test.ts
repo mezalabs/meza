@@ -12,7 +12,11 @@ vi.mock('./channel-keys.ts', () => ({
   flushChannelKeys: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock localStorage
+vi.mock('./storage.ts', () => ({
+  clearCryptoStorage: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock localStorage (master key is cached in localStorage for persistence across app restarts)
 const localStorageMap = new Map<string, string>();
 const mockLocalStorage = {
   getItem: vi.fn((key: string) => localStorageMap.get(key) ?? null),
@@ -44,6 +48,8 @@ const {
   clearChannelKeyCache,
   flushChannelKeys,
 } = await import('./channel-keys.ts');
+
+const { clearCryptoStorage } = await import('./storage.ts');
 
 const fakeKeypair = {
   secretKey: crypto.getRandomValues(new Uint8Array(32)),
@@ -195,6 +201,18 @@ describe('teardownSession', () => {
 
     expect(flushChannelKeys).toHaveBeenCalled();
     expect(clearChannelKeyCache).toHaveBeenCalled();
+  });
+
+  it('clears IndexedDB crypto storage', async () => {
+    const masterKey = crypto.getRandomValues(new Uint8Array(32));
+    vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
+
+    await bootstrapSession(masterKey);
+    vi.clearAllMocks();
+
+    await teardownSession();
+
+    expect(clearCryptoStorage).toHaveBeenCalled();
   });
 
   it('removes master key from localStorage', async () => {
