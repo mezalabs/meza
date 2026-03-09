@@ -12,21 +12,25 @@ vi.mock('./channel-keys.ts', () => ({
   flushChannelKeys: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Mock localStorage
-const localStorageMap = new Map<string, string>();
-const mockLocalStorage = {
-  getItem: vi.fn((key: string) => localStorageMap.get(key) ?? null),
+vi.mock('./storage.ts', () => ({
+  clearCryptoStorage: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock sessionStorage (master key is stored in sessionStorage, not localStorage)
+const sessionStorageMap = new Map<string, string>();
+const mockSessionStorage = {
+  getItem: vi.fn((key: string) => sessionStorageMap.get(key) ?? null),
   setItem: vi.fn((key: string, value: string) =>
-    localStorageMap.set(key, value),
+    sessionStorageMap.set(key, value),
   ),
-  removeItem: vi.fn((key: string) => localStorageMap.delete(key)),
-  clear: vi.fn(() => localStorageMap.clear()),
+  removeItem: vi.fn((key: string) => sessionStorageMap.delete(key)),
+  clear: vi.fn(() => sessionStorageMap.clear()),
   get length() {
-    return localStorageMap.size;
+    return sessionStorageMap.size;
   },
   key: vi.fn((_index: number) => null),
 };
-vi.stubGlobal('localStorage', mockLocalStorage);
+vi.stubGlobal('sessionStorage', mockSessionStorage);
 
 // Dynamic imports after mocks
 const {
@@ -45,6 +49,8 @@ const {
   flushChannelKeys,
 } = await import('./channel-keys.ts');
 
+const { clearCryptoStorage } = await import('./storage.ts');
+
 const fakeKeypair = {
   secretKey: crypto.getRandomValues(new Uint8Array(32)),
   publicKey: crypto.getRandomValues(new Uint8Array(32)),
@@ -52,7 +58,7 @@ const fakeKeypair = {
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  localStorageMap.clear();
+  sessionStorageMap.clear();
 
   // Tear down any existing session to reset internal module state
   await teardownSession();
@@ -81,26 +87,26 @@ describe('bootstrapSession', () => {
     expect(getIdentity()).toBe(fakeKeypair);
   });
 
-  it('with master key caches it in localStorage', async () => {
+  it('with master key caches it in sessionStorage', async () => {
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
     await bootstrapSession(masterKey);
 
-    expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
+    expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
       'meza-mk',
       expect.any(String),
     );
   });
 
-  it('without master key falls back to localStorage', async () => {
-    // Pre-populate localStorage with a base64-encoded master key
+  it('without master key falls back to sessionStorage', async () => {
+    // Pre-populate sessionStorage with a base64-encoded master key
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     let binary = '';
     for (let i = 0; i < masterKey.length; i++) {
       binary += String.fromCharCode(masterKey[i]);
     }
-    localStorageMap.set('meza-mk', btoa(binary));
+    sessionStorageMap.set('meza-mk', btoa(binary));
 
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
@@ -111,7 +117,7 @@ describe('bootstrapSession', () => {
     expect(restoreIdentity).toHaveBeenCalled();
   });
 
-  it('without master key and no localStorage returns false', async () => {
+  it('without master key and no sessionStorage returns false', async () => {
     const result = await bootstrapSession();
 
     expect(result).toBe(false);
@@ -197,7 +203,7 @@ describe('teardownSession', () => {
     expect(clearChannelKeyCache).toHaveBeenCalled();
   });
 
-  it('removes master key from localStorage', async () => {
+  it('clears IndexedDB crypto storage', async () => {
     const masterKey = crypto.getRandomValues(new Uint8Array(32));
     vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
 
@@ -206,7 +212,19 @@ describe('teardownSession', () => {
 
     await teardownSession();
 
-    expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('meza-mk');
+    expect(clearCryptoStorage).toHaveBeenCalled();
+  });
+
+  it('removes master key from sessionStorage', async () => {
+    const masterKey = crypto.getRandomValues(new Uint8Array(32));
+    vi.mocked(restoreIdentity).mockResolvedValue(fakeKeypair);
+
+    await bootstrapSession(masterKey);
+    vi.clearAllMocks();
+
+    await teardownSession();
+
+    expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('meza-mk');
   });
 });
 

@@ -47,7 +47,7 @@ func main() {
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	permStore := store.NewChannelPermissionStore(pool)
 	chatStore := store.NewChatStore(pool)
-	svc := newKeyService(keyEnvelopeStore, permStore, chatStore, nc)
+	svc := newKeyService(ctx, keyEnvelopeStore, permStore, chatStore, nc)
 
 	// Load Ed25519 public key (required for JWT verification).
 	ed25519PubKey, err := auth.LoadEd25519PublicKey(cfg.Ed25519PublicKey, cfg.Ed25519PublicKeyFile)

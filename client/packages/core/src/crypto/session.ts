@@ -28,6 +28,7 @@ import {
 import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
+import { clearCryptoStorage } from './storage.ts';
 
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;
@@ -37,37 +38,40 @@ const readyListeners: Array<() => void> = [];
 const MK_SESSION_KEY = 'meza-mk';
 
 function mkStorage(): Storage | undefined {
-  if (typeof window === 'undefined') return undefined;
+  if (typeof sessionStorage === 'undefined') return undefined;
   return sessionStorage;
 }
 
 function storeMasterKey(key: Uint8Array): void {
-  if (typeof localStorage === 'undefined') return;
+  const storage = mkStorage();
+  if (!storage) return;
   let binary = '';
   for (let i = 0; i < key.length; i++) {
     binary += String.fromCharCode(key[i]);
   }
-  localStorage.setItem(MK_SESSION_KEY, btoa(binary));
+  storage.setItem(MK_SESSION_KEY, btoa(binary));
 }
 
 function loadMasterKey(): Uint8Array | null {
-  if (typeof localStorage === 'undefined') return null;
-  const stored = localStorage.getItem(MK_SESSION_KEY);
+  const storage = mkStorage();
+  if (!storage) return null;
+  const stored = storage.getItem(MK_SESSION_KEY);
   if (!stored) return null;
   return Uint8Array.from(atob(stored), (c) => c.charCodeAt(0));
 }
 
 function clearMasterKey(): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.removeItem(MK_SESSION_KEY);
+  const storage = mkStorage();
+  if (!storage) return;
+  storage.removeItem(MK_SESSION_KEY);
 }
 
 /**
  * Bootstrap the E2EE session from the encrypted key bundle in IndexedDB.
  *
  * If a masterKey is provided (login/registration), it's used to decrypt the
- * key bundle and cached in localStorage for page reloads. On page reload,
- * the cached master key from localStorage is used.
+ * key bundle and cached in sessionStorage for page reloads. On page reload,
+ * the cached master key from sessionStorage is used.
  *
  * Returns true if the session was initialized, false if unable to decrypt.
  */
@@ -92,7 +96,7 @@ async function doBootstrap(masterKey?: Uint8Array): Promise<boolean> {
   const restored = await restoreIdentity(key);
   if (!restored) return false;
 
-  // Cache master key in localStorage for page reloads
+  // Cache master key in sessionStorage for page reloads
   if (masterKey) storeMasterKey(masterKey);
 
   identity = restored;
@@ -136,6 +140,12 @@ export async function teardownSession(): Promise<void> {
   clearChannelKeyCache();
   clearAesKeyCache();
   clearMasterKey();
+  // Wipe IndexedDB crypto state (encrypted bundles + channel key cache)
+  try {
+    await clearCryptoStorage();
+  } catch {
+    // Best-effort — IndexedDB may not be available
+  }
   identity = null;
   sessionReady = false;
   readyListeners.length = 0;

@@ -106,6 +106,33 @@ export function generateChannelKey(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(32));
 }
 
+// --- Low-order point rejection ---
+
+/**
+ * Known X25519 low-order points that produce all-zero shared secrets.
+ * Rejecting these prevents a malicious server from substituting a key
+ * that would make the ECIES wrapping trivially decryptable.
+ */
+const X25519_LOW_ORDER_POINTS = new Set([
+  '0000000000000000000000000000000000000000000000000000000000000000',
+  '0100000000000000000000000000000000000000000000000000000000000000',
+  'ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f',
+  'e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800',
+  '5f9c95bca3508c24b1d0b1559c83ef5b04445cc4581c8e86d8224eddd09f1157',
+]);
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export function rejectLowOrderPoint(pub: Uint8Array, label: string): void {
+  if (X25519_LOW_ORDER_POINTS.has(toHex(pub))) {
+    throw new Error(`${label} is a low-order point`);
+  }
+}
+
 // --- ECIES key wrapping ---
 
 const KEY_WRAP_INFO = new TextEncoder().encode('meza-key-wrap-v1');
@@ -127,6 +154,7 @@ export async function wrapChannelKey(
 ): Promise<Uint8Array> {
   // Convert recipient Ed25519 pub to X25519
   const recipientX25519Pub = edToX25519Public(recipientEdPub);
+  rejectLowOrderPoint(recipientX25519Pub, 'recipient X25519 public key');
 
   // Ephemeral X25519 keypair for this wrapping operation
   const ephemeral = x25519.keygen();
@@ -193,6 +221,8 @@ export async function unwrapChannelKey(
   const nonce = envelope.slice(32, 44);
   const wrapped = envelope.slice(44);
 
+  rejectLowOrderPoint(ephemeralPub, 'ephemeral X25519 public key');
+
   // Convert own Ed25519 secret to X25519
   const myX25519Secret = edToX25519Secret(edSecretKey);
   const myX25519Pub = x25519.getPublicKey(myX25519Secret);
@@ -246,10 +276,9 @@ function channelKeyCacheKey(
   rawKey: Uint8Array,
   usage: 'encrypt' | 'decrypt',
 ): string {
-  // Fast hex from first 8 bytes (enough for uniqueness) + usage suffix
+  // Full hex of key bytes + usage suffix for collision-free cache lookup
   let hex = '';
-  const len = Math.min(rawKey.length, 8);
-  for (let i = 0; i < len; i++) {
+  for (let i = 0; i < rawKey.length; i++) {
     hex += rawKey[i].toString(16).padStart(2, '0');
   }
   return `${hex}:${usage}`;

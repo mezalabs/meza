@@ -27,6 +27,10 @@ const (
 	// keyRequestCooldown is the minimum interval between key request broadcasts
 	// for the same (userID, channelID) pair. Aligned with the client-side 60s re-request.
 	keyRequestCooldown = 30 * time.Second
+
+	// throttleCleanupInterval is how often the background goroutine sweeps
+	// expired entries from keyRequestThrottle.
+	throttleCleanupInterval = 5 * time.Minute
 )
 
 // viewChannelChecker checks ViewChannel permission for a user on a channel.
@@ -55,8 +59,34 @@ type keyService struct {
 	keyRequestThrottle sync.Map
 }
 
-func newKeyService(s store.KeyEnvelopeStorer, ps viewChannelChecker, cs envelopeRecipientChecker, nc *nats.Conn) *keyService {
-	return &keyService{store: s, permStore: ps, chatStore: cs, nc: nc}
+func newKeyService(ctx context.Context, s store.KeyEnvelopeStorer, ps viewChannelChecker, cs envelopeRecipientChecker, nc *nats.Conn) *keyService {
+	ks := &keyService{store: s, permStore: ps, chatStore: cs, nc: nc}
+	ks.startThrottleCleanup(ctx)
+	return ks
+}
+
+// startThrottleCleanup launches a background goroutine that periodically
+// removes expired entries from keyRequestThrottle, preventing unbounded
+// memory growth on long-running servers.
+func (s *keyService) startThrottleCleanup(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(throttleCleanupInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				now := time.Now()
+				s.keyRequestThrottle.Range(func(key, value any) bool {
+					if now.Sub(value.(time.Time)) >= keyRequestCooldown {
+						s.keyRequestThrottle.Delete(key)
+					}
+					return true
+				})
+			}
+		}
+	}()
 }
 
 // validateAndConvertEnvelopes validates proto envelopes and converts them to store types.

@@ -84,6 +84,7 @@ export {
   generateChannelKey,
   generateIdentityKeypair,
   type IdentityKeypair,
+  rejectLowOrderPoint,
   serializeIdentity,
   signMessage,
   unwrapChannelKey,

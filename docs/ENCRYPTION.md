@@ -195,6 +195,7 @@ The Key Service (`proto/meza/v1/keys.proto`) manages public keys and channel key
 | `GetKeyEnvelopes` | Retrieve all channel key envelopes for the calling user |
 | `RotateChannelKey` | Atomically increment key version + store new envelopes (optimistic concurrency) |
 | `ListMembersWithViewChannel` | Paginated list of user IDs + public keys for members with `ViewChannel` on a channel |
+| `RequestChannelKeys` | Broadcast a key request so online members can distribute keys to the caller (throttled per user+channel, server channels only) |
 
 The Key Service runs on port 8088. Authorization uses `ViewChannel` permission (not `channel_members` membership) for all envelope operations.
 
@@ -220,7 +221,8 @@ The master key is cached in `sessionStorage` (survives page reload, cleared on t
 1. Flush pending channel key persistence to IndexedDB
 2. Clear channel key cache (memory)
 3. Clear master key from sessionStorage
-4. Clear identity reference
+4. Clear all IndexedDB crypto state (key bundles + channel key cache)
+5. Clear identity reference
 ```
 
 ---

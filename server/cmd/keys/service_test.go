@@ -357,7 +357,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	ks := newMockKeyStore()
 	ps := newMockPermStore()
 	cs := newMockChatStore()
-	svc := newKeyService(ks, ps, cs, nil)
+	svc := newKeyService(context.Background(), ks, ps, cs, nil)
 
 	mux := http.NewServeMux()
 	path, handler := mezav1connect.NewKeyServiceHandler(svc,
