@@ -1,8 +1,8 @@
 import {
   ChannelType,
-  getMediaURL,
   joinServer,
   type PaneId,
+  resolveIconUrl,
   resolveInvite,
   type Server,
   useChannelStore,
@@ -12,11 +12,6 @@ import { BuildingsIcon, LinkIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
-
-function resolveIconUrl(iconUrl: string): string {
-  const match = iconUrl.match(/^\/media\/([^/?]+)/);
-  return match ? getMediaURL(match[1], true) : iconUrl;
-}
 
 interface GetStartedViewProps {
   paneId: PaneId;

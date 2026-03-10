@@ -5,10 +5,15 @@ import (
 	"strings"
 )
 
+// idSanitizer replaces NATS metacharacters (., *, >) and spaces with
+// underscores. Hoisted to package level so the Replacer is allocated once
+// instead of on every call to sanitizeID (hot path on every NATS publish).
+var idSanitizer = strings.NewReplacer(".", "_", "*", "_", ">", "_", " ", "_")
+
 // sanitizeID replaces NATS metacharacters (., *, >) in IDs to prevent
 // subject injection. ULIDs should never contain these, but this is defense-in-depth.
 func sanitizeID(id string) string {
-	return strings.NewReplacer(".", "_", "*", "_", ">", "_", " ", "_").Replace(id)
+	return idSanitizer.Replace(id)
 }
 
 // Delivery subjects — gateway subscribes, services publish.

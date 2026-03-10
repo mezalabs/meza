@@ -47,6 +47,10 @@ func main() {
 		slog.Error("MEZA_HMAC_SECRET must be changed from the default value")
 		os.Exit(1)
 	}
+	if cfg.HMACSecret == "meza-local-dev-hmac-secret-do-not-use-in-prod" {
+		slog.Error("MEZA_HMAC_SECRET must be changed from the default value")
+		os.Exit(1)
+	}
 
 	pool, err := database.NewPostgresPool(ctx, cfg.PostgresURL)
 	if err != nil {

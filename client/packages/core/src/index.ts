@@ -139,6 +139,7 @@ export {
   fetchEncryptedMedia,
   getDownloadURL,
   getMediaURL,
+  resolveIconUrl,
   uploadEncryptedFile,
   uploadFile,
 } from './api/media.ts';

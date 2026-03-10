@@ -1,14 +1,9 @@
-import { getMediaURL } from '@meza/core';
+import { resolveIconUrl } from '@meza/core';
 
 interface WelcomeStepProps {
   serverName: string;
   iconUrl: string;
   welcomeMessage: string;
-}
-
-function resolveIconUrl(iconUrl: string): string {
-  const match = iconUrl.match(/^\/media\/([^/?]+)/);
-  return match ? getMediaURL(match[1], true) : iconUrl;
 }
 
 export function WelcomeStep({

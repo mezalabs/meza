@@ -324,4 +324,16 @@ export function getMediaURL(attachmentId: string, thumbnail = false): string {
   return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 }
 
+/**
+ * Resolve a server/user icon URL.
+ *
+ * Icon URLs stored on Server objects may look like `/media/<attachmentId>`.
+ * This helper detects that pattern and converts it to a full media URL via
+ * {@link getMediaURL}; all other URLs are returned as-is.
+ */
+export function resolveIconUrl(iconUrl: string): string {
+  const match = iconUrl.match(/^\/media\/([^/?]+)/);
+  return match ? getMediaURL(match[1], true) : iconUrl;
+}
+
 export { UploadPurpose };

@@ -1,14 +1,9 @@
-import { getMediaURL, type Invite, type Server } from '@meza/core';
+import { resolveIconUrl, type Invite, type Server } from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {
   server: Server;
   invite: Invite | null;
-}
-
-function resolveIconUrl(iconUrl: string): string {
-  const match = iconUrl.match(/^\/media\/([^/?]+)/);
-  return match ? getMediaURL(match[1], true) : iconUrl;
 }
 
 export function InviteStep({ server, invite }: InviteStepProps) {
