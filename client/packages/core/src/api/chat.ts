@@ -1054,6 +1054,17 @@ export async function updateServer(
 export async function acknowledgeRules(serverId: string) {
   try {
     const res = await chatClient.acknowledgeRules({ serverId });
+    // Patch member store so sidebar reactively unblocks
+    const userId = useAuthStore.getState().user?.id;
+    if (userId && res.acknowledgedAt) {
+      const members = useMemberStore.getState().byServer[serverId] ?? [];
+      const me = members.find((m) => m.userId === userId);
+      if (me) {
+        useMemberStore
+          .getState()
+          .updateMember({ ...me, rulesAcknowledgedAt: res.acknowledgedAt });
+      }
+    }
     return res.acknowledgedAt;
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });
@@ -1071,6 +1082,17 @@ export async function completeOnboarding(
       channelIds,
       roleIds,
     });
+    // Patch member store so sidebar reactively shows channels
+    const userId = useAuthStore.getState().user?.id;
+    if (userId && res.completedAt) {
+      const members = useMemberStore.getState().byServer[serverId] ?? [];
+      const me = members.find((m) => m.userId === userId);
+      if (me) {
+        useMemberStore
+          .getState()
+          .updateMember({ ...me, onboardingCompletedAt: res.completedAt });
+      }
+    }
     return {
       completedAt: res.completedAt,
       skippedChannelIds: res.skippedChannelIds,
