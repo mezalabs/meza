@@ -1,5 +1,6 @@
 import {
   ChannelType,
+  getMediaURL,
   joinServer,
   type PaneId,
   resolveInvite,
@@ -11,6 +12,11 @@ import { BuildingsIcon, LinkIcon } from '@phosphor-icons/react';
 import { useCallback, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
+
+function resolveIconUrl(iconUrl: string): string {
+  const match = iconUrl.match(/^\/media\/([^/?]+)/);
+  return match ? getMediaURL(match[1], true) : iconUrl;
+}
 
 interface GetStartedViewProps {
   paneId: PaneId;
@@ -170,7 +176,7 @@ export function GetStartedView({ paneId }: GetStartedViewProps) {
                 <div className="flex items-center gap-3">
                   {preview.server.iconUrl ? (
                     <img
-                      src={preview.server.iconUrl}
+                      src={resolveIconUrl(preview.server.iconUrl)}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover"
                     />

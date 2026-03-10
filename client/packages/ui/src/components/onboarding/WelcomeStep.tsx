@@ -1,7 +1,14 @@
+import { getMediaURL } from '@meza/core';
+
 interface WelcomeStepProps {
   serverName: string;
   iconUrl: string;
   welcomeMessage: string;
+}
+
+function resolveIconUrl(iconUrl: string): string {
+  const match = iconUrl.match(/^\/media\/([^/?]+)/);
+  return match ? getMediaURL(match[1], true) : iconUrl;
 }
 
 export function WelcomeStep({
@@ -15,7 +22,7 @@ export function WelcomeStep({
       <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-accent text-3xl font-bold text-black">
         {iconUrl ? (
           <img
-            src={iconUrl}
+            src={resolveIconUrl(iconUrl)}
             alt={serverName}
             className="h-full w-full rounded-2xl object-cover"
           />

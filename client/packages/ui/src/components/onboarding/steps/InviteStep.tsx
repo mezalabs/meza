@@ -1,9 +1,14 @@
-import type { Invite, Server } from '@meza/core';
+import { getMediaURL, type Invite, type Server } from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {
   server: Server;
   invite: Invite | null;
+}
+
+function resolveIconUrl(iconUrl: string): string {
+  const match = iconUrl.match(/^\/media\/([^/?]+)/);
+  return match ? getMediaURL(match[1], true) : iconUrl;
 }
 
 export function InviteStep({ server, invite }: InviteStepProps) {
@@ -32,7 +37,7 @@ export function InviteStep({ server, invite }: InviteStepProps) {
       <div className="text-center">
         {server.iconUrl ? (
           <img
-            src={server.iconUrl}
+            src={resolveIconUrl(server.iconUrl)}
             alt=""
             className="mx-auto mb-3 h-16 w-16 rounded-full object-cover"
           />
