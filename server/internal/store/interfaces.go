@@ -29,6 +29,7 @@ type AuthStorer interface {
 	StoreRefreshToken(ctx context.Context, tokenHash, userID, deviceID string, expiresAt time.Time) error
 	ConsumeRefreshToken(ctx context.Context, tokenHash string) (userID, deviceID string, err error)
 	DeleteRefreshTokensByUser(ctx context.Context, userID string) error
+	DeleteRefreshTokensByDevice(ctx context.Context, userID, deviceID string) error
 	GetKeyBundle(ctx context.Context, userID string) (*models.EncryptedBundle, error)
 	ChangePassword(ctx context.Context, userID, oldAuthKeyHash, newAuthKeyHash string, newSalt []byte, newBundle models.EncryptedBundle) error
 	GetRecoveryBundle(ctx context.Context, email string) (recoveryBundle, recoveryIV, salt []byte, err error)

@@ -5,6 +5,7 @@ import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
+import { getBaseUrl } from '../utils/platform.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
 import {
   type ConnectionPlatform,
@@ -300,6 +301,27 @@ export async function recoverAccount(
 }
 
 export async function logout() {
+  // Notify the server to invalidate the session (revoke refresh tokens and
+  // block the device's access tokens). This is best-effort -- we still clear
+  // local state even if the server call fails.
+  try {
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) {
+      const baseUrl = getBaseUrl();
+      await fetch(`${baseUrl}/meza.v1.AuthService/Logout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Connect-Protocol-Version': '1',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: '{}',
+      });
+    }
+  } catch {
+    // Best-effort: server-side logout failed, proceed with local cleanup.
+  }
+
   disconnect();
   useVoiceStore.getState().disconnect();
   useServerStore.getState().reset();

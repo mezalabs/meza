@@ -264,6 +264,13 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Store the refresh token so it can be consumed (rotated) on refresh
+	refreshHash := hashToken(refreshToken)
+	if err := s.authStore.StoreRefreshToken(ctx, refreshHash, shadowUser.ID, deviceID, time.Now().Add(30*24*time.Hour)); err != nil {
+		slog.Error("storing federation refresh token", "err", err, "shadow_user", shadowUser.ID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
 	// Fetch server details
 	server, err := s.chatStore.GetServer(ctx, invite.ServerID)
 	if err != nil {
@@ -357,6 +364,12 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("not a refresh token"))
 	}
 
+	// Consume the old refresh token (one-time use / rotation)
+	oldTokenHash := hashToken(req.Msg.RefreshToken)
+	if _, _, err := s.authStore.ConsumeRefreshToken(ctx, oldTokenHash); err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token not found or expired"))
+	}
+
 	// Validate fresh assertion from the origin
 	assertionClaims, err := s.verifier.VerifyAssertion(ctx, req.Msg.AssertionToken)
 	if err != nil {
@@ -406,6 +419,13 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 	accessToken, refreshToken, err := s.generateLocalTokenPair(claims.UserID, claims.DeviceID)
 	if err != nil {
 		slog.Error("generating federation refresh tokens", "err", err, "user", claims.UserID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Store the new refresh token (completes the rotation)
+	newRefreshHash := hashToken(refreshToken)
+	if err := s.authStore.StoreRefreshToken(ctx, newRefreshHash, claims.UserID, claims.DeviceID, time.Now().Add(30*24*time.Hour)); err != nil {
+		slog.Error("storing federation refresh token", "err", err, "user", claims.UserID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 

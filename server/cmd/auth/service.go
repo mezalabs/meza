@@ -233,6 +233,35 @@ func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 	}), nil
 }
 
+func (s *authService) Logout(ctx context.Context, req *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("authentication required"))
+	}
+	deviceID, _ := auth.DeviceIDFromContext(ctx)
+	if deviceID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("no current device"))
+	}
+
+	// Delete refresh tokens for the current device so they cannot be reused.
+	if err := s.store.DeleteRefreshTokensByDevice(ctx, userID, deviceID); err != nil {
+		slog.Error("logout: delete refresh tokens", "err", err, "user", userID, "device", deviceID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Block the device ID in the token blocklist for 1 hour (matching access token TTL)
+	// so any outstanding access tokens are immediately rejected.
+	if s.tokenBlocklist != nil {
+		if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, 1*time.Hour); err != nil {
+			slog.Error("logout: block device", "err", err, "device", deviceID)
+			// Non-fatal: refresh tokens are already deleted, access tokens will expire naturally.
+		}
+	}
+
+	slog.Info("user logged out", "user", userID, "device", deviceID)
+	return connect.NewResponse(&v1.LogoutResponse{}), nil
+}
+
 func (s *authService) GetSalt(ctx context.Context, req *connect.Request[v1.GetSaltRequest]) (*connect.Response[v1.GetSaltResponse], error) {
 	if req.Msg.Identifier == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier is required"))

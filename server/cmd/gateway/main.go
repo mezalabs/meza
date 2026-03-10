@@ -76,7 +76,7 @@ func main() {
 	}
 	slog.Info("Ed25519 signing enabled", "kid", ed25519Keys.KeyID, "fingerprint", ed25519Keys.KeyFingerprint())
 
-	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc)
+	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins)
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.InstanceURL
 	gw.verificationCache = auth.NewVerificationCache()

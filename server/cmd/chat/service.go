@@ -31,6 +31,11 @@ import (
 
 var validULID = regexp.MustCompile(`^[0-9A-Z]{26}$`)
 
+// maxEncryptedContentSize is the upper bound for encrypted message payloads,
+// matching the gateway WebSocket frame limit (64 KB). Direct ConnectRPC calls
+// bypass the gateway, so the service must enforce this independently.
+const maxEncryptedContentSize = 65536
+
 // EncryptionChecker checks whether a channel has been set up for E2EE.
 // Used as a defense-in-depth measure to reject plaintext messages on encrypted channels.
 type EncryptionChecker interface {
@@ -964,7 +969,10 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 	if req.Msg.ChannelId == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
-	if len(req.Msg.EncryptedContent) > 16000 {
+	if len(req.Msg.EncryptedContent) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_content is required"))
+	}
+	if len(req.Msg.EncryptedContent) > maxEncryptedContentSize {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("message content too large"))
 	}
 
@@ -1608,7 +1616,7 @@ func (s *chatService) EditMessage(ctx context.Context, req *connect.Request[v1.E
 	if len(req.Msg.EncryptedContent) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_content is required"))
 	}
-	if len(req.Msg.EncryptedContent) > 16000 {
+	if len(req.Msg.EncryptedContent) > maxEncryptedContentSize {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("message content too large"))
 	}
 

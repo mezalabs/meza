@@ -46,6 +46,7 @@ type Config struct {
 
 	// Gateway
 	ChatServiceURL string `envconfig:"CHAT_SERVICE_URL" default:"http://localhost:8082"`
+	AllowedOrigins string `envconfig:"ALLOWED_ORIGINS"` // Comma-separated WebSocket origin patterns; defaults to "*" (wildcard) if unset
 
 	// Media (S3-compatible)
 	S3Endpoint       string `envconfig:"S3_ENDPOINT"`

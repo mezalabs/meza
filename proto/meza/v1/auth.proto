@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
   rpc GetSalt(GetSaltRequest) returns (GetSaltResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
   rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
@@ -64,6 +65,10 @@ message LoginResponse {
   bytes key_bundle_iv = 5;
   bytes salt = 6;
 }
+
+message LogoutRequest {}
+
+message LogoutResponse {}
 
 message GetSaltRequest {
   string identifier = 1;  // email or username
