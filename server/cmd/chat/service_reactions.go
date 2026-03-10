@@ -141,6 +141,11 @@ func (s *chatService) AddReaction(ctx context.Context, req *connect.Request[v1.A
 	return connect.NewResponse(&v1.AddReactionResponse{}), nil
 }
 
+// RemoveReaction removes the caller's own reaction from a message.
+// No AddReactions permission check is required — users can always remove their
+// own reactions regardless of permission state (e.g. timed-out users). The
+// store DELETE is scoped to the caller's user ID, so users cannot remove other
+// users' reactions through this endpoint.
 func (s *chatService) RemoveReaction(ctx context.Context, req *connect.Request[v1.RemoveReactionRequest]) (*connect.Response[v1.RemoveReactionResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
@@ -165,7 +170,7 @@ func (s *chatService) RemoveReaction(ctx context.Context, req *connect.Request[v
 		return nil, err
 	}
 
-	// Delete reaction.
+	// Delete reaction (scoped to caller's user ID — cannot remove others' reactions).
 	if err := s.reactionStore.RemoveReaction(ctx, req.Msg.ChannelId, req.Msg.MessageId, userID, req.Msg.Emoji); err != nil {
 		slog.Error("removing reaction", "err", err, "user", userID, "channel", req.Msg.ChannelId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

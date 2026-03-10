@@ -31,6 +31,11 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot DM yourself"))
 	}
 
+	// Per-user rate limit: 20 DM creations per 60 seconds.
+	if err := s.checkRateLimit(ctx, "dm_rl", userID, 60, 20); err != nil {
+		return nil, err
+	}
+
 	// Verify recipient exists.
 	recipient, err := s.authStore.GetUserByID(ctx, recipientID)
 	if err != nil {
@@ -230,6 +235,11 @@ func (s *chatService) CreateGroupDMChannel(ctx context.Context, req *connect.Req
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+
+	// Per-user rate limit: 10 group DM creations per 60 seconds.
+	if err := s.checkRateLimit(ctx, "gdm_rl", userID, 60, 10); err != nil {
+		return nil, err
 	}
 
 	participantIDs := req.Msg.ParticipantIds

@@ -40,6 +40,17 @@ func (s *chatService) AcceptMessageRequest(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the recipient can accept a message request"))
 	}
 
+	// Re-check block status: the initiator may have been blocked since the
+	// request was created. Prioritize the blocker's safety.
+	blocked, err := s.blockStore.IsBlockedEither(ctx, userID, ch.DMInitiatorID)
+	if err != nil {
+		slog.Error("checking block in AcceptMessageRequest", "err", err, "user", userID, "initiator", ch.DMInitiatorID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if blocked {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("unable to accept this request"))
+	}
+
 	if err := s.chatStore.UpdateDMStatus(ctx, ch.ID, "active"); err != nil {
 		slog.Error("accepting message request", "err", err, "channel", ch.ID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -158,6 +169,17 @@ func (s *chatService) ReverseDecline(ctx context.Context, req *connect.Request[v
 	// Only the recipient (not the initiator) can reverse a decline.
 	if ch.DMInitiatorID == userID {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("only the recipient can reverse a decline"))
+	}
+
+	// Re-check block status: either user may have blocked the other since the
+	// original request. Prioritize the blocker's safety.
+	blocked, err := s.blockStore.IsBlockedEither(ctx, userID, ch.DMInitiatorID)
+	if err != nil {
+		slog.Error("checking block in ReverseDecline", "err", err, "user", userID, "initiator", ch.DMInitiatorID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if blocked {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("unable to reverse this decline"))
 	}
 
 	if err := s.chatStore.UpdateDMStatus(ctx, ch.ID, "active"); err != nil {

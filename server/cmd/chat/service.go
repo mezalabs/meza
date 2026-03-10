@@ -1393,14 +1393,35 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 	}), nil
 }
 
+// checkRateLimit enforces a per-user rate limit using the Redis Lua script.
+// key is the Redis key prefix (e.g. "invite_rl"), windowSec is the time window,
+// and maxCount is the maximum number of requests allowed within that window.
+// Returns nil if allowed, or a CodeResourceExhausted error if exceeded.
+// If Redis is unavailable the request is allowed (fail-open for availability).
+func (s *chatService) checkRateLimit(ctx context.Context, key string, userID string, windowSec int, maxCount int64) error {
+	if s.rdb == nil {
+		return nil
+	}
+	rlKey := fmt.Sprintf("%s:%s", key, userID)
+	count, err := rateLimitScript.Run(ctx, s.rdb, []string{rlKey}, windowSec).Int64()
+	if err != nil {
+		slog.Error("rate limit check", "err", err, "key", key, "user", userID)
+		return nil // fail-open
+	}
+	if count > maxCount {
+		return connect.NewError(connect.CodeResourceExhausted, errors.New("rate limit exceeded, try again later"))
+	}
+	return nil
+}
+
 // searchSemaphore limits concurrent search requests across the service instance
 // to prevent partition scans from starving real-time message CRUD operations.
 var searchSemaphore = make(chan struct{}, 5)
 
-// searchRateLimitScript atomically increments a counter and sets TTL on first use.
+// rateLimitScript atomically increments a counter and sets TTL on first use.
 // Returns the new count. Avoids INCR/EXPIRE race where a crash between the two
 // commands would leave the key without a TTL, permanently blocking the user.
-var searchRateLimitScript = redis.NewScript(`
+var rateLimitScript = redis.NewScript(`
 local count = redis.call('INCR', KEYS[1])
 if count == 1 then
     redis.call('EXPIRE', KEYS[1], ARGV[1])
@@ -1416,7 +1437,7 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 
 	// Per-user rate limit: 5 searches per 10 seconds (atomic Lua script).
 	rlKey := fmt.Sprintf("search_rl:%s", userID)
-	count, err := searchRateLimitScript.Run(ctx, s.rdb, []string{rlKey}, 10).Int64()
+	count, err := rateLimitScript.Run(ctx, s.rdb, []string{rlKey}, 10).Int64()
 	if err != nil {
 		slog.Error("search rate limit check", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("search temporarily unavailable"))
@@ -2602,6 +2623,11 @@ func (s *chatService) CreateInvite(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
 	}
 
+	// Per-user rate limit: 10 invites per 60 seconds.
+	if err := s.checkRateLimit(ctx, "invite_rl", userID, 60, 10); err != nil {
+		return nil, err
+	}
+
 	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 		return nil, err
 	}
@@ -2797,6 +2823,13 @@ func (s *chatService) GetReplies(ctx context.Context, req *connect.Request[v1.Ge
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before reading replies.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetRepliesResponse{}), nil
 		}
 	}
 
