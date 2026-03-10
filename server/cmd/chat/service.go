@@ -186,6 +186,25 @@ func (s *chatService) requireMembership(ctx context.Context, userID, serverID st
 	return nil
 }
 
+// checkRulesAcknowledged returns true if the server does not require rules
+// acknowledgement or if the user has already acknowledged them.
+func (s *chatService) checkRulesAcknowledged(ctx context.Context, userID, serverID string) (bool, error) {
+	srv, err := s.chatStore.GetServer(ctx, serverID)
+	if err != nil {
+		slog.Error("getting server for rules check", "err", err, "server", serverID)
+		return false, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if !srv.RulesRequired {
+		return true, nil
+	}
+	acknowledged, err := s.chatStore.CheckRulesAcknowledged(ctx, userID, srv.ID)
+	if err != nil {
+		slog.Error("checking rules acknowledgement", "err", err, "user", userID, "server", srv.ID)
+		return false, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	return acknowledged, nil
+}
+
 func (s *chatService) isDMChannel(ch *models.Channel) bool {
 	return ch.Type == 3
 }
@@ -1031,21 +1050,11 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 		}
 
 		// Check rules acknowledgement if required.
-		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
-		if srvErr != nil {
-			slog.Error("getting server for rules check", "err", srvErr, "server", ch.ServerID)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		if srv.RulesRequired {
-			acknowledged, ackErr := s.chatStore.CheckRulesAcknowledged(ctx, userID, srv.ID)
-			if ackErr != nil {
-				slog.Error("checking rules acknowledgement", "err", ackErr, "user", userID, "server", srv.ID)
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			if !acknowledged {
-				return nil, connect.NewError(connect.CodePermissionDenied,
-					errors.New("you must acknowledge server rules before sending messages"))
-			}
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return nil, connect.NewError(connect.CodePermissionDenied,
+				errors.New("you must acknowledge server rules before sending messages"))
 		}
 	}
 
@@ -1292,6 +1301,13 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
 		}
+
+		// Enforce rules acknowledgement before reading messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetMessagesResponse{}), nil
+		}
 	}
 
 	// Validate mutual exclusivity of cursors
@@ -1447,6 +1463,13 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before searching messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.SearchMessagesResponse{}), nil
 		}
 	}
 
@@ -2838,6 +2861,13 @@ func (s *chatService) GetMessagesByIDs(ctx context.Context, req *connect.Request
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before reading messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetMessagesByIDsResponse{}), nil
 		}
 	}
 

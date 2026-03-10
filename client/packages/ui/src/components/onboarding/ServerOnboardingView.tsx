@@ -136,6 +136,9 @@ export function ServerOnboardingView({
         [...selectedRoleIds],
       );
 
+      // Re-fetch channels — onboarding may have joined the user to new ones.
+      await listChannels(serverId);
+
       // Navigate to first default channel or first available channel
       const chs = useChannelStore.getState().byServer[serverId] ?? [];
       const defaultChannel =

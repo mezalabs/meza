@@ -147,6 +147,26 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   // Navigate focused pane to the first text channel of a server
   const pendingServerNavRef = useRef<string | null>(null);
   const navigateToDefaultChannel = useCallback((serverId: string) => {
+    // If onboarding/rules not yet completed, show onboarding instead of channel
+    const srv = useServerStore.getState().servers[serverId];
+    if (srv?.onboardingEnabled || srv?.rulesRequired) {
+      const userId = useAuthStore.getState().user?.id;
+      const members = useMemberStore.getState().byServer[serverId] ?? [];
+      const me = members.find((m) => m.userId === userId);
+      const needsOnboarding =
+        (srv.onboardingEnabled && !me?.onboardingCompletedAt) ||
+        (srv.rulesRequired && !me?.rulesAcknowledgedAt);
+      if (needsOnboarding) {
+        const { focusedPaneId, setPaneContent } = useTilingStore.getState();
+        setPaneContent(focusedPaneId, {
+          type: 'serverOnboarding',
+          serverId,
+        });
+        pendingServerNavRef.current = null;
+        return;
+      }
+    }
+
     const serverChannels = useChannelStore.getState().byServer[serverId];
     if (serverChannels?.length) {
       const first =
