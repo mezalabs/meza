@@ -2622,8 +2622,8 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x12PollDeviceRecovery\x12\".meza.v1.PollDeviceRecoveryRequest\x1a#.meza.v1.PollDeviceRecoveryResponse\x12f\n" +
 	"\x15ApproveDeviceRecovery\x12%.meza.v1.ApproveDeviceRecoveryRequest\x1a&.meza.v1.ApproveDeviceRecoveryResponse\x12i\n" +
 	"\x16CompleteDeviceRecovery\x12&.meza.v1.CompleteDeviceRecoveryRequest\x1a'.meza.v1.CompleteDeviceRecoveryResponse\x12r\n" +
-	"\x19GetPendingRecoveryRequest\x12).meza.v1.GetPendingRecoveryRequestRequest\x1a*.meza.v1.GetPendingRecoveryRequestResponseB\x83\x01\n" +
-	"\vcom.meza.v1B\tAuthProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\x19GetPendingRecoveryRequest\x12).meza.v1.GetPendingRecoveryRequestRequest\x1a*.meza.v1.GetPendingRecoveryRequestResponseB\x82\x01\n" +
+	"\vcom.meza.v1B\tAuthProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_auth_proto_rawDescOnce sync.Once

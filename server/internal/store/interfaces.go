@@ -340,7 +340,12 @@ type FederationStorer interface {
 	// IsFederatedUser checks if a user ID belongs to a federated shadow user.
 	IsFederatedUser(ctx context.Context, userID string) (bool, error)
 
-	// FederationJoinTx atomically creates/updates a shadow user and adds guild membership.
+	// LookupShadowUserID returns the local user ID for a federated shadow user
+	// identified by (homeServer, remoteUserID). Returns "", nil if not found.
+	LookupShadowUserID(ctx context.Context, homeServer, remoteUserID string) (string, error)
+
+	// FederationJoinTx atomically creates/updates a shadow user, checks bans,
+	// and adds guild membership. Returns store.ErrBannedFromServer if banned.
 	FederationJoinTx(ctx context.Context, homeServer, remoteUserID, displayName, avatarURL, serverID string) (*models.User, error)
 
 	// UpdateShadowUserProfile updates the display name and avatar URL on a shadow user.

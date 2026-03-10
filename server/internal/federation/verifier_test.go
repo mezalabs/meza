@@ -24,12 +24,12 @@ func setupVerifierTest(t *testing.T) (*Verifier, ed25519.PrivateKey, string) {
 
 	// Create JWKS client without SSRF filtering (for localhost test server)
 	jwksClient := newTestClient()
-	if err := jwksClient.EagerLoad(context.Background(), []string{issuerURL}); err != nil {
+	if err := jwksClient.EagerLoad(context.Background(), issuerURL); err != nil {
 		t.Fatal(err)
 	}
 
 	instanceURL := "https://remote.example.com"
-	verifier := NewVerifier(jwksClient, instanceURL, []string{issuerURL})
+	verifier := NewVerifier(jwksClient, instanceURL, issuerURL)
 
 	return verifier, priv, issuerURL
 }

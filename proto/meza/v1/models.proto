@@ -159,8 +159,8 @@ message Member {
   optional google.protobuf.Timestamp timed_out_until = 6;
   optional google.protobuf.Timestamp onboarding_completed_at = 7;
   optional google.protobuf.Timestamp rules_acknowledged_at = 8;
-  // Federation: home server user ID for federated users (empty for local users).
-  // Enables client-side correlation of shadow users to home identities.
+  // Federation: origin user ID for federated users (empty for local users).
+  // Enables client-side correlation of shadow users to origin identities.
   string home_user_id = 9;
   // Inviter user ID, populated only on MEMBER_JOIN events for key distribution election.
   string inviter_user_id = 10;

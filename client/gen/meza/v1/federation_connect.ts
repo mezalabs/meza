@@ -13,7 +13,7 @@ export const FederationService = {
   typeName: "meza.v1.FederationService",
   methods: {
     /**
-     * Home server only: create a scoped assertion for a target instance
+     * Origin only: create a scoped assertion for a target host instance
      *
      * @generated from rpc meza.v1.FederationService.CreateFederationAssertion
      */
@@ -24,7 +24,7 @@ export const FederationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Remote instances: join a guild with a federation assertion
+     * Host instances: join a guild with a federation assertion
      *
      * @generated from rpc meza.v1.FederationService.FederationJoin
      */
@@ -35,7 +35,7 @@ export const FederationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Remote instances: refresh local token (requires fresh assertion)
+     * Host instances: refresh local token (requires fresh assertion)
      *
      * @generated from rpc meza.v1.FederationService.FederationRefresh
      */
@@ -46,7 +46,7 @@ export const FederationService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Remote instances: leave a guild
+     * Host instances: leave a guild
      *
      * @generated from rpc meza.v1.FederationService.FederationLeave
      */

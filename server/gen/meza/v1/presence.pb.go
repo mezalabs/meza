@@ -690,8 +690,8 @@ const file_meza_v1_presence_proto_rawDesc = "" +
 	"\x0fGetBulkPresence\x12\x1f.meza.v1.GetBulkPresenceRequest\x1a .meza.v1.GetBulkPresenceResponse\x12Z\n" +
 	"\x11SetStatusOverride\x12!.meza.v1.SetStatusOverrideRequest\x1a\".meza.v1.SetStatusOverrideResponse\x12`\n" +
 	"\x13ClearStatusOverride\x12#.meza.v1.ClearStatusOverrideRequest\x1a$.meza.v1.ClearStatusOverrideResponse\x12N\n" +
-	"\rGetMyPresence\x12\x1d.meza.v1.GetMyPresenceRequest\x1a\x1e.meza.v1.GetMyPresenceResponseB\x87\x01\n" +
-	"\vcom.meza.v1B\rPresenceProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\rGetMyPresence\x12\x1d.meza.v1.GetMyPresenceRequest\x1a\x1e.meza.v1.GetMyPresenceResponseB\x86\x01\n" +
+	"\vcom.meza.v1B\rPresenceProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_presence_proto_rawDescOnce sync.Once

@@ -112,7 +112,7 @@ func (x *CreateFederationAssertionResponse) GetAssertionToken() string {
 
 type FederationJoinRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	AssertionToken string                 `protobuf:"bytes,1,opt,name=assertion_token,json=assertionToken,proto3" json:"assertion_token,omitempty"` // Federation assertion from the home server
+	AssertionToken string                 `protobuf:"bytes,1,opt,name=assertion_token,json=assertionToken,proto3" json:"assertion_token,omitempty"` // Federation assertion from the origin
 	InviteCode     string                 `protobuf:"bytes,2,opt,name=invite_code,json=inviteCode,proto3" json:"invite_code,omitempty"`             // Invite code on this instance
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -249,7 +249,7 @@ func (x *FederationJoinResponse) GetUserId() string {
 type FederationRefreshRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	RefreshToken   string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`       // Local refresh token from this instance
-	AssertionToken string                 `protobuf:"bytes,2,opt,name=assertion_token,json=assertionToken,proto3" json:"assertion_token,omitempty"` // Fresh federation assertion from the home server
+	AssertionToken string                 `protobuf:"bytes,2,opt,name=assertion_token,json=assertionToken,proto3" json:"assertion_token,omitempty"` // Fresh federation assertion from the origin
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -734,8 +734,8 @@ const file_meza_v1_federation_proto_rawDesc = "" +
 	"\x11FederationRefresh\x12!.meza.v1.FederationRefreshRequest\x1a\".meza.v1.FederationRefreshResponse\x12T\n" +
 	"\x0fFederationLeave\x12\x1f.meza.v1.FederationLeaveRequest\x1a .meza.v1.FederationLeaveResponse\x12`\n" +
 	"\x13ResolveRemoteInvite\x12#.meza.v1.ResolveRemoteInviteRequest\x1a$.meza.v1.ResolveRemoteInviteResponse\x12o\n" +
-	"\x18ListFederatedMemberships\x12(.meza.v1.ListFederatedMembershipsRequest\x1a).meza.v1.ListFederatedMembershipsResponseB\x89\x01\n" +
-	"\vcom.meza.v1B\x0fFederationProtoP\x01Z,github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
+	"\x18ListFederatedMemberships\x12(.meza.v1.ListFederatedMembershipsRequest\x1a).meza.v1.ListFederatedMembershipsResponseB\x88\x01\n" +
+	"\vcom.meza.v1B\x0fFederationProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (
 	file_meza_v1_federation_proto_rawDescOnce sync.Once

@@ -186,7 +186,7 @@ func TestJWKSClientEagerLoad(t *testing.T) {
 	client := newTestClient()
 	ctx := context.Background()
 
-	err := client.EagerLoad(ctx, []string{srv.URL})
+	err := client.EagerLoad(ctx, srv.URL)
 	if err != nil {
 		t.Fatalf("EagerLoad: %v", err)
 	}

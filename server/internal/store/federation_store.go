@@ -48,12 +48,34 @@ func (s *FederationStore) IsFederatedUser(ctx context.Context, userID string) (b
 	return isFederated, nil
 }
 
-// FederationJoinTx atomically upserts a shadow user and adds guild membership
-// within a single PostgreSQL transaction. This prevents orphaned shadow users
-// on partial failure and ensures idempotent re-join behaviour:
+// LookupShadowUserID returns the local user ID for a federated shadow user
+// identified by (homeServer, remoteUserID). Returns "", nil if not found.
+func (s *FederationStore) LookupShadowUserID(ctx context.Context, homeServer, remoteUserID string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var id string
+	err := s.pool.QueryRow(ctx,
+		`SELECT id FROM users WHERE home_server = $1 AND remote_user_id = $2 AND is_federated = true`,
+		homeServer, remoteUserID,
+	).Scan(&id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", fmt.Errorf("lookup shadow user: %w", err)
+	}
+	return id, nil
+}
+
+// FederationJoinTx atomically upserts a shadow user, checks bans, and adds
+// guild membership within a single PostgreSQL transaction. This prevents
+// orphaned shadow users on partial failure and ensures idempotent re-join:
 //
 //   - Shadow user: ON CONFLICT (home_server, remote_user_id) refreshes
 //     display_name and avatar_url so re-joins pick up profile changes.
+//   - Ban check: after upsert (so we have the shadow user ID) and before
+//     membership insert (to prevent banned users from rejoining via new invite).
 //   - Member row: ON CONFLICT (user_id, server_id) refreshes joined_at
 //     so a re-join after leave (or admin kick) is recorded correctly.
 //
@@ -89,7 +111,20 @@ func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remo
 		return nil, fmt.Errorf("upsert shadow user: %w", err)
 	}
 
-	// Step 2: Add guild membership — idempotent via PK (user_id, server_id).
+	// Step 2: Check ban inside transaction (prevents TOCTOU race with concurrent ban)
+	var banned bool
+	err = tx.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM bans WHERE server_id = $1 AND user_id = $2)`,
+		serverID, u.ID,
+	).Scan(&banned)
+	if err != nil {
+		return nil, fmt.Errorf("check ban: %w", err)
+	}
+	if banned {
+		return nil, ErrBannedFromServer
+	}
+
+	// Step 3: Add guild membership — idempotent via PK (user_id, server_id).
 	// On conflict (user already a member), refresh joined_at so a re-join
 	// after leave or admin kick is properly timestamped.
 	_, err = tx.Exec(ctx,
@@ -108,8 +143,8 @@ func (s *FederationStore) FederationJoinTx(ctx context.Context, homeServer, remo
 	return &u, nil
 }
 
-// ErrShadowUserNotFound is returned when UpdateShadowUserProfile matches no rows.
-var ErrShadowUserNotFound = errors.New("shadow user not found")
+// ErrBannedFromServer is returned when a banned user tries to join via federation.
+var ErrBannedFromServer = errors.New("user is banned from this server")
 
 func (s *FederationStore) UpdateShadowUserProfile(ctx context.Context, userID, displayName, avatarURL string) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
@@ -123,8 +158,8 @@ func (s *FederationStore) UpdateShadowUserProfile(ctx context.Context, userID, d
 	if err != nil {
 		return fmt.Errorf("update shadow user profile: %w", err)
 	}
-	if result.RowsAffected() == 0 {
-		return ErrShadowUserNotFound
-	}
+	// No rows affected means the shadow user doesn't exist (yet); treat as
+	// a harmless no-op so callers don't need to handle a not-found case.
+	_ = result.RowsAffected()
 	return nil
 }

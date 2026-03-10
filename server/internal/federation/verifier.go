@@ -14,19 +14,16 @@ import (
 type Verifier struct {
 	jwks        *JWKSClient
 	instanceURL string // This instance's public URL (expected audience)
-	trusted     map[string]bool
+	originURL   string // The single trusted origin (identity provider)
 }
 
 // NewVerifier creates a federation assertion verifier.
-func NewVerifier(jwks *JWKSClient, instanceURL string, trustedServers []string) *Verifier {
-	trusted := make(map[string]bool, len(trustedServers))
-	for _, s := range trustedServers {
-		trusted[s] = true
-	}
+// originURL is the single trusted identity provider (e.g. "https://meza.chat").
+func NewVerifier(jwks *JWKSClient, instanceURL string, originURL string) *Verifier {
 	return &Verifier{
 		jwks:        jwks,
 		instanceURL: instanceURL,
-		trusted:     trusted,
+		originURL:   originURL,
 	}
 }
 
@@ -56,8 +53,8 @@ func (v *Verifier) VerifyAssertion(ctx context.Context, tokenString string) (*au
 		return nil, fmt.Errorf("missing iss claim in assertion")
 	}
 
-	// Check issuer is trusted
-	if !v.trusted[iss] {
+	// Check issuer is the trusted origin
+	if iss != v.originURL {
 		return nil, fmt.Errorf("untrusted issuer: %s", iss)
 	}
 

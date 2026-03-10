@@ -27,6 +27,7 @@ type federationService struct {
 	federationStore store.FederationStorer
 	chatStore       store.ChatStorer
 	inviteStore     store.InviteStorer
+	banStore        store.BanStorer
 	ed25519Keys     *auth.Ed25519Keys
 	instanceURL     string // This instance's public URL
 	verifier        *federation.Verifier
@@ -39,13 +40,40 @@ func (s *federationService) consumeJTI(ctx context.Context, jti string) (bool, e
 	if s.redisClient == nil {
 		return true, nil // No Redis = no replay protection (dev mode)
 	}
-	// SET NX with 90s TTL (assertion TTL is 60s + buffer)
+	// SET NX with 120s TTL (assertion TTL is 60s + 15s leeway + buffer)
 	key := "fed_jti:" + jti
-	ok, err := s.redisClient.SetNX(ctx, key, "1", 90*time.Second).Result()
+	ok, err := s.redisClient.SetNX(ctx, key, "1", 120*time.Second).Result()
 	if err != nil {
 		return false, fmt.Errorf("check jti replay: %w", err)
 	}
 	return ok, nil
+}
+
+// checkJTIReplay parses the raw assertion token (unverified) to extract the jti
+// claim and ensures it has not been used before. Returns an error if the jti is
+// missing, empty, or has already been consumed.
+func (s *federationService) checkJTIReplay(ctx context.Context, rawToken string) error {
+	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
+	unverified, _, err := parser.ParseUnverified(rawToken, jwt.MapClaims{})
+	if err != nil || unverified == nil {
+		return fmt.Errorf("failed to parse token for jti: %w", err)
+	}
+	mc, ok := unverified.Claims.(jwt.MapClaims)
+	if !ok {
+		return errors.New("unexpected claims type")
+	}
+	jti, ok := mc["jti"].(string)
+	if !ok || jti == "" {
+		return errors.New("missing or empty jti claim")
+	}
+	consumed, err := s.consumeJTI(ctx, jti)
+	if err != nil {
+		return fmt.Errorf("jti replay check: %w", err)
+	}
+	if !consumed {
+		return errors.New("assertion already consumed")
+	}
+	return nil
 }
 
 // sanitizeFederationProfile validates and cleans federation profile claims.
@@ -94,9 +122,9 @@ func federationDeviceID() string {
 	return "federation_" + hex.EncodeToString(b)
 }
 
-// CreateFederationAssertion is called on the home server.
+// CreateFederationAssertion is called on the origin.
 // It issues a short-lived, audience-scoped JWT for the authenticated user
-// to present to a remote instance during federation join/refresh.
+// to present to a host instance during federation join/refresh.
 func (s *federationService) CreateFederationAssertion(ctx context.Context, req *connect.Request[v1.CreateFederationAssertionRequest]) (*connect.Response[v1.CreateFederationAssertionResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok || userID == "" {
@@ -125,7 +153,7 @@ func (s *federationService) CreateFederationAssertion(ctx context.Context, req *
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	// Federated shadow users cannot create assertions (only real home users)
+	// Federated shadow users cannot create assertions (only real origin users)
 	if user.IsFederated {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("federated users cannot create assertions"))
 	}
@@ -144,8 +172,8 @@ func (s *federationService) CreateFederationAssertion(ctx context.Context, req *
 	}), nil
 }
 
-// FederationJoin is called on the remote instance.
-// It verifies the home server assertion, creates a shadow user + member,
+// FederationJoin is called on a host instance.
+// It verifies the origin assertion, creates a shadow user + member,
 // and issues local tokens.
 func (s *federationService) FederationJoin(ctx context.Context, req *connect.Request[v1.FederationJoinRequest]) (*connect.Response[v1.FederationJoinResponse], error) {
 	if req.Msg.AssertionToken == "" {
@@ -159,7 +187,7 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("federation not enabled on this instance"))
 	}
 
-	// Verify the federation assertion from the home server
+	// Verify the federation assertion from the origin
 	assertionClaims, err := s.verifier.VerifyAssertion(ctx, req.Msg.AssertionToken)
 	if err != nil {
 		slog.Warn("federation assertion verification failed", "err", err)
@@ -167,33 +195,51 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 	}
 
 	// Check for assertion replay
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	unverified, _, _ := parser.ParseUnverified(req.Msg.AssertionToken, jwt.MapClaims{})
-	if unverified != nil {
-		if mc, ok := unverified.Claims.(jwt.MapClaims); ok {
-			if jti, ok := mc["jti"].(string); ok && jti != "" {
-				consumed, err := s.consumeJTI(ctx, jti)
-				if err != nil {
-					slog.Error("jti replay check", "err", err)
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				if !consumed {
-					return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
-				}
-			}
+	if err := s.checkJTIReplay(ctx, req.Msg.AssertionToken); err != nil {
+		slog.Error("jti replay check", "err", err)
+		if err.Error() == "assertion already consumed" {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
 		}
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid federation assertion: "+err.Error()))
 	}
 
 	// Sanitize federation profile claims
 	displayName, avatarURL := sanitizeFederationProfile(assertionClaims.DisplayName, assertionClaims.AvatarURL)
 
-	// Resolve invite code to a server
+	// Pre-check: if this user already has a shadow user, check bans before
+	// consuming the invite (avoid burning single-use invites for banned users).
+	if shadowUserID, err := s.federationStore.LookupShadowUserID(ctx, assertionClaims.Issuer, assertionClaims.UserID); err != nil {
+		slog.Error("lookup shadow user for ban check", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	} else if shadowUserID != "" {
+		// Peek at the invite to get the server ID without consuming it
+		invite, err := s.inviteStore.GetInvite(ctx, req.Msg.InviteCode)
+		if err != nil || invite == nil {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found or expired"))
+		}
+		banned, err := s.banStore.IsBanned(ctx, invite.ServerID, shadowUserID)
+		if err != nil {
+			slog.Error("pre-check ban for federation join", "err", err)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if banned {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you are banned from this server"))
+		}
+	}
+
+	// Resolve invite code to a server.
+	// NOTE: ConsumeInvite runs outside the FederationJoinTx transaction, so a
+	// ban applied between the pre-check above and here could waste a single-use
+	// invite (the in-tx ban check in FederationJoinTx will still block
+	// membership creation). This is an accepted trade-off: the race window is
+	// narrow, the impact is limited to invite waste (not a security bypass),
+	// and the pre-check handles the common case.
 	invite, err := s.inviteStore.ConsumeInvite(ctx, req.Msg.InviteCode)
 	if err != nil || invite == nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found or expired"))
 	}
 
-	// Atomically create shadow user + add guild membership
+	// Atomically create shadow user + add guild membership (includes in-tx ban check)
 	shadowUser, err := s.federationStore.FederationJoinTx(
 		ctx,
 		assertionClaims.Issuer,
@@ -203,6 +249,9 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 		invite.ServerID,
 	)
 	if err != nil {
+		if errors.Is(err, store.ErrBannedFromServer) {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you are banned from this server"))
+		}
 		slog.Error("federation join tx", "err", err, "remote_user", assertionClaims.UserID, "server", invite.ServerID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -284,8 +333,8 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 	}), nil
 }
 
-// FederationRefresh is called on the remote instance.
-// It validates both the local refresh token and a fresh home server assertion
+// FederationRefresh is called on a host instance.
+// It validates both the local refresh token and a fresh origin assertion
 // (to ensure revocation propagation), then issues new local tokens.
 func (s *federationService) FederationRefresh(ctx context.Context, req *connect.Request[v1.FederationRefreshRequest]) (*connect.Response[v1.FederationRefreshResponse], error) {
 	if req.Msg.RefreshToken == "" {
@@ -308,7 +357,7 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("not a refresh token"))
 	}
 
-	// Validate fresh assertion from the home server
+	// Validate fresh assertion from the origin
 	assertionClaims, err := s.verifier.VerifyAssertion(ctx, req.Msg.AssertionToken)
 	if err != nil {
 		slog.Warn("federation refresh assertion failed", "err", err)
@@ -316,21 +365,12 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 	}
 
 	// Check for assertion replay
-	parser := jwt.NewParser(jwt.WithoutClaimsValidation())
-	unverified, _, _ := parser.ParseUnverified(req.Msg.AssertionToken, jwt.MapClaims{})
-	if unverified != nil {
-		if mc, ok := unverified.Claims.(jwt.MapClaims); ok {
-			if jti, ok := mc["jti"].(string); ok && jti != "" {
-				consumed, err := s.consumeJTI(ctx, jti)
-				if err != nil {
-					slog.Error("jti replay check", "err", err)
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				if !consumed {
-					return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
-				}
-			}
+	if err := s.checkJTIReplay(ctx, req.Msg.AssertionToken); err != nil {
+		slog.Error("jti replay check", "err", err)
+		if err.Error() == "assertion already consumed" {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("assertion already consumed"))
 		}
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid federation assertion: "+err.Error()))
 	}
 
 	// Cross-check: assertion identity must match the shadow user bound to the refresh token.
@@ -375,7 +415,7 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 	}), nil
 }
 
-// FederationLeave is called on the remote instance.
+// FederationLeave is called on a host instance.
 // Removes guild membership but keeps the shadow user row for message attribution.
 func (s *federationService) FederationLeave(ctx context.Context, req *connect.Request[v1.FederationLeaveRequest]) (*connect.Response[v1.FederationLeaveResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)

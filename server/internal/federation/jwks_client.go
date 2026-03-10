@@ -155,20 +155,18 @@ func newJWKSClient(dialControl func(network, address string, c syscall.RawConn) 
 	}
 }
 
-// EagerLoad fetches JWKS for all trusted home servers at startup.
+// EagerLoad fetches JWKS for the origin at startup.
 // Should be called before the server accepts federation requests.
-func (c *JWKSClient) EagerLoad(ctx context.Context, trustedServers []string) error {
-	for _, issuer := range trustedServers {
-		if _, err := c.fetchAndCache(ctx, issuer); err != nil {
-			return fmt.Errorf("eager load JWKS for %s: %w", issuer, err)
-		}
-		slog.Info("JWKS loaded", "issuer", issuer)
+func (c *JWKSClient) EagerLoad(ctx context.Context, originURL string) error {
+	if _, err := c.fetchAndCache(ctx, originURL); err != nil {
+		return fmt.Errorf("eager load JWKS for %s: %w", originURL, err)
 	}
+	slog.Info("JWKS loaded", "origin", originURL)
 	return nil
 }
 
-// StartBackgroundRefresh starts a goroutine that refreshes JWKS periodically.
-func (c *JWKSClient) StartBackgroundRefresh(ctx context.Context, trustedServers []string) {
+// StartBackgroundRefresh starts a goroutine that refreshes the origin's JWKS periodically.
+func (c *JWKSClient) StartBackgroundRefresh(ctx context.Context, originURL string) {
 	go func() {
 		ticker := time.NewTicker(jwksRefreshEvery)
 		defer ticker.Stop()
@@ -177,10 +175,8 @@ func (c *JWKSClient) StartBackgroundRefresh(ctx context.Context, trustedServers 
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				for _, issuer := range trustedServers {
-					if _, err := c.fetchAndCache(ctx, issuer); err != nil {
-						slog.Warn("JWKS background refresh failed", "issuer", issuer, "err", err)
-					}
+				if _, err := c.fetchAndCache(ctx, originURL); err != nil {
+					slog.Warn("JWKS background refresh failed", "origin", originURL, "err", err)
 				}
 			}
 		}
