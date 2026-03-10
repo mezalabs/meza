@@ -228,7 +228,7 @@ func (s *voiceService) newLiveKitToken(userID, room string, canScreenShare bool)
 		CanPublishSources: sources,
 	}).
 		SetIdentity(userID).
-		SetValidFor(24 * time.Hour)
+		SetValidFor(2 * time.Hour)
 
 	return at.ToJWT()
 }

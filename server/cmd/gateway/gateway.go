@@ -76,6 +76,7 @@ type Gateway struct {
 	ed25519Keys       *auth.Ed25519Keys       // Ed25519 keys for JWT signing/verification
 	instanceURL       string                  // This instance's URL for iss claim
 	verificationCache *auth.VerificationCache // Caches validated JWT claims to avoid repeated Ed25519 verification
+	tokenBlocklist    *auth.TokenBlocklist     // Redis-backed blocklist for revoked devices
 	originPatterns    []string
 	chatStore      store.ChatStorer
 	readStateStore store.ReadStateStorer
@@ -93,13 +94,14 @@ type Gateway struct {
 	heartbeatBatch map[string]struct{} // userIDs to flush
 }
 
-func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string) *Gateway {
+func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string, tokenBlocklist *auth.TokenBlocklist) *Gateway {
 	// Fix 3: Read allowed origins from config instead of os.Getenv.
 	// Defaults to "*" for development, but logs a WARNING to alert operators.
 	origins := parseAllowedOrigins(allowedOrigins)
 
 	return &Gateway{
 		originPatterns: origins,
+		tokenBlocklist: tokenBlocklist,
 		chatStore:      chatStore,
 		readStateStore: readStateStore,
 		messageStore:   messageStore,
@@ -603,23 +605,32 @@ func (gw *Gateway) authenticateFirstMessage(conn *websocket.Conn) (*auth.Claims,
 	}
 
 	// Check verification cache first to avoid repeated Ed25519 verification
+	var claims *auth.Claims
 	if gw.verificationCache != nil {
-		if claims, ok := gw.verificationCache.Get(identifyPayload.Token); ok {
-			return claims, nil
+		if cached, ok := gw.verificationCache.Get(identifyPayload.Token); ok {
+			claims = cached
 		}
 	}
 
-	claims, err := auth.ValidateTokenEd25519(identifyPayload.Token, gw.ed25519Keys.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid token: %w", err)
-	}
-	if claims.IsRefresh {
-		return nil, fmt.Errorf("refresh token cannot be used for authentication")
+	if claims == nil {
+		var err error
+		claims, err = auth.ValidateTokenEd25519(identifyPayload.Token, gw.ed25519Keys.PublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid token: %w", err)
+		}
+		if claims.IsRefresh {
+			return nil, fmt.Errorf("refresh token cannot be used for authentication")
+		}
+
+		// Cache validated claims
+		if gw.verificationCache != nil {
+			gw.verificationCache.Put(identifyPayload.Token, claims, claims.ExpiresAt)
+		}
 	}
 
-	// Cache validated claims
-	if gw.verificationCache != nil {
-		gw.verificationCache.Put(identifyPayload.Token, claims, time.Now().Add(1*time.Hour))
+	// Check if the device has been revoked (must run even for cached claims)
+	if gw.tokenBlocklist != nil && gw.tokenBlocklist.IsDeviceBlocked(ctx, claims.DeviceID) {
+		return nil, fmt.Errorf("device has been revoked")
 	}
 
 	return claims, nil

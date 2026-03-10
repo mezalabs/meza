@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -32,5 +33,9 @@ func (b *TokenBlocklist) BlockDevice(ctx context.Context, deviceID string, ttl t
 func (b *TokenBlocklist) IsDeviceBlocked(ctx context.Context, deviceID string) bool {
 	key := fmt.Sprintf("blocked:device:%s", deviceID)
 	val, err := b.client.Exists(ctx, key).Result()
-	return err == nil && val > 0
+	if err != nil {
+		slog.Error("device blocklist check failed, failing open", "err", err, "device", deviceID)
+		return false
+	}
+	return val > 0
 }

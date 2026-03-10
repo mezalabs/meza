@@ -173,12 +173,16 @@ func (s *chatService) GetPinnedMessages(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
 
-	_, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, req.Msg.ChannelId, userID)
+	ch, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, req.Msg.ChannelId, userID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
 	}
 	if !isMember {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member"))
+	}
+
+	if err := s.requireChannelAccess(ctx, ch, userID); err != nil {
+		return nil, err
 	}
 
 	// Parse cursor: default to now() for first page.

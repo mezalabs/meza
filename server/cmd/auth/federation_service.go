@@ -38,7 +38,7 @@ type federationService struct {
 // Returns true if this is the first consumption, false if already used.
 func (s *federationService) consumeJTI(ctx context.Context, jti string) (bool, error) {
 	if s.redisClient == nil {
-		return true, nil // No Redis = no replay protection (dev mode)
+		return false, errors.New("redis required for federation JTI replay protection")
 	}
 	// SET NX with 120s TTL (assertion TTL is 60s + 15s leeway + buffer)
 	key := "fed_jti:" + jti

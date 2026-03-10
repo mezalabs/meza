@@ -208,12 +208,12 @@ func (s *chatService) GetReactions(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("too many message_ids (max 100)"))
 	}
 
-	ch, err := s.chatStore.GetChannel(ctx, req.Msg.ChannelId)
+	ch, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, req.Msg.ChannelId, userID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
 	}
-	if err := s.requireMembership(ctx, userID, ch.ServerID); err != nil {
-		return nil, err
+	if !isMember {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member of this server"))
 	}
 	if err := s.requireChannelAccess(ctx, ch, userID); err != nil {
 		return nil, err

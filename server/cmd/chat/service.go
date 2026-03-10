@@ -74,10 +74,11 @@ func validateContentWarning(cw string) error {
 // validateServerName checks that a server name is non-empty, not whitespace-only,
 // within length limits, and free of null bytes or HTML tags.
 func validateServerName(name string) error {
-	if name == "" || strings.TrimSpace(name) == "" {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("name is required"))
 	}
-	if len(name) > 100 {
+	if utf8.RuneCountInString(trimmed) > 100 {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("name exceeds 100 characters"))
 	}
 	if strings.ContainsRune(name, 0) {
@@ -2717,6 +2718,18 @@ func (s *chatService) ListInvites(ctx context.Context, req *connect.Request[v1.L
 	if err != nil {
 		slog.Error("listing invites", "err", err, "server", req.Msg.ServerId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Users with ManageServer permission can see all invites;
+	// everyone else only sees their own.
+	if !s.hasPermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer) {
+		filtered := invites[:0]
+		for _, inv := range invites {
+			if inv.CreatorID == userID {
+				filtered = append(filtered, inv)
+			}
+		}
+		invites = filtered
 	}
 
 	protoInvites := make([]*v1.Invite, len(invites))

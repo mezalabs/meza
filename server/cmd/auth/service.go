@@ -52,11 +52,12 @@ func (s *authService) checkRecoveryRateLimit(ctx context.Context, email, endpoin
 	key := fmt.Sprintf("ratelimit:recovery:%s:%s", endpoint, email)
 	count, err := s.redisClient.Incr(ctx, key).Result()
 	if err != nil {
-		slog.Error("recovery rate limit incr", "err", err, "email", email)
+		slog.Error("recovery rate limit incr", "err", err, "email_hash", hashEmailForLog(email))
 		return connect.NewError(connect.CodeUnavailable, errors.New("recovery temporarily unavailable"))
 	}
-	if err := s.redisClient.Expire(ctx, key, recoveryRateLimitTTL).Err(); err != nil {
-		slog.Error("recovery rate limit expire", "err", err, "email", email)
+	if count == 1 {
+		// Only set TTL on first increment (key creation) to prevent sliding-window TOCTOU
+		s.redisClient.Expire(ctx, key, recoveryRateLimitTTL)
 	}
 	if count > recoveryRateLimitMax {
 		return connect.NewError(connect.CodeResourceExhausted, errors.New("too many recovery attempts, try again later"))
@@ -96,6 +97,9 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 	r := req.Msg
 	if r.Email == "" || r.Username == "" || len(r.AuthKey) == 0 || len(r.Salt) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email, username, auth_key, and salt are required"))
+	}
+	if len(r.AuthKey) > 128 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("auth_key too large"))
 	}
 	if !validateEmail(r.Email) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid email format"))
@@ -177,6 +181,9 @@ func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 	r := req.Msg
 	if r.Identifier == "" || len(r.AuthKey) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier and auth_key are required"))
+	}
+	if len(r.AuthKey) > 128 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("auth_key too large"))
 	}
 
 	var user *models.User
@@ -696,6 +703,12 @@ func (s *authService) ChangePassword(ctx context.Context, req *connect.Request[v
 	if len(r.OldAuthKey) == 0 || len(r.NewAuthKey) == 0 || len(r.NewSalt) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("old_auth_key, new_auth_key, and new_salt are required"))
 	}
+	if len(r.OldAuthKey) > 128 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("auth_key too large"))
+	}
+	if len(r.NewAuthKey) > 128 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("auth_key too large"))
+	}
 	if len(r.NewRecoveryVerifier) != 0 && len(r.NewRecoveryVerifier) != 32 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid new_recovery_verifier length"))
 	}
@@ -903,4 +916,11 @@ func userToProto(u *models.User) *v1.User {
 func hashToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(h[:])
+}
+
+// hashEmailForLog returns a truncated SHA-256 hash of the email for logging
+// without exposing PII. First 4 bytes = 8 hex characters.
+func hashEmailForLog(email string) string {
+	h := sha256.Sum256([]byte(email))
+	return hex.EncodeToString(h[:4])
 }

@@ -28,6 +28,13 @@ const (
 	// Redis key prefix for tracking connected devices per user.
 	connectedDevicesPrefix = "connected_devices:"
 
+	// connectedDevicesTTL is the expiry applied to each connected_devices set.
+	// If the gateway crashes without sending disconnect events, entries
+	// expire automatically so push notifications are no longer suppressed.
+	// Heartbeats refresh this TTL, so the value should comfortably exceed
+	// the gateway's heartbeat flush interval (5 s).
+	connectedDevicesTTL = 5 * time.Minute
+
 	// Default throttle window: 1 push per 30s per channel per user.
 	defaultThrottleSeconds = 30
 
@@ -167,8 +174,15 @@ func (s *notificationService) StartConsumers(ctx context.Context) error {
 		}
 		userID := parts[3]
 		deviceID := string(msg.Data)
-		if err := s.rdb.SAdd(ctx, connectedDevicesPrefix+userID, deviceID).Err(); err != nil {
+		key := connectedDevicesPrefix + userID
+		if err := s.rdb.SAdd(ctx, key, deviceID).Err(); err != nil {
 			slog.Error("redis sadd connected device", "err", err, "user", userID)
+			return
+		}
+		// Set TTL so the set expires if the gateway crashes without
+		// sending disconnect events (M-8 fix).
+		if err := s.rdb.Expire(ctx, key, connectedDevicesTTL).Err(); err != nil {
+			slog.Error("redis expire connected devices", "err", err, "user", userID)
 		}
 	}); err != nil {
 		return fmt.Errorf("subscribe device connected: %w", err)
@@ -187,6 +201,24 @@ func (s *notificationService) StartConsumers(ctx context.Context) error {
 		}
 	}); err != nil {
 		return fmt.Errorf("subscribe device disconnected: %w", err)
+	}
+
+	// Refresh connected-devices TTL on heartbeat so the set stays alive
+	// while the gateway is healthy (M-8 fix).
+	if _, err := s.nc.QueueSubscribe(subjects.PresenceHeartbeatWildcard(), "notification-workers", func(msg *nats.Msg) {
+		parts := strings.Split(msg.Subject, ".")
+		if len(parts) < 4 {
+			return
+		}
+		userID := parts[3]
+		key := connectedDevicesPrefix + userID
+		// Only refresh the TTL if the key exists (Expire returns false
+		// for missing keys, which is fine — no error to handle).
+		if err := s.rdb.Expire(ctx, key, connectedDevicesTTL).Err(); err != nil {
+			slog.Error("redis expire heartbeat refresh", "err", err, "user", userID)
+		}
+	}); err != nil {
+		return fmt.Errorf("subscribe presence heartbeat: %w", err)
 	}
 
 	// Listen for channel delivery events (same subjects the gateway uses).
