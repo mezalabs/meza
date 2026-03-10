@@ -332,8 +332,12 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       (m) => m.userId === currentUserId,
     );
   });
+  // Block until we have member data confirming rules were acknowledged.
+  // When currentMember is undefined (not loaded yet), stay blocked to
+  // prevent a flash of channel content before the member record arrives.
   const rulesBlocked =
-    !!selectedServer?.rulesRequired && !currentMember?.rulesAcknowledgedAt;
+    !!selectedServer?.rulesRequired &&
+    (!currentMember || !currentMember.rulesAcknowledgedAt);
 
   return (
     <aside
