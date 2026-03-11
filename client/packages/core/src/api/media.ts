@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import { createClient } from '@connectrpc/connect';
 import { MediaService, UploadPurpose } from '@meza/gen/meza/v1/media_pb.ts';
 import {

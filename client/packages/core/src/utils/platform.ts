@@ -1,5 +1,4 @@
 /// <reference path="../types/electron.d.ts" />
-/// <reference types="vite/client" />
 
 export function isElectron(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
