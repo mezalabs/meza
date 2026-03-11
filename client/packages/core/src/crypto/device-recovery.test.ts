@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { generateIdentityKeypair } from './primitives.ts';
 import {
   deriveVerificationCode,
   generateRecoveryKeypair,
   unwrapIdentityFromRecovery,
   wrapIdentityForRecovery,
 } from './device-recovery.ts';
+import { generateIdentityKeypair } from './primitives.ts';
 
 describe('generateRecoveryKeypair', () => {
   it('generates an X25519 keypair with 32-byte keys', () => {
@@ -122,31 +122,30 @@ describe('low-order point rejection', () => {
     const identity = generateIdentityKeypair();
     const allZero = hexToBytes(lowOrderPoints[0]);
 
-    await expect(
-      wrapIdentityForRecovery(identity, allZero),
-    ).rejects.toThrow('low-order point');
+    await expect(wrapIdentityForRecovery(identity, allZero)).rejects.toThrow(
+      'low-order point',
+    );
   });
 
   it('wrapIdentityForRecovery throws for 0x01...00 public key', async () => {
     const identity = generateIdentityKeypair();
     const onePoint = hexToBytes(lowOrderPoints[1]);
 
-    await expect(
-      wrapIdentityForRecovery(identity, onePoint),
-    ).rejects.toThrow('low-order point');
+    await expect(wrapIdentityForRecovery(identity, onePoint)).rejects.toThrow(
+      'low-order point',
+    );
   });
 
-  it.each(lowOrderPoints)(
-    'wrapIdentityForRecovery throws for low-order point %s',
-    async (hex) => {
-      const identity = generateIdentityKeypair();
-      const badPub = hexToBytes(hex);
+  it.each(
+    lowOrderPoints,
+  )('wrapIdentityForRecovery throws for low-order point %s', async (hex) => {
+    const identity = generateIdentityKeypair();
+    const badPub = hexToBytes(hex);
 
-      await expect(
-        wrapIdentityForRecovery(identity, badPub),
-      ).rejects.toThrow('low-order point');
-    },
-  );
+    await expect(wrapIdentityForRecovery(identity, badPub)).rejects.toThrow(
+      'low-order point',
+    );
+  });
 
   it('unwrapIdentityFromRecovery throws when envelope contains low-order sender ephemeral pub', async () => {
     // Craft a fake 124-byte envelope with a low-order point as the sender ephemeral pub

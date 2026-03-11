@@ -27,10 +27,10 @@ import {
   type VoiceActivity,
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 import { ImageCropper } from '../shared/ImageCropper.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
-import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
 interface ProfileViewProps {
@@ -630,7 +630,8 @@ function ProfileEditMode({
     },
   });
 
-  const uploadProgress = avatarUpload.uploadProgress ?? bannerUpload.uploadProgress;
+  const uploadProgress =
+    avatarUpload.uploadProgress ?? bannerUpload.uploadProgress;
   const uploadError = avatarUpload.error || bannerUpload.error;
 
   const connectionsChanged =

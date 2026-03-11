@@ -551,7 +551,11 @@ export function MessageComposer({
               : 'Waiting for encryption keys \u2014 another member needs to be online'}
           </span>
           {unavailableReason !== 'no-session' && (
-            <button type="button" onClick={retryEncryption} className="underline">
+            <button
+              type="button"
+              onClick={retryEncryption}
+              className="underline"
+            >
               Retry
             </button>
           )}
@@ -618,10 +622,11 @@ export function MessageComposer({
                   className="flex-1 flex items-center justify-center bg-black/50 text-white hover:bg-black/60 transition-colors"
                   title={pf.isSpoiler ? 'Remove spoiler' : 'Mark as spoiler'}
                 >
-                  {pf.isSpoiler
-                    ? <EyeIcon weight="bold" size={28} aria-hidden="true" />
-                    : <EyeSlashIcon weight="bold" size={28} aria-hidden="true" />
-                  }
+                  {pf.isSpoiler ? (
+                    <EyeIcon weight="bold" size={28} aria-hidden="true" />
+                  ) : (
+                    <EyeSlashIcon weight="bold" size={28} aria-hidden="true" />
+                  )}
                 </button>
                 {/* Remove zone (right half) */}
                 <button
@@ -637,7 +642,12 @@ export function MessageComposer({
               {/* Persistent spoiler indicator when not hovering */}
               {pf.isSpoiler && (
                 <div className="spoiler-badge absolute inset-0 z-[5] flex items-center justify-center bg-black/70 pointer-events-none transition-opacity duration-150">
-                  <EyeSlashIcon weight="bold" size={20} className="text-white/60" aria-hidden="true" />
+                  <EyeSlashIcon
+                    weight="bold"
+                    size={20}
+                    className="text-white/60"
+                    aria-hidden="true"
+                  />
                 </div>
               )}
 

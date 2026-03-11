@@ -90,7 +90,7 @@ export type KeyEnvelope = Message<"meza.v1.KeyEnvelope"> & {
   userId: string;
 
   /**
-   * 92 bytes: ephemeral_pub(32) || nonce(12) || wrapped_key(48)
+   * 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
    *
    * @generated from field: bytes envelope = 2;
    */
@@ -188,7 +188,7 @@ export type VersionedKeyEnvelope = Message<"meza.v1.VersionedKeyEnvelope"> & {
   keyVersion: number;
 
   /**
-   * 92 bytes
+   * 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
    *
    * @generated from field: bytes envelope = 2;
    */

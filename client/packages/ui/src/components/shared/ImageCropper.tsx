@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import Cropper from 'react-easy-crop';
 import { useCallback, useState } from 'react';
+import Cropper from 'react-easy-crop';
 import { getCroppedImage, type PixelCrop } from '../../utils/image-utils.ts';
 
 export interface ImageCropperProps {
@@ -42,7 +42,11 @@ export function ImageCropper({
 
     try {
       setCropError(null);
-      const file = await getCroppedImage(imageSrc, croppedAreaPixels, 'crop.jpg');
+      const file = await getCroppedImage(
+        imageSrc,
+        croppedAreaPixels,
+        'crop.jpg',
+      );
       onCrop(file);
     } catch {
       setCropError('Failed to crop image. Please try again.');
@@ -109,9 +113,7 @@ export function ImageCropper({
             </button>
           </div>
 
-          {cropError && (
-            <p className="mt-2 text-xs text-error">{cropError}</p>
-          )}
+          {cropError && <p className="mt-2 text-xs text-error">{cropError}</p>}
 
           {/* Action buttons */}
           <div className="mt-4 flex justify-end gap-2">

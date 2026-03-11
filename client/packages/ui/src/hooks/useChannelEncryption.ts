@@ -23,7 +23,10 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** Why encryption is unavailable — helps the UI show actionable guidance. */
-export type EncryptionUnavailableReason = 'no-session' | 'no-channel-key' | null;
+export type EncryptionUnavailableReason =
+  | 'no-session'
+  | 'no-channel-key'
+  | null;
 
 export interface ChannelEncryption {
   /** Whether the channel key is ready for encryption. */

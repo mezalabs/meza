@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS meza.messages (
     mentioned_user_ids FROZEN<LIST<TEXT>>,
     mentioned_role_ids FROZEN<LIST<TEXT>>,
     mention_everyone   BOOLEAN,
+    message_type       INT,
     key_version        INT,
     created_at         TIMESTAMP,
     edited_at          TIMESTAMP,

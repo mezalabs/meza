@@ -354,10 +354,9 @@ export function ImageViewer() {
               t.directionLocked = false;
               t.swiped = false;
 
-              const imageEl =
-                e.currentTarget.querySelector<HTMLElement>(
-                  '[role="presentation"]',
-                );
+              const imageEl = e.currentTarget.querySelector<HTMLElement>(
+                '[role="presentation"]',
+              );
               if (imageEl) imageEl.style.transition = 'none';
             }}
             onTouchMove={(e) => {
@@ -376,10 +375,9 @@ export function ImageViewer() {
                 t.directionLocked = true;
                 if (Math.abs(dy) > Math.abs(dx)) {
                   t.tracking = false;
-                  const imageEl =
-                    e.currentTarget.querySelector<HTMLElement>(
-                      '[role="presentation"]',
-                    );
+                  const imageEl = e.currentTarget.querySelector<HTMLElement>(
+                    '[role="presentation"]',
+                  );
                   if (imageEl) {
                     imageEl.style.transition = '';
                     imageEl.style.transform = '';
@@ -389,10 +387,9 @@ export function ImageViewer() {
               }
 
               if (t.directionLocked) {
-                const imageEl =
-                  e.currentTarget.querySelector<HTMLElement>(
-                    '[role="presentation"]',
-                  );
+                const imageEl = e.currentTarget.querySelector<HTMLElement>(
+                  '[role="presentation"]',
+                );
                 if (imageEl) {
                   let clampedDx = dx;
                   if (dx > 0 && !hasPrev) clampedDx = dx * 0.3;
@@ -407,10 +404,9 @@ export function ImageViewer() {
               t.tracking = false;
               const touch = e.changedTouches[0];
               if (!touch) {
-                const imageEl =
-                  e.currentTarget.querySelector<HTMLElement>(
-                    '[role="presentation"]',
-                  );
+                const imageEl = e.currentTarget.querySelector<HTMLElement>(
+                  '[role="presentation"]',
+                );
                 if (imageEl) {
                   imageEl.style.transition = '';
                   imageEl.style.transform = '';
@@ -419,10 +415,9 @@ export function ImageViewer() {
               }
               const dx = touch.clientX - t.startX;
 
-              const imageEl =
-                e.currentTarget.querySelector<HTMLElement>(
-                  '[role="presentation"]',
-                );
+              const imageEl = e.currentTarget.querySelector<HTMLElement>(
+                '[role="presentation"]',
+              );
 
               if (dx < -SWIPE_THRESHOLD && hasNext && imageEl) {
                 // Animate off to the left, then advance

@@ -52,7 +52,7 @@ message GetPublicKeysResponse {
 
 message KeyEnvelope {
   string user_id = 1;
-  bytes envelope = 2; // 92 bytes: ephemeral_pub(32) || nonce(12) || wrapped_key(48)
+  bytes envelope = 2; // 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
 }
 
 message StoreKeyEnvelopesRequest {
@@ -75,7 +75,7 @@ message GetKeyEnvelopesResponse {
 
 message VersionedKeyEnvelope {
   uint32 key_version = 1;
-  bytes envelope = 2; // 92 bytes
+  bytes envelope = 2; // 93 bytes
 }
 
 // RotateChannelKey

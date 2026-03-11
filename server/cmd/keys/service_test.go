@@ -374,9 +374,11 @@ func setupTestEnv(t *testing.T) *testEnv {
 }
 
 func makeEnvelope(userID string) *v1.KeyEnvelope {
+	env := make([]byte, 93)
+	env[0] = 0x02 // version byte
 	return &v1.KeyEnvelope{
 		UserId:   userID,
-		Envelope: make([]byte, 92),
+		Envelope: env,
 	}
 }
 
@@ -631,8 +633,8 @@ func TestStoreKeyEnvelopes_WrongEnvelopeSize(t *testing.T) {
 		name string
 		size int
 	}{
-		{"91 bytes", 91},
-		{"93 bytes", 93},
+		{"92 bytes", 92},
+		{"94 bytes", 94},
 	}
 
 	for _, tc := range tests {
@@ -701,9 +703,11 @@ func TestStoreKeyEnvelopes_TooManyEnvelopes(t *testing.T) {
 
 	envs := make([]*v1.KeyEnvelope, 1001)
 	for i := range envs {
+		env := make([]byte, 93)
+		env[0] = 0x02
 		envs[i] = &v1.KeyEnvelope{
 			UserId:   fmt.Sprintf("user-%d", i),
-			Envelope: make([]byte, 92),
+			Envelope: env,
 		}
 	}
 
@@ -801,8 +805,8 @@ func TestGetKeyEnvelopes_WithViewChannel(t *testing.T) {
 	// Seed envelopes directly.
 	env.keyStore.envelopes["ch-1"] = map[string][]store.KeyEnvelope{
 		versionKey(1): {
-			{UserID: "user-1", Envelope: make([]byte, 92)},
-			{UserID: "user-2", Envelope: make([]byte, 92)},
+			{UserID: "user-1", Envelope: make([]byte, 93)},
+			{UserID: "user-2", Envelope: make([]byte, 93)},
 		},
 	}
 	env.keyStore.versions["ch-1"] = 1
@@ -830,7 +834,7 @@ func TestGetKeyEnvelopes_FallbackWithChannelMembership(t *testing.T) {
 	env.chatStore.addChannelMember("ch-1", "user-1")
 
 	env.keyStore.envelopes["ch-1"] = map[string][]store.KeyEnvelope{
-		versionKey(1): {{UserID: "user-1", Envelope: make([]byte, 92)}},
+		versionKey(1): {{UserID: "user-1", Envelope: make([]byte, 93)}},
 	}
 	env.keyStore.versions["ch-1"] = 1
 
@@ -908,8 +912,8 @@ func TestRotateChannelKey_ValidRotation(t *testing.T) {
 	env.keyStore.versions["ch-1"] = 1
 	env.keyStore.envelopes["ch-1"] = map[string][]store.KeyEnvelope{
 		versionKey(1): {
-			{UserID: "user-1", Envelope: make([]byte, 92)},
-			{UserID: "user-2", Envelope: make([]byte, 92)},
+			{UserID: "user-1", Envelope: make([]byte, 93)},
+			{UserID: "user-2", Envelope: make([]byte, 93)},
 		},
 	}
 
@@ -1070,7 +1074,7 @@ func TestRotateChannelKey_ConcurrentRotation(t *testing.T) {
 	// Seed initial version.
 	env.keyStore.versions["ch-1"] = 1
 	env.keyStore.envelopes["ch-1"] = map[string][]store.KeyEnvelope{
-		versionKey(1): {{UserID: "user-0", Envelope: make([]byte, 92)}},
+		versionKey(1): {{UserID: "user-0", Envelope: make([]byte, 93)}},
 	}
 
 	const goroutines = 10

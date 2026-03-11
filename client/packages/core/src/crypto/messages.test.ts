@@ -45,10 +45,10 @@ beforeEach(() => {
 
 describe('encryptMessage', () => {
   it('encrypts content with sign-then-encrypt', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new TextEncoder().encode('Hello, world!');
 
-    const result = await encryptMessage('ch1', content);
+    const result = await encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content);
 
     expect(result.keyVersion).toBe(1);
     expect(result.data).toBeInstanceOf(Uint8Array);
@@ -58,20 +58,23 @@ describe('encryptMessage', () => {
 
   it('throws when no channel key exists', async () => {
     const content = new TextEncoder().encode('test');
-    await expect(encryptMessage('unknown', content)).rejects.toThrow(
-      'No channel key available',
-    );
+    await expect(
+      encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4ZZ', content),
+    ).rejects.toThrow('No channel key available');
   });
 });
 
 describe('decryptMessage', () => {
   it('decrypts with verify-then-return', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new TextEncoder().encode('Hello, secure world!');
 
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
     const decrypted = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -81,12 +84,15 @@ describe('decryptMessage', () => {
   });
 
   it('decrypts empty content', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new Uint8Array(0);
 
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
     const decrypted = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -96,13 +102,16 @@ describe('decryptMessage', () => {
   });
 
   it('decrypts large content', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new Uint8Array(10000);
     crypto.getRandomValues(content);
 
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
     const decrypted = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -114,7 +123,7 @@ describe('decryptMessage', () => {
 
 describe('encrypt/decrypt round-trip', () => {
   it('works with multiple messages on the same channel', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     const messages = [
       'First message',
@@ -123,9 +132,12 @@ describe('encrypt/decrypt round-trip', () => {
     ].map((s) => new TextEncoder().encode(s));
 
     for (const content of messages) {
-      const encrypted = await encryptMessage('ch1', content);
+      const encrypted = await encryptMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        content,
+      );
       const decrypted = await decryptMessage(
-        'ch1',
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
         encrypted.keyVersion,
         encrypted.data,
         alice.publicKey,
@@ -135,24 +147,24 @@ describe('encrypt/decrypt round-trip', () => {
   });
 
   it('produces different ciphertext for the same plaintext', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new TextEncoder().encode('same message');
 
-    const enc1 = await encryptMessage('ch1', content);
-    const enc2 = await encryptMessage('ch1', content);
+    const enc1 = await encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content);
+    const enc2 = await encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content);
 
     // Different nonces → different ciphertext
     expect(enc1.data).not.toEqual(enc2.data);
 
     // Both decrypt to the same content
     const dec1 = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       enc1.keyVersion,
       enc1.data,
       alice.publicKey,
     );
     const dec2 = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       enc2.keyVersion,
       enc2.data,
       alice.publicKey,
@@ -164,15 +176,18 @@ describe('encrypt/decrypt round-trip', () => {
 
 describe('signature verification', () => {
   it('rejects message with wrong sender public key', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new TextEncoder().encode('authenticated message');
 
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
 
     // Try to decrypt with Bob's public key instead of Alice's
     await expect(
       decryptMessage(
-        'ch1',
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
         encrypted.keyVersion,
         encrypted.data,
         bob.publicKey,
@@ -181,10 +196,13 @@ describe('signature verification', () => {
   });
 
   it('rejects tampered ciphertext', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const content = new TextEncoder().encode('tamper test');
 
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
 
     // Tamper with the ciphertext (after the nonce)
     const tampered = new Uint8Array(encrypted.data);
@@ -192,7 +210,12 @@ describe('signature verification', () => {
 
     // Should fail decryption (GCM auth tag mismatch)
     await expect(
-      decryptMessage('ch1', encrypted.keyVersion, tampered, alice.publicKey),
+      decryptMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        encrypted.keyVersion,
+        tampered,
+        alice.publicKey,
+      ),
     ).rejects.toThrow();
   });
 });
@@ -204,14 +227,17 @@ describe('cross-user encryption', () => {
     const masterKey = new Uint8Array(32);
     crypto.getRandomValues(masterKey);
     initChannelKeys(alice, masterKey);
-    createChannelKey('shared-ch');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AC');
 
     const content = new TextEncoder().encode('From Alice');
-    const encrypted = await encryptMessage('shared-ch', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AC',
+      content,
+    );
 
     // Decrypt using Alice's public key (since Alice signed it)
     const decrypted = await decryptMessage(
-      'shared-ch',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AC',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -222,10 +248,15 @@ describe('cross-user encryption', () => {
 
 describe('signature verification edge cases', () => {
   it('rejects empty ciphertext', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     await expect(
-      decryptMessage('ch1', 1, new Uint8Array(0), alice.publicKey),
+      decryptMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        1,
+        new Uint8Array(0),
+        alice.publicKey,
+      ),
     ).rejects.toThrow();
   });
 });
@@ -377,12 +408,15 @@ describe('parseMessageContent', () => {
 
 describe('buildMessageContent + encryptMessage round-trip', () => {
   it('encrypts and decrypts V1 JSON content', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     const content = buildMessageContent('hello with format');
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
     const decrypted = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -393,7 +427,7 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
   });
 
   it('encrypts and decrypts content with attachment metadata', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     const attachments = new Map([
       [
@@ -407,9 +441,12 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
     ]);
 
     const content = buildMessageContent('beautiful sunset', attachments);
-    const encrypted = await encryptMessage('ch1', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
     const decrypted = await decryptMessage(
-      'ch1',
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
       encrypted.keyVersion,
       encrypted.data,
       alice.publicKey,
@@ -427,13 +464,13 @@ describe('buildMessageContent + encryptMessage round-trip', () => {
 
 describe('encryptMessage pre-session-ready', () => {
   it('throws when identity is null', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     vi.mocked(getIdentity).mockReturnValueOnce(null);
 
     const content = new TextEncoder().encode('test');
-    await expect(encryptMessage('ch1', content)).rejects.toThrow(
-      'E2EE session not initialized',
-    );
+    await expect(
+      encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content),
+    ).rejects.toThrow('E2EE session not initialized');
   });
 });

@@ -290,7 +290,7 @@ async function clearAll(): Promise<void> {
         searchDbs.map(
           (db) =>
             new Promise<void>((resolve, reject) => {
-              const req = indexedDB.deleteDatabase(db.name!);
+              const req = indexedDB.deleteDatabase(db.name ?? '');
               req.onsuccess = () => resolve();
               req.onerror = () => reject(req.error);
             }),
@@ -306,13 +306,10 @@ async function clearAll(): Promise<void> {
 // biome-ignore lint/suspicious/noExplicitAny: dynamic dispatch requires untyped args
 const methods: Record<string, (...args: any[]) => Promise<unknown>> = {
   initChannel: (id: string) => initChannel(id),
-  addMessages: (id: string, msgs: IndexableMessage[]) =>
-    addMessages(id, msgs),
-  updateMessage: (id: string, msg: IndexableMessage) =>
-    updateMessage(id, msg),
+  addMessages: (id: string, msgs: IndexableMessage[]) => addMessages(id, msgs),
+  updateMessage: (id: string, msg: IndexableMessage) => updateMessage(id, msg),
   removeMessage: (id: string, msgId: string) => removeMessage(id, msgId),
-  removeMessages: (id: string, msgIds: string[]) =>
-    removeMessages(id, msgIds),
+  removeMessages: (id: string, msgIds: string[]) => removeMessages(id, msgIds),
   search: (query: string, opts: SearchOpts) => search(query, opts),
   flush: () => flushDirty(),
   clearChannel: (id: string) => clearChannel(id),

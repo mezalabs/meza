@@ -26,7 +26,10 @@ import type {
 } from 'livekit-client';
 import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
-import { preloadRnnoiseWorklet, RnnoiseTrackProcessor } from '../../audio/rnnoise-processor.ts';
+import {
+  preloadRnnoiseWorklet,
+  RnnoiseTrackProcessor,
+} from '../../audio/rnnoise-processor.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
@@ -425,10 +428,12 @@ function AudioSettingsSync() {
           // WASM/worklet load failed — fall back to Standard
           console.error('[GIGA] RNNoise processor failed to load:', err);
           useAudioSettingsStore.getState().setNoiseCancellationMode('standard');
-          useToastStore.getState().addToast(
-            'GIGA noise cancellation unavailable \u2014 using Standard mode',
-            'warning',
-          );
+          useToastStore
+            .getState()
+            .addToast(
+              'GIGA noise cancellation unavailable \u2014 using Standard mode',
+              'warning',
+            );
         }
       } else {
         // Detach processor if active

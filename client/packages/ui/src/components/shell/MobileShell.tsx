@@ -12,9 +12,9 @@ import { useMobileHistory } from '../../hooks/useMobileHistory.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
-import { MemberList } from '../chat/MemberList.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
+import { MemberList } from '../chat/MemberList.tsx';
 import { MessageRequestsPane } from '../chat/MessageRequestsPane.tsx';
 import { SearchPane } from '../chat/SearchPane.tsx';
 import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
@@ -24,9 +24,9 @@ import { ProfileView } from '../profile/ProfileView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
+import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ScreenSharePane } from '../voice/ScreenSharePane.tsx';
-import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
 import { VoicePanel } from '../voice/VoicePanel.tsx';
 import { GatewayConnectionBanner } from './GatewayConnectionBanner.tsx';
 import { MobileOverlay } from './MobileOverlay.tsx';
@@ -155,7 +155,7 @@ export function MobileShell() {
           title="Members"
         >
           {mobileActiveChannel && resolveServerId(mobileActiveChannel) ? (
-            <MemberList serverId={resolveServerId(mobileActiveChannel)!} />
+            <MemberList serverId={resolveServerId(mobileActiveChannel) ?? ''} />
           ) : (
             <div className="flex flex-1 items-center justify-center text-text-muted text-sm">
               No server selected

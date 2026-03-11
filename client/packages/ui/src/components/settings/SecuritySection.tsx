@@ -416,11 +416,7 @@ function RegenerateRecoveryForm({
             onClick={() => setShowPassword(!showPassword)}
             tabIndex={-1}
           >
-            {showPassword ? (
-              <EyeSlashIcon size={16} />
-            ) : (
-              <EyeIcon size={16} />
-            )}
+            {showPassword ? <EyeSlashIcon size={16} /> : <EyeIcon size={16} />}
           </button>
         </div>
 

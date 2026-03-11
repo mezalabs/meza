@@ -21,11 +21,19 @@ interface EventConfig {
   label: string;
   enabledField: keyof Pick<
     ServerSystemMessageConfig,
-    'joinEnabled' | 'leaveEnabled' | 'kickEnabled' | 'banEnabled' | 'timeoutEnabled'
+    | 'joinEnabled'
+    | 'leaveEnabled'
+    | 'kickEnabled'
+    | 'banEnabled'
+    | 'timeoutEnabled'
   >;
   templateField: keyof Pick<
     ServerSystemMessageConfig,
-    'joinTemplate' | 'leaveTemplate' | 'kickTemplate' | 'banTemplate' | 'timeoutTemplate'
+    | 'joinTemplate'
+    | 'leaveTemplate'
+    | 'kickTemplate'
+    | 'banTemplate'
+    | 'timeoutTemplate'
   >;
   variables: string[];
   placeholder: string;
@@ -215,7 +223,11 @@ function ChannelCard({
   textChannels: Channel[];
   events: EventConfig[];
   config: Partial<ServerSystemMessageConfig>;
-  onConfigChange: (fn: (prev: Partial<ServerSystemMessageConfig>) => Partial<ServerSystemMessageConfig>) => void;
+  onConfigChange: (
+    fn: (
+      prev: Partial<ServerSystemMessageConfig>,
+    ) => Partial<ServerSystemMessageConfig>,
+  ) => void;
 }) {
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -226,10 +238,14 @@ function ChannelCard({
 
       {/* Channel dropdown */}
       <div>
-        <label className="mb-1 block text-xs font-medium text-text-muted">
+        <label
+          htmlFor={`sysmsg-channel-${title}`}
+          className="mb-1 block text-xs font-medium text-text-muted"
+        >
           Channel
         </label>
         <select
+          id={`sysmsg-channel-${title}`}
           value={channelId ?? ''}
           onChange={(e) => onChannelChange(e.target.value)}
           className="w-full rounded-md border border-border bg-bg-surface px-3 py-1.5 text-sm text-text focus:border-accent focus:outline-none"
@@ -254,7 +270,10 @@ function ChannelCard({
             onConfigChange((prev) => ({ ...prev, [evt.enabledField]: v }))
           }
           onTemplateChange={(v) =>
-            onConfigChange((prev) => ({ ...prev, [evt.templateField]: v || undefined }))
+            onConfigChange((prev) => ({
+              ...prev,
+              [evt.templateField]: v || undefined,
+            }))
           }
         />
       ))}

@@ -80,6 +80,7 @@ export {
   getReactions,
   getReplies,
   getServer,
+  getSystemMessageConfig,
   joinServer,
   kickMember,
   listBans,
@@ -124,7 +125,6 @@ export {
   updateEmoji,
   updateMember,
   updateRole,
-  getSystemMessageConfig,
   updateServer,
   updateSound,
   updateSystemMessageConfig,
@@ -143,6 +143,8 @@ export {
   uploadEncryptedFile,
   uploadFile,
 } from './api/media.ts';
+// API — notification
+export { getVAPIDPublicKey } from './api/notification.ts';
 // API — presence
 export {
   clearStatusOverride,
@@ -264,6 +266,9 @@ export {
   type TemplateRole,
   VOICE_CHANNELS,
 } from './onboarding/templates.ts';
+export { subscribeToPush } from './push/push-manager.ts';
+// Push notifications
+export type { PushAdapter, PushSubscriptionDetails } from './push/types.ts';
 // Search
 export * from './search/index.ts';
 // Sound
@@ -361,13 +366,6 @@ export { useServerStore } from './store/servers.ts';
 export type { SoundActions, SoundState } from './store/sounds.ts';
 export { useSoundStore } from './store/sounds.ts';
 export type {
-  Toast,
-  ToastActions,
-  ToastState,
-  ToastVariant,
-} from './store/toasts.ts';
-export { useToastStore } from './store/toasts.ts';
-export type {
   ContentHint,
   ScreenSharePresetKey,
   StreamSettingsActions,
@@ -375,6 +373,13 @@ export type {
   ViewerQuality,
 } from './store/streamSettings.ts';
 export { useStreamSettingsStore } from './store/streamSettings.ts';
+export type {
+  Toast,
+  ToastActions,
+  ToastState,
+  ToastVariant,
+} from './store/toasts.ts';
+export { useToastStore } from './store/toasts.ts';
 export type { TypingActions, TypingState } from './store/typing.ts';
 export { useTypingStore } from './store/typing.ts';
 export type { UsersActions, UsersState } from './store/users.ts';
@@ -394,11 +399,6 @@ export * from './tiling/index.ts';
 export type { ElectronAPI } from './types/electron.d.ts';
 export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
-// API — notification
-export { getVAPIDPublicKey } from './api/notification.ts';
-// Push notifications
-export type { PushAdapter, PushSubscriptionDetails } from './push/types.ts';
-export { subscribeToPush } from './push/push-manager.ts';
 export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';

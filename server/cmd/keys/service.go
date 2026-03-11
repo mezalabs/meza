@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	maxEnvelopeSize  = 92   // ephemeral_pub(32) + nonce(12) + wrapped(48)
+	maxEnvelopeSize  = 93   // version(1) + ephemeral_pub(32) + nonce(12) + wrapped(48)
+	envelopeVersion  = 0x02 // ECIES envelope version byte
 	maxPublicKeySize = 32   // Ed25519 verify key
 	maxEnvelopeBatch = 1000 // max envelopes per RPC call
 	maxUserIDsBatch  = 100  // max user IDs per GetPublicKeys call
@@ -107,6 +108,10 @@ func validateAndConvertEnvelopes(protoEnvelopes []*v1.KeyEnvelope) ([]store.KeyE
 		if len(pe.GetEnvelope()) != maxEnvelopeSize {
 			return nil, connect.NewError(connect.CodeInvalidArgument,
 				fmt.Errorf("envelope[%d]: must be exactly %d bytes, got %d", i, maxEnvelopeSize, len(pe.GetEnvelope())))
+		}
+		if pe.GetEnvelope()[0] != envelopeVersion {
+			return nil, connect.NewError(connect.CodeInvalidArgument,
+				fmt.Errorf("envelope[%d]: unsupported version byte 0x%02x, expected 0x%02x", i, pe.GetEnvelope()[0], envelopeVersion))
 		}
 		envelopes[i] = store.KeyEnvelope{
 			UserID:   pe.GetUserId(),

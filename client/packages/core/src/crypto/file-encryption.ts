@@ -5,10 +5,13 @@
  * are encrypted with this key. The per-file key is wrapped (encrypted)
  * with the channel key and stored server-side as `encrypted_key`.
  *
- * Uses the same encryptPayload/decryptPayload primitives as message encryption.
+ * File body uses per-file key (no AAD — the unique key provides binding).
+ * File key wrapping uses channel key with AAD to prevent cross-channel swaps.
  */
 
+import { buildContextAAD, PURPOSE_FILE_KEY } from './aad.ts';
 import { getChannelKey, getLatestKeyVersion } from './channel-keys.ts';
+import { aesGcmDecrypt, aesGcmEncrypt } from './keys.ts';
 import { decryptPayload, encryptPayload } from './primitives.ts';
 
 /**
@@ -21,12 +24,21 @@ export function generateFileKey(): Uint8Array {
 /**
  * Encrypt file bytes with a per-file key.
  * Returns nonce(12) || ciphertext + auth_tag(16).
+ *
+ * No AAD: the per-file key is unique to this file, so the key itself
+ * provides context binding. AAD is used when wrapping this key with
+ * the channel key (see wrapFileKey).
  */
 export async function encryptFile(
   fileKey: Uint8Array,
   fileBytes: Uint8Array,
 ): Promise<Uint8Array> {
-  return encryptPayload(fileKey, fileBytes);
+  const { ciphertext, iv } = await aesGcmEncrypt(fileKey, fileBytes);
+  // Pack: [nonce(12) || ciphertext]
+  const result = new Uint8Array(iv.length + ciphertext.length);
+  result.set(iv, 0);
+  result.set(ciphertext, iv.length);
+  return result;
 }
 
 /**
@@ -35,9 +47,14 @@ export async function encryptFile(
  */
 export async function decryptFile(
   fileKey: Uint8Array,
-  ciphertext: Uint8Array,
+  data: Uint8Array,
 ): Promise<Uint8Array> {
-  return decryptPayload(fileKey, ciphertext);
+  if (data.length < 28) {
+    throw new Error('Encrypted file data too short');
+  }
+  const iv = data.slice(0, 12);
+  const ciphertext = data.slice(12);
+  return aesGcmDecrypt(fileKey, ciphertext, iv);
 }
 
 /**
@@ -46,6 +63,9 @@ export async function decryptFile(
  * The output format is: keyVersion(4 bytes BE) || wrappedKey(60 bytes)
  * = 64 bytes total. This self-describes which channel key version was
  * used, so unwrapFileKey doesn't need an external keyVersion parameter.
+ *
+ * AAD binds the wrapped key to the channel and key version,
+ * preventing cross-channel file key substitution.
  */
 export async function wrapFileKey(
   channelId: string,
@@ -56,7 +76,8 @@ export async function wrapFileKey(
     throw new Error(`No channel key available for ${channelId}`);
   }
   const channelKey = await getChannelKey(channelId, keyVersion);
-  const wrappedKey = await encryptPayload(channelKey, fileKey);
+  const aad = buildContextAAD(PURPOSE_FILE_KEY, channelId, keyVersion);
+  const wrappedKey = await encryptPayload(channelKey, fileKey, aad);
 
   // Prepend key version as 4-byte big-endian
   const result = new Uint8Array(4 + wrappedKey.length);
@@ -85,5 +106,6 @@ export async function unwrapFileKey(
   const keyVersion = new DataView(ownedKey.buffer).getUint32(0);
   const wrappedKey = ownedKey.slice(4);
   const channelKey = await getChannelKey(channelId, keyVersion);
-  return decryptPayload(channelKey, wrappedKey);
+  const aad = buildContextAAD(PURPOSE_FILE_KEY, channelId, keyVersion);
+  return decryptPayload(channelKey, wrappedKey, aad);
 }

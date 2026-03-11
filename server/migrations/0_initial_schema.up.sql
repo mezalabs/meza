@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
     simple_mode             BOOLEAN NOT NULL DEFAULT false,
     audio_preferences       JSONB NOT NULL DEFAULT '{"noise_suppression": true, "echo_cancellation": true, "auto_gain_control": true}',
     dm_privacy              TEXT NOT NULL DEFAULT 'message_requests',
+    connections             JSONB NOT NULL DEFAULT '[]',
     is_federated            BOOLEAN NOT NULL DEFAULT false,
     home_server             TEXT,
     remote_user_id          TEXT,
@@ -47,6 +48,7 @@ CREATE TABLE IF NOT EXISTS user_auth (
     key_bundle_iv                 BYTEA NOT NULL,
     recovery_encrypted_key_bundle BYTEA,
     recovery_key_bundle_iv        BYTEA,
+    recovery_verifier_hash        BYTEA,
     updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT chk_recovery_bundle_pair CHECK (
         (recovery_encrypted_key_bundle IS NULL AND recovery_key_bundle_iv IS NULL)
@@ -113,31 +115,34 @@ CREATE INDEX IF NOT EXISTS idx_channel_groups_server ON channel_groups (server_i
 -- Channels --
 
 CREATE TABLE IF NOT EXISTS channels (
-    id               TEXT PRIMARY KEY,
-    server_id        TEXT REFERENCES servers(id) ON DELETE CASCADE,
-    channel_group_id TEXT REFERENCES channel_groups(id) ON DELETE SET NULL,
-    name             TEXT NOT NULL,
-    type             SMALLINT NOT NULL DEFAULT 1,
-    topic            TEXT DEFAULT '',
-    position         INTEGER NOT NULL DEFAULT 0,
-    is_private       BOOLEAN NOT NULL DEFAULT false,
-    is_default       BOOLEAN NOT NULL DEFAULT false,
-    slow_mode_seconds INT DEFAULT NULL,
-    dm_pair_key      TEXT,
-    dm_status        TEXT NOT NULL DEFAULT 'active',
-    dm_initiator_id  TEXT DEFAULT NULL,
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    id                    TEXT PRIMARY KEY,
+    server_id             TEXT REFERENCES servers(id) ON DELETE CASCADE,
+    channel_group_id      TEXT REFERENCES channel_groups(id) ON DELETE SET NULL,
+    name                  TEXT NOT NULL,
+    type                  SMALLINT NOT NULL DEFAULT 1,
+    topic                 TEXT DEFAULT '',
+    position              INTEGER NOT NULL DEFAULT 0,
+    is_private            BOOLEAN NOT NULL DEFAULT false,
+    is_default            BOOLEAN NOT NULL DEFAULT false,
+    slow_mode_seconds     INT DEFAULT NULL,
+    dm_pair_key           TEXT,
+    dm_status             TEXT NOT NULL DEFAULT 'active',
+    dm_initiator_id       TEXT DEFAULT NULL,
+    voice_text_channel_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+    content_warning       TEXT NOT NULL DEFAULT '',
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT channels_type_check CHECK (type IN (0, 1, 2, 3, 4)),
     CONSTRAINT chk_slow_mode CHECK (slow_mode_seconds IS NULL OR (slow_mode_seconds >= 0 AND slow_mode_seconds <= 21600)),
     CONSTRAINT chk_dm_status CHECK (dm_status IN ('active', 'pending', 'declined'))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS channels_server_id_name_key ON channels (server_id, name) WHERE server_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS channels_server_id_name_key ON channels (server_id, name) WHERE server_id IS NOT NULL AND voice_text_channel_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_pair_key ON channels (dm_pair_key) WHERE dm_pair_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_channels_server ON channels (server_id, position);
 CREATE INDEX IF NOT EXISTS idx_channels_group ON channels (channel_group_id);
 CREATE INDEX IF NOT EXISTS idx_channels_dm_status ON channels (dm_status) WHERE type = 3 AND dm_status != 'active';
+CREATE INDEX IF NOT EXISTS idx_channels_voice_text_channel_id ON channels (voice_text_channel_id) WHERE voice_text_channel_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS channel_members (
     channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
@@ -151,14 +156,16 @@ CREATE INDEX IF NOT EXISTS idx_channel_members_user ON channel_members (user_id)
 -- Invites --
 
 CREATE TABLE IF NOT EXISTS invites (
-    code       TEXT PRIMARY KEY,
-    server_id  TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
-    creator_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    max_uses   INTEGER NOT NULL DEFAULT 0,
-    use_count  INTEGER NOT NULL DEFAULT 0,
-    expires_at TIMESTAMPTZ,
-    revoked    BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    code                   TEXT PRIMARY KEY,
+    server_id              TEXT NOT NULL REFERENCES servers(id) ON DELETE CASCADE,
+    creator_id             TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    max_uses               INTEGER NOT NULL DEFAULT 0,
+    use_count              INTEGER NOT NULL DEFAULT 0,
+    expires_at             TIMESTAMPTZ,
+    revoked                BOOLEAN NOT NULL DEFAULT false,
+    encrypted_channel_keys BYTEA,
+    channel_keys_iv        BYTEA,
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT invites_max_uses_check  CHECK (max_uses  >= 0),
     CONSTRAINT invites_use_count_check CHECK (use_count >= 0)
 );
@@ -169,22 +176,27 @@ CREATE INDEX IF NOT EXISTS idx_invites_creator ON invites (creator_id);
 -- Attachments --
 
 CREATE TABLE IF NOT EXISTS attachments (
-    id                   TEXT PRIMARY KEY,
-    uploader_id          TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    upload_purpose       TEXT NOT NULL DEFAULT 'chat_attachment',
-    object_key           TEXT NOT NULL UNIQUE,
-    thumbnail_key        TEXT NOT NULL DEFAULT '',
-    micro_thumbnail_data TEXT NOT NULL DEFAULT '',
-    filename             TEXT NOT NULL,
-    content_type         TEXT NOT NULL DEFAULT 'application/octet-stream',
-    size_bytes           BIGINT  NOT NULL DEFAULT 0,
-    width                INTEGER NOT NULL DEFAULT 0,
-    height               INTEGER NOT NULL DEFAULT 0,
-    status               TEXT NOT NULL DEFAULT 'pending',
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-    completed_at         TIMESTAMPTZ,
-    expires_at           TIMESTAMPTZ,
+    id                    TEXT PRIMARY KEY,
+    uploader_id           TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    upload_purpose        TEXT NOT NULL DEFAULT 'chat_attachment',
+    object_key            TEXT NOT NULL UNIQUE,
+    thumbnail_key         TEXT NOT NULL DEFAULT '',
+    micro_thumbnail_data  TEXT NOT NULL DEFAULT '',
+    filename              TEXT NOT NULL,
+    content_type          TEXT NOT NULL DEFAULT 'application/octet-stream',
+    size_bytes            BIGINT  NOT NULL DEFAULT 0,
+    width                 INTEGER NOT NULL DEFAULT 0,
+    height                INTEGER NOT NULL DEFAULT 0,
+    status                TEXT NOT NULL DEFAULT 'pending',
+    encrypted_key         BYTEA,
+    original_content_type TEXT NOT NULL DEFAULT '',
+    linked_at             TIMESTAMPTZ,
+    channel_id            TEXT,
+    is_spoiler            BOOLEAN NOT NULL DEFAULT false,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at          TIMESTAMPTZ,
+    expires_at            TIMESTAMPTZ,
     CONSTRAINT attachments_status_check CHECK (status IN ('pending', 'processing', 'completed')),
     CONSTRAINT attachments_upload_purpose_check CHECK (upload_purpose IN (
         'chat_attachment', 'profile_avatar', 'profile_banner', 'server_icon', 'server_emoji', 'soundboard'
@@ -194,6 +206,8 @@ CREATE TABLE IF NOT EXISTS attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_uploader        ON attachments (uploader_id);
 CREATE INDEX IF NOT EXISTS idx_attachments_uploader_pending ON attachments (uploader_id) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_attachments_cleanup          ON attachments (status, expires_at) WHERE status IN ('pending', 'processing');
+CREATE INDEX IF NOT EXISTS idx_attachments_unlinked_cleanup ON attachments (completed_at) WHERE status = 'completed' AND linked_at IS NULL AND upload_purpose = 'chat_attachment';
+CREATE INDEX IF NOT EXISTS idx_attachments_channel_id       ON attachments (channel_id) WHERE channel_id IS NOT NULL;
 
 -- Roles --
 
@@ -208,7 +222,8 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT roles_name_check     CHECK (length(name) >= 1 AND length(name) <= 100),
     CONSTRAINT roles_color_check    CHECK (color >= 0 AND color <= 16777215),
-    CONSTRAINT roles_position_check CHECK (position >= 0)
+    CONSTRAINT roles_position_check CHECK (position >= 0),
+    CONSTRAINT roles_server_position_unique UNIQUE (server_id, position) DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE INDEX IF NOT EXISTS idx_roles_server ON roles (server_id, position);
@@ -251,6 +266,7 @@ CREATE TABLE IF NOT EXISTS server_emojis (
 CREATE INDEX IF NOT EXISTS idx_server_emojis_server_id ON server_emojis (server_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_emoji_user_name ON server_emojis (user_id, name) WHERE server_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_emoji_server_name ON server_emojis (server_id, name) WHERE server_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_server_emojis_attachment_id ON server_emojis (attachment_id);
 
 -- Pinned messages --
 
@@ -293,6 +309,7 @@ CREATE TABLE IF NOT EXISTS soundboard_sounds (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_soundboard_user_name ON soundboard_sounds (user_id, name) WHERE server_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_soundboard_server_name ON soundboard_sounds (server_id, name) WHERE server_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_soundboard_sounds_attachment_id ON soundboard_sounds (attachment_id);
 
 -- Message reactions --
 
@@ -388,7 +405,7 @@ CREATE TABLE IF NOT EXISTS channel_key_envelopes (
     channel_id   TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     key_version  INTEGER NOT NULL CHECK (key_version > 0),
-    envelope     BYTEA NOT NULL CHECK (octet_length(envelope) = 92),
+    envelope     BYTEA NOT NULL CHECK (octet_length(envelope) = 93),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (channel_id, user_id, key_version)
 );
@@ -407,17 +424,23 @@ CREATE TABLE IF NOT EXISTS permission_overrides (
     id               TEXT PRIMARY KEY,
     channel_group_id TEXT REFERENCES channel_groups(id) ON DELETE CASCADE,
     channel_id       TEXT REFERENCES channels(id) ON DELETE CASCADE,
-    role_id          TEXT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    role_id          TEXT REFERENCES roles(id) ON DELETE CASCADE,
+    user_id          TEXT REFERENCES users(id) ON DELETE CASCADE,
     allow            BIGINT NOT NULL DEFAULT 0,
     deny             BIGINT NOT NULL DEFAULT 0,
     CONSTRAINT permission_overrides_target_check
         CHECK ((channel_group_id IS NOT NULL AND channel_id IS NULL)
-            OR (channel_group_id IS NULL AND channel_id IS NOT NULL))
+            OR (channel_group_id IS NULL AND channel_id IS NOT NULL)),
+    CONSTRAINT permission_overrides_role_or_user_check
+        CHECK ((role_id IS NOT NULL AND user_id IS NULL) OR (role_id IS NULL AND user_id IS NOT NULL))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS permission_overrides_unique_group_role ON permission_overrides (channel_group_id, role_id) WHERE channel_group_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS permission_overrides_unique_channel_role ON permission_overrides (channel_id, role_id) WHERE channel_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_permission_overrides_role ON permission_overrides (role_id);
+CREATE UNIQUE INDEX IF NOT EXISTS permission_overrides_unique_group_user ON permission_overrides (channel_group_id, user_id) WHERE channel_group_id IS NOT NULL AND user_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS permission_overrides_unique_channel_user ON permission_overrides (channel_id, user_id) WHERE channel_id IS NOT NULL AND user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_permission_overrides_user ON permission_overrides (user_id);
 
 -- User blocks --
 
@@ -444,6 +467,25 @@ CREATE TABLE IF NOT EXISTS friendships (
 
 CREATE INDEX IF NOT EXISTS idx_friendships_addressee_status ON friendships (addressee_id, status);
 CREATE INDEX IF NOT EXISTS idx_friendships_accepted ON friendships (addressee_id, requester_id) WHERE status = 'accepted';
+
+-- Server system message config --
+
+CREATE TABLE IF NOT EXISTS server_system_message_config (
+    server_id          TEXT PRIMARY KEY REFERENCES servers(id) ON DELETE CASCADE,
+    welcome_channel_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+    mod_log_channel_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+    join_enabled       BOOLEAN NOT NULL DEFAULT true,
+    join_template      TEXT,
+    leave_enabled      BOOLEAN NOT NULL DEFAULT true,
+    leave_template     TEXT,
+    kick_enabled       BOOLEAN NOT NULL DEFAULT true,
+    kick_template      TEXT,
+    ban_enabled        BOOLEAN NOT NULL DEFAULT true,
+    ban_template       TEXT,
+    timeout_enabled    BOOLEAN NOT NULL DEFAULT true,
+    timeout_template   TEXT,
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 -- ============================================================================
 -- Seed data

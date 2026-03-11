@@ -52,7 +52,9 @@ export function DevicesSection() {
         err instanceof Error ? err.message : 'Failed to sign out devices',
       );
       // Refresh the list to show actual state
-      listDevices().then(setDevices).catch(() => {});
+      listDevices()
+        .then(setDevices)
+        .catch(() => {});
     } finally {
       setRevokingAll(false);
     }

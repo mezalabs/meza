@@ -1,4 +1,4 @@
-import { resolveIconUrl, type Invite, type Server } from '@meza/core';
+import { type Invite, resolveIconUrl, type Server } from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {

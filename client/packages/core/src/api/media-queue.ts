@@ -16,15 +16,14 @@ function makeSemaphore(max: number) {
     active--;
     queue.shift()?.();
   }
-  return function <T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve) => {
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve) => {
       const run = () => {
         active++;
         resolve(fn().finally(release));
       };
       active < max ? run() : queue.push(run);
     });
-  };
 }
 
 /** Singleton semaphore — limits concurrent media fetches across the app. */

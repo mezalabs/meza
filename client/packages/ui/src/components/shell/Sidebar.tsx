@@ -4,6 +4,7 @@ import type { DMChannel, PaneContent } from '@meza/core';
 import {
   ChannelType,
   createChannelGroup,
+  getBaseUrl,
   getBulkPresence,
   getDMDisplayName,
   isGroupDM,
@@ -30,7 +31,6 @@ import {
   useUsersStore,
   useVoiceParticipantsStore,
   useVoiceStore,
-  getBaseUrl,
 } from '@meza/core';
 import {
   ArrowRightIcon,

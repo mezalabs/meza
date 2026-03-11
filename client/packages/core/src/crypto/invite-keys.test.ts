@@ -185,9 +185,7 @@ describe('tampered ciphertext', () => {
     const tampered = new Uint8Array(ciphertext);
     tampered[0] ^= 0xff;
 
-    await expect(
-      importInviteKeyBundle(secret, tampered, iv),
-    ).rejects.toThrow();
+    await expect(importInviteKeyBundle(secret, tampered, iv)).rejects.toThrow();
 
     expect(importChannelKeys).not.toHaveBeenCalled();
   });

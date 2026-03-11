@@ -137,6 +137,9 @@ export function rejectLowOrderPoint(pub: Uint8Array, label: string): void {
 
 const KEY_WRAP_INFO = new TextEncoder().encode('meza-key-wrap-v1');
 
+/** Envelope version byte indicating AAD-bound ECIES wrapping. */
+const ENVELOPE_VERSION = 0x02;
+
 /**
  * Wrap a channel key for a recipient using ECIES.
  *
@@ -145,12 +148,14 @@ const KEY_WRAP_INFO = new TextEncoder().encode('meza-key-wrap-v1');
  * 3. HKDF-SHA256(shared, salt=ephemeral_pub||recipient_pub, info="meza-key-wrap-v1")
  * 4. AES-256-GCM encrypt the channel key
  *
- * Returns a 92-byte envelope: [ephemeral_pub(32) || nonce(12) || wrapped(48)]
+ * Returns a 93-byte envelope: [version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48)]
  * (48 = 32 bytes channel key + 16 bytes GCM auth tag)
+ * Version byte 0x02 indicates AAD-bound envelope.
  */
 export async function wrapChannelKey(
   channelKey: Uint8Array,
   recipientEdPub: Uint8Array,
+  aad: Uint8Array,
 ): Promise<Uint8Array> {
   // Convert recipient Ed25519 pub to X25519
   const recipientX25519Pub = edToX25519Public(recipientEdPub);
@@ -186,19 +191,20 @@ export async function wrapChannelKey(
     ['encrypt'],
   );
 
-  // Encrypt channel key with AES-256-GCM
+  // Encrypt channel key with AES-256-GCM + AAD
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const wrapped = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     wrappingKey,
     channelKey as BufferSource,
   );
 
-  // Pack envelope: [ephemeral_pub(32) || nonce(12) || wrapped(48)]
-  const envelope = new Uint8Array(32 + 12 + wrapped.byteLength);
-  envelope.set(ephemeral.publicKey, 0);
-  envelope.set(nonce, 32);
-  envelope.set(new Uint8Array(wrapped), 44);
+  // Pack envelope: [version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48)]
+  const envelope = new Uint8Array(1 + 32 + 12 + wrapped.byteLength);
+  envelope[0] = ENVELOPE_VERSION;
+  envelope.set(ephemeral.publicKey, 1);
+  envelope.set(nonce, 33);
+  envelope.set(new Uint8Array(wrapped), 45);
 
   return envelope;
 }
@@ -209,17 +215,23 @@ export async function wrapChannelKey(
 export async function unwrapChannelKey(
   envelope: Uint8Array,
   edSecretKey: Uint8Array,
+  aad: Uint8Array,
 ): Promise<Uint8Array> {
-  if (envelope.length !== 92) {
+  if (envelope.length !== 93) {
     throw new Error(
-      `Invalid envelope size: expected 92, got ${envelope.length}`,
+      `Invalid envelope size: expected 93, got ${envelope.length}`,
+    );
+  }
+  if (envelope[0] !== ENVELOPE_VERSION) {
+    throw new Error(
+      `Invalid envelope version: expected 0x${ENVELOPE_VERSION.toString(16).padStart(2, '0')}, got 0x${envelope[0].toString(16).padStart(2, '0')}`,
     );
   }
 
-  // Parse envelope
-  const ephemeralPub = envelope.slice(0, 32);
-  const nonce = envelope.slice(32, 44);
-  const wrapped = envelope.slice(44);
+  // Parse envelope (skip version byte)
+  const ephemeralPub = envelope.slice(1, 33);
+  const nonce = envelope.slice(33, 45);
+  const wrapped = envelope.slice(45);
 
   rejectLowOrderPoint(ephemeralPub, 'ephemeral X25519 public key');
 
@@ -251,9 +263,9 @@ export async function unwrapChannelKey(
     ['decrypt'],
   );
 
-  // Decrypt channel key
+  // Decrypt channel key with AAD
   const channelKey = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     wrappingKey,
     wrapped as BufferSource,
   );
@@ -279,7 +291,7 @@ async function channelKeyCacheKey(
   // Hash the key material so the cache key cannot be reversed to recover the
   // original key.  First 16 bytes (128-bit) of the SHA-256 digest is more than
   // sufficient for cache-key uniqueness while avoiding retaining raw key bytes.
-  const hash = await crypto.subtle.digest('SHA-256', rawKey);
+  const hash = await crypto.subtle.digest('SHA-256', rawKey as BufferSource);
   const hashArray = new Uint8Array(hash);
   let hex = '';
   for (let i = 0; i < 16; i++) {
@@ -317,15 +329,18 @@ export function clearAesKeyCache(): void {
 /**
  * Encrypt a payload with AES-256-GCM using a channel key.
  * Returns nonce(12) || ciphertext (includes 16-byte GCM auth tag).
+ *
+ * @param aad - Additional Authenticated Data binding ciphertext to its context.
  */
 export async function encryptPayload(
   channelKey: Uint8Array,
   plaintext: Uint8Array,
+  aad: Uint8Array,
 ): Promise<Uint8Array> {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const aesKey = await getAesKey(channelKey, 'encrypt');
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     aesKey,
     plaintext as BufferSource,
   );
@@ -340,10 +355,13 @@ export async function encryptPayload(
 /**
  * Decrypt a payload with AES-256-GCM using a channel key.
  * Input format: nonce(12) || ciphertext (with GCM auth tag).
+ *
+ * @param aad - Additional Authenticated Data that must match what was used during encryption.
  */
 export async function decryptPayload(
   channelKey: Uint8Array,
   noncePlusCiphertext: Uint8Array,
+  aad: Uint8Array,
 ): Promise<Uint8Array> {
   if (noncePlusCiphertext.length < 28) {
     throw new Error('Ciphertext too short');
@@ -354,7 +372,7 @@ export async function decryptPayload(
 
   const aesKey = await getAesKey(channelKey, 'decrypt');
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     aesKey,
     ciphertext as BufferSource,
   );

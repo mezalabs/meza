@@ -205,7 +205,9 @@ function ImageGrid({
     );
     return att.isSpoiler ? (
       <SpoilerOverlay attachmentId={att.id}>{inner}</SpoilerOverlay>
-    ) : inner;
+    ) : (
+      inner
+    );
   }
 
   // For 2+ images, use a grid with object-fit: cover
@@ -244,7 +246,9 @@ function ImageGrid({
             );
             return img.isSpoiler ? (
               <SpoilerOverlay attachmentId={img.id}>{inner}</SpoilerOverlay>
-            ) : inner;
+            ) : (
+              inner
+            );
           })()}
         </div>
       ))}
@@ -586,15 +590,26 @@ function FileIcon() {
 
 // --- Spoiler overlay ---
 
-function SpoilerOverlay({ attachmentId, children }: { attachmentId: string; children: React.ReactNode }) {
-  const revealed = useContentWarningStore((s) => s.isSpoilerRevealed(attachmentId));
+function SpoilerOverlay({
+  attachmentId,
+  children,
+}: {
+  attachmentId: string;
+  children: React.ReactNode;
+}) {
+  const revealed = useContentWarningStore((s) =>
+    s.isSpoilerRevealed(attachmentId),
+  );
   const reveal = useContentWarningStore((s) => s.revealSpoiler);
 
   if (revealed) return <>{children}</>;
 
   return (
     <div className="relative h-full rounded-md overflow-hidden">
-      <div className="blur-xl pointer-events-none select-none h-full" aria-hidden="true">
+      <div
+        className="blur-xl pointer-events-none select-none h-full"
+        aria-hidden="true"
+      >
         {children}
       </div>
       <button
@@ -629,7 +644,6 @@ export function AttachmentRenderer({
     () => attachments.filter((a) => !a.contentType.startsWith('image/')),
     [attachments],
   );
-
 
   if (attachments.length === 0) return null;
 
