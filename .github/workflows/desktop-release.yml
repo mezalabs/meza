@@ -119,12 +119,41 @@ jobs:
           # macOS code signing
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Windows code signing
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Notarize macOS builds
+        if: matrix.platform == 'mac' && secrets.APPLE_API_KEY != ''
+        working-directory: client/packages/desktop
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          # Write the API key to the location notarytool expects
+          KEY_DIR=~/private_keys
+          mkdir -p "$KEY_DIR"
+          echo "$APPLE_API_KEY" > "$KEY_DIR/AuthKey_${APPLE_API_KEY_ID}.p8"
+
+          VERSION=$(node -p "require('./package.json').version")
+          RELEASE_DIR="release/${VERSION}"
+
+          for DMG in "$RELEASE_DIR"/*.dmg; do
+            [ -f "$DMG" ] || continue
+            echo "Submitting $(basename "$DMG") for notarization..."
+            xcrun notarytool submit "$DMG" \
+              --key "$KEY_DIR/AuthKey_${APPLE_API_KEY_ID}.p8" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" \
+              --wait
+            echo "Stapling $(basename "$DMG")..."
+            xcrun stapler staple "$DMG"
+          done
+
+          rm -rf "$KEY_DIR"
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

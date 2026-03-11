@@ -28,8 +28,7 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  notarize:
-    teamId: KD587V52FJ
+  notarize: false
 
 dmg:
   sign: false
