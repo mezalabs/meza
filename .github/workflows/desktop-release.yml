@@ -57,6 +57,10 @@ jobs:
     needs: validate
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    env:
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
     strategy:
       fail-fast: false
       matrix:
@@ -124,7 +128,7 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
       - name: Notarize macOS builds
-        if: matrix.platform == 'mac' && secrets.APPLE_API_KEY != ''
+        if: matrix.platform == 'mac' && env.APPLE_API_KEY != ''
         working-directory: client/packages/desktop
         timeout-minutes: 15
         shell: bash
@@ -150,10 +154,6 @@ jobs:
           done
 
           rm -rf "$KEY_DIR"
-        env:
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
