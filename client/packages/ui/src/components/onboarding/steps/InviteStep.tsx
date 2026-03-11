@@ -1,4 +1,4 @@
-import type { Invite, Server } from '@meza/core';
+import { resolveIconUrl, type Invite, type Server } from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {
@@ -32,7 +32,7 @@ export function InviteStep({ server, invite }: InviteStepProps) {
       <div className="text-center">
         {server.iconUrl ? (
           <img
-            src={server.iconUrl}
+            src={resolveIconUrl(server.iconUrl)}
             alt=""
             className="mx-auto mb-3 h-16 w-16 rounded-full object-cover"
           />

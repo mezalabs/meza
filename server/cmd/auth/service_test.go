@@ -209,6 +209,18 @@ func (m *mockAuthStore) DeleteRefreshTokensByUser(_ context.Context, userID stri
 	return nil
 }
 
+func (m *mockAuthStore) DeleteRefreshTokensByDevice(_ context.Context, userID, deviceID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for hash, entry := range m.refreshTokens {
+		if entry.userID == userID && entry.deviceID == deviceID {
+			delete(m.refreshTokens, hash)
+		}
+	}
+	return nil
+}
+
 func (m *mockAuthStore) ConsumeRefreshToken(_ context.Context, tokenHash string) (string, string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

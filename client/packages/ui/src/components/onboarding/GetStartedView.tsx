@@ -2,6 +2,7 @@ import {
   ChannelType,
   joinServer,
   type PaneId,
+  resolveIconUrl,
   resolveInvite,
   type Server,
   useChannelStore,
@@ -170,7 +171,7 @@ export function GetStartedView({ paneId }: GetStartedViewProps) {
                 <div className="flex items-center gap-3">
                   {preview.server.iconUrl ? (
                     <img
-                      src={preview.server.iconUrl}
+                      src={resolveIconUrl(preview.server.iconUrl)}
                       alt=""
                       className="h-10 w-10 rounded-full object-cover"
                     />

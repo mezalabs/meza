@@ -147,6 +147,31 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   // Navigate focused pane to the first text channel of a server
   const pendingServerNavRef = useRef<string | null>(null);
   const navigateToDefaultChannel = useCallback((serverId: string) => {
+    // If onboarding/rules not yet completed, show onboarding instead of channel.
+    // Only redirect when member data is loaded — if `me` is undefined we fall
+    // through to normal channel navigation (the sidebar's rulesBlocked guard
+    // will catch it reactively once members load).
+    const srv = useServerStore.getState().servers[serverId];
+    if (srv?.onboardingEnabled || srv?.rulesRequired) {
+      const userId = useAuthStore.getState().user?.id;
+      const members = useMemberStore.getState().byServer[serverId] ?? [];
+      const me = members.find((m) => m.userId === userId);
+      if (me) {
+        const needsOnboarding =
+          (srv.onboardingEnabled && !me.onboardingCompletedAt) ||
+          (srv.rulesRequired && !me.rulesAcknowledgedAt);
+        if (needsOnboarding) {
+          const { focusedPaneId, setPaneContent } = useTilingStore.getState();
+          setPaneContent(focusedPaneId, {
+            type: 'serverOnboarding',
+            serverId,
+          });
+          pendingServerNavRef.current = null;
+          return;
+        }
+      }
+    }
+
     const serverChannels = useChannelStore.getState().byServer[serverId];
     if (serverChannels?.length) {
       const first =
@@ -307,8 +332,12 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       (m) => m.userId === currentUserId,
     );
   });
+  // Block until we have member data confirming rules were acknowledged.
+  // When currentMember is undefined (not loaded yet), stay blocked to
+  // prevent a flash of channel content before the member record arrives.
   const rulesBlocked =
-    !!selectedServer?.rulesRequired && !currentMember?.rulesAcknowledgedAt;
+    !!selectedServer?.rulesRequired &&
+    (!currentMember || !currentMember.rulesAcknowledgedAt);
 
   return (
     <aside

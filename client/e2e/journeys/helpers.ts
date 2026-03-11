@@ -125,10 +125,15 @@ export async function createContext(
   if (fs.existsSync(cryptoFile)) {
     const crypto = JSON.parse(fs.readFileSync(cryptoFile, 'utf-8'));
 
-    // Restore master key to localStorage on every page load.
-    await page.addInitScript((mk: string) => {
-      localStorage.setItem('meza-mk', mk);
-    }, crypto.mk);
+    // Restore encrypted master key blob to localStorage and session
+    // wrapping key to sessionStorage on every page load.
+    await page.addInitScript(
+      ({ mk, sk }: { mk: string; sk: string }) => {
+        localStorage.setItem('meza-mk', mk);
+        if (sk) sessionStorage.setItem('meza-sk', sk);
+      },
+      { mk: crypto.mk, sk: crypto.sk },
+    );
 
     // Write the encrypted key bundle to IndexedDB BEFORE the app loads.
     // Navigate to a static asset on the same origin (so IndexedDB is
@@ -182,6 +187,7 @@ export async function saveAuth(
     const crypto = await pages[0]
       .evaluate(async () => {
         const mk = localStorage.getItem('meza-mk');
+        const sk = sessionStorage.getItem('meza-sk');
         if (!mk) return null;
 
         // Read key bundle from IndexedDB
@@ -206,7 +212,7 @@ export async function saveAuth(
           };
         });
 
-        return { mk, kb };
+        return { mk, sk, kb };
       })
       .catch(() => null);
 

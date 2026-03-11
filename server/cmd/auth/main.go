@@ -33,6 +33,25 @@ func main() {
 	logger := observability.NewLogger(cfg.LogLevel)
 	slog.SetDefault(logger)
 
+	// H-3: Validate HMAC secret at startup to ensure anti-enumeration
+	// protections (fake salts / recovery bundles) are not defeated.
+	if cfg.HMACSecret == "" {
+		slog.Error("MEZA_HMAC_SECRET is required")
+		os.Exit(1)
+	}
+	if len(cfg.HMACSecret) < 32 {
+		slog.Error("MEZA_HMAC_SECRET must be at least 32 characters")
+		os.Exit(1)
+	}
+	if cfg.HMACSecret == "dev-secret-change-in-production" {
+		slog.Error("MEZA_HMAC_SECRET must be changed from the default value")
+		os.Exit(1)
+	}
+	if cfg.HMACSecret == "meza-local-dev-hmac-secret-do-not-use-in-prod" {
+		slog.Error("MEZA_HMAC_SECRET must be changed from the default value")
+		os.Exit(1)
+	}
+
 	pool, err := database.NewPostgresPool(ctx, cfg.PostgresURL)
 	if err != nil {
 		slog.Error("connect postgres", "err", err)

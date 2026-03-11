@@ -106,6 +106,11 @@ func (w *Worker) processJob(ctx context.Context, job *v1.EmbedFetchJob) {
 }
 
 func (w *Worker) fetchAndParse(ctx context.Context, rawURL, urlHash string) *models.LinkPreview {
+	if err := ValidateURL(rawURL); err != nil {
+		slog.Debug("URL validation failed", "url", rawURL, "err", err)
+		return nil
+	}
+
 	resp, err := FetchHTML(ctx, w.httpClient, rawURL)
 	if err != nil {
 		slog.Debug("fetch URL failed", "url", rawURL, "err", err)

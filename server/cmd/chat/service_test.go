@@ -457,6 +457,12 @@ func (m *mockChatStore) IsVoiceTextCompanion(_ context.Context, _ string) (bool,
 func (m *mockChatStore) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
 	return nil
 }
+func (m *mockChatStore) GetSystemMessageConfig(_ context.Context, _ string) (*models.ServerSystemMessageConfig, error) {
+	return nil, nil
+}
+func (m *mockChatStore) UpsertSystemMessageConfig(_ context.Context, _ string, _ store.UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
+	return nil, nil
+}
 
 // mockMessageStore implements models.MessageStorer for testing.
 type mockMessageStore struct {

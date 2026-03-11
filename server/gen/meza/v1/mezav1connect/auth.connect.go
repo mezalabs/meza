@@ -37,6 +37,8 @@ const (
 	AuthServiceRegisterProcedure = "/meza.v1.AuthService/Register"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
 	AuthServiceLoginProcedure = "/meza.v1.AuthService/Login"
+	// AuthServiceLogoutProcedure is the fully-qualified name of the AuthService's Logout RPC.
+	AuthServiceLogoutProcedure = "/meza.v1.AuthService/Logout"
 	// AuthServiceGetSaltProcedure is the fully-qualified name of the AuthService's GetSalt RPC.
 	AuthServiceGetSaltProcedure = "/meza.v1.AuthService/GetSalt"
 	// AuthServiceRefreshTokenProcedure is the fully-qualified name of the AuthService's RefreshToken
@@ -94,6 +96,7 @@ const (
 type AuthServiceClient interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	GetSalt(context.Context, *connect.Request[v1.GetSaltRequest]) (*connect.Response[v1.GetSaltResponse], error)
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	RegisterDevice(context.Context, *connect.Request[v1.RegisterDeviceRequest]) (*connect.Response[v1.RegisterDeviceResponse], error)
@@ -137,6 +140,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+AuthServiceLoginProcedure,
 			connect.WithSchema(authServiceMethods.ByName("Login")),
+			connect.WithClientOptions(opts...),
+		),
+		logout: connect.NewClient[v1.LogoutRequest, v1.LogoutResponse](
+			httpClient,
+			baseURL+AuthServiceLogoutProcedure,
+			connect.WithSchema(authServiceMethods.ByName("Logout")),
 			connect.WithClientOptions(opts...),
 		),
 		getSalt: connect.NewClient[v1.GetSaltRequest, v1.GetSaltResponse](
@@ -254,6 +263,7 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type authServiceClient struct {
 	register                  *connect.Client[v1.RegisterRequest, v1.RegisterResponse]
 	login                     *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout                    *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
 	getSalt                   *connect.Client[v1.GetSaltRequest, v1.GetSaltResponse]
 	refreshToken              *connect.Client[v1.RefreshTokenRequest, v1.RefreshTokenResponse]
 	registerDevice            *connect.Client[v1.RegisterDeviceRequest, v1.RegisterDeviceResponse]
@@ -282,6 +292,11 @@ func (c *authServiceClient) Register(ctx context.Context, req *connect.Request[v
 // Login calls meza.v1.AuthService.Login.
 func (c *authServiceClient) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return c.login.CallUnary(ctx, req)
+}
+
+// Logout calls meza.v1.AuthService.Logout.
+func (c *authServiceClient) Logout(ctx context.Context, req *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	return c.logout.CallUnary(ctx, req)
 }
 
 // GetSalt calls meza.v1.AuthService.GetSalt.
@@ -378,6 +393,7 @@ func (c *authServiceClient) GetPendingRecoveryRequest(ctx context.Context, req *
 type AuthServiceHandler interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	GetSalt(context.Context, *connect.Request[v1.GetSaltRequest]) (*connect.Response[v1.GetSaltResponse], error)
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	RegisterDevice(context.Context, *connect.Request[v1.RegisterDeviceRequest]) (*connect.Response[v1.RegisterDeviceResponse], error)
@@ -417,6 +433,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		AuthServiceLoginProcedure,
 		svc.Login,
 		connect.WithSchema(authServiceMethods.ByName("Login")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceLogoutHandler := connect.NewUnaryHandler(
+		AuthServiceLogoutProcedure,
+		svc.Logout,
+		connect.WithSchema(authServiceMethods.ByName("Logout")),
 		connect.WithHandlerOptions(opts...),
 	)
 	authServiceGetSaltHandler := connect.NewUnaryHandler(
@@ -533,6 +555,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRegisterHandler.ServeHTTP(w, r)
 		case AuthServiceLoginProcedure:
 			authServiceLoginHandler.ServeHTTP(w, r)
+		case AuthServiceLogoutProcedure:
+			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetSaltProcedure:
 			authServiceGetSaltHandler.ServeHTTP(w, r)
 		case AuthServiceRefreshTokenProcedure:
@@ -584,6 +608,10 @@ func (UnimplementedAuthServiceHandler) Register(context.Context, *connect.Reques
 
 func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.Login is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.AuthService.Logout is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) GetSalt(context.Context, *connect.Request[v1.GetSaltRequest]) (*connect.Response[v1.GetSaltResponse], error) {

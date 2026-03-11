@@ -295,6 +295,17 @@ func (s *AuthStore) DeleteRefreshTokensByUser(ctx context.Context, userID string
 	return nil
 }
 
+func (s *AuthStore) DeleteRefreshTokensByDevice(ctx context.Context, userID, deviceID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	_, err := s.pool.Exec(ctx, `DELETE FROM refresh_tokens WHERE user_id = $1 AND device_id = $2`, userID, deviceID)
+	if err != nil {
+		return fmt.Errorf("delete refresh tokens by device: %w", err)
+	}
+	return nil
+}
+
 func (s *AuthStore) ConsumeRefreshToken(ctx context.Context, tokenHash string) (string, string, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

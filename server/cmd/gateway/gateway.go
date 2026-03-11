@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/coder/websocket"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 
 	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	"github.com/mezalabs/meza/gen/meza/v1/mezav1connect"
@@ -44,8 +44,9 @@ type Client struct {
 	Servers  []string
 	Send     chan []byte
 
-	cancel   context.CancelFunc
-	closeOnce sync.Once // guards close(Send)
+	cancel      context.CancelFunc
+	closeOnce   sync.Once      // guards close(Send)
+	rateLimiter *rate.Limiter  // per-connection message rate limiter
 
 	// Per-user NATS subscription for dynamic channel updates.
 	userSub *nats.Subscription
@@ -75,6 +76,7 @@ type Gateway struct {
 	ed25519Keys       *auth.Ed25519Keys       // Ed25519 keys for JWT signing/verification
 	instanceURL       string                  // This instance's URL for iss claim
 	verificationCache *auth.VerificationCache // Caches validated JWT claims to avoid repeated Ed25519 verification
+	tokenBlocklist    *auth.TokenBlocklist     // Redis-backed blocklist for revoked devices
 	originPatterns    []string
 	chatStore      store.ChatStorer
 	readStateStore store.ReadStateStorer
@@ -92,13 +94,14 @@ type Gateway struct {
 	heartbeatBatch map[string]struct{} // userIDs to flush
 }
 
-func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn) *Gateway {
-	// Fix 3: Read allowed origins from environment variable instead of
-	// hardcoding a wildcard. Defaults to "*" for development.
-	origins := parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS"))
+func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string, tokenBlocklist *auth.TokenBlocklist) *Gateway {
+	// Fix 3: Read allowed origins from config instead of os.Getenv.
+	// Defaults to "*" for development, but logs a WARNING to alert operators.
+	origins := parseAllowedOrigins(allowedOrigins)
 
 	return &Gateway{
 		originPatterns: origins,
+		tokenBlocklist: tokenBlocklist,
 		chatStore:      chatStore,
 		readStateStore: readStateStore,
 		messageStore:   messageStore,
@@ -113,10 +116,12 @@ func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer
 }
 
 // parseAllowedOrigins splits a comma-separated origin string into a slice.
-// Returns []string{"*"} when the input is empty (development default).
+// Returns []string{"*"} when the input is empty (development default) and
+// logs a prominent WARNING so operators notice the wildcard in production.
 func parseAllowedOrigins(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
+		slog.Warn("SECURITY: MEZA_ALLOWED_ORIGINS is not set -- WebSocket origin check defaults to wildcard (\"*\"). Set MEZA_ALLOWED_ORIGINS to restrict allowed origins in production.")
 		return []string{"*"}
 	}
 	parts := strings.Split(raw, ",")
@@ -128,7 +133,14 @@ func parseAllowedOrigins(raw string) []string {
 		}
 	}
 	if len(origins) == 0 {
+		slog.Warn("SECURITY: MEZA_ALLOWED_ORIGINS is empty after parsing -- WebSocket origin check defaults to wildcard (\"*\"). Set MEZA_ALLOWED_ORIGINS to restrict allowed origins in production.")
 		return []string{"*"}
+	}
+	for _, o := range origins {
+		if o == "*" {
+			slog.Warn("SECURITY: MEZA_ALLOWED_ORIGINS contains wildcard (\"*\") -- all origins will be accepted. Set explicit origins in production.")
+			break
+		}
 	}
 	return origins
 }
@@ -417,11 +429,12 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	client := &Client{
-		UserID:   claims.UserID,
-		DeviceID: claims.DeviceID,
-		Conn:     conn,
-		Send:     make(chan []byte, sendBufSize),
-		cancel:   cancel,
+		UserID:      claims.UserID,
+		DeviceID:    claims.DeviceID,
+		Conn:        conn,
+		Send:        make(chan []byte, sendBufSize),
+		cancel:      cancel,
+		rateLimiter: rate.NewLimiter(30, 10), // 30 msgs/sec, burst of 10
 	}
 
 	// Fetch user's channel IDs
@@ -592,23 +605,32 @@ func (gw *Gateway) authenticateFirstMessage(conn *websocket.Conn) (*auth.Claims,
 	}
 
 	// Check verification cache first to avoid repeated Ed25519 verification
+	var claims *auth.Claims
 	if gw.verificationCache != nil {
-		if claims, ok := gw.verificationCache.Get(identifyPayload.Token); ok {
-			return claims, nil
+		if cached, ok := gw.verificationCache.Get(identifyPayload.Token); ok {
+			claims = cached
 		}
 	}
 
-	claims, err := auth.ValidateTokenEd25519(identifyPayload.Token, gw.ed25519Keys.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid token: %w", err)
-	}
-	if claims.IsRefresh {
-		return nil, fmt.Errorf("refresh token cannot be used for authentication")
+	if claims == nil {
+		var err error
+		claims, err = auth.ValidateTokenEd25519(identifyPayload.Token, gw.ed25519Keys.PublicKey)
+		if err != nil {
+			return nil, fmt.Errorf("invalid token: %w", err)
+		}
+		if claims.IsRefresh {
+			return nil, fmt.Errorf("refresh token cannot be used for authentication")
+		}
+
+		// Cache validated claims
+		if gw.verificationCache != nil {
+			gw.verificationCache.Put(identifyPayload.Token, claims, claims.ExpiresAt)
+		}
 	}
 
-	// Cache validated claims
-	if gw.verificationCache != nil {
-		gw.verificationCache.Put(identifyPayload.Token, claims, time.Now().Add(1*time.Hour))
+	// Check if the device has been revoked (must run even for cached claims)
+	if gw.tokenBlocklist != nil && gw.tokenBlocklist.IsDeviceBlocked(ctx, claims.DeviceID) {
+		return nil, fmt.Errorf("device has been revoked")
 	}
 
 	return claims, nil
@@ -802,6 +824,12 @@ func (gw *Gateway) readPump(ctx context.Context, client *Client) {
 			return
 		}
 
+		// Per-connection rate limiting: drop messages that exceed the limit.
+		if !client.rateLimiter.Allow() {
+			slog.Warn("rate limited", "user", client.UserID)
+			continue
+		}
+
 		env, err := parseEnvelope(data)
 		if err != nil {
 			slog.Warn("invalid envelope", "err", err, "user", client.UserID)
@@ -815,7 +843,11 @@ func (gw *Gateway) readPump(ctx context.Context, client *Client) {
 				slog.Error("marshaling heartbeat ack", "err", err)
 				continue
 			}
-			client.Send <- ack
+			select {
+			case client.Send <- ack:
+			default:
+				go gw.closeSlowConsumer(client)
+			}
 			gw.heartbeatMu.Lock()
 			gw.heartbeatBatch[client.UserID] = struct{}{}
 			gw.heartbeatMu.Unlock()

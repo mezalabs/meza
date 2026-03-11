@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"syscall"
 	"time"
 )
@@ -93,13 +94,23 @@ func NewSafeClient() *http.Client {
 	}
 }
 
-// ValidateURL checks that a URL is safe to fetch (scheme, port).
+// ValidateURL checks that a URL is safe to fetch (scheme, host, port).
 func ValidateURL(rawURL string) error {
-	// We only need to check scheme and port; IP validation happens at dial time.
-	if len(rawURL) < 8 {
-		return fmt.Errorf("URL too short")
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
 	}
-	// Parsed later; basic scheme check here.
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("unsupported scheme: %s", u.Scheme)
+	}
+	if u.Host == "" {
+		return fmt.Errorf("missing host")
+	}
+	// Block non-standard ports.
+	port := u.Port()
+	if port != "" && port != "80" && port != "443" {
+		return fmt.Errorf("non-standard port: %s", port)
+	}
 	return nil
 }
 

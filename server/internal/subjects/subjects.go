@@ -1,11 +1,25 @@
 package subjects
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+// idSanitizer replaces NATS metacharacters (., *, >) and spaces with
+// underscores. Hoisted to package level so the Replacer is allocated once
+// instead of on every call to sanitizeID (hot path on every NATS publish).
+var idSanitizer = strings.NewReplacer(".", "_", "*", "_", ">", "_", " ", "_")
+
+// sanitizeID replaces NATS metacharacters (., *, >) in IDs to prevent
+// subject injection. ULIDs should never contain these, but this is defense-in-depth.
+func sanitizeID(id string) string {
+	return idSanitizer.Replace(id)
+}
 
 // Delivery subjects — gateway subscribes, services publish.
 
 func DeliverChannel(channelID string) string {
-	return fmt.Sprintf("meza.deliver.channel.%s", channelID)
+	return fmt.Sprintf("meza.deliver.channel.%s", sanitizeID(channelID))
 }
 
 func DeliverChannelWildcard() string {
@@ -15,7 +29,7 @@ func DeliverChannelWildcard() string {
 // Presence subjects.
 
 func PresenceHeartbeat(userID string) string {
-	return fmt.Sprintf("meza.presence.heartbeat.%s", userID)
+	return fmt.Sprintf("meza.presence.heartbeat.%s", sanitizeID(userID))
 }
 
 func PresenceHeartbeatWildcard() string {
@@ -23,7 +37,7 @@ func PresenceHeartbeatWildcard() string {
 }
 
 func PresenceUpdate(userID string) string {
-	return fmt.Sprintf("meza.presence.update.%s", userID)
+	return fmt.Sprintf("meza.presence.update.%s", sanitizeID(userID))
 }
 
 func PresenceUpdateWildcard() string {
@@ -33,11 +47,11 @@ func PresenceUpdateWildcard() string {
 // Server event subjects.
 
 func ServerMember(serverID string) string {
-	return fmt.Sprintf("meza.server.member.%s", serverID)
+	return fmt.Sprintf("meza.server.member.%s", sanitizeID(serverID))
 }
 
 func ServerChannel(serverID string) string {
-	return fmt.Sprintf("meza.server.channel.%s", serverID)
+	return fmt.Sprintf("meza.server.channel.%s", sanitizeID(serverID))
 }
 
 func ServerChannelWildcard() string {
@@ -94,7 +108,7 @@ func ServerMemberWildcard() string {
 }
 
 func ServerRole(serverID string) string {
-	return fmt.Sprintf("meza.server.role.%s", serverID)
+	return fmt.Sprintf("meza.server.role.%s", sanitizeID(serverID))
 }
 
 func ServerRoleWildcard() string {
@@ -102,7 +116,7 @@ func ServerRoleWildcard() string {
 }
 
 func ServerEmoji(serverID string) string {
-	return fmt.Sprintf("meza.server.emoji.%s", serverID)
+	return fmt.Sprintf("meza.server.emoji.%s", sanitizeID(serverID))
 }
 
 func ServerEmojiWildcard() string {
@@ -110,7 +124,7 @@ func ServerEmojiWildcard() string {
 }
 
 func ServerSoundboard(serverID string) string {
-	return fmt.Sprintf("meza.server.soundboard.%s", serverID)
+	return fmt.Sprintf("meza.server.soundboard.%s", sanitizeID(serverID))
 }
 
 func ServerSoundboardWildcard() string {
@@ -118,7 +132,7 @@ func ServerSoundboardWildcard() string {
 }
 
 func ServerChannelGroup(serverID string) string {
-	return fmt.Sprintf("meza.server.channelgroup.%s", serverID)
+	return fmt.Sprintf("meza.server.channelgroup.%s", sanitizeID(serverID))
 }
 
 func ServerChannelGroupWildcard() string {
@@ -128,7 +142,7 @@ func ServerChannelGroupWildcard() string {
 // User read state subjects — gateway delivers to user's own clients only.
 
 func UserReadState(userID string) string {
-	return fmt.Sprintf("meza.user.readstate.%s", userID)
+	return fmt.Sprintf("meza.user.readstate.%s", sanitizeID(userID))
 }
 
 func UserReadStateWildcard() string {
@@ -142,7 +156,7 @@ func UserReadStateWildcard() string {
 //     to the user's WebSocket clients (used for block/friend/DM events).
 
 func UserSubscription(userID string) string {
-	return fmt.Sprintf("meza.user.subscription.%s", userID)
+	return fmt.Sprintf("meza.user.subscription.%s", sanitizeID(userID))
 }
 
 // User recovery subjects — auth service publishes, notification service subscribes.
@@ -150,7 +164,7 @@ func UserSubscription(userID string) string {
 // to UserSubscription — it subscribes to DeliverChannel/DeviceConnected/DeviceDisconnected.
 
 func UserRecovery(userID string) string {
-	return fmt.Sprintf("meza.user.recovery.%s", userID)
+	return fmt.Sprintf("meza.user.recovery.%s", sanitizeID(userID))
 }
 
 func UserRecoveryWildcard() string {
@@ -161,11 +175,11 @@ func UserRecoveryWildcard() string {
 // gateway publishes on WebSocket connect/disconnect.
 
 func DeviceConnected(userID string) string {
-	return fmt.Sprintf("meza.device.connected.%s", userID)
+	return fmt.Sprintf("meza.device.connected.%s", sanitizeID(userID))
 }
 
 func DeviceDisconnected(userID string) string {
-	return fmt.Sprintf("meza.device.disconnected.%s", userID)
+	return fmt.Sprintf("meza.device.disconnected.%s", sanitizeID(userID))
 }
 
 func DeviceConnectedWildcard() string {

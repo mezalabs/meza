@@ -369,6 +369,9 @@ func (s *idorMockAuthStore) ConsumeRefreshToken(context.Context, string) (string
 func (s *idorMockAuthStore) DeleteRefreshTokensByUser(context.Context, string) error {
 	panic("not implemented")
 }
+func (s *idorMockAuthStore) DeleteRefreshTokensByDevice(context.Context, string, string) error {
+	panic("not implemented")
+}
 func (s *idorMockAuthStore) GetKeyBundle(context.Context, string) (*models.EncryptedBundle, error) {
 	panic("not implemented")
 }

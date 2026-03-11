@@ -186,6 +186,12 @@ func (m *mockChatStoreGW) IsVoiceTextCompanion(_ context.Context, _ string) (boo
 func (m *mockChatStoreGW) UpdateCompanionChannel(_ context.Context, _ string, _, _ *string, _ *string) error {
 	return nil
 }
+func (m *mockChatStoreGW) GetSystemMessageConfig(_ context.Context, _ string) (*models.ServerSystemMessageConfig, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (m *mockChatStoreGW) UpsertSystemMessageConfig(_ context.Context, _ string, _ store.UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
+	return nil, fmt.Errorf("not implemented")
+}
 
 // mockReadStateStoreGW implements store.ReadStateStorer for gateway tests.
 type mockReadStateStoreGW struct{}
@@ -247,7 +253,7 @@ func setupGatewayTest(t *testing.T, userID string, channelIDs []string) (*httpte
 	// Dummy chat client (won't be used in most tests)
 	chatClient := mezav1connect.NewChatServiceClient(http.DefaultClient, "http://localhost:1")
 
-	gw := NewGateway(chatStore, &mockReadStateStoreGW{}, &mockMessageStoreGW{}, chatClient, nc)
+	gw := NewGateway(chatStore, &mockReadStateStoreGW{}, &mockMessageStoreGW{}, chatClient, nc, "*", nil)
 	gw.ed25519Keys = testutil.TestEd25519Keys
 	gw.verificationCache = auth.NewVerificationCache()
 	ctx, cancel := context.WithCancel(context.Background())

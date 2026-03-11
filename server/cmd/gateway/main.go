@@ -18,6 +18,7 @@ import (
 	bfnats "github.com/mezalabs/meza/internal/nats"
 	"github.com/mezalabs/meza/internal/observability"
 	"github.com/mezalabs/meza/internal/ratelimit"
+	bfredis "github.com/mezalabs/meza/internal/redis"
 	"github.com/mezalabs/meza/internal/store"
 )
 
@@ -76,7 +77,23 @@ func main() {
 	}
 	slog.Info("Ed25519 signing enabled", "kid", ed25519Keys.KeyID, "fingerprint", ed25519Keys.KeyFingerprint())
 
-	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc)
+	// Redis-backed token blocklist for device revocation checks.
+	// Optional: if REDIS_URL is not configured, revocation checks are skipped.
+	var tokenBlocklist *auth.TokenBlocklist
+	if cfg.RedisURL != "" {
+		redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
+		if err != nil {
+			slog.Error("connect redis", "err", err)
+			os.Exit(1)
+		}
+		defer redisClient.Close()
+		tokenBlocklist = auth.NewTokenBlocklist(redisClient)
+		slog.Info("device revocation blocklist enabled")
+	} else {
+		slog.Warn("SECURITY: MEZA_REDIS_URL is not set -- device revocation checks are disabled on WebSocket auth")
+	}
+
+	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins, tokenBlocklist)
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.InstanceURL
 	gw.verificationCache = auth.NewVerificationCache()

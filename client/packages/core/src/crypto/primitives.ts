@@ -265,21 +265,25 @@ export async function unwrapChannelKey(
 
 /**
  * Cache imported CryptoKey objects to avoid calling crypto.subtle.importKey
- * on every encrypt/decrypt. Keyed by hex(channelKey) + usage.
+ * on every encrypt/decrypt. Keyed by truncated SHA-256(channelKey) + usage.
  *
  * WebCrypto importKey is async and non-trivial — caching turns batch decrypts
  * of 50+ messages from O(n) importKey calls to a single import per channel key.
  */
 const aesKeyCache = new Map<string, CryptoKey>();
 
-function channelKeyCacheKey(
+async function channelKeyCacheKey(
   rawKey: Uint8Array,
   usage: 'encrypt' | 'decrypt',
-): string {
-  // Full hex of key bytes + usage suffix for collision-free cache lookup
+): Promise<string> {
+  // Hash the key material so the cache key cannot be reversed to recover the
+  // original key.  First 16 bytes (128-bit) of the SHA-256 digest is more than
+  // sufficient for cache-key uniqueness while avoiding retaining raw key bytes.
+  const hash = await crypto.subtle.digest('SHA-256', rawKey);
+  const hashArray = new Uint8Array(hash);
   let hex = '';
-  for (let i = 0; i < rawKey.length; i++) {
-    hex += rawKey[i].toString(16).padStart(2, '0');
+  for (let i = 0; i < 16; i++) {
+    hex += hashArray[i].toString(16).padStart(2, '0');
   }
   return `${hex}:${usage}`;
 }
@@ -288,7 +292,7 @@ async function getAesKey(
   rawKey: Uint8Array,
   usage: 'encrypt' | 'decrypt',
 ): Promise<CryptoKey> {
-  const cacheKey = channelKeyCacheKey(rawKey, usage);
+  const cacheKey = await channelKeyCacheKey(rawKey, usage);
   const cached = aesKeyCache.get(cacheKey);
   if (cached) return cached;
 

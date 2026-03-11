@@ -232,6 +232,9 @@ func (s *chatService) resolveDisplayName(ctx context.Context, userID, serverID s
 	if err == nil && member != nil && member.Nickname != "" {
 		return member.Nickname
 	}
+	if s.authStore == nil {
+		return userID
+	}
 	user, err := s.authStore.GetUserByID(ctx, userID)
 	if err == nil && user != nil {
 		if user.DisplayName != "" {

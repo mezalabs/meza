@@ -111,6 +111,7 @@ services:
       MEZA_SCYLLA_HOSTS: "scylla:9042"
       MEZA_REDIS_URL: "redis://redis:6379"
       MEZA_NATS_URL: "nats://nats:4222"
+      MEZA_ALLOWED_ORIGINS: "http://localhost:4080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,7 +135,7 @@ services:
       MEZA_POSTGRES_URL: "postgres://meza:meza@postgres:5432/meza?sslmode=disable"
       MEZA_REDIS_URL: "redis://redis:6379"
       MEZA_NATS_URL: "nats://nats:4222"
-      MEZA_HMAC_SECRET: "dev-secret-change-in-production"
+      MEZA_HMAC_SECRET: "meza-local-dev-hmac-secret-do-not-use-in-prod"
     depends_on:
       postgres:
         condition: service_healthy

@@ -31,6 +31,11 @@ import (
 
 var validULID = regexp.MustCompile(`^[0-9A-Z]{26}$`)
 
+// maxEncryptedContentSize is the upper bound for encrypted message payloads,
+// matching the gateway WebSocket frame limit (64 KB). Direct ConnectRPC calls
+// bypass the gateway, so the service must enforce this independently.
+const maxEncryptedContentSize = 65536
+
 // EncryptionChecker checks whether a channel has been set up for E2EE.
 // Used as a defense-in-depth measure to reject plaintext messages on encrypted channels.
 type EncryptionChecker interface {
@@ -69,10 +74,11 @@ func validateContentWarning(cw string) error {
 // validateServerName checks that a server name is non-empty, not whitespace-only,
 // within length limits, and free of null bytes or HTML tags.
 func validateServerName(name string) error {
-	if name == "" || strings.TrimSpace(name) == "" {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("name is required"))
 	}
-	if len(name) > 100 {
+	if utf8.RuneCountInString(trimmed) > 100 {
 		return connect.NewError(connect.CodeInvalidArgument, errors.New("name exceeds 100 characters"))
 	}
 	if strings.ContainsRune(name, 0) {
@@ -178,6 +184,22 @@ func (s *chatService) requireMembership(ctx context.Context, userID, serverID st
 		return connect.NewError(connect.CodePermissionDenied, errors.New("not a member of this server"))
 	}
 	return nil
+}
+
+// checkRulesAcknowledged returns true if the server does not require rules
+// acknowledgement or if the user has already acknowledged them.
+// The caller must pass the server's RulesRequired flag to avoid a redundant
+// GetServer call (the server is typically already loaded for permission checks).
+func (s *chatService) checkRulesAcknowledged(ctx context.Context, userID, serverID string, rulesRequired bool) (bool, error) {
+	if !rulesRequired {
+		return true, nil
+	}
+	acknowledged, err := s.chatStore.CheckRulesAcknowledged(ctx, userID, serverID)
+	if err != nil {
+		slog.Error("checking rules acknowledgement", "err", err, "user", userID, "server", serverID)
+		return false, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	return acknowledged, nil
 }
 
 func (s *chatService) isDMChannel(ch *models.Channel) bool {
@@ -964,7 +986,10 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 	if req.Msg.ChannelId == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
 	}
-	if len(req.Msg.EncryptedContent) > 16000 {
+	if len(req.Msg.EncryptedContent) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_content is required"))
+	}
+	if len(req.Msg.EncryptedContent) > maxEncryptedContentSize {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("message content too large"))
 	}
 
@@ -1009,6 +1034,12 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 	// Permission + rules checks (server channels only; DMs skip).
 	var channelPerms int64
 	if ch.ServerID != "" {
+		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
+		if srvErr != nil {
+			slog.Error("getting server for permission/rules check", "err", srvErr, "server", ch.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+
 		resolved, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
 		if permErr != nil {
 			return nil, permErr
@@ -1022,21 +1053,11 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 		}
 
 		// Check rules acknowledgement if required.
-		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
-		if srvErr != nil {
-			slog.Error("getting server for rules check", "err", srvErr, "server", ch.ServerID)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		if srv.RulesRequired {
-			acknowledged, ackErr := s.chatStore.CheckRulesAcknowledged(ctx, userID, srv.ID)
-			if ackErr != nil {
-				slog.Error("checking rules acknowledgement", "err", ackErr, "user", userID, "server", srv.ID)
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			if !acknowledged {
-				return nil, connect.NewError(connect.CodePermissionDenied,
-					errors.New("you must acknowledge server rules before sending messages"))
-			}
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID, srv.RulesRequired); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return nil, connect.NewError(connect.CodePermissionDenied,
+				errors.New("you must acknowledge server rules before sending messages"))
 		}
 	}
 
@@ -1273,6 +1294,12 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 
 	// Permission checks (server channels only; DMs skip).
 	if ch.ServerID != "" {
+		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
+		if srvErr != nil {
+			slog.Error("getting server for permission/rules check", "err", srvErr, "server", ch.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+
 		perms, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
 		if permErr != nil {
 			return nil, permErr
@@ -1282,6 +1309,13 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before reading messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID, srv.RulesRequired); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetMessagesResponse{}), nil
 		}
 	}
 
@@ -1368,14 +1402,38 @@ func (s *chatService) GetMessages(ctx context.Context, req *connect.Request[v1.G
 	}), nil
 }
 
+// checkRateLimit enforces a per-user rate limit using the Redis Lua script.
+// key is the Redis key prefix (e.g. "invite_rl"), windowSec is the time window,
+// and maxCount is the maximum number of requests allowed within that window.
+// Returns nil if allowed, or a CodeResourceExhausted error if exceeded.
+// If Redis is unavailable the request is allowed (fail-open for availability).
+//
+// The limiter fails open on Redis errors (allows the request) to prioritize
+// availability for non-critical operations like invite and DM creation.
+func (s *chatService) checkRateLimit(ctx context.Context, key string, userID string, windowSec int, maxCount int64) error {
+	if s.rdb == nil {
+		return nil
+	}
+	rlKey := fmt.Sprintf("%s:%s", key, userID)
+	count, err := rateLimitScript.Run(ctx, s.rdb, []string{rlKey}, windowSec).Int64()
+	if err != nil {
+		slog.Error("rate limit check", "err", err, "key", key, "user", userID)
+		return nil // fail-open
+	}
+	if count > maxCount {
+		return connect.NewError(connect.CodeResourceExhausted, errors.New("rate limit exceeded, try again later"))
+	}
+	return nil
+}
+
 // searchSemaphore limits concurrent search requests across the service instance
 // to prevent partition scans from starving real-time message CRUD operations.
 var searchSemaphore = make(chan struct{}, 5)
 
-// searchRateLimitScript atomically increments a counter and sets TTL on first use.
+// rateLimitScript atomically increments a counter and sets TTL on first use.
 // Returns the new count. Avoids INCR/EXPIRE race where a crash between the two
 // commands would leave the key without a TTL, permanently blocking the user.
-var searchRateLimitScript = redis.NewScript(`
+var rateLimitScript = redis.NewScript(`
 local count = redis.call('INCR', KEYS[1])
 if count == 1 then
     redis.call('EXPIRE', KEYS[1], ARGV[1])
@@ -1390,8 +1448,10 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 	}
 
 	// Per-user rate limit: 5 searches per 10 seconds (atomic Lua script).
+	// Unlike checkRateLimit, search fails CLOSED on Redis errors because
+	// search triggers expensive partition scans that could starve the database.
 	rlKey := fmt.Sprintf("search_rl:%s", userID)
-	count, err := searchRateLimitScript.Run(ctx, s.rdb, []string{rlKey}, 10).Int64()
+	count, err := rateLimitScript.Run(ctx, s.rdb, []string{rlKey}, 10).Int64()
 	if err != nil {
 		slog.Error("search rate limit check", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("search temporarily unavailable"))
@@ -1429,6 +1489,12 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 
 	// Permission checks (server channels only; DMs skip).
 	if ch.ServerID != "" {
+		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
+		if srvErr != nil {
+			slog.Error("getting server for permission/rules check", "err", srvErr, "server", ch.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+
 		perms, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
 		if permErr != nil {
 			return nil, permErr
@@ -1438,6 +1504,13 @@ func (s *chatService) SearchMessages(ctx context.Context, req *connect.Request[v
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before searching messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID, srv.RulesRequired); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.SearchMessagesResponse{}), nil
 		}
 	}
 
@@ -1608,7 +1681,7 @@ func (s *chatService) EditMessage(ctx context.Context, req *connect.Request[v1.E
 	if len(req.Msg.EncryptedContent) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("encrypted_content is required"))
 	}
-	if len(req.Msg.EncryptedContent) > 16000 {
+	if len(req.Msg.EncryptedContent) > maxEncryptedContentSize {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("message content too large"))
 	}
 
@@ -2570,6 +2643,11 @@ func (s *chatService) CreateInvite(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
 	}
 
+	// Per-user rate limit: 10 invites per 60 seconds.
+	if err := s.checkRateLimit(ctx, "invite_rl", userID, 60, 10); err != nil {
+		return nil, err
+	}
+
 	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 		return nil, err
 	}
@@ -2711,6 +2789,18 @@ func (s *chatService) ListInvites(ctx context.Context, req *connect.Request[v1.L
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Users with ManageServer permission can see all invites;
+	// everyone else only sees their own.
+	if !s.hasPermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer) {
+		filtered := invites[:0]
+		for _, inv := range invites {
+			if inv.CreatorID == userID {
+				filtered = append(filtered, inv)
+			}
+		}
+		invites = filtered
+	}
+
 	protoInvites := make([]*v1.Invite, len(invites))
 	for i, inv := range invites {
 		protoInvites[i] = inviteToProto(inv)
@@ -2744,6 +2834,12 @@ func (s *chatService) GetReplies(ctx context.Context, req *connect.Request[v1.Ge
 
 	// Permission checks (server channels only; DMs skip).
 	if ch.ServerID != "" {
+		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
+		if srvErr != nil {
+			slog.Error("getting server for permission/rules check", "err", srvErr, "server", ch.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+
 		perms, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
 		if permErr != nil {
 			return nil, permErr
@@ -2753,6 +2849,13 @@ func (s *chatService) GetReplies(ctx context.Context, req *connect.Request[v1.Ge
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before reading replies.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID, srv.RulesRequired); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetRepliesResponse{}), nil
 		}
 	}
 
@@ -2808,6 +2911,12 @@ func (s *chatService) GetMessagesByIDs(ctx context.Context, req *connect.Request
 
 	// Permission checks (server channels only; DMs skip).
 	if ch.ServerID != "" {
+		srv, srvErr := s.chatStore.GetServer(ctx, ch.ServerID)
+		if srvErr != nil {
+			slog.Error("getting server for permission/rules check", "err", srvErr, "server", ch.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+
 		perms, permErr := s.resolvePermissions(ctx, userID, ch.ServerID, ch.ID)
 		if permErr != nil {
 			return nil, permErr
@@ -2817,6 +2926,13 @@ func (s *chatService) GetMessagesByIDs(ctx context.Context, req *connect.Request
 		}
 		if !permissions.Has(perms, permissions.ReadMessageHistory) {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("missing ReadMessageHistory permission"))
+		}
+
+		// Enforce rules acknowledgement before reading messages.
+		if ack, ackErr := s.checkRulesAcknowledged(ctx, userID, ch.ServerID, srv.RulesRequired); ackErr != nil {
+			return nil, ackErr
+		} else if !ack {
+			return connect.NewResponse(&v1.GetMessagesByIDsResponse{}), nil
 		}
 	}
 
