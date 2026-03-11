@@ -169,6 +169,7 @@ jobs:
             client/packages/desktop/release/**/latest*.yaml
             !client/packages/desktop/release/**/*.blockmap
             !client/packages/desktop/release/**/elevate.exe
+            !client/packages/desktop/release/**/Meza.exe
           retention-days: 30
 
   release:
@@ -196,7 +197,7 @@ jobs:
           find artifacts -type f \( \
             -name "*.dmg" -o -name "*.zip" -o -name "*.exe" \
             -o -name "*.AppImage" -o -name "*.deb" \
-          \) ! -name "elevate.exe" -exec cp {} release-files/ \;
+          \) ! -name "elevate.exe" ! -name "Meza.exe" -exec cp {} release-files/ \;
           # Include auto-update manifests only
           find artifacts -type f \( \
             -name "latest*.yml" -o -name "latest*.yaml" \

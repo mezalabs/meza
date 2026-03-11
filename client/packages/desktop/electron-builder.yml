@@ -1,6 +1,6 @@
 appId: com.meza.desktop
 productName: Meza
-artifactName: "${productName}-${version}-${arch}.${ext}"
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 asar: true
 compression: normal
 
