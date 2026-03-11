@@ -1,13 +1,19 @@
-import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import {
+  Capacitor,
+  type PluginListenerHandle,
+  registerPlugin,
+} from '@capacitor/core';
+import {
+  type ActionPerformed,
   PushNotifications,
   type Token,
-  type ActionPerformed,
 } from '@capacitor/push-notifications';
 import type { PushAdapter, PushSubscriptionDetails } from '@meza/core';
 
 /** Native plugin that exposes the FCM token on iOS (see FCMTokenPlugin.swift). */
-const FCMToken = registerPlugin<{ getToken(): Promise<{ token: string }> }>('FCMToken');
+const FCMToken = registerPlugin<{ getToken(): Promise<{ token: string }> }>(
+  'FCMToken',
+);
 
 /**
  * Push adapter for Capacitor (iOS + Android).
@@ -30,7 +36,9 @@ export class CapacitorPushAdapter implements PushAdapter {
     // plugin is properly wired up. The actual danger is register() which
     // calls into Firebase, so we gate on the permission result and catch
     // any synchronous native bridge errors.
-    let permStatus;
+    let permStatus: Awaited<
+      ReturnType<typeof PushNotifications.checkPermissions>
+    >;
     try {
       permStatus = await PushNotifications.checkPermissions();
     } catch {
@@ -81,14 +89,18 @@ export class CapacitorPushAdapter implements PushAdapter {
   /** Register with APNs/FCM and return the token from the Capacitor plugin. */
   private async registerNative(): Promise<string | null> {
     let settled = false;
-    let resolve: (value: string | null) => void;
-    const result = new Promise<string | null>((r) => { resolve = r; });
+    let doResolve: (value: string | null) => void = () => {};
+    const result = new Promise<string | null>((r) => {
+      doResolve = r;
+    });
 
     const timeout = setTimeout(() => {
       if (!settled) {
         settled = true;
-        console.warn('Push registration timed out (Firebase may not be configured)');
-        resolve(null);
+        console.warn(
+          'Push registration timed out (Firebase may not be configured)',
+        );
+        doResolve(null);
       }
     }, 10_000);
 
@@ -108,7 +120,7 @@ export class CapacitorPushAdapter implements PushAdapter {
       'registration',
       async (token: Token) => {
         await cleanup();
-        resolve(token.value);
+        doResolve(token.value);
       },
     );
 
@@ -117,7 +129,7 @@ export class CapacitorPushAdapter implements PushAdapter {
       async (error) => {
         await cleanup();
         console.error('Push registration error:', error);
-        resolve(null);
+        doResolve(null);
       },
     );
 
@@ -126,7 +138,7 @@ export class CapacitorPushAdapter implements PushAdapter {
     } catch (e) {
       await cleanup();
       console.error('Push register() failed:', e);
-      resolve!(null);
+      doResolve(null);
     }
 
     return result;
@@ -148,10 +160,12 @@ export class CapacitorPushAdapter implements PushAdapter {
         const data = action.notification.data as Record<string, string>;
         callback(data);
       },
-    ).then((handle) => {
-      this.tapHandle = handle;
-    }).catch((err) => {
-      console.error('Failed to add notification tap listener:', err);
-    });
+    )
+      .then((handle) => {
+        this.tapHandle = handle;
+      })
+      .catch((err) => {
+        console.error('Failed to add notification tap listener:', err);
+      });
   }
 }

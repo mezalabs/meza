@@ -449,7 +449,11 @@ describe('lazyInitChannelKey', () => {
     // First fetch-first returns nothing, then re-fetch after conflict returns winner
     const winnerKey = generateChannelKey();
     const winnerAad = buildKeyWrapAAD(TEST_CH, alice.publicKey);
-    const winnerEnvelope = await wrapChannelKey(winnerKey, alice.publicKey, winnerAad);
+    const winnerEnvelope = await wrapChannelKey(
+      winnerKey,
+      alice.publicKey,
+      winnerAad,
+    );
     vi.mocked(getKeyEnvelopes)
       .mockResolvedValueOnce([]) // fetch-first: no keys yet
       .mockResolvedValueOnce([{ keyVersion: 1, envelope: winnerEnvelope }]); // re-fetch after conflict

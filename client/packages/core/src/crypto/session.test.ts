@@ -137,8 +137,8 @@ describe('bootstrapSession', () => {
     await bootstrapSession(masterKey);
 
     // Grab the stored values before teardown clears them
-    const storedMk = localStorageMap.get('meza-mk')!;
-    const storedSk = sessionStorageMap.get('meza-sk')!;
+    const storedMk = localStorageMap.get('meza-mk') ?? '';
+    const storedSk = sessionStorageMap.get('meza-sk') ?? '';
 
     // Teardown resets session state AND clears storage
     await teardownSession();
@@ -172,7 +172,7 @@ describe('bootstrapSession', () => {
     await bootstrapSession(masterKey);
 
     // Grab encrypted blob before teardown clears it
-    const storedMk = localStorageMap.get('meza-mk')!;
+    const storedMk = localStorageMap.get('meza-mk') ?? '';
 
     await teardownSession();
 

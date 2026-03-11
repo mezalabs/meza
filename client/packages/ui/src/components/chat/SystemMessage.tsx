@@ -150,8 +150,7 @@ function useSystemMessageText(
     }
     case MessageType.CHANNEL_UPDATE: {
       const c = content as ChannelUpdateContent | null;
-      if (!c?.actor_id)
-        return { icon: '\u270E', node: 'Channel was updated' };
+      if (!c?.actor_id) return { icon: '\u270E', node: 'Channel was updated' };
       const what =
         c.field === 'name'
           ? `changed the channel name to "${c.new_value}"`
@@ -197,14 +196,8 @@ export const SystemMessage = memo(function SystemMessage({
   createdAt,
   serverId,
 }: SystemMessageProps) {
-  const { icon, node } = useSystemMessageText(
-    type,
-    encryptedContent,
-    serverId,
-  );
-  const time = createdAt
-    ? new Date(Number(createdAt.seconds) * 1000)
-    : null;
+  const { icon, node } = useSystemMessageText(type, encryptedContent, serverId);
+  const time = createdAt ? new Date(Number(createdAt.seconds) * 1000) : null;
 
   return (
     <div className="flex items-center justify-center gap-2 py-1 px-4">

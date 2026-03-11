@@ -129,15 +129,18 @@ describe('wrapFileKey / unwrapFileKey', () => {
     ).getUint32(0);
     expect(version).toBe(1);
 
-    const unwrapped = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
+    const unwrapped = await unwrapFileKey(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      envelope,
+    );
     expect(unwrapped).toEqual(fileKey);
   });
 
   it('throws when no channel key exists', async () => {
     const fileKey = generateFileKey();
-    await expect(wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4ZZ', fileKey)).rejects.toThrow(
-      'No channel key available',
-    );
+    await expect(
+      wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4ZZ', fileKey),
+    ).rejects.toThrow('No channel key available');
   });
 
   it('produces different wrapped keys for same file key (random nonce)', async () => {
@@ -157,13 +160,15 @@ describe('wrapFileKey / unwrapFileKey', () => {
     // Tamper with the key version to a non-existent version
     const tampered = new Uint8Array(envelope);
     new DataView(tampered.buffer).setUint32(0, 999);
-    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', tampered)).rejects.toThrow();
+    await expect(
+      unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', tampered),
+    ).rejects.toThrow();
   });
 
   it('throws for too-short encrypted key', async () => {
-    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', new Uint8Array(3))).rejects.toThrow(
-      'Invalid encrypted key: too short',
-    );
+    await expect(
+      unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', new Uint8Array(3)),
+    ).rejects.toThrow('Invalid encrypted key: too short');
   });
 });
 
@@ -177,9 +182,9 @@ describe('unwrapFileKey before session ready', () => {
     clearChannelKeyCache();
 
     // unwrapFileKey needs to fetch the channel key, which fails without identity
-    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope)).rejects.toThrow(
-      'Channel keys not initialized',
-    );
+    await expect(
+      unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope),
+    ).rejects.toThrow('Channel keys not initialized');
   });
 });
 
@@ -196,7 +201,10 @@ describe('full file encryption flow', () => {
     const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
 
     // Recipient side
-    const recoveredKey = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
+    const recoveredKey = await unwrapFileKey(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      envelope,
+    );
     const decryptedFile = await decryptFile(recoveredKey, encryptedFile);
 
     expect(decryptedFile).toEqual(original);

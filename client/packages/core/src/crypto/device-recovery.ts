@@ -38,7 +38,10 @@ export function generateRecoveryKeypair(): {
 export async function deriveVerificationCode(
   ephemeralPub: Uint8Array,
 ): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', ephemeralPub as BufferSource);
+  const hash = await crypto.subtle.digest(
+    'SHA-256',
+    ephemeralPub as BufferSource,
+  );
   const view = new DataView(hash);
   // Use first 4 bytes as uint32, mod 1000000
   const num = view.getUint32(0) % 1000000;

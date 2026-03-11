@@ -5,7 +5,6 @@ import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
-import { getBaseUrl } from '../utils/platform.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
 import {
   type ConnectionPlatform,
@@ -22,6 +21,7 @@ import { useStreamSettingsStore } from '../store/streamSettings.ts';
 import { useTypingStore } from '../store/typing.ts';
 import { useUsersStore } from '../store/users.ts';
 import { useVoiceStore } from '../store/voice.ts';
+import { getBaseUrl } from '../utils/platform.ts';
 import { transport } from './client.ts';
 
 const authClient = createClient(AuthService, transport);
@@ -114,10 +114,12 @@ export function finalizeRegistration(
   useAuthStore.getState().setAuth(accessToken, refreshToken, user);
   // Register signing public key now that we have a valid auth token
   if (isSessionReady()) {
-    import('../crypto/session.ts').then(({ getIdentity }) => {
-      const id = getIdentity();
-      if (id) registerPublicKey(id.publicKey).catch(() => {});
-    }).catch(() => {});
+    import('../crypto/session.ts')
+      .then(({ getIdentity }) => {
+        const id = getIdentity();
+        if (id) registerPublicKey(id.publicKey).catch(() => {});
+      })
+      .catch(() => {});
   }
 }
 

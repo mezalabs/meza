@@ -19,9 +19,7 @@ export interface PushAdapter {
    * Register a callback for notification tap events.
    * Called with the notification data payload when the user taps a notification.
    */
-  onNotificationTap?(
-    callback: (data: Record<string, string>) => void,
-  ): void;
+  onNotificationTap?(callback: (data: Record<string, string>) => void): void;
 }
 
 /** Details returned by a push adapter after subscribing. */

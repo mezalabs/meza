@@ -23,7 +23,11 @@ import {
   unwrapChannelKey,
   wrapChannelKey,
 } from './primitives.ts';
-import { clearChannelKeysStorage, loadChannelKeys, storeChannelKeys } from './storage.ts';
+import {
+  clearChannelKeysStorage,
+  loadChannelKeys,
+  storeChannelKeys,
+} from './storage.ts';
 
 // --- Module state ---
 
@@ -264,7 +268,11 @@ export async function wrapKeyForMembers(
   return Promise.all(
     [...memberPublicKeys.entries()].map(async ([userId, edPub]) => ({
       userId,
-      envelope: await wrapChannelKey(channelKey, edPub, buildKeyWrapAAD(channelId, edPub)),
+      envelope: await wrapChannelKey(
+        channelKey,
+        edPub,
+        buildKeyWrapAAD(channelId, edPub),
+      ),
     })),
   );
 }
@@ -294,7 +302,11 @@ async function doFetchAndCache(channelId: string): Promise<void> {
 
   for (const { keyVersion, envelope } of envelopes) {
     const aad = buildKeyWrapAAD(channelId, identityKeypair.publicKey);
-    const key = await unwrapChannelKey(envelope, identityKeypair.secretKey, aad);
+    const key = await unwrapChannelKey(
+      envelope,
+      identityKeypair.secretKey,
+      aad,
+    );
     setCachedKey(channelId, keyVersion, key);
   }
   schedulePersist();
@@ -374,7 +386,11 @@ async function doLazyInit(channelId: string, userId: string): Promise<boolean> {
   // No keys exist — create version 1 atomically
   const newKey = generateChannelKey();
   const selfAad = buildKeyWrapAAD(channelId, identityKeypair.publicKey);
-  const selfEnvelope = await wrapChannelKey(newKey, identityKeypair.publicKey, selfAad);
+  const selfEnvelope = await wrapChannelKey(
+    newKey,
+    identityKeypair.publicKey,
+    selfAad,
+  );
 
   try {
     const newVersion = await rotateChannelKeyRpc(channelId, 0, [
@@ -495,7 +511,11 @@ export async function rotateChannelKey(
 ): Promise<number> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const newKey = generateChannelKey();
-    const envelopes = await wrapKeyForMembers(channelId, newKey, remainingMembers);
+    const envelopes = await wrapKeyForMembers(
+      channelId,
+      newKey,
+      remainingMembers,
+    );
 
     try {
       const newVersion = await rotateChannelKeyRpc(

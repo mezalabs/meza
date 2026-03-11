@@ -110,7 +110,10 @@ describe('race: waiting for session ready before operations', () => {
     // Verify the key is usable
     const fileKey = generateFileKey();
     const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
-    const unwrapResult = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
+    const unwrapResult = await unwrapFileKey(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      envelope,
+    );
     expect(unwrapResult).toEqual(fileKey);
   });
 

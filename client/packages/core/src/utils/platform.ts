@@ -10,7 +10,8 @@ export function isCapacitor(): boolean {
   return (
     typeof cap === 'object' &&
     cap !== null &&
-    typeof (cap as { isNativePlatform?: unknown }).isNativePlatform === 'function' &&
+    typeof (cap as { isNativePlatform?: unknown }).isNativePlatform ===
+      'function' &&
     (cap as { isNativePlatform: () => boolean }).isNativePlatform()
   );
 }

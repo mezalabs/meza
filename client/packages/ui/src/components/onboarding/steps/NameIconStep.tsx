@@ -1,7 +1,7 @@
-import { UploadPurpose, getMediaURL } from '@meza/core';
+import { getMediaURL, UploadPurpose } from '@meza/core';
 import { useState } from 'react';
-import { ImageCropper } from '../../shared/ImageCropper.tsx';
 import { useImageCropUpload } from '../../../hooks/useImageCropUpload.ts';
+import { ImageCropper } from '../../shared/ImageCropper.tsx';
 
 interface NameIconStepProps {
   name: string;

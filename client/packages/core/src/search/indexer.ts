@@ -53,7 +53,8 @@ export function toIndexable(
       ? Number(msg.createdAt.seconds) * 1000
       : Date.now(),
     hasAttachment: (msg.attachments?.length ?? 0) > 0,
-    hasMention: (msg.mentionedUserIds?.length ?? 0) > 0 || !!msg.mentionEveryone,
+    hasMention:
+      (msg.mentionedUserIds?.length ?? 0) > 0 || !!msg.mentionEveryone,
   };
 }
 

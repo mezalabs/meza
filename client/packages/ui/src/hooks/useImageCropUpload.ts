@@ -1,4 +1,4 @@
-import { UploadPurpose, uploadFile } from '@meza/core';
+import { type UploadPurpose, uploadFile } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ImageCropperProps } from '../components/shared/ImageCropper.tsx';
 import {
@@ -44,24 +44,24 @@ export function useImageCropUpload({
   const cancelTokenRef = useRef({ canceled: false });
   const objectUrlsRef = useRef(new Set<string>());
 
-  function trackObjectUrl(url: string): string {
+  const trackObjectUrl = useCallback((url: string): string => {
     objectUrlsRef.current.add(url);
     return url;
-  }
+  }, []);
 
-  function revokeObjectUrl(url: string) {
+  const revokeObjectUrl = useCallback((url: string) => {
     if (objectUrlsRef.current.has(url)) {
       URL.revokeObjectURL(url);
       objectUrlsRef.current.delete(url);
     }
-  }
+  }, []);
 
-  function revokeAllObjectUrls() {
+  const revokeAllObjectUrls = useCallback(() => {
     for (const url of objectUrlsRef.current) {
       URL.revokeObjectURL(url);
     }
     objectUrlsRef.current.clear();
-  }
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -69,7 +69,7 @@ export function useImageCropUpload({
       cancelTokenRef.current.canceled = true;
       revokeAllObjectUrls();
     };
-  }, []);
+  }, [revokeAllObjectUrls]);
 
   const resetPipeline = useCallback(() => {
     cancelTokenRef.current.canceled = true;
@@ -79,7 +79,7 @@ export function useImageCropUpload({
     setError(null);
     setUploadProgress(null);
     setCropperImageSrc(null);
-  }, []);
+  }, [revokeAllObjectUrls]);
 
   const onFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,11 +129,13 @@ export function useImageCropUpload({
         setState('cropping');
       } catch (err) {
         if (token.canceled) return;
-        setError(err instanceof Error ? err.message : 'Failed to prepare image');
+        setError(
+          err instanceof Error ? err.message : 'Failed to prepare image',
+        );
         setState('idle');
       }
     },
-    [purpose],
+    [purpose, revokeAllObjectUrls, trackObjectUrl],
   );
 
   const handleCrop = useCallback(
@@ -151,11 +153,15 @@ export function useImageCropUpload({
       }
 
       try {
-        const result = await uploadFile(croppedFile, purpose, setUploadProgress);
+        const result = await uploadFile(
+          croppedFile,
+          purpose,
+          setUploadProgress,
+        );
         if (token.canceled) return;
 
         const mediaUrl = `/media/${result.attachmentId}`;
-        await onUploadComplete(mediaUrl);
+        await onUploadCompleteRef.current(mediaUrl);
         if (token.canceled) return;
 
         setState('idle');
@@ -167,7 +173,7 @@ export function useImageCropUpload({
         setUploadProgress(null);
       }
     },
-    [state, cropperImageSrc, purpose],
+    [state, cropperImageSrc, purpose, revokeObjectUrl],
   );
 
   const handleCropCancel = useCallback(() => {

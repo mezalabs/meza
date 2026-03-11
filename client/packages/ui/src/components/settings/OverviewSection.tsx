@@ -1,4 +1,9 @@
-import { getMediaURL, updateServer, UploadPurpose, useServerStore } from '@meza/core';
+import {
+  getMediaURL,
+  UploadPurpose,
+  updateServer,
+  useServerStore,
+} from '@meza/core';
 import { useCallback, useState } from 'react';
 import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
 import { ImageCropper } from '../shared/ImageCropper.tsx';

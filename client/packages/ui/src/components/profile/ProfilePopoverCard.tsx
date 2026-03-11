@@ -331,7 +331,15 @@ function ProfileCardContent({
                     }
                   }}
                 >
-                  {isMobile ? <ChatCircleIcon size={18} weight="fill" aria-label="Message" /> : 'Message'}
+                  {isMobile ? (
+                    <ChatCircleIcon
+                      size={18}
+                      weight="fill"
+                      aria-label="Message"
+                    />
+                  ) : (
+                    'Message'
+                  )}
                 </button>
               )}
 
@@ -347,7 +355,15 @@ function ProfileCardContent({
                     }
                   }}
                 >
-                  {isMobile ? <UserPlusIcon size={18} weight="fill" aria-label="Add Friend" /> : 'Add Friend'}
+                  {isMobile ? (
+                    <UserPlusIcon
+                      size={18}
+                      weight="fill"
+                      aria-label="Add Friend"
+                    />
+                  ) : (
+                    'Add Friend'
+                  )}
                 </button>
               )}
               {!isBlocked && friendRelationship === 'friends' && (
@@ -371,7 +387,11 @@ function ProfileCardContent({
               openProfilePane(userId);
             }}
           >
-            {isMobile ? <UserIcon size={18} weight="fill" aria-label="Profile" /> : 'Profile'}
+            {isMobile ? (
+              <UserIcon size={18} weight="fill" aria-label="Profile" />
+            ) : (
+              'Profile'
+            )}
           </button>
         </div>
       </div>

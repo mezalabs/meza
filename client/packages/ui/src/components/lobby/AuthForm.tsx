@@ -253,9 +253,11 @@ function RegisterForm({
     } catch (err) {
       console.error('[RegisterForm] registration failed:', err);
       if (!useAuthStore.getState().error) {
-        useAuthStore.getState().setError(
-          'Unable to reach the server. Please check your connection.',
-        );
+        useAuthStore
+          .getState()
+          .setError(
+            'Unable to reach the server. Please check your connection.',
+          );
       }
     } finally {
       setSubmitting(false);
@@ -381,9 +383,11 @@ function LoginForm({
       console.error('[LoginForm] login failed:', err);
       // getSalt() doesn't set the store error — surface it here
       if (!useAuthStore.getState().error) {
-        useAuthStore.getState().setError(
-          'Unable to reach the server. Please check your connection.',
-        );
+        useAuthStore
+          .getState()
+          .setError(
+            'Unable to reach the server. Please check your connection.',
+          );
       }
     } finally {
       setSubmitting(false);
@@ -690,4 +694,3 @@ function PasswordInput({
     </div>
   );
 }
-

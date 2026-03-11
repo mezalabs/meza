@@ -89,13 +89,22 @@ async function seedEncryptedMessage(
 describe('decryptAndUpdateMessage', () => {
   it('decrypts an encrypted message and updates the store', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'hello world');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'hello world',
+    );
 
-    const result = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const result = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
 
     expect(result).toBe(true);
 
-    const stored = useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1'];
+    const stored =
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1'];
     expect(stored).toBeDefined();
     expect(stored?.keyVersion).toBe(0);
     const text = new TextDecoder().decode(stored?.encryptedContent);
@@ -104,33 +113,63 @@ describe('decryptAndUpdateMessage', () => {
 
   it('returns true on successful decrypt', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'test');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'test',
+    );
 
-    const result = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const result = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
     expect(result).toBe(true);
   });
 
   it('returns false when message is no longer in the store', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'ephemeral');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'ephemeral',
+    );
 
     // Remove message from store before decrypt completes
-    useMessageStore.getState().removeMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1');
+    useMessageStore
+      .getState()
+      .removeMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1');
 
-    const result = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const result = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
     expect(result).toBe(false);
   });
 
   it('returns false when message already decrypted (idempotency guard)', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'already done');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'already done',
+    );
 
     // First decrypt succeeds
-    const first = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const first = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
     expect(first).toBe(true);
 
     // Second decrypt returns false (keyVersion is now 0)
-    const second = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const second = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
     expect(second).toBe(false);
   });
 });
@@ -138,28 +177,57 @@ describe('decryptAndUpdateMessage', () => {
 describe('concurrent decrypt idempotency', () => {
   it('only the first of two concurrent decrypts writes to the store', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'race me');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'race me',
+    );
 
     const [r1, r2] = await Promise.all([
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey),
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg,
+        alice.publicKey,
+      ),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg,
+        alice.publicKey,
+      ),
     ]);
 
     // Exactly one should succeed
     expect([r1, r2].filter(Boolean)).toHaveLength(1);
 
-    const stored = useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1'];
+    const stored =
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1'];
     expect(stored?.keyVersion).toBe(0);
   });
 
   it('three concurrent decrypts produce exactly one store update', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'triple race');
+    const msg = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'triple race',
+    );
 
     const results = await Promise.all([
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey),
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey),
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg,
+        alice.publicKey,
+      ),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg,
+        alice.publicKey,
+      ),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg,
+        alice.publicKey,
+      ),
     ]);
 
     expect(results.filter(Boolean)).toHaveLength(1);
@@ -167,24 +235,49 @@ describe('concurrent decrypt idempotency', () => {
 
   it('concurrent decrypts of different messages both succeed', async () => {
     createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
-    const msg1 = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-1', 'first');
-    const msg2 = await seedEncryptedMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', 'msg-2', 'second');
+    const msg1 = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-1',
+      'first',
+    );
+    const msg2 = await seedEncryptedMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      'msg-2',
+      'second',
+    );
 
     // Re-seed both messages since setMessages replaces the array
     useMessageStore
       .getState()
-      .setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [msg1 as never, msg2 as never]);
+      .setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [
+        msg1 as never,
+        msg2 as never,
+      ]);
 
     const [r1, r2] = await Promise.all([
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg1, alice.publicKey),
-      decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg2, alice.publicKey),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg1,
+        alice.publicKey,
+      ),
+      decryptAndUpdateMessage(
+        '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+        msg2,
+        alice.publicKey,
+      ),
     ]);
 
     expect(r1).toBe(true);
     expect(r2).toBe(true);
 
-    expect(useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1']?.keyVersion).toBe(0);
-    expect(useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-2']?.keyVersion).toBe(0);
+    expect(
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-1']
+        ?.keyVersion,
+    ).toBe(0);
+    expect(
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-2']
+        ?.keyVersion,
+    ).toBe(0);
   });
 });
 
@@ -204,7 +297,10 @@ describe('attachment metadata enrichment', () => {
       ],
     ]);
     const content = buildMessageContent('look at this', attachments);
-    const encrypted = await encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
 
     // Seed a message with a placeholder attachment (empty filename/contentType)
     const storeAttachment = {
@@ -239,12 +335,21 @@ describe('attachment metadata enrichment', () => {
       $unknown: undefined,
     };
 
-    useMessageStore.getState().setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [msg as never]);
+    useMessageStore
+      .getState()
+      .setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [msg as never]);
 
-    const result = await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    const result = await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
     expect(result).toBe(true);
 
-    const stored = useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-att'];
+    const stored =
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.[
+        'msg-att'
+      ];
     expect(stored?.attachments[0].filename).toBe('photo.jpg');
     expect(stored?.attachments[0].contentType).toBe('image/jpeg');
   });
@@ -254,7 +359,10 @@ describe('attachment metadata enrichment', () => {
 
     // Build text-only content (no attachment metadata)
     const content = buildMessageContent('just text');
-    const encrypted = await encryptMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', content);
+    const encrypted = await encryptMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      content,
+    );
 
     const storeAttachment = {
       id: 'att-1',
@@ -288,11 +396,20 @@ describe('attachment metadata enrichment', () => {
       $unknown: undefined,
     };
 
-    useMessageStore.getState().setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [msg as never]);
+    useMessageStore
+      .getState()
+      .setMessages('01HZXK5M8E3J6Q9P2RVTYWN4AB', [msg as never]);
 
-    await decryptAndUpdateMessage('01HZXK5M8E3J6Q9P2RVTYWN4AB', msg, alice.publicKey);
+    await decryptAndUpdateMessage(
+      '01HZXK5M8E3J6Q9P2RVTYWN4AB',
+      msg,
+      alice.publicKey,
+    );
 
-    const stored = useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.['msg-noatt'];
+    const stored =
+      useMessageStore.getState().byId['01HZXK5M8E3J6Q9P2RVTYWN4AB']?.[
+        'msg-noatt'
+      ];
     expect(stored?.attachments[0].filename).toBe('original.pdf');
     expect(stored?.attachments[0].contentType).toBe('application/pdf');
   });

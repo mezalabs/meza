@@ -79,9 +79,13 @@ export async function deriveRecoveryKey(phrase: string): Promise<Uint8Array> {
 export async function deriveRecoveryVerifier(
   recoveryKey: Uint8Array,
 ): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey('raw', recoveryKey as BufferSource, 'HKDF', false, [
-    'deriveBits',
-  ]);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    recoveryKey as BufferSource,
+    'HKDF',
+    false,
+    ['deriveBits'],
+  );
   const bits = await crypto.subtle.deriveBits(
     {
       name: 'HKDF',

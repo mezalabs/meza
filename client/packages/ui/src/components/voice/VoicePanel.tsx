@@ -19,7 +19,6 @@ import {
   useVoiceParticipantsStore,
   useVoiceStore,
 } from '@meza/core';
-import { ChannelView } from '../chat/ChannelView.tsx';
 import {
   EarIcon,
   EarSlashIcon,
@@ -48,6 +47,7 @@ import {
   buildPublishOptions,
 } from '../../utils/streamPresets.ts';
 import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
+import { ChannelView } from '../chat/ChannelView.tsx';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';

@@ -21,7 +21,10 @@ export function RecoveryPhraseDisplay({
       await navigator.clipboard.writeText(phrase);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      setTimeout(() => navigator.clipboard.writeText('').catch(() => {}), 30000);
+      setTimeout(
+        () => navigator.clipboard.writeText('').catch(() => {}),
+        30000,
+      );
     } catch {
       // Clipboard API may not be available in all contexts
     }

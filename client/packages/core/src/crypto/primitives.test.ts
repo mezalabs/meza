@@ -19,7 +19,10 @@ import {
 const TEST_CHANNEL_ID = '01HZXK5M8E3J6Q9P2RVTYWN4AB';
 const TEST_KEY_VERSION = 1;
 
-function testMessageAAD(channelId = TEST_CHANNEL_ID, keyVersion = TEST_KEY_VERSION) {
+function testMessageAAD(
+  channelId = TEST_CHANNEL_ID,
+  keyVersion = TEST_KEY_VERSION,
+) {
   return buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion);
 }
 
@@ -157,7 +160,11 @@ describe('wrapChannelKey / unwrapChannelKey', () => {
     expect(envelope.length).toBe(93);
     expect(envelope[0]).toBe(0x02);
 
-    const unwrapped = await unwrapChannelKey(envelope, recipient.secretKey, aad);
+    const unwrapped = await unwrapChannelKey(
+      envelope,
+      recipient.secretKey,
+      aad,
+    );
     expect(unwrapped).toEqual(channelKey);
   });
 
@@ -233,18 +240,30 @@ describe('wrapChannelKey / unwrapChannelKey', () => {
     const aadAlice = testKeyWrapAAD(TEST_CHANNEL_ID, alice.publicKey);
     const aadBob = testKeyWrapAAD(TEST_CHANNEL_ID, bob.publicKey);
 
-    const envAlice = await wrapChannelKey(channelKey, alice.publicKey, aadAlice);
+    const envAlice = await wrapChannelKey(
+      channelKey,
+      alice.publicKey,
+      aadAlice,
+    );
     const envBob = await wrapChannelKey(channelKey, bob.publicKey, aadBob);
 
     // Each can unwrap their own envelope
-    const aliceKey = await unwrapChannelKey(envAlice, alice.secretKey, aadAlice);
+    const aliceKey = await unwrapChannelKey(
+      envAlice,
+      alice.secretKey,
+      aadAlice,
+    );
     const bobKey = await unwrapChannelKey(envBob, bob.secretKey, aadBob);
     expect(aliceKey).toEqual(channelKey);
     expect(bobKey).toEqual(channelKey);
 
     // Cross-unwrapping fails (wrong DH + wrong AAD)
-    await expect(unwrapChannelKey(envAlice, bob.secretKey, aadBob)).rejects.toThrow();
-    await expect(unwrapChannelKey(envBob, alice.secretKey, aadAlice)).rejects.toThrow();
+    await expect(
+      unwrapChannelKey(envAlice, bob.secretKey, aadBob),
+    ).rejects.toThrow();
+    await expect(
+      unwrapChannelKey(envBob, alice.secretKey, aadAlice),
+    ).rejects.toThrow();
   });
 
   it('fails unwrapping with wrong channelId in AAD', async () => {
@@ -255,7 +274,11 @@ describe('wrapChannelKey / unwrapChannelKey', () => {
     const aadA = testKeyWrapAAD(channelA, recipient.publicKey);
     const aadB = testKeyWrapAAD(channelB, recipient.publicKey);
 
-    const envelope = await wrapChannelKey(channelKey, recipient.publicKey, aadA);
+    const envelope = await wrapChannelKey(
+      channelKey,
+      recipient.publicKey,
+      aadA,
+    );
     await expect(
       unwrapChannelKey(envelope, recipient.secretKey, aadB),
     ).rejects.toThrow();
@@ -337,9 +360,17 @@ describe('encryptPayload / decryptPayload', () => {
     const channelA = '01HZXK5M8E3J6Q9P2RVTYWN4AB';
     const channelB = '01HZXK5M8E3J6Q9P2RVTYWN4AC';
 
-    const encrypted = await encryptPayload(key, plaintext, buildContextAAD(PURPOSE_MESSAGE, channelA, 1));
+    const encrypted = await encryptPayload(
+      key,
+      plaintext,
+      buildContextAAD(PURPOSE_MESSAGE, channelA, 1),
+    );
     await expect(
-      decryptPayload(key, encrypted, buildContextAAD(PURPOSE_MESSAGE, channelB, 1)),
+      decryptPayload(
+        key,
+        encrypted,
+        buildContextAAD(PURPOSE_MESSAGE, channelB, 1),
+      ),
     ).rejects.toThrow();
   });
 
@@ -347,7 +378,11 @@ describe('encryptPayload / decryptPayload', () => {
     const key = generateChannelKey();
     const plaintext = new TextEncoder().encode('secret');
 
-    const encrypted = await encryptPayload(key, plaintext, testMessageAAD(TEST_CHANNEL_ID, 1));
+    const encrypted = await encryptPayload(
+      key,
+      plaintext,
+      testMessageAAD(TEST_CHANNEL_ID, 1),
+    );
     await expect(
       decryptPayload(key, encrypted, testMessageAAD(TEST_CHANNEL_ID, 2)),
     ).rejects.toThrow();
@@ -446,7 +481,11 @@ describe('ephemeral key uniqueness', () => {
     const ephemeralKeys = new Set<string>();
 
     for (let i = 0; i < 50; i++) {
-      const envelope = await wrapChannelKey(channelKey, identity.publicKey, aad);
+      const envelope = await wrapChannelKey(
+        channelKey,
+        identity.publicKey,
+        aad,
+      );
       // Bytes 1-33 are the ephemeral public key (after version byte)
       const ephPub = Array.from(envelope.slice(1, 33), (b) =>
         b.toString(16).padStart(2, '0'),

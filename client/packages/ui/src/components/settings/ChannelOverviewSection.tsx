@@ -249,7 +249,9 @@ export function ChannelOverviewSection({
       <div className="flex items-center gap-3">
         <button
           type="button"
-          disabled={!isDirty || !nameValid || !topicValid || !cwValid || isSaving}
+          disabled={
+            !isDirty || !nameValid || !topicValid || !cwValid || isSaving
+          }
           onClick={handleSave}
           className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
