@@ -126,9 +126,8 @@ Wrap (sender → recipient):
   2. DH: shared = X25519(ephemeral_secret, recipient_x25519_pub)
      (recipient X25519 pub is derived from their Ed25519 pub)
   3. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||recipient_pub, info="meza-key-wrap-v1")
-  4. wrapped = AES-256-GCM(wrapping_key, channel_key)
-  5. wrapped = AES-256-GCM(wrapping_key, channel_key, aad=buildKeyWrapAAD(channelId, recipientEdPub))
-  6. envelope = version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48) = 93 bytes
+  4. wrapped = AES-256-GCM(wrapping_key, channel_key, aad=buildKeyWrapAAD(channelId, recipientEdPub))
+  5. envelope = version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48) = 93 bytes
      version byte = 0x02
 
 Unwrap (recipient):

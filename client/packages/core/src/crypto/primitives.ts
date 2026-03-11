@@ -137,6 +137,9 @@ export function rejectLowOrderPoint(pub: Uint8Array, label: string): void {
 
 const KEY_WRAP_INFO = new TextEncoder().encode('meza-key-wrap-v1');
 
+/** Envelope version byte indicating AAD-bound ECIES wrapping. */
+const ENVELOPE_VERSION = 0x02;
+
 /**
  * Wrap a channel key for a recipient using ECIES.
  *
@@ -198,7 +201,7 @@ export async function wrapChannelKey(
 
   // Pack envelope: [version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48)]
   const envelope = new Uint8Array(1 + 32 + 12 + wrapped.byteLength);
-  envelope[0] = 0x02;
+  envelope[0] = ENVELOPE_VERSION;
   envelope.set(ephemeral.publicKey, 1);
   envelope.set(nonce, 33);
   envelope.set(new Uint8Array(wrapped), 45);
@@ -219,9 +222,9 @@ export async function unwrapChannelKey(
       `Invalid envelope size: expected 93, got ${envelope.length}`,
     );
   }
-  if (envelope[0] !== 0x02) {
+  if (envelope[0] !== ENVELOPE_VERSION) {
     throw new Error(
-      `Invalid envelope version: expected 0x02, got 0x${envelope[0].toString(16).padStart(2, '0')}`,
+      `Invalid envelope version: expected 0x${ENVELOPE_VERSION.toString(16).padStart(2, '0')}, got 0x${envelope[0].toString(16).padStart(2, '0')}`,
     );
   }
 

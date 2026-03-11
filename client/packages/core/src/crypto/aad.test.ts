@@ -81,6 +81,14 @@ describe('buildContextAAD', () => {
     );
   });
 
+  it('rejects 26-char string with multi-byte UTF-8 characters (>26 bytes)', () => {
+    // 25 ASCII chars + 1 accented char (2 bytes in UTF-8) = 26 chars, 27 bytes
+    const multibyteId = '01HZXK5M8E3J6Q9P2RVTYWN4A\u00E9';
+    expect(() => buildContextAAD(PURPOSE_MESSAGE, multibyteId, 1)).toThrow(
+      'channelId must be 26 bytes',
+    );
+  });
+
   it('produces deterministic output', () => {
     const aad1 = buildContextAAD(PURPOSE_MESSAGE, TEST_CHANNEL_ID, 3);
     const aad2 = buildContextAAD(PURPOSE_MESSAGE, TEST_CHANNEL_ID, 3);

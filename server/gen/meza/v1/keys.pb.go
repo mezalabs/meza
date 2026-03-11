@@ -193,7 +193,7 @@ func (x *GetPublicKeysResponse) GetPublicKeys() map[string][]byte {
 type KeyEnvelope struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Envelope      []byte                 `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"` // 92 bytes: ephemeral_pub(32) || nonce(12) || wrapped_key(48)
+	Envelope      []byte                 `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"` // 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -429,7 +429,7 @@ func (x *GetKeyEnvelopesResponse) GetEnvelopes() []*VersionedKeyEnvelope {
 type VersionedKeyEnvelope struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	KeyVersion    uint32                 `protobuf:"varint,1,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"`
-	Envelope      []byte                 `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"` // 92 bytes
+	Envelope      []byte                 `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"` // 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

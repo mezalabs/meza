@@ -356,7 +356,7 @@ type FederationStorer interface {
 // KeyEnvelope represents a single ECIES-wrapped channel key for a user.
 type KeyEnvelope struct {
 	UserID   string
-	Envelope []byte // 92 bytes
+	Envelope []byte // 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
 }
 
 // VersionedEnvelope is a key envelope tagged with its version.
