@@ -107,7 +107,7 @@ func main() {
 	wsLimiter := ratelimit.New(10, 3)
 
 	mux := http.NewServeMux()
-	mux.Handle("/ws", wsLimiter.WrapFunc(gw.HandleWebSocket))
+	mux.Handle("/ws", wsLimiter.Wrap(http.HandlerFunc(gw.HandleWebSocket)))
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())
 
