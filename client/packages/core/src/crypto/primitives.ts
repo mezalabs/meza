@@ -194,7 +194,7 @@ export async function wrapChannelKey(
   // Encrypt channel key with AES-256-GCM + AAD
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const wrapped = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     wrappingKey,
     channelKey as BufferSource,
   );
@@ -265,7 +265,7 @@ export async function unwrapChannelKey(
 
   // Decrypt channel key with AAD
   const channelKey = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     wrappingKey,
     wrapped as BufferSource,
   );
@@ -291,7 +291,7 @@ async function channelKeyCacheKey(
   // Hash the key material so the cache key cannot be reversed to recover the
   // original key.  First 16 bytes (128-bit) of the SHA-256 digest is more than
   // sufficient for cache-key uniqueness while avoiding retaining raw key bytes.
-  const hash = await crypto.subtle.digest('SHA-256', rawKey);
+  const hash = await crypto.subtle.digest('SHA-256', rawKey as BufferSource);
   const hashArray = new Uint8Array(hash);
   let hex = '';
   for (let i = 0; i < 16; i++) {
@@ -340,7 +340,7 @@ export async function encryptPayload(
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const aesKey = await getAesKey(channelKey, 'encrypt');
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     aesKey,
     plaintext as BufferSource,
   );
@@ -372,7 +372,7 @@ export async function decryptPayload(
 
   const aesKey = await getAesKey(channelKey, 'decrypt');
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad as BufferSource },
     aesKey,
     ciphertext as BufferSource,
   );

@@ -1,4 +1,5 @@
 /// <reference path="../types/electron.d.ts" />
+/// <reference types="vite/client" />
 
 export function isElectron(): boolean {
   return typeof window !== 'undefined' && 'electronAPI' in window;
@@ -6,7 +7,7 @@ export function isElectron(): boolean {
 
 export function isCapacitor(): boolean {
   if (typeof window === 'undefined') return false;
-  const cap = (window as Record<string, unknown>).Capacitor;
+  const cap = (window as unknown as Record<string, unknown>).Capacitor;
   return (
     typeof cap === 'object' &&
     cap !== null &&

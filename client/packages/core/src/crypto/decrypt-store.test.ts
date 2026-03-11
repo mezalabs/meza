@@ -61,6 +61,7 @@ async function seedEncryptedMessage(
     height: 0,
     hasThumbnail: false,
     microThumbnail: new Uint8Array(),
+    isSpoiler: false,
     $typeName: 'meza.v1.Attachment' as const,
     $unknown: undefined,
   }));
@@ -217,6 +218,7 @@ describe('attachment metadata enrichment', () => {
       height: 0,
       hasThumbnail: false,
       microThumbnail: new Uint8Array(),
+      isSpoiler: false,
       $typeName: 'meza.v1.Attachment' as const,
       $unknown: undefined,
     };
@@ -265,6 +267,7 @@ describe('attachment metadata enrichment', () => {
       height: 0,
       hasThumbnail: false,
       microThumbnail: new Uint8Array(),
+      isSpoiler: false,
       $typeName: 'meza.v1.Attachment' as const,
       $unknown: undefined,
     };
