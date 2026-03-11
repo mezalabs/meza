@@ -99,7 +99,7 @@ describe('race: waiting for session ready before operations', () => {
     onSessionReady(() => {
       // At this point session is ready and identity is set
       // Create channel key synchronously (initChannelKeys was called by bootstrap)
-      createChannelKey('ch-ready');
+      createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
       resolvedInCallback = true;
     });
 
@@ -109,8 +109,8 @@ describe('race: waiting for session ready before operations', () => {
 
     // Verify the key is usable
     const fileKey = generateFileKey();
-    const envelope = await wrapFileKey('ch-ready', fileKey);
-    const unwrapResult = await unwrapFileKey('ch-ready', envelope);
+    const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
+    const unwrapResult = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
     expect(unwrapResult).toEqual(fileKey);
   });
 

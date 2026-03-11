@@ -67,7 +67,7 @@ async function provisionChannelKey(
   }
   if (memberPubKeys.size === 0) return;
 
-  const envelopes = await wrapKeyForMembers(key, memberPubKeys);
+  const envelopes = await wrapKeyForMembers(channelId, key, memberPubKeys);
   await storeKeyEnvelopes(channelId, version, envelopes);
 }
 

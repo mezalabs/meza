@@ -115,10 +115,10 @@ describe('encryptFile / decryptFile', () => {
 
 describe('wrapFileKey / unwrapFileKey', () => {
   it('round-trips a file key through channel key wrapping', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const fileKey = generateFileKey();
 
-    const envelope = await wrapFileKey('ch1', fileKey);
+    const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
     // envelope = keyVersion(4) + nonce(12) + ciphertext(32) + tag(16) = 64 bytes
     expect(envelope.length).toBe(64);
     // First 4 bytes are key version (big-endian), should be 1
@@ -129,39 +129,39 @@ describe('wrapFileKey / unwrapFileKey', () => {
     ).getUint32(0);
     expect(version).toBe(1);
 
-    const unwrapped = await unwrapFileKey('ch1', envelope);
+    const unwrapped = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
     expect(unwrapped).toEqual(fileKey);
   });
 
   it('throws when no channel key exists', async () => {
     const fileKey = generateFileKey();
-    await expect(wrapFileKey('unknown-ch', fileKey)).rejects.toThrow(
+    await expect(wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4ZZ', fileKey)).rejects.toThrow(
       'No channel key available',
     );
   });
 
   it('produces different wrapped keys for same file key (random nonce)', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const fileKey = generateFileKey();
 
-    const w1 = await wrapFileKey('ch1', fileKey);
-    const w2 = await wrapFileKey('ch1', fileKey);
+    const w1 = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
+    const w2 = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
     expect(w1).not.toEqual(w2);
   });
 
   it('fails unwrap with tampered key version', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const fileKey = generateFileKey();
 
-    const envelope = await wrapFileKey('ch1', fileKey);
+    const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
     // Tamper with the key version to a non-existent version
     const tampered = new Uint8Array(envelope);
     new DataView(tampered.buffer).setUint32(0, 999);
-    await expect(unwrapFileKey('ch1', tampered)).rejects.toThrow();
+    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', tampered)).rejects.toThrow();
   });
 
   it('throws for too-short encrypted key', async () => {
-    await expect(unwrapFileKey('ch1', new Uint8Array(3))).rejects.toThrow(
+    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', new Uint8Array(3))).rejects.toThrow(
       'Invalid encrypted key: too short',
     );
   });
@@ -169,15 +169,15 @@ describe('wrapFileKey / unwrapFileKey', () => {
 
 describe('unwrapFileKey before session ready', () => {
   it('unwrapFileKey fails when channel keys are not initialized', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
     const fileKey = generateFileKey();
-    const envelope = await wrapFileKey('ch1', fileKey);
+    const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
 
     // Clear all channel key state (simulating pre-bootstrap)
     clearChannelKeyCache();
 
     // unwrapFileKey needs to fetch the channel key, which fails without identity
-    await expect(unwrapFileKey('ch1', envelope)).rejects.toThrow(
+    await expect(unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope)).rejects.toThrow(
       'Channel keys not initialized',
     );
   });
@@ -185,7 +185,7 @@ describe('unwrapFileKey before session ready', () => {
 
 describe('full file encryption flow', () => {
   it('encrypt file + wrap key → unwrap key + decrypt file', async () => {
-    createChannelKey('ch1');
+    createChannelKey('01HZXK5M8E3J6Q9P2RVTYWN4AB');
 
     // Sender side
     const fileKey = generateFileKey();
@@ -193,10 +193,10 @@ describe('full file encryption flow', () => {
     crypto.getRandomValues(original);
 
     const encryptedFile = await encryptFile(fileKey, original);
-    const envelope = await wrapFileKey('ch1', fileKey);
+    const envelope = await wrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', fileKey);
 
     // Recipient side
-    const recoveredKey = await unwrapFileKey('ch1', envelope);
+    const recoveredKey = await unwrapFileKey('01HZXK5M8E3J6Q9P2RVTYWN4AB', envelope);
     const decryptedFile = await decryptFile(recoveredKey, encryptedFile);
 
     expect(decryptedFile).toEqual(original);

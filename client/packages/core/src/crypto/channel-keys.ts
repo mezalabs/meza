@@ -15,6 +15,7 @@ import {
   rotateChannelKeyRpc,
   storeKeyEnvelopes,
 } from '../api/keys.ts';
+import { buildKeyWrapAAD } from './aad.ts';
 import { aesGcmDecrypt, aesGcmEncrypt } from './keys.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import {
@@ -256,13 +257,14 @@ export function createChannelKey(channelId: string): {
  * Returns envelopes ready for upload via StoreKeyEnvelopes RPC.
  */
 export async function wrapKeyForMembers(
+  channelId: string,
   channelKey: Uint8Array,
   memberPublicKeys: Map<string, Uint8Array>,
 ): Promise<Array<{ userId: string; envelope: Uint8Array }>> {
   return Promise.all(
     [...memberPublicKeys.entries()].map(async ([userId, edPub]) => ({
       userId,
-      envelope: await wrapChannelKey(channelKey, edPub),
+      envelope: await wrapChannelKey(channelKey, edPub, buildKeyWrapAAD(channelId, edPub)),
     })),
   );
 }
@@ -291,7 +293,8 @@ async function doFetchAndCache(channelId: string): Promise<void> {
   if (envelopes.length === 0) return;
 
   for (const { keyVersion, envelope } of envelopes) {
-    const key = await unwrapChannelKey(envelope, identityKeypair.secretKey);
+    const aad = buildKeyWrapAAD(channelId, identityKeypair.publicKey);
+    const key = await unwrapChannelKey(envelope, identityKeypair.secretKey, aad);
     setCachedKey(channelId, keyVersion, key);
   }
   schedulePersist();
@@ -325,7 +328,8 @@ export async function distributeKeyToMember(
 
   const key = channelKeyCache.get(channelId)?.get(version);
   if (!key) return;
-  const envelope = await wrapChannelKey(key, memberEdPub);
+  const aad = buildKeyWrapAAD(channelId, memberEdPub);
+  const envelope = await wrapChannelKey(key, memberEdPub, aad);
   await storeKeyEnvelopes(channelId, version, [{ userId, envelope }]);
 }
 
@@ -369,7 +373,8 @@ async function doLazyInit(channelId: string, userId: string): Promise<boolean> {
 
   // No keys exist — create version 1 atomically
   const newKey = generateChannelKey();
-  const selfEnvelope = await wrapChannelKey(newKey, identityKeypair.publicKey);
+  const selfAad = buildKeyWrapAAD(channelId, identityKeypair.publicKey);
+  const selfEnvelope = await wrapChannelKey(newKey, identityKeypair.publicKey, selfAad);
 
   try {
     const newVersion = await rotateChannelKeyRpc(channelId, 0, [
@@ -425,7 +430,7 @@ async function distributeKeyToAllMembers(
       }
     }
     if (memberPubKeys.size > 0) {
-      const envelopes = await wrapKeyForMembers(key, memberPubKeys);
+      const envelopes = await wrapKeyForMembers(channelId, key, memberPubKeys);
       await storeKeyEnvelopes(channelId, version, envelopes);
     }
     cursor = page.nextCursor;
@@ -490,7 +495,7 @@ export async function rotateChannelKey(
 ): Promise<number> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const newKey = generateChannelKey();
-    const envelopes = await wrapKeyForMembers(newKey, remainingMembers);
+    const envelopes = await wrapKeyForMembers(channelId, newKey, remainingMembers);
 
     try {
       const newVersion = await rotateChannelKeyRpc(

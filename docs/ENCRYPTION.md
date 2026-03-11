@@ -127,17 +127,20 @@ Wrap (sender → recipient):
      (recipient X25519 pub is derived from their Ed25519 pub)
   3. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||recipient_pub, info="meza-key-wrap-v1")
   4. wrapped = AES-256-GCM(wrapping_key, channel_key)
-  5. envelope = ephemeral_pub(32) || nonce(12) || wrapped(48)  = 92 bytes
+  5. wrapped = AES-256-GCM(wrapping_key, channel_key, aad=buildKeyWrapAAD(channelId, recipientEdPub))
+  6. envelope = version(1) || ephemeral_pub(32) || nonce(12) || wrapped(48) = 93 bytes
+     version byte = 0x02
 
 Unwrap (recipient):
-  1. Parse envelope: ephemeral_pub, nonce, wrapped
-  2. Convert own Ed25519 secret → X25519 secret
-  3. DH: shared = X25519(own_x25519_secret, ephemeral_pub)
-  4. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||own_x25519_pub, info="meza-key-wrap-v1")
-  5. channel_key = AES-256-GCM-decrypt(wrapping_key, wrapped)
+  1. Parse envelope: version, ephemeral_pub, nonce, wrapped
+  2. Verify version == 0x02
+  3. Convert own Ed25519 secret → X25519 secret
+  4. DH: shared = X25519(own_x25519_secret, ephemeral_pub)
+  5. wrapping_key = HKDF-SHA256(shared, salt=ephemeral_pub||own_x25519_pub, info="meza-key-wrap-v1")
+  6. channel_key = AES-256-GCM-decrypt(wrapping_key, wrapped, aad=buildKeyWrapAAD(channelId, ownEdPub))
 ```
 
-Envelopes are stored server-side via the Key Service. The server only sees opaque 92-byte blobs — it cannot derive the wrapping key without the recipient's private key.
+Envelopes are stored server-side via the Key Service. The server only sees opaque 93-byte blobs — it cannot derive the wrapping key without the recipient's private key. The server validates envelope size (exactly 93 bytes) and version byte (`0x02`).
 
 ### Key Versioning
 
@@ -157,18 +160,20 @@ Messages use a **sign-then-encrypt** scheme. This is stateless — no ratchet st
 1. Get channel key + version for this channel
 2. Sign content with Ed25519 identity key → signature (64 bytes)
 3. Build payload: signature(64) || content
-4. Encrypt payload with AES-256-GCM using channel key
-5. Send: { key_version, encrypted_content: nonce(12) || ciphertext }
+4. Build AAD: buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion)
+5. Encrypt payload with AES-256-GCM using channel key + AAD
+6. Send: { key_version, encrypted_content: nonce(12) || ciphertext }
 ```
 
 ### Decrypt (recipient)
 
 ```
 1. Get channel key by version from cache (or fetch from server)
-2. Decrypt AES-256-GCM → payload
-3. Split: signature(64) || content
-4. Verify Ed25519 signature against sender's public key
-5. Return content (or throw on verification failure)
+2. Build AAD: buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion)
+3. Decrypt AES-256-GCM with AAD → payload
+4. Split: signature(64) || content
+5. Verify Ed25519 signature against sender's public key
+6. Return content (or throw on verification failure)
 ```
 
 ### Wire Format
@@ -180,6 +185,65 @@ Cleartext fields (visible to server):
 Encrypted content (opaque to server):
   nonce(12) || AES-256-GCM(channel_key, signature(64) || plaintext_content || auth_tag(16))
 ```
+
+---
+
+## AAD (Additional Authenticated Data) Specification
+
+All AES-256-GCM encryption of channel messages and key wrapping includes AAD that binds ciphertext to its context. This prevents ciphertext swapping attacks where a compromised server moves encrypted data between channels or key versions.
+
+### Encoding: Fixed-Width Binary
+
+Channel IDs are ULIDs (always 26 ASCII bytes). AAD uses fixed-width encoding with a purpose byte per RFC 5116:
+
+```
+AAD = purpose(1) || channelId_utf8(26) || context_field(variable)
+```
+
+### Purpose Bytes
+
+| Purpose | Byte | Context Field | Total Size |
+|---------|------|---------------|------------|
+| Message encryption | `0x01` | `keyVersion_u32be(4)` | 31 bytes |
+| ECIES key wrapping | `0x02` | `recipientEdPub(32)` | 59 bytes |
+| File key wrapping | `0x03` | `keyVersion_u32be(4)` | 31 bytes |
+
+Purpose bytes prevent cross-context confusion — a message ciphertext cannot be substituted for a file key ciphertext even if the same channel key and version are used.
+
+### AAD Scope
+
+| Call site | AAD | Notes |
+|-----------|-----|-------|
+| `encryptPayload` / `decryptPayload` | `buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion)` | Required for all message encryption |
+| `wrapChannelKey` / `unwrapChannelKey` | `buildKeyWrapAAD(channelId, recipientEdPub)` | Binds envelope to channel + recipient |
+| `wrapFileKey` / `unwrapFileKey` | `buildContextAAD(PURPOSE_FILE_KEY, channelId, keyVersion)` | Binds file key to channel |
+| `encryptFile` / `decryptFile` | None | Per-file key provides binding (unique random key) |
+| `aesGcmEncrypt` / `aesGcmDecrypt` | None | Local storage only (master key provides binding) |
+| Session, recovery, device transfer, invite encryption | None | HKDF domain separation or user-specific keys |
+
+### Test Vectors
+
+```
+channelId:  "01HZXK5M8E3J6Q9P2RVTYWN4AB"
+keyVersion: 3
+
+Message AAD (31 bytes, hex):
+  01 3031485a584b354d384533 4a365139503252565459 574e344142 00000003
+  ^  ^                                                      ^
+  |  channelId UTF-8 (26 bytes)                              keyVersion BE
+
+File Key AAD (31 bytes, hex):
+  03 3031485a584b354d384533 4a365139503252565459 574e344142 00000003
+  ^  (same channelId)                                        (same keyVersion)
+  purpose=FILE_KEY
+
+Key Wrap AAD (59 bytes, hex):
+  02 3031485a584b354d384533 4a365139503252565459 574e344142 000102...1f
+  ^  (channelId)                                             recipientEdPub (32 bytes)
+  purpose=KEY_WRAP
+```
+
+Source: `client/packages/core/src/crypto/aad.ts`
 
 ---
 
@@ -279,7 +343,7 @@ MLS-era stores (`provider-state`, `mls-groups`) are automatically deleted on upg
 ### Confidentiality
 - Messages are encrypted with AES-256-GCM using a shared channel key
 - Channel keys are ECIES-wrapped per-member — only the intended recipient can unwrap
-- The server sees only opaque ciphertext and 92-byte ECIES envelopes
+- The server sees only opaque ciphertext and 93-byte ECIES envelopes
 
 ### Authenticity
 - Every message is Ed25519-signed by the sender before encryption

@@ -13,6 +13,7 @@
  * Stateless and idempotent — no ratchet state, no process_message.
  */
 
+import { buildContextAAD, PURPOSE_MESSAGE } from './aad.ts';
 import { getChannelKey, getLatestKeyVersion } from './channel-keys.ts';
 import {
   decryptPayload,
@@ -172,8 +173,9 @@ export async function encryptMessage(
   payload.set(signature, 0);
   payload.set(content, SIGNATURE_SIZE);
 
-  // Encrypt payload
-  const data = await encryptPayload(channelKey, payload);
+  // Encrypt payload with AAD binding to channel + key version
+  const aad = buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion);
+  const data = await encryptPayload(channelKey, payload, aad);
 
   return { keyVersion, data };
 }
@@ -194,8 +196,9 @@ export async function decryptMessage(
 ): Promise<Uint8Array> {
   const channelKey = await getChannelKey(channelId, keyVersion);
 
-  // Decrypt payload
-  const payload = await decryptPayload(channelKey, data);
+  // Decrypt payload with AAD binding
+  const aad = buildContextAAD(PURPOSE_MESSAGE, channelId, keyVersion);
+  const payload = await decryptPayload(channelKey, data, aad);
 
   if (payload.length < SIGNATURE_SIZE) {
     throw new Error('Decrypted payload too short');

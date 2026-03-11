@@ -1,5 +1,6 @@
 -- Drop all tables in reverse FK dependency order.
 
+DROP TABLE IF EXISTS server_system_message_config;
 DROP TABLE IF EXISTS friendships;
 DROP TABLE IF EXISTS user_blocks;
 DROP TABLE IF EXISTS permission_overrides;
