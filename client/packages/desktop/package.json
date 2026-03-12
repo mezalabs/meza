@@ -17,9 +17,9 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package:mac": "pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --mac",
-    "package:win": "pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --win",
-    "package:linux": "pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --linux"
+    "package:mac": "DESKTOP_BUILD=1 pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --mac",
+    "package:win": "DESKTOP_BUILD=1 pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --win",
+    "package:linux": "DESKTOP_BUILD=1 pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --linux"
   },
   "dependencies": {
     "electron-store": "^11.0.2",

@@ -7,6 +7,7 @@ import { defineConfig } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const mobileDev = !!process.env.MOBILE_DEV;
+const desktopBuild = !!process.env.DESKTOP_BUILD;
 
 export default defineConfig(async () => {
   // Use Tailscale HTTPS cert for mobile dev so the WebView gets a secure
@@ -21,6 +22,8 @@ export default defineConfig(async () => {
   }
 
   return {
+    // Desktop (Electron) loads via file:// — assets must use relative paths.
+    base: desktopBuild ? './' : '/',
     plugins: [tailwindcss(), react()],
     resolve: {
       dedupe: ['@phosphor-icons/react', 'react', 'react-dom'],

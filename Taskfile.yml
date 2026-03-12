@@ -591,7 +591,7 @@ tasks:
     dir: client
     cmds:
       - pnpm install --frozen-lockfile
-      - pnpm --filter @meza/web... build
+      - DESKTOP_BUILD=1 pnpm --filter @meza/web... build
       - pnpm --filter @meza/desktop build
       - mkdir -p packages/desktop/out/renderer
       - cp -r packages/web/dist/* packages/desktop/out/renderer/
