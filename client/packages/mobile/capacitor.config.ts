@@ -1,6 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const devServer = process.env.CAPACITOR_DEV_SERVER;
+const debug = !!devServer || !!process.env.CAPACITOR_DEBUG;
 
 const config: CapacitorConfig = {
   appId: 'chat.meza.app',
@@ -37,10 +38,10 @@ const config: CapacitorConfig = {
         iosScheme: 'https',
       },
   android: {
-    webContentsDebuggingEnabled: !!devServer,
+    webContentsDebuggingEnabled: debug,
   },
   ios: {
-    webContentsDebuggingEnabled: !!devServer,
+    webContentsDebuggingEnabled: debug,
   },
 };
 
