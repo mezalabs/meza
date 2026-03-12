@@ -38,9 +38,7 @@ class MockBroadcastChannel {
       ) {
         const handler = instance.onmessage;
         // Use queueMicrotask to match real BroadcastChannel async delivery
-        queueMicrotask(() =>
-          handler(new MessageEvent('message', { data })),
-        );
+        queueMicrotask(() => handler(new MessageEvent('message', { data })));
       }
     }
   }
@@ -228,9 +226,7 @@ describe('cross-tab session key sharing via BroadcastChannel', () => {
       if (event.data?.type === 'session-key-request') {
         // Send a valid-looking but wrong base64 key
         const wrongKey = btoa(
-          String.fromCharCode(
-            ...crypto.getRandomValues(new Uint8Array(32)),
-          ),
+          String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))),
         );
         peerResponder.postMessage({
           type: 'session-key-response',

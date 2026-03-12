@@ -72,7 +72,9 @@ function isSessionSyncMessage(data: unknown): data is SessionSyncMessage {
       return true;
     case 'session-key-response':
     case 'session-key-update':
-      return 'key' in data && typeof (data as { key: unknown }).key === 'string';
+      return (
+        'key' in data && typeof (data as { key: unknown }).key === 'string'
+      );
     default:
       return false;
   }
@@ -113,7 +115,9 @@ function requestSessionKeyFromPeer(): Promise<string | null> {
         }
       };
 
-      ch.postMessage({ type: 'session-key-request' } satisfies SessionSyncMessage);
+      ch.postMessage({
+        type: 'session-key-request',
+      } satisfies SessionSyncMessage);
     });
   } catch {
     return Promise.resolve(null);

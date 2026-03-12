@@ -17,8 +17,8 @@ import {
   useInviteStore,
 } from '@meza/core';
 import { InviteLanding, LandingPage, Shell, TitleBar } from '@meza/ui';
-import { createRoot } from 'react-dom/client';
 import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
