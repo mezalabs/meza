@@ -227,6 +227,7 @@ export {
   lazyInitChannelKey,
   loadCachedChannelKeys,
   loadKeyBundle,
+  onCrossTabTeardown,
   onSessionReady,
   type ParsedMessageContent,
   parseMessageContent,

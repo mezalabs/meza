@@ -103,6 +103,7 @@ export {
   bootstrapSession,
   getIdentity,
   isSessionReady,
+  onCrossTabTeardown,
   onSessionReady,
   teardownSession,
 } from './session.ts';
