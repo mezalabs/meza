@@ -11,7 +11,7 @@ import {
   useChannelStore,
   VOICE_CHANNELS,
 } from '@meza/core';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelsStep } from './steps/ChannelsStep.tsx';
@@ -33,9 +33,13 @@ const STEP_LABELS = [
 ];
 
 export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
+  const displayName = useAuthStore((s) => s.user?.displayName);
+
   const [step, setStep] = useState(0);
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(
+    displayName ? `${displayName}'s Server` : '',
+  );
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [channels, setChannels] = useState<TemplateChannel[]>([]);
   const [roles, setRoles] = useState<TemplateRole[]>([]);
@@ -46,15 +50,6 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
   const [error, setError] = useState<string | null>(null);
   const [createdServer, setCreatedServer] = useState<Server | null>(null);
   const [createdInvite, setCreatedInvite] = useState<Invite | null>(null);
-
-  const displayName = useAuthStore((s) => s.user?.displayName);
-
-  // Pre-fill name with display name
-  useEffect(() => {
-    if (displayName && !name) {
-      setName(`${displayName}'s Server`);
-    }
-  }, [displayName, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTemplateSelect = useCallback(
     (template: ServerTemplate) => {
