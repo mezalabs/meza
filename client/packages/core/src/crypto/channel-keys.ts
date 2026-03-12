@@ -578,9 +578,7 @@ export async function prefetchChannelKeys(
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(concurrency, queue.length) }, () =>
-      worker(),
-    ),
+    Array.from({ length: Math.min(concurrency, queue.length) }, () => worker()),
   );
 }
 

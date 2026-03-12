@@ -153,7 +153,10 @@ app.whenReady().then(() => {
     }
     const filePath = path.join(rendererDir, pathname);
     // Prevent path traversal outside the renderer directory
-    if (!filePath.startsWith(rendererDir + path.sep) && filePath !== rendererDir) {
+    if (
+      !filePath.startsWith(rendererDir + path.sep) &&
+      filePath !== rendererDir
+    ) {
       return new Response('Forbidden', { status: 403 });
     }
     try {
@@ -181,8 +184,8 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeSendHeaders(
     serverFilter,
     (details, callback) => {
-      if (details.requestHeaders['Origin']?.startsWith('meza://')) {
-        details.requestHeaders['Origin'] = serverOrigin;
+      if (details.requestHeaders.Origin?.startsWith('meza://')) {
+        details.requestHeaders.Origin = serverOrigin;
       }
       callback({ requestHeaders: details.requestHeaders });
     },
