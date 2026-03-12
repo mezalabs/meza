@@ -25,10 +25,11 @@ import {
   fetchAndCacheChannelKeys,
   getCachedChannelIds,
   hasChannelKey,
+  prefetchChannelKeys,
   redistributeChannelKeys,
 } from '../crypto/channel-keys.ts';
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
-import { isSessionReady } from '../crypto/session.ts';
+import { isSessionReady, onSessionReady } from '../crypto/session.ts';
 import { indexIncomingMessage } from '../search/indexer.ts';
 import {
   removeSearchMessage,
@@ -476,6 +477,26 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
                 err,
               ),
             );
+          }
+        }
+        // Prefetch channel keys for all channels so switching is instant.
+        // Runs after session bootstrap completes (may already be ready).
+        if (
+          Array.isArray(readyData.channel_ids) &&
+          readyData.channel_ids.length > 0
+        ) {
+          const readyChannelIds = readyData.channel_ids;
+          const gen = generation;
+          const doPrefetch = () => {
+            if (gen !== generation) return; // stale READY after reconnect
+            prefetchChannelKeys(readyChannelIds).catch((err) =>
+              console.error('[E2EE] channel key prefetch failed:', err),
+            );
+          };
+          if (isSessionReady()) {
+            doPrefetch();
+          } else {
+            onSessionReady(doPrefetch);
           }
         }
         hasConnectedBefore = true;

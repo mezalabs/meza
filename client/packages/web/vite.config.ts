@@ -22,7 +22,7 @@ export default defineConfig(async () => {
   }
 
   return {
-    // Desktop (Electron) loads via file:// — assets must use relative paths.
+    // Desktop (Electron) loads via meza:// custom protocol — assets must use relative paths.
     base: desktopBuild ? './' : '/',
     plugins: [tailwindcss(), react()],
     resolve: {

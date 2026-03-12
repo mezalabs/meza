@@ -551,6 +551,40 @@ export function getCachedChannelIds(): string[] {
 }
 
 /**
+ * Prefetch channel keys for a list of channels in parallel.
+ * Skips channels that already have cached keys. Errors are logged
+ * but don't fail the batch — channels will lazy-fetch when opened.
+ *
+ * @param channelIds - Channel IDs to prefetch keys for
+ * @param concurrency - Max parallel fetch operations (default 5)
+ */
+export async function prefetchChannelKeys(
+  channelIds: string[],
+  concurrency = 5,
+): Promise<void> {
+  const queue = channelIds.filter((id) => !hasChannelKey(id));
+  if (queue.length === 0) return;
+
+  async function worker() {
+    while (queue.length > 0) {
+      const id = queue.shift();
+      if (!id) break;
+      try {
+        await fetchAndCacheChannelKeys(id);
+      } catch (err) {
+        console.warn(`[E2EE] prefetch key failed for ${id}:`, err);
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, queue.length) }, () =>
+      worker(),
+    ),
+  );
+}
+
+/**
  * Get cached channel keys for a set of channel IDs.
  * Returns a map of channelId → (version → base64-encoded key).
  * Used by invite key bundles to pre-share keys with joining members.

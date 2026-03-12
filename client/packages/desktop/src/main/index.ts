@@ -1,11 +1,10 @@
-import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   app,
   BrowserWindow,
   desktopCapturer,
   nativeImage,
-  net,
   protocol,
   screen,
   session,
@@ -123,15 +122,51 @@ app.on('before-quit', () => {
 
 app.whenReady().then(() => {
   // Serve bundled web files under meza:// so they have a proper origin.
+  // Uses direct fs.readFile instead of net.fetch(file://) to avoid the
+  // double network-stack hop (meza:// → file://) on every asset load.
   const rendererDir = path.join(import.meta.dirname, '../renderer');
-  protocol.handle('meza', (request) => {
+  const MIME_TYPES: Record<string, string> = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.webp': 'image/webp',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.wasm': 'application/wasm',
+    '.mp3': 'audio/mpeg',
+    '.ogg': 'audio/ogg',
+    '.wav': 'audio/wav',
+    '.avif': 'image/avif',
+  };
+  protocol.handle('meza', async (request) => {
     let { pathname } = new URL(request.url);
-    // Serve index.html for the root or any path without an extension (SPA routing)
     if (pathname === '/' || !path.extname(pathname)) {
       pathname = '/index.html';
     }
     const filePath = path.join(rendererDir, pathname);
-    return net.fetch(pathToFileURL(filePath).toString());
+    // Prevent path traversal outside the renderer directory
+    if (!filePath.startsWith(rendererDir + path.sep) && filePath !== rendererDir) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    try {
+      const buffer = await readFile(filePath);
+      const ext = path.extname(pathname).toLowerCase();
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+        },
+      });
+    } catch {
+      return new Response('Not Found', { status: 404 });
+    }
   });
 
   // Bridge the custom meza:// origin to the real server for CORS + WebSocket.
