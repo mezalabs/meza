@@ -723,6 +723,116 @@ func TestLoginNonexistentUsername(t *testing.T) {
 	}
 }
 
+func TestRegisterCaseInsensitiveUsername(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	req := makeRegisterRequest()
+	req.Username = "JohnDoe"
+	regResp, err := client.Register(context.Background(), connect.NewRequest(req))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+	if regResp.Msg.User.Username != "johndoe" {
+		t.Errorf("username = %q, want %q", regResp.Msg.User.Username, "johndoe")
+	}
+	if regResp.Msg.User.DisplayName != "JohnDoe" {
+		t.Errorf("display_name = %q, want %q", regResp.Msg.User.DisplayName, "JohnDoe")
+	}
+}
+
+func TestRegisterDuplicateUsernameCaseInsensitive(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	req := makeRegisterRequest()
+	req.Username = "JohnDoe"
+	_, err := client.Register(context.Background(), connect.NewRequest(req))
+	if err != nil {
+		t.Fatalf("first Register: %v", err)
+	}
+
+	req2 := makeRegisterRequest()
+	req2.Email = "other@example.com"
+	req2.Username = "johndoe"
+	_, err = client.Register(context.Background(), connect.NewRequest(req2))
+	if err == nil {
+		t.Fatal("expected error for case-insensitive duplicate username")
+	}
+	if connect.CodeOf(err) != connect.CodeAlreadyExists {
+		t.Errorf("code = %v, want AlreadyExists", connect.CodeOf(err))
+	}
+}
+
+func TestLoginCaseInsensitive(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	req := makeRegisterRequest()
+	req.Username = "testuser"
+	_, err := client.Register(context.Background(), connect.NewRequest(req))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// Login with uppercase variant of the username
+	loginResp, err := client.Login(context.Background(), connect.NewRequest(&v1.LoginRequest{
+		Identifier: "TestUser",
+		AuthKey:    []byte("my-auth-key"),
+	}))
+	if err != nil {
+		t.Fatalf("Login with different casing: %v", err)
+	}
+	if loginResp.Msg.AccessToken == "" {
+		t.Error("expected access token")
+	}
+}
+
+func TestGetSaltCaseInsensitive(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	_, err := client.Register(context.Background(), connect.NewRequest(makeRegisterRequest()))
+	if err != nil {
+		t.Fatalf("Register: %v", err)
+	}
+
+	// GetSalt with uppercase variant should return the same real salt
+	resp1, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "testuser",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt lowercase: %v", err)
+	}
+	resp2, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "TESTUSER",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt uppercase: %v", err)
+	}
+	if string(resp1.Msg.Salt) != string(resp2.Msg.Salt) {
+		t.Error("expected same salt for case-insensitive username lookup")
+	}
+}
+
+func TestGetSaltFakeSaltNormalized(t *testing.T) {
+	client, _ := setupTestServer(t)
+
+	// Unknown usernames with different casing should produce the same fake salt
+	// to prevent case-based enumeration.
+	resp1, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "UNKNOWN",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt UNKNOWN: %v", err)
+	}
+	resp2, err := client.GetSalt(context.Background(), connect.NewRequest(&v1.GetSaltRequest{
+		Identifier: "unknown",
+	}))
+	if err != nil {
+		t.Fatalf("GetSalt unknown: %v", err)
+	}
+	if string(resp1.Msg.Salt) != string(resp2.Msg.Salt) {
+		t.Error("expected same fake salt for case variants of unknown username")
+	}
+}
+
 func TestGetSaltNonexistentUsername(t *testing.T) {
 	client, _ := setupTestServer(t)
 
