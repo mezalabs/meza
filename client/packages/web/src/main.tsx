@@ -8,6 +8,9 @@ import {
   gatewayDisconnect,
   isCapacitor,
   isElectron,
+  isSessionReady,
+  onCrossTabTeardown,
+  onSessionReady,
   subscribeToPush,
   teardownSession,
   useAuthStore,
@@ -15,6 +18,7 @@ import {
 } from '@meza/core';
 import { InviteLanding, LandingPage, Shell, TitleBar } from '@meza/ui';
 import { createRoot } from 'react-dom/client';
+import { useEffect, useState } from 'react';
 import { navigateToChannel } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
@@ -48,10 +52,24 @@ if (inviteMatch) {
 // Connect/disconnect gateway based on auth state — outside React to avoid StrictMode double-mount.
 // Handle the case where the page reloads with an already-authenticated state from localStorage.
 const initialAuth = useAuthStore.getState();
-if (initialAuth.isAuthenticated && initialAuth.accessToken) {
-  gatewayConnect(initialAuth.accessToken);
-  // Bootstrap E2EE session from IndexedDB (async, non-blocking)
-  bootstrapSession();
+const { accessToken } = initialAuth;
+if (initialAuth.isAuthenticated && accessToken) {
+  // Bootstrap E2EE session before connecting the gateway. If sessionStorage
+  // is empty (new tab), bootstrapSession will request the session key from
+  // another open tab via BroadcastChannel. If no tab responds (all closed),
+  // bootstrap fails and we clear auth to force re-login — otherwise the
+  // chat UI renders but cannot decrypt any messages.
+  bootstrapSession()
+    .then((ok) => {
+      if (ok) {
+        gatewayConnect(accessToken);
+      } else if (useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().clearAuth();
+      }
+    })
+    .catch(() => {
+      useAuthStore.getState().clearAuth();
+    });
 }
 
 useAuthStore.subscribe((state, prevState) => {
@@ -65,6 +83,12 @@ useAuthStore.subscribe((state, prevState) => {
     gatewayDisconnect();
     teardownSession();
   }
+});
+
+// Cross-tab logout: when another tab tears down its session (logout),
+// clear auth locally so this tab also logs out.
+onCrossTabTeardown(() => {
+  useAuthStore.getState().clearAuth();
 });
 
 // Initialize Capacitor when running inside a native shell.
@@ -102,10 +126,20 @@ function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasPendingInvite = useInviteStore((s) => !!s.pendingCode);
 
+  // Wait for the E2EE session to be ready before rendering Shell.
+  // This prevents a brief flash of the chat UI that immediately vanishes
+  // when bootstrap fails (e.g. new tab with no peer to share session key).
+  const [sessionReady, setSessionReady] = useState(isSessionReady());
+  useEffect(() => {
+    if (sessionReady) return;
+    return onSessionReady(() => setSessionReady(true));
+  }, [sessionReady]);
+
   let content: React.ReactNode;
-  if (isAuthenticated) content = <Shell />;
+  if (isAuthenticated && sessionReady) content = <Shell />;
   else if (hasPendingInvite) content = <InviteLanding />;
-  else content = <LandingPage />;
+  else if (!isAuthenticated) content = <LandingPage />;
+  // else: authenticated but session not ready yet — show nothing (brief loading)
 
   return (
     <div className="flex h-dvh w-screen flex-col overflow-hidden">

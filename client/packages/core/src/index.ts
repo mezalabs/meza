@@ -225,6 +225,7 @@ export {
   initChannelKeys,
   isSessionReady,
   lazyInitChannelKey,
+  onCrossTabTeardown,
   loadCachedChannelKeys,
   loadKeyBundle,
   onSessionReady,

@@ -276,17 +276,34 @@ The Key Service runs on port 8088. Authorization uses `ViewChannel` permission (
 5. Session is ready — messages can be encrypted/decrypted
 ```
 
-The master key is cached in `localStorage` so users don't need to re-enter their password on page reload or app restart (including Capacitor mobile shells).
+The master key is never stored in plaintext. It is encrypted with a random 32-byte session key using AES-256-GCM. The encrypted blob lives in `localStorage` (persistent); the session wrapping key lives in `sessionStorage` (per-tab, cleared on tab close). This split means an XSS attacker must access both storage mechanisms to recover the master key.
+
+### Cross-tab session sharing
+
+When a new tab opens, `sessionStorage` is empty. The app uses the **BroadcastChannel API** (same-origin) to request the session key from another open tab:
+
+1. New tab opens, finds no session key in `sessionStorage`
+2. Sends `session-key-request` on `meza-session-sync` BroadcastChannel
+3. An existing tab responds with the session key
+4. New tab stores the key in `sessionStorage` and decrypts the master key
+5. If no tab responds within 1 second, bootstrap fails and the user must re-login
+
+**Security note:** BroadcastChannel is same-origin, so only scripts running on the app's origin can participate. An XSS attacker on the same origin could request the session key via BroadcastChannel (rather than reading `sessionStorage` directly), which is an equivalent attack vector. The dual-storage split primarily limits the exposure window: when all tabs are closed, `sessionStorage` is wiped, and the session key is not recoverable without re-entering the password.
+
+When the master key wrapping key is rotated (e.g. password change), a `session-key-update` message is broadcast so all tabs update their `sessionStorage`.
 
 ### Teardown (logout)
 
 ```
-1. Flush pending channel key persistence to IndexedDB
-2. Clear channel key cache (memory)
-3. Clear master key from localStorage
-4. Clear all IndexedDB crypto state (key bundles + channel key cache)
-5. Clear identity reference
+1. Broadcast session-teardown to all other tabs (triggers their logout)
+2. Flush pending channel key persistence to IndexedDB
+3. Clear channel key cache (memory)
+4. Clear master key from localStorage + session key from sessionStorage
+5. Clear all IndexedDB crypto state (key bundles + channel key cache)
+6. Clear identity reference
 ```
+
+When any tab logs out, it broadcasts a `session-teardown` message. All other tabs tear down their sessions and clear auth state, ensuring logout is synchronized across tabs.
 
 ---
 

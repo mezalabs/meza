@@ -13,8 +13,17 @@
  * key held in sessionStorage encrypts (AES-256-GCM) the master key before
  * it is persisted to localStorage. An XSS attacker must access both storage
  * mechanisms to recover the master key; sessionStorage is cleared on tab
- * close, limiting the exposure window. If the session key is missing (new
- * tab / tab closed), the user must re-authenticate.
+ * close, limiting the exposure window.
+ *
+ * Cross-tab support: when a new tab opens (sessionStorage is empty), we use
+ * the BroadcastChannel API to request the session key from an existing tab.
+ * If another tab responds, the new tab can decrypt the master key without
+ * requiring re-authentication. If all tabs are closed (no responder), the
+ * user must re-authenticate on next visit. Note: this means an XSS attacker
+ * in one tab can obtain the session key via BroadcastChannel from another
+ * tab without directly reading sessionStorage. The same-origin restriction
+ * of BroadcastChannel limits this to scripts already running on the app's
+ * origin, which could also read sessionStorage directly.
  */
 
 import {
@@ -37,6 +46,195 @@ const readyListeners: Array<() => void> = [];
 const MK_STORAGE_KEY = 'meza-mk';
 /** sessionStorage key for the ephemeral session wrapping key. */
 const SK_SESSION_KEY = 'meza-sk';
+/** BroadcastChannel name for cross-tab session key sharing. */
+const SESSION_SYNC_CHANNEL = 'meza-session-sync';
+/** How long a new tab waits for a session key response from another tab. */
+const SESSION_KEY_REQUEST_TIMEOUT_MS = 1_000;
+
+// ---------------------------------------------------------------------------
+// Cross-tab session sync message types
+// ---------------------------------------------------------------------------
+
+/** Messages exchanged between tabs via BroadcastChannel. */
+type SessionSyncMessage =
+  | { type: 'session-key-request' }
+  | { type: 'session-key-response'; key: string }
+  | { type: 'session-key-update'; key: string }
+  | { type: 'session-teardown' };
+
+function isSessionSyncMessage(data: unknown): data is SessionSyncMessage {
+  if (typeof data !== 'object' || data === null || !('type' in data))
+    return false;
+  const msg = data as { type: string };
+  switch (msg.type) {
+    case 'session-key-request':
+    case 'session-teardown':
+      return true;
+    case 'session-key-response':
+    case 'session-key-update':
+      return 'key' in data && typeof (data as { key: unknown }).key === 'string';
+    default:
+      return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-tab session key sharing via BroadcastChannel
+// ---------------------------------------------------------------------------
+
+/** Active BroadcastChannel for responding to session key requests. */
+let syncChannel: BroadcastChannel | null = null;
+
+/**
+ * Request the session key from another open tab. Returns the base64-encoded
+ * session key if a tab responds within the timeout, or null otherwise.
+ */
+function requestSessionKeyFromPeer(): Promise<string | null> {
+  if (typeof BroadcastChannel === 'undefined') return Promise.resolve(null);
+
+  try {
+    const ch = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        ch.onmessage = null;
+        ch.close();
+        resolve(null);
+      }, SESSION_KEY_REQUEST_TIMEOUT_MS);
+
+      ch.onmessage = (event: MessageEvent) => {
+        if (
+          isSessionSyncMessage(event.data) &&
+          event.data.type === 'session-key-response'
+        ) {
+          clearTimeout(timer);
+          ch.onmessage = null;
+          ch.close();
+          resolve(event.data.key);
+        }
+      };
+
+      ch.postMessage({ type: 'session-key-request' } satisfies SessionSyncMessage);
+    });
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+
+/**
+ * Start listening for session key requests from new tabs. Called after a
+ * successful bootstrap so this tab can share its session key with peers.
+ *
+ * Also handles:
+ * - `session-key-update`: another tab rotated the master key wrapping key
+ *   (e.g. password change). Update this tab's sessionStorage so reloads
+ *   can still decrypt the master key blob in localStorage.
+ * - `session-teardown`: another tab logged out. Tear down the local session
+ *   and notify the `onSessionTeardown` callback so the app can clear auth.
+ */
+function startSessionKeyResponder(): void {
+  if (typeof BroadcastChannel === 'undefined') return;
+  if (syncChannel) return;
+
+  try {
+    syncChannel = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+  } catch {
+    return;
+  }
+
+  syncChannel.onmessage = (event: MessageEvent) => {
+    if (!isSessionSyncMessage(event.data)) return;
+
+    switch (event.data.type) {
+      case 'session-key-request': {
+        const ss = ephemeralStorage();
+        const sk = ss?.getItem(SK_SESSION_KEY);
+        if (sk) {
+          syncChannel?.postMessage({
+            type: 'session-key-response',
+            key: sk,
+          } satisfies SessionSyncMessage);
+        }
+        break;
+      }
+
+      case 'session-key-update': {
+        // Another tab rotated the session wrapping key — update ours so
+        // page reloads can still decrypt the master key from localStorage.
+        const ss = ephemeralStorage();
+        if (ss) ss.setItem(SK_SESSION_KEY, event.data.key);
+        break;
+      }
+
+      case 'session-teardown': {
+        // Another tab logged out — tear down our session too.
+        // Pass broadcast=false to avoid re-broadcasting back.
+        teardownSession(false).then(() => {
+          for (const cb of teardownListeners) cb();
+        });
+        break;
+      }
+    }
+  };
+}
+
+/** Stop the session key responder (on teardown). */
+function stopSessionKeyResponder(): void {
+  if (syncChannel) {
+    syncChannel.close();
+    syncChannel = null;
+  }
+}
+
+/**
+ * Broadcast a session-key-update to all other tabs so they update their
+ * sessionStorage with the new wrapping key after master key re-encryption.
+ */
+function broadcastSessionKeyUpdate(sessionKeyBase64: string): void {
+  if (typeof BroadcastChannel === 'undefined') return;
+  try {
+    const ch = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+    ch.postMessage({
+      type: 'session-key-update',
+      key: sessionKeyBase64,
+    } satisfies SessionSyncMessage);
+    ch.close();
+  } catch {
+    // Best-effort — BroadcastChannel may not be available
+  }
+}
+
+/**
+ * Broadcast a session-teardown to all other tabs so they log out too.
+ */
+function broadcastSessionTeardown(): void {
+  if (typeof BroadcastChannel === 'undefined') return;
+  try {
+    const ch = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+    ch.postMessage({ type: 'session-teardown' } satisfies SessionSyncMessage);
+    ch.close();
+  } catch {
+    // Best-effort
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-tab teardown notification
+// ---------------------------------------------------------------------------
+
+const teardownListeners: Array<() => void> = [];
+
+/**
+ * Register a callback that fires when another tab broadcasts a session
+ * teardown (logout). The app should call `clearAuth()` in response.
+ * Returns an unsubscribe function.
+ */
+export function onCrossTabTeardown(cb: () => void): () => void {
+  teardownListeners.push(cb);
+  return () => {
+    const idx = teardownListeners.indexOf(cb);
+    if (idx >= 0) teardownListeners.splice(idx, 1);
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers: storage accessors
@@ -111,14 +309,20 @@ async function storeMasterKey(key: Uint8Array): Promise<void> {
   blob.set(iv, 0);
   blob.set(ciphertext, 12);
 
-  ss.setItem(SK_SESSION_KEY, toBase64(sessionKey));
+  const sessionKeyBase64 = toBase64(sessionKey);
+  ss.setItem(SK_SESSION_KEY, sessionKeyBase64);
   ls.setItem(MK_STORAGE_KEY, toBase64(blob));
+
+  // Notify other tabs so they update their sessionStorage with the new key
+  broadcastSessionKeyUpdate(sessionKeyBase64);
 }
 
 /**
  * Decrypt the master key from localStorage using the session key in
- * sessionStorage. Returns `null` if either piece is missing (e.g. new tab
- * or cleared session), which forces re-authentication.
+ * sessionStorage. If sessionStorage is empty (new tab), attempts to
+ * request the session key from another open tab via BroadcastChannel.
+ * Returns `null` if no session key is available, which forces
+ * re-authentication.
  */
 async function loadMasterKey(): Promise<Uint8Array | null> {
   const ls = persistentStorage();
@@ -126,8 +330,16 @@ async function loadMasterKey(): Promise<Uint8Array | null> {
   if (!ls || !ss) return null;
 
   const storedBlob = ls.getItem(MK_STORAGE_KEY);
-  const storedSk = ss.getItem(SK_SESSION_KEY);
-  if (!storedBlob || !storedSk) return null;
+  if (!storedBlob) return null;
+
+  let storedSk = ss.getItem(SK_SESSION_KEY);
+
+  // New tab: sessionStorage is empty. Ask another open tab for the session key.
+  if (!storedSk) {
+    const peerKey = await requestSessionKeyFromPeer();
+    if (!peerKey) return null;
+    storedSk = peerKey;
+  }
 
   try {
     const blob = fromBase64(storedBlob);
@@ -152,6 +364,10 @@ async function loadMasterKey(): Promise<Uint8Array | null> {
       cryptoKey,
       ciphertext as BufferSource,
     );
+
+    // Only persist the session key after successful decryption — prevents
+    // a poisoned BroadcastChannel response from causing persistent failures.
+    ss.setItem(SK_SESSION_KEY, storedSk);
 
     return new Uint8Array(plaintext);
   } catch {
@@ -214,6 +430,9 @@ async function doBootstrap(masterKey?: Uint8Array): Promise<boolean> {
 
   sessionReady = true;
 
+  // Start responding to session key requests from new tabs
+  startSessionKeyResponder();
+
   // Notify any hooks waiting for the session to become ready
   for (const cb of readyListeners) cb();
   readyListeners.length = 0;
@@ -223,8 +442,16 @@ async function doBootstrap(masterKey?: Uint8Array): Promise<boolean> {
 
 /**
  * Tear down the E2EE session (on logout).
+ *
+ * @param broadcast - If true (default), notify other tabs to tear down too.
+ *   Set to false when responding to a cross-tab teardown to avoid loops.
  */
-export async function teardownSession(): Promise<void> {
+export async function teardownSession(broadcast = true): Promise<void> {
+  // Only broadcast if we have an active session — prevents re-broadcasting
+  // when the auth store subscription triggers a second teardown after
+  // a cross-tab teardown callback calls clearAuth().
+  if (broadcast && sessionReady) broadcastSessionTeardown();
+
   // Flush any pending channel key persistence
   try {
     await flushChannelKeys();
@@ -241,6 +468,7 @@ export async function teardownSession(): Promise<void> {
   clearChannelKeyCache();
   clearAesKeyCache();
   clearMasterKey();
+  stopSessionKeyResponder();
   // Wipe IndexedDB crypto state (encrypted bundles + channel key cache)
   try {
     await clearCryptoStorage();
