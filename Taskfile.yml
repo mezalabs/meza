@@ -591,10 +591,17 @@ tasks:
     dir: client
     cmds:
       - pnpm install --frozen-lockfile
-      - pnpm --filter @meza/web... build
+      - DESKTOP_BUILD=1 pnpm --filter @meza/web... build
+      - pnpm --filter @meza/desktop build
       - mkdir -p packages/desktop/out/renderer
       - cp -r packages/web/dist/* packages/desktop/out/renderer/
-      - pnpm --filter @meza/desktop build
+      - |
+        if [ ! -f packages/desktop/out/renderer/index.html ]; then
+          echo "ERROR: Web build not found in renderer directory"; exit 1
+        fi
+        if ! grep -q '<script' packages/desktop/out/renderer/index.html; then
+          echo "ERROR: renderer/index.html appears to be the empty stub, not the web app"; exit 1
+        fi
 
   release:desktop:
     desc: "Bump desktop version, commit, and tag (usage: task release:desktop -- 0.2.0)"

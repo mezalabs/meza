@@ -1,9 +1,11 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   app,
   BrowserWindow,
   desktopCapturer,
   nativeImage,
+  protocol,
   screen,
   session,
 } from 'electron';
@@ -17,11 +19,28 @@ import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
 
+const DEFAULT_SERVER_URL = 'https://meza.chat';
+
 // On Linux, enable PipeWire-based screen capture so getDisplayMedia() goes
 // through xdg-desktop-portal natively (single dialog, no desktopCapturer).
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
 }
+
+// Register a custom scheme that behaves like https:// so bundled web files
+// get a proper origin, secure context, and working fetch/WebSocket/crypto.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'meza',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+    },
+  },
+]);
 
 // Single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -63,14 +82,15 @@ function createWindow(): BrowserWindow {
     win.maximize();
   }
 
-  // Dev: load from Vite dev server. Prod: load embedded web build.
+  // Dev: load from Vite dev server.
+  // Prod: load bundled web files via meza:// custom protocol (or server URL override).
   const serverUrl = store.get('settings').serverUrl;
   if (!app.isPackaged) {
     win.loadURL(serverUrl || 'http://localhost:4080');
   } else if (serverUrl) {
     win.loadURL(serverUrl);
   } else {
-    win.loadFile(path.join(import.meta.dirname, '../renderer/index.html'));
+    win.loadURL('meza://app/index.html');
   }
 
   // Show window once content is loaded to avoid white flash
@@ -101,6 +121,85 @@ app.on('before-quit', () => {
 });
 
 app.whenReady().then(() => {
+  // Serve bundled web files under meza:// so they have a proper origin.
+  // Uses direct fs.readFile instead of net.fetch(file://) to avoid the
+  // double network-stack hop (meza:// → file://) on every asset load.
+  const rendererDir = path.join(import.meta.dirname, '../renderer');
+  const MIME_TYPES: Record<string, string> = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript',
+    '.css': 'text/css',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+    '.webp': 'image/webp',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2',
+    '.ttf': 'font/ttf',
+    '.wasm': 'application/wasm',
+    '.mp3': 'audio/mpeg',
+    '.ogg': 'audio/ogg',
+    '.wav': 'audio/wav',
+    '.avif': 'image/avif',
+  };
+  protocol.handle('meza', async (request) => {
+    let { pathname } = new URL(request.url);
+    if (pathname === '/' || !path.extname(pathname)) {
+      pathname = '/index.html';
+    }
+    const filePath = path.join(rendererDir, pathname);
+    // Prevent path traversal outside the renderer directory
+    if (
+      !filePath.startsWith(rendererDir + path.sep) &&
+      filePath !== rendererDir
+    ) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    try {
+      const buffer = await readFile(filePath);
+      const ext = path.extname(pathname).toLowerCase();
+      return new Response(buffer, {
+        headers: {
+          'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+        },
+      });
+    } catch {
+      return new Response('Not Found', { status: 404 });
+    }
+  });
+
+  // Bridge the custom meza:// origin to the real server for CORS + WebSocket.
+  // URL filters ensure these callbacks ONLY fire for server requests, not local assets.
+  const serverUrl = store.get('settings').serverUrl || DEFAULT_SERVER_URL;
+  const serverOrigin = new URL(serverUrl).origin;
+  const serverHost = new URL(serverUrl).host;
+  const serverFilter = {
+    urls: [`https://${serverHost}/*`, `wss://${serverHost}/*`],
+  };
+
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    serverFilter,
+    (details, callback) => {
+      if (details.requestHeaders.Origin?.startsWith('meza://')) {
+        details.requestHeaders.Origin = serverOrigin;
+      }
+      callback({ requestHeaders: details.requestHeaders });
+    },
+  );
+
+  session.defaultSession.webRequest.onHeadersReceived(
+    serverFilter,
+    (details, callback) => {
+      const headers = details.responseHeaders ?? {};
+      headers['Access-Control-Allow-Origin'] = ['meza://app'];
+      callback({ responseHeaders: headers });
+    },
+  );
+
   // Enable navigator.mediaDevices.getDisplayMedia() in the renderer.
   // Without setDisplayMediaRequestHandler, getDisplayMedia is blocked entirely.
   if (process.platform === 'linux') {

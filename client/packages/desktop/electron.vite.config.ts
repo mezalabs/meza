@@ -19,8 +19,12 @@ export default defineConfig({
       },
     },
   },
-  // Renderer is intentionally empty — @meza/web's pre-built output is copied
-  // into out/renderer/ before packaging. Do NOT add input config here or it
-  // will clobber the renderer directory.
-  renderer: {},
+  // Renderer is intentionally minimal — @meza/web's pre-built output is copied
+  // into out/renderer/ after this build. emptyOutDir is disabled to prevent
+  // electron-vite from wiping the renderer directory if build ordering changes.
+  renderer: {
+    build: {
+      emptyOutDir: false,
+    },
+  },
 });

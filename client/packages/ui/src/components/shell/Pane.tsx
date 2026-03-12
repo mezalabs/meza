@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import type { DropPosition } from '@meza/core';
-import { useAuthStore } from '@meza/core';
+import { getBaseUrl, useAuthStore } from '@meza/core';
 import {
   ChatIcon,
   GearIcon,
@@ -57,8 +57,9 @@ export function Pane({
   const [iconHovered, setIconHovered] = useState(false);
   const token = useAuthStore((s) => s.accessToken);
   const authQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+  const base = getBaseUrl();
   const iconSrc = serverIconUrl
-    ? `${serverIconUrl}${iconHovered ? '' : '/thumb'}${authQuery}`
+    ? `${base}${serverIconUrl}${iconHovered ? '' : '/thumb'}${authQuery}`
     : undefined;
 
   const {

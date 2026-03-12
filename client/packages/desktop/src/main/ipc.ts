@@ -48,6 +48,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('app:getVersion', () => app.getVersion());
 
   // --- Settings ---
+  ipcMain.on('settings:getServerUrlSync', (event) => {
+    event.returnValue = store.get('settings.serverUrl');
+  });
+
   ipcMain.handle('settings:getServerUrl', () =>
     store.get('settings.serverUrl'),
   );

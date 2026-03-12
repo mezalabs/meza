@@ -92,6 +92,12 @@ jobs:
       - name: Build web app
         working-directory: client
         run: pnpm --filter @meza/web build
+        env:
+          DESKTOP_BUILD: '1'
+
+      - name: Build desktop (main + preload)
+        working-directory: client/packages/desktop
+        run: pnpm run build
 
       - name: Copy web build to desktop renderer
         shell: bash
@@ -106,10 +112,10 @@ jobs:
             echo "::error::Web build was not copied to renderer directory"
             exit 1
           fi
-
-      - name: Build desktop (main + preload)
-        working-directory: client/packages/desktop
-        run: pnpm run build
+          if ! grep -q '<script' client/packages/desktop/out/renderer/index.html; then
+            echo "::error::renderer/index.html has no scripts — likely the empty stub, not the web app"
+            exit 1
+          fi
 
       - name: Package desktop app
         working-directory: client/packages/desktop
