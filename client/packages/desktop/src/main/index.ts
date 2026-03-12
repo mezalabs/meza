@@ -173,20 +173,29 @@ app.whenReady().then(() => {
   // URL filters ensure these callbacks ONLY fire for server requests, not local assets.
   const serverUrl = store.get('settings').serverUrl || DEFAULT_SERVER_URL;
   const serverOrigin = new URL(serverUrl).origin;
-  const serverFilter = { urls: [`https://${new URL(serverUrl).host}/*`, `wss://${new URL(serverUrl).host}/*`] };
+  const serverHost = new URL(serverUrl).host;
+  const serverFilter = {
+    urls: [`https://${serverHost}/*`, `wss://${serverHost}/*`],
+  };
 
-  session.defaultSession.webRequest.onBeforeSendHeaders(serverFilter, (details, callback) => {
-    if (details.requestHeaders['Origin']?.startsWith('meza://')) {
-      details.requestHeaders['Origin'] = serverOrigin;
-    }
-    callback({ requestHeaders: details.requestHeaders });
-  });
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    serverFilter,
+    (details, callback) => {
+      if (details.requestHeaders['Origin']?.startsWith('meza://')) {
+        details.requestHeaders['Origin'] = serverOrigin;
+      }
+      callback({ requestHeaders: details.requestHeaders });
+    },
+  );
 
-  session.defaultSession.webRequest.onHeadersReceived(serverFilter, (details, callback) => {
-    const headers = details.responseHeaders ?? {};
-    headers['Access-Control-Allow-Origin'] = ['meza://app'];
-    callback({ responseHeaders: headers });
-  });
+  session.defaultSession.webRequest.onHeadersReceived(
+    serverFilter,
+    (details, callback) => {
+      const headers = details.responseHeaders ?? {};
+      headers['Access-Control-Allow-Origin'] = ['meza://app'];
+      callback({ responseHeaders: headers });
+    },
+  );
 
   // Enable navigator.mediaDevices.getDisplayMedia() in the renderer.
   // Without setDisplayMediaRequestHandler, getDisplayMedia is blocked entirely.
