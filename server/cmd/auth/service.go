@@ -123,7 +123,7 @@ func (s *authService) Register(ctx context.Context, req *connect.Request[v1.Regi
 	user := &models.User{
 		ID:          userID,
 		Email:       r.Email,
-		Username:    r.Username,
+		Username:    strings.ToLower(r.Username),
 		DisplayName: r.Username,
 		CreatedAt:   now,
 	}
@@ -192,7 +192,7 @@ func (s *authService) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 	if isEmail(r.Identifier) {
 		user, authData, err = s.store.GetUserByEmail(ctx, r.Identifier)
 	} else {
-		user, authData, err = s.store.GetUserByUsername(ctx, r.Identifier)
+		user, authData, err = s.store.GetUserByUsername(ctx, strings.ToLower(r.Identifier))
 	}
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid credentials"))
@@ -274,18 +274,23 @@ func (s *authService) GetSalt(ctx context.Context, req *connect.Request[v1.GetSa
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier is required"))
 	}
 
+	identifier := req.Msg.Identifier
+	if !isEmail(identifier) {
+		identifier = strings.ToLower(identifier)
+	}
+
 	var salt []byte
 	var err error
-	if isEmail(req.Msg.Identifier) {
-		salt, err = s.store.GetSalt(ctx, req.Msg.Identifier)
+	if isEmail(identifier) {
+		salt, err = s.store.GetSalt(ctx, identifier)
 	} else {
-		salt, err = s.store.GetSaltByUsername(ctx, req.Msg.Identifier)
+		salt, err = s.store.GetSaltByUsername(ctx, identifier)
 	}
 	if err != nil {
 		// Return a deterministic fake salt for unknown identifiers to prevent
 		// enumeration. The client will derive the wrong key and login will
 		// fail with "invalid credentials" — indistinguishable from a wrong password.
-		salt = deriveFakeSalt(s.hmacSecret, req.Msg.Identifier)
+		salt = deriveFakeSalt(s.hmacSecret, identifier)
 	}
 
 	return connect.NewResponse(&v1.GetSaltResponse{Salt: salt}), nil
