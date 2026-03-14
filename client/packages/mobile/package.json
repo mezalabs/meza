@@ -21,7 +21,7 @@
     "@capacitor/keyboard": "^7.0.4",
     "@capacitor/push-notifications": "^7",
     "@capacitor/splash-screen": "^7",
-    "@capacitor/status-bar": "^7"
+    "@capacitor/status-bar": "^8"
   },
   "devDependencies": {
     "@capacitor/android": "^7",

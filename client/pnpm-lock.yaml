@@ -138,8 +138,8 @@ importers:
         specifier: ^7
         version: 7.0.5(@capacitor/core@7.5.0)
       '@capacitor/status-bar':
-        specifier: ^7
-        version: 7.0.5(@capacitor/core@7.5.0)
+        specifier: ^8
+        version: 8.0.1(@capacitor/core@7.5.0)
     devDependencies:
       '@capacitor/android':
         specifier: ^7
@@ -269,8 +269,8 @@ importers:
         specifier: ^7
         version: 7.0.5(@capacitor/core@7.5.0)
       '@capacitor/status-bar':
-        specifier: ^7.0.5
-        version: 7.0.5(@capacitor/core@7.5.0)
+        specifier: ^8.0.1
+        version: 8.0.1(@capacitor/core@7.5.0)
       '@meza/core':
         specifier: workspace:^
         version: link:../core
@@ -510,10 +510,10 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capacitor/status-bar@7.0.5':
-    resolution: {integrity: sha512-d0DI/Usy4RrNiV5xfnypXNRLmWYMixC2yAUAwe6sCQQ0HF7oskDf4RpCxcZqbxnpc4H4A0qqiOSltfJLFAYshg==}
+  '@capacitor/status-bar@8.0.1':
+    resolution: {integrity: sha512-OR59dlbwvmrV5dKsC9lvwv48QaGbqcbSTBpk+9/WXWxXYSdXXdzJZU9p8oyNPAkuJhCdnSa3XmU43fZRPBJJ5w==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
 
   '@connectrpc/connect-web@2.1.1':
     resolution: {integrity: sha512-J8317Q2MaFRCT1jzVR1o06bZhDIBmU0UAzWx6xOIXzOq8+k71/+k7MUF7AwcBUX+34WIvbm5syRgC5HXQA8fOg==}
@@ -4123,7 +4123,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.5.0
 
-  '@capacitor/status-bar@7.0.5(@capacitor/core@7.5.0)':
+  '@capacitor/status-bar@8.0.1(@capacitor/core@7.5.0)':
     dependencies:
       '@capacitor/core': 7.5.0
 

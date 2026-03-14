@@ -13,7 +13,7 @@
     "@capacitor/app": "^7",
     "@capacitor/core": "^7",
     "@capacitor/push-notifications": "^7",
-    "@capacitor/status-bar": "^7.0.5",
+    "@capacitor/status-bar": "^8.0.1",
     "@meza/core": "workspace:^",
     "@meza/ui": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
