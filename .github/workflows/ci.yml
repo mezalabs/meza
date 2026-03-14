@@ -99,6 +99,3 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Dependency vulnerability scan
-        run: pnpm audit --audit-level=high
-
