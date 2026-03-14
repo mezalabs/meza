@@ -26,6 +26,7 @@
  * origin, which could also read sessionStorage directly.
  */
 
+import { isCapacitor, isElectron } from '../utils/platform.ts';
 import {
   clearChannelKeyCache,
   flushChannelKeys,
@@ -36,7 +37,6 @@ import { restoreIdentity } from './credentials.ts';
 import type { IdentityKeypair } from './primitives.ts';
 import { clearAesKeyCache } from './primitives.ts';
 import { clearCryptoStorage } from './storage.ts';
-import { isCapacitor, isElectron } from '../utils/platform.ts';
 
 let sessionReady = false;
 let bootstrapPromise: Promise<boolean> | null = null;

@@ -166,7 +166,9 @@ function App() {
       <div className="flex flex-1 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent text-text-muted" />
-          <span className="text-sm text-text-muted">Setting up encryption…</span>
+          <span className="text-sm text-text-muted">
+            Setting up encryption…
+          </span>
         </div>
       </div>
     );
