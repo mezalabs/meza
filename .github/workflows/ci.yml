@@ -40,7 +40,6 @@ jobs:
         run: go test -race -count=1 -timeout=5m ./...
 
       - name: Dependency vulnerability scan
-        continue-on-error: true
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
@@ -101,6 +100,5 @@ jobs:
         run: pnpm lint
 
       - name: Dependency vulnerability scan
-        continue-on-error: true
         run: pnpm audit --audit-level=high
 
