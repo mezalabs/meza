@@ -104,7 +104,7 @@ importers:
         version: 6.8.3
     devDependencies:
       electron:
-        specifier: ^35.0.0
+        specifier: ^35.7.5
         version: 35.7.5
       electron-builder:
         specifier: ^26.8.1
