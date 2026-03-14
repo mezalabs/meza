@@ -26,6 +26,7 @@
  * origin, which could also read sessionStorage directly.
  */
 
+import { isCapacitor, isElectron } from '../utils/platform.ts';
 import {
   clearChannelKeyCache,
   flushChannelKeys,
@@ -250,10 +251,11 @@ function persistentStorage(): Storage | undefined {
 }
 
 function ephemeralStorage(): Storage | undefined {
-  // In Electron, sessionStorage is cleared on app quit — use localStorage
-  // instead. The sessionStorage/localStorage split only protects against
-  // cross-tab XSS on the web, which doesn't apply to a desktop app.
-  if (typeof window !== 'undefined' && 'electronAPI' in window) {
+  // In Electron and Capacitor (mobile), sessionStorage is cleared on app
+  // quit / backgrounding — use localStorage instead. The sessionStorage /
+  // localStorage split only protects against cross-tab XSS on the web,
+  // which doesn't apply to desktop or mobile app shells.
+  if (isElectron() || isCapacitor()) {
     return typeof localStorage !== 'undefined' ? localStorage : undefined;
   }
   if (typeof sessionStorage === 'undefined') return undefined;
