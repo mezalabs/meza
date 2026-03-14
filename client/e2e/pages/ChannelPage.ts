@@ -95,7 +95,10 @@ export class ChannelPage {
     await Promise.race([
       expect(this.composer.first()).toBeVisible({ timeout: 10_000 }),
       expect(
-        this.page.locator('main').getByText(/connected|join voice/i).first(),
+        this.page
+          .locator('main')
+          .getByText(/connected|join voice/i)
+          .first(),
       ).toBeVisible({ timeout: 10_000 }),
     ]);
   }
