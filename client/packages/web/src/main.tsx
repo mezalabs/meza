@@ -135,11 +135,42 @@ function App() {
     return onSessionReady(() => setSessionReady(true));
   }, [sessionReady]);
 
+  // If authenticated but session hasn't become ready after a timeout,
+  // something went wrong (e.g. crypto bootstrap failed silently). Force
+  // re-login so the user isn't stuck on a blank screen.
+  useEffect(() => {
+    if (sessionReady || !isAuthenticated) return;
+    // Longer timeout on mobile — IndexedDB can be slower on Android WebViews
+    const timeoutMs = isCapacitor() ? 15_000 : 8_000;
+    const timer = setTimeout(() => {
+      if (!isSessionReady()) {
+        console.warn(
+          '[Meza] E2EE session bootstrap timed out — clearing auth to force re-login',
+        );
+        useAuthStore
+          .getState()
+          .setError('Session setup timed out. Please sign in again.');
+        useAuthStore.getState().clearAuth();
+      }
+    }, timeoutMs);
+    return () => clearTimeout(timer);
+  }, [sessionReady, isAuthenticated]);
+
   let content: React.ReactNode;
   if (isAuthenticated && sessionReady) content = <Shell />;
   else if (hasPendingInvite) content = <InviteLanding />;
   else if (!isAuthenticated) content = <LandingPage />;
-  // else: authenticated but session not ready yet — show nothing (brief loading)
+  else {
+    // Authenticated but session not ready yet — show a loading state
+    content = (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent text-text-muted" />
+          <span className="text-sm text-text-muted">Setting up encryption…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh w-screen flex-col overflow-hidden">

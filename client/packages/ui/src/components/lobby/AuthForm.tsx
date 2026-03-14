@@ -237,7 +237,14 @@ function RegisterForm({
 
       // Persist identity and bootstrap E2EE session
       await persistIdentity(identity, masterKey);
-      await bootstrapSession(masterKey);
+      const bootstrapped = await bootstrapSession(masterKey);
+      if (!bootstrapped) {
+        console.error('[RegisterForm] E2EE session bootstrap failed');
+        useAuthStore
+          .getState()
+          .setError('Failed to initialize encryption. Please try logging in.');
+        return;
+      }
 
       // Stash auth credentials — they'll be set after the user confirms the phrase
       if (res.user) {
@@ -374,10 +381,26 @@ function LoginForm({
         packed.set(res.keyBundleIv, 0);
         packed.set(res.encryptedKeyBundle, 12);
         await storeKeyBundle(packed);
-        await bootstrapSession(masterKey);
+        const bootstrapped = await bootstrapSession(masterKey);
+        if (!bootstrapped) {
+          console.error('[LoginForm] E2EE session bootstrap failed');
+          useAuthStore.getState().clearAuth();
+          useAuthStore
+            .getState()
+            .setError('Failed to initialize encryption. Please try again.');
+          return;
+        }
         // Register public key so other users can encrypt for us
         const id = getIdentity();
         if (id) registerPublicKey(id.publicKey).catch(() => {});
+      } else {
+        // Server didn't return key bundle — can't establish E2EE session
+        console.error('[LoginForm] Login response missing key bundle');
+        useAuthStore.getState().clearAuth();
+        useAuthStore
+          .getState()
+          .setError('Login failed: missing encryption data. Please try again.');
+        return;
       }
     } catch (err) {
       console.error('[LoginForm] login failed:', err);
@@ -549,7 +572,15 @@ function RecoverAccountForm({
         await clearCryptoStorage();
         const identity = deserializeIdentity(keyBundle);
         await persistIdentity(identity, masterKey);
-        await bootstrapSession(masterKey);
+        const bootstrapped = await bootstrapSession(masterKey);
+        if (!bootstrapped) {
+          // Don't block — the user MUST save the new recovery phrase.
+          // The old phrase is already invalidated on the server.
+          // They can log in manually after, which will re-attempt bootstrap.
+          console.error(
+            '[RecoverForm] E2EE session bootstrap failed — proceeding to show phrase',
+          );
+        }
 
         // Stash auth credentials — they'll be set after the user confirms the new phrase
         if (res.user) {

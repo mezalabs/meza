@@ -11,8 +11,10 @@
  * when not imported.
  */
 import {
+  bootstrapSession,
   gatewayConnect,
   gatewayDisconnect,
+  isSessionReady,
   subscribeToPush,
   useAuthStore,
 } from '@meza/core';
@@ -47,15 +49,25 @@ async function setupStatusBar(): Promise<void> {
 }
 
 function setupAppLifecycle(App: typeof import('@capacitor/app').App): void {
-  App.addListener('appStateChange', ({ isActive }) => {
+  App.addListener('appStateChange', async ({ isActive }) => {
     const { isAuthenticated, accessToken } = useAuthStore.getState();
     if (!isAuthenticated || !accessToken) return;
 
-    if (isActive) {
-      gatewayConnect(accessToken);
-    } else {
+    if (!isActive) {
       gatewayDisconnect();
+      return;
     }
+
+    // Verify E2EE session is still intact before reconnecting.
+    // Android may clear storage under memory pressure while backgrounded.
+    if (!isSessionReady()) {
+      const ok = await bootstrapSession().catch(() => false as const);
+      if (!ok) {
+        useAuthStore.getState().clearAuth();
+        return;
+      }
+    }
+    gatewayConnect(accessToken);
   });
 }
 
