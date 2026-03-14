@@ -88,12 +88,16 @@ export class ChannelPage {
       .locator('[data-channel-type]')
       .filter({ hasText: channelName });
     await channelBtn.click({ timeout: 10_000 });
-    // Wait for main content to load (composer for text, or voice UI)
-    await expect(
-      this.composer
-        .first()
-        .or(this.page.locator('main').getByText(/connected|join voice/i)),
-    ).toBeVisible({ timeout: 10_000 });
+    // Wait for main content to load (composer for text, or voice UI).
+    // Use Promise.race because .or() hits strict-mode violations when
+    // both the composer and the "Connected" badge are visible at once
+    // (e.g. voice channels that also render a text composer).
+    await Promise.race([
+      expect(this.composer.first()).toBeVisible({ timeout: 10_000 }),
+      expect(
+        this.page.locator('main').getByText(/connected|join voice/i).first(),
+      ).toBeVisible({ timeout: 10_000 }),
+    ]);
   }
 
   /** Navigate to a channel in a specific server and wait for it to load. */
