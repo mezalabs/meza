@@ -11,7 +11,7 @@ import * as fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { AuthPage } from '../pages/AuthPage';
 import { ChannelPage } from '../pages/ChannelPage';
-import { chapter, createContext, reportFailures } from './helpers';
+import { chapter, createContext, reportFailures, saveAuth } from './helpers';
 
 const SERVER = 'Test Server';
 const ts = () => `${Date.now()}`;
@@ -213,6 +213,11 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       timeout: 30_000,
     });
   });
+
+  // Save updated auth state so later journeys (06, 07) get valid tokens.
+  // Session Management and Account Recovery chapters invalidated the
+  // original tokens saved by Journey 1.
+  await saveAuth(aliceCtx, 'alice');
 
   await aliceCtx.close();
   reportFailures();
