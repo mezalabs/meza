@@ -49,7 +49,7 @@ func (s *chatService) ListMembers(ctx context.Context, req *connect.Request[v1.L
 
 	// Enrich with public profile data (best-effort — don't fail the request).
 	var protoUsers []*v1.PublicUser
-	if len(userIDs) > 0 {
+	if len(userIDs) > 0 && s.authStore != nil {
 		users, err := s.authStore.GetUsersByIDs(ctx, userIDs)
 		if err != nil {
 			slog.Warn("fetching user profiles for member list", "err", err, "server", req.Msg.ServerId)

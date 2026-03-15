@@ -301,7 +301,7 @@ export async function listMembers(
     });
     store.setMembers(serverId, res.members);
     // Bulk-hydrate user profiles from the sidecar (avoids N+1 getProfile calls).
-    if (res.users.length > 0) {
+    if (res.users?.length > 0) {
       useUsersStore.getState().setProfiles(res.users.map(publicUserToStored));
     }
     return res.members;
