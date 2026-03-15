@@ -15,12 +15,15 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/redis/go-redis/v9"
 
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	"github.com/mezalabs/meza/internal/auth"
 	"github.com/mezalabs/meza/internal/email"
 	"github.com/mezalabs/meza/internal/models"
 	"github.com/mezalabs/meza/internal/store"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/mezalabs/meza/internal/subjects"
 )
 
 type authService struct {
@@ -506,6 +509,27 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Broadcast profile update to shared-server members via gateway fanout.
+	pubUser := userToPublicProto(user)
+	event := &v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_USER_UPDATE,
+		Timestamp: timestamppb.New(time.Now()),
+		Payload: &v1.Event_UserUpdate{
+			UserUpdate: &v1.UserUpdateEvent{
+				User: pubUser,
+			},
+		},
+	}
+	eventData, err := proto.Marshal(event)
+	if err != nil {
+		slog.Error("marshaling user update event", "err", err)
+	} else {
+		if err := s.nc.Publish(subjects.UserUpdate(userID), eventData); err != nil {
+			slog.Warn("nats publish failed", "subject", subjects.UserUpdate(userID), "err", err)
+		}
+	}
+
 	return connect.NewResponse(&v1.UpdateProfileResponse{
 		User: userToProto(user),
 	}), nil
@@ -916,6 +940,20 @@ func userToProto(u *models.User) *v1.User {
 		})
 	}
 	return proto
+}
+
+func userToPublicProto(u *models.User) *v1.PublicUser {
+	return &v1.PublicUser{
+		Id:                  u.ID,
+		Username:            u.Username,
+		DisplayName:         u.DisplayName,
+		AvatarUrl:           u.AvatarURL,
+		Bio:                 u.Bio,
+		Pronouns:            u.Pronouns,
+		BannerUrl:           u.BannerURL,
+		ThemeColorPrimary:   u.ThemeColorPrimary,
+		ThemeColorSecondary: u.ThemeColorSecondary,
+	}
 }
 
 func hashToken(token string) string {
