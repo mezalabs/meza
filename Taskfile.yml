@@ -475,6 +475,13 @@ tasks:
       - pnpm install --frozen-lockfile --silent
       - pnpm --filter @meza/desktop dev
 
+  dev:desktop:prod:
+    desc: Start Electron desktop app against prod (meza.chat)
+    dir: client
+    deps: [build:desktop]
+    cmds:
+      - DESKTOP_PROD=1 pnpm --filter @meza/desktop dev
+
   dev:mobile:
     desc: Start HTTPS Vite dev server (Tailscale cert) and sync to Capacitor for live reload
     dir: client
@@ -627,3 +634,84 @@ tasks:
         echo ""
         echo "Created tag desktop-v${VERSION}"
         echo "Run 'git push && git push --tags' to trigger the release build"
+
+  release:desktop:update-packaging:
+    desc: "Update packaging files with checksums from a desktop release (usage: task release:desktop:update-packaging -- 0.2.0)"
+    cmds:
+      - |
+        set -euo pipefail
+        VERSION="{{.CLI_ARGS}}"
+        if [ -z "$VERSION" ]; then
+          echo "Usage: task release:desktop:update-packaging -- <version>"
+          exit 1
+        fi
+        TAG="desktop-v${VERSION}"
+
+        echo "Fetching artifacts for ${TAG}..."
+
+        DOWNLOAD_DIR=$(mktemp -d)
+        trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
+
+        gh release download "$TAG" --dir "$DOWNLOAD_DIR" \
+          --pattern "Meza-${VERSION}-linux-x86_64.AppImage" \
+          --pattern "Meza-${VERSION}-mac-arm64.zip" \
+          --pattern "Meza-${VERSION}-mac-x64.zip"
+
+        # Portable sha256: GNU coreutils (Linux) or shasum (macOS)
+        sha256portable() {
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "$1" | cut -d' ' -f1
+          else
+            shasum -a 256 "$1" | cut -d' ' -f1
+          fi
+        }
+
+        HASH_LINUX=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-linux-x86_64.AppImage")
+        HASH_MAC_ARM=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-mac-arm64.zip")
+        HASH_MAC_X64=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-mac-x64.zip")
+
+        echo "Checksums:"
+        echo "  Linux AppImage: ${HASH_LINUX}"
+        echo "  macOS arm64:    ${HASH_MAC_ARM}"
+        echo "  macOS x64:      ${HASH_MAC_X64}"
+
+        # Portable sed -i: GNU sed (Linux) vs BSD sed (macOS)
+        sedi() {
+          if sed --version >/dev/null 2>&1; then
+            sed -i "$@"
+          else
+            sed -i '' "$@"
+          fi
+        }
+
+        # Update AUR PKGBUILD
+        PKGBUILD="packaging/aur/PKGBUILD"
+        sedi "s/^pkgver=.*/pkgver=${VERSION}/" "$PKGBUILD"
+        sedi "s/^pkgrel=.*/pkgrel=1/" "$PKGBUILD"
+        sedi "s/^sha256sums=.*/sha256sums=('${HASH_LINUX}')/" "$PKGBUILD"
+        echo "Updated ${PKGBUILD}"
+
+        # Update Homebrew cask
+        CASK="packaging/homebrew/meza.rb"
+        sedi "s/^  version \".*\"/  version \"${VERSION}\"/" "$CASK"
+        sedi "/on_arm/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${HASH_MAC_ARM}\"/}" "$CASK"
+        sedi "/on_intel/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${HASH_MAC_X64}\"/}" "$CASK"
+        echo "Updated ${CASK}"
+
+        # Validate updates were applied
+        grep -q "pkgver=${VERSION}" "$PKGBUILD" || { echo "ERROR: PKGBUILD version update failed"; exit 1; }
+        grep -q "version \"${VERSION}\"" "$CASK" || { echo "ERROR: Cask version update failed"; exit 1; }
+
+        # Generate .SRCINFO if makepkg is available (required for AUR submission)
+        if command -v makepkg >/dev/null 2>&1; then
+          (cd packaging/aur && makepkg --printsrcinfo > .SRCINFO)
+          echo "Generated packaging/aur/.SRCINFO"
+        else
+          echo "NOTE: makepkg not found — run 'makepkg --printsrcinfo > .SRCINFO' in packaging/aur/ before pushing to AUR"
+        fi
+
+        echo ""
+        echo "Packaging files updated for v${VERSION}."
+        echo "Review changes, then:"
+        echo "  1. Push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"
+        echo "  2. Push meza.rb to mezalabs/homebrew-tap"
