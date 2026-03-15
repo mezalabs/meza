@@ -62,6 +62,11 @@ function createWindow(): BrowserWindow {
     minWidth: 800,
     minHeight: 500,
     frame: false,
+    ...(!isMac
+      ? {
+          icon: path.join(process.resourcesPath, 'icon.png'),
+        }
+      : {}),
     ...(isMac
       ? {
           titleBarStyle: 'hiddenInset',
@@ -83,9 +88,10 @@ function createWindow(): BrowserWindow {
   }
 
   // Dev: load from Vite dev server.
-  // Prod: load bundled web files via meza:// custom protocol (or server URL override).
+  // Prod (or DESKTOP_PROD=1): load bundled web files via meza:// custom protocol.
   const serverUrl = store.get('settings').serverUrl;
-  if (!app.isPackaged) {
+  const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
+  if (!prodMode) {
     win.loadURL(serverUrl || 'http://localhost:4080');
   } else if (serverUrl) {
     win.loadURL(serverUrl);

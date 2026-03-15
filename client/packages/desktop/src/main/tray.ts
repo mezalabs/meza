@@ -4,7 +4,7 @@ import { type BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 let tray: Tray | null = null;
 
 export function createTray(win: BrowserWindow): Tray {
-  const iconPath = path.join(import.meta.dirname, '../../build/icon.png');
+  const iconPath = path.join(process.resourcesPath, 'icon.png');
   let icon = nativeImage.createFromPath(iconPath);
 
   // On macOS, use template image for proper dark/light mode
