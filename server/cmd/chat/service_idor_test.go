@@ -339,6 +339,18 @@ func (s *idorMockAuthStore) GetUserByID(_ context.Context, userID string) (*mode
 	return u, nil
 }
 
+func (s *idorMockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) ([]*models.User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var users []*models.User
+	for _, id := range userIDs {
+		if u, ok := s.users[id]; ok {
+			users = append(users, u)
+		}
+	}
+	return users, nil
+}
+
 func (s *idorMockAuthStore) CreateUser(context.Context, *models.User, string, []byte, models.EncryptedBundle) (*models.User, error) {
 	panic("not implemented")
 }
