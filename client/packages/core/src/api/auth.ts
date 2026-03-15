@@ -26,6 +26,36 @@ import { transport } from './client.ts';
 
 const authClient = createClient(AuthService, transport);
 
+/** Convert a PublicUser (broadcast-safe subset) to a StoredUser with defaults for private fields. */
+export function publicUserToStored(user: {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  bio: string;
+  pronouns: string;
+  bannerUrl: string;
+  themeColorPrimary: string;
+  themeColorSecondary: string;
+}): StoredUser {
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    emojiScale: 1.0,
+    bio: user.bio,
+    pronouns: user.pronouns,
+    bannerUrl: user.bannerUrl,
+    themeColorPrimary: user.themeColorPrimary,
+    themeColorSecondary: user.themeColorSecondary,
+    simpleMode: false,
+    dmPrivacy: '',
+    connections: [],
+    createdAt: '',
+  };
+}
+
 export function toStoredUser(user: User): StoredUser {
   return {
     id: user.id,

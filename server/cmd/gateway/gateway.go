@@ -236,6 +236,7 @@ func (gw *Gateway) Start(ctx context.Context) error {
 		subjects.ServerEmojiWildcard(),
 		subjects.ServerSoundboardWildcard(),
 		subjects.ServerChannelGroupWildcard(),
+		subjects.ServerMetaWildcard(),
 	}
 	for _, subject := range serverBroadcastSubjects {
 		if err := gw.subscribeServerBroadcast(subject); err != nil {
@@ -322,6 +323,55 @@ func (gw *Gateway) Start(ctx context.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("subscribe presence update wildcard: %w", err)
+	}
+
+	// User profile update events — fan out to all members of shared servers.
+	// Uses the same pattern as presence updates: derive servers from user's clients.
+	_, err = gw.nc.Subscribe(subjects.UserUpdateWildcard(), func(msg *nats.Msg) {
+		parts := strings.Split(msg.Subject, ".")
+		if len(parts) < 4 {
+			return
+		}
+		userID := parts[3]
+
+		envelope, err := makeEnvelope(v1.GatewayOpCode_GATEWAY_OP_EVENT, msg.Data)
+		if err != nil {
+			slog.Error("marshaling user update envelope", "err", err)
+			return
+		}
+
+		gw.mu.RLock()
+		userCls := gw.userClients[userID]
+		if len(userCls) == 0 {
+			gw.mu.RUnlock()
+			return
+		}
+		// Collect server IDs from the user's clients.
+		serverSet := make(map[string]struct{})
+		for _, c := range userCls {
+			for _, srvID := range c.Servers {
+				serverSet[srvID] = struct{}{}
+			}
+		}
+		// Fan out to all clients in those servers, deduplicated.
+		sent := make(map[*Client]struct{})
+		for srvID := range serverSet {
+			for client := range gw.serverClients[srvID] {
+				if _, already := sent[client]; already {
+					continue
+				}
+				sent[client] = struct{}{}
+				select {
+				case client.Send <- envelope:
+				default:
+					go gw.closeSlowConsumer(client)
+				}
+			}
+		}
+		gw.mu.RUnlock()
+	})
+	if err != nil {
+		return fmt.Errorf("subscribe user update wildcard: %w", err)
 	}
 
 	// Start heartbeat flusher

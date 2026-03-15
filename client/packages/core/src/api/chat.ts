@@ -300,6 +300,11 @@ export async function listMembers(
       limit: opts?.limit ?? 200,
     });
     store.setMembers(serverId, res.members);
+    // Bulk-hydrate user profiles from the sidecar (avoids N+1 getProfile calls).
+    if (res.users.length > 0) {
+      const { publicUserToStored } = await import('./auth.ts');
+      useUsersStore.getState().setProfiles(res.users.map(publicUserToStored));
+    }
     return res.members;
   } catch (err) {
     store.setError(mapChatError(err));
