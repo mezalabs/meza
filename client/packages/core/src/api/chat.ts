@@ -33,7 +33,7 @@ import { useRoleStore } from '../store/roles.ts';
 import { useServerStore } from '../store/servers.ts';
 import { useSoundStore } from '../store/sounds.ts';
 import { useUsersStore } from '../store/users.ts';
-import { toStoredUser } from './auth.ts';
+import { publicUserToStored, toStoredUser } from './auth.ts';
 import { transport } from './client.ts';
 import { getPublicKeys, storeKeyEnvelopes } from './keys.ts';
 
@@ -300,6 +300,10 @@ export async function listMembers(
       limit: opts?.limit ?? 200,
     });
     store.setMembers(serverId, res.members);
+    // Bulk-hydrate user profiles from the sidecar (avoids N+1 getProfile calls).
+    if (res.users?.length > 0) {
+      useUsersStore.getState().setProfiles(res.users.map(publicUserToStored));
+    }
     return res.members;
   } catch (err) {
     store.setError(mapChatError(err));

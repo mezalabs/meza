@@ -10,6 +10,8 @@ export interface UsersState {
 
 export interface UsersActions {
   setProfile: (userId: string, profile: StoredUser) => void;
+  /** Bulk-set profiles in a single immer produce (avoids N re-renders). */
+  setProfiles: (profiles: StoredUser[]) => void;
   getProfile: (userId: string) => StoredUser | undefined;
   /** Returns true if the cached profile is fresh (fetched within `ttlMs`). */
   isProfileFresh: (userId: string, ttlMs: number) => boolean;
@@ -24,6 +26,21 @@ export const useUsersStore = create<UsersState & UsersActions>()(
       set((state) => {
         state.profiles[userId] = profile;
         state.profileFetchedAt[userId] = Date.now();
+      });
+    },
+
+    setProfiles: (profiles) => {
+      set((state) => {
+        const now = Date.now();
+        for (const profile of profiles) {
+          // Merge onto existing profile to avoid overwriting richer data
+          // (e.g., full getProfile result) with PublicUser defaults.
+          const existing = state.profiles[profile.id];
+          state.profiles[profile.id] = existing
+            ? { ...existing, ...profile }
+            : profile;
+          state.profileFetchedAt[profile.id] = now;
+        }
       });
     },
 

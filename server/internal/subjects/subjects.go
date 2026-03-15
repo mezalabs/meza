@@ -107,6 +107,16 @@ func ServerMemberWildcard() string {
 	return "meza.server.member.>"
 }
 
+// Server metadata update subjects — broadcast when server name/icon/settings change.
+
+func ServerMeta(serverID string) string {
+	return fmt.Sprintf("meza.server.meta.%s", sanitizeID(serverID))
+}
+
+func ServerMetaWildcard() string {
+	return "meza.server.meta.>"
+}
+
 func ServerRole(serverID string) string {
 	return fmt.Sprintf("meza.server.role.%s", sanitizeID(serverID))
 }
@@ -137,6 +147,16 @@ func ServerChannelGroup(serverID string) string {
 
 func ServerChannelGroupWildcard() string {
 	return "meza.server.channelgroup.>"
+}
+
+// User profile update subjects — gateway fans out to shared-server members.
+
+func UserUpdate(userID string) string {
+	return fmt.Sprintf("meza.user.update.%s", sanitizeID(userID))
+}
+
+func UserUpdateWildcard() string {
+	return "meza.user.update.>"
 }
 
 // User read state subjects — gateway delivers to user's own clients only.

@@ -282,6 +282,7 @@ message ListMembersRequest {
 
 message ListMembersResponse {
   repeated Member members = 1;
+  repeated PublicUser users = 2;  // Profile sidecar: public profile data for the returned members
 }
 
 message UpdateMemberRequest {
@@ -483,6 +484,8 @@ message Event {
     // 59 reserved for future voice activity update event
     KeyRequestEvent key_request = 60;
     DeviceRecoveryRequestEvent device_recovery_request = 61;
+    ServerUpdateEvent server_update = 62;
+    UserUpdateEvent user_update = 63;
   }
 }
 
@@ -540,6 +543,8 @@ enum EventType {
   // 50 reserved for future EVENT_TYPE_VOICE_ACTIVITY_UPDATE
   EVENT_TYPE_KEY_REQUEST = 51;
   EVENT_TYPE_DEVICE_RECOVERY_REQUEST = 52;
+  EVENT_TYPE_SERVER_UPDATE = 53;
+  EVENT_TYPE_USER_UPDATE = 54;
 }
 
 message MessageDeleteEvent {
@@ -1219,6 +1224,16 @@ message SearchMessagesResponse {
   reserved 2;              // was total_hits, removed 2026-02-28
   reserved "total_hits";
   bool has_more = 3;
+}
+
+// Server update event — broadcast when server metadata (name, icon, etc.) changes.
+message ServerUpdateEvent {
+  Server server = 1;
+}
+
+// User update event — broadcast when a user's public profile changes.
+message UserUpdateEvent {
+  PublicUser user = 1;
 }
 
 // Internal NATS job message for embed URL fetching.
