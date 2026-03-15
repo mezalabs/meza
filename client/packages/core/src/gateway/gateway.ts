@@ -10,12 +10,12 @@ import {
 } from '@meza/gen/meza/v1/gateway_pb.ts';
 import type { Message } from '@meza/gen/meza/v1/models_pb.ts';
 import { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
+import { publicUserToStored } from '../api/auth.ts';
 import {
   listChannels as fetchChannels,
   listDMChannels as fetchDMChannels,
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
-import { publicUserToStored } from '../api/auth.ts';
 import {
   clearStatusOverride,
   getMyPresence,
