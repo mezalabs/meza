@@ -2369,6 +2369,116 @@ func (x *ServerSystemMessageConfig) GetTimeoutTemplate() string {
 	return ""
 }
 
+// PublicUser is a safe subset of User for broadcasting to other users.
+// It excludes private fields like dm_privacy, audio_preferences, signing_public_key, etc.
+type PublicUser struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Username            string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	DisplayName         string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl           string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	Bio                 string                 `protobuf:"bytes,5,opt,name=bio,proto3" json:"bio,omitempty"`
+	Pronouns            string                 `protobuf:"bytes,6,opt,name=pronouns,proto3" json:"pronouns,omitempty"`
+	BannerUrl           string                 `protobuf:"bytes,7,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
+	ThemeColorPrimary   string                 `protobuf:"bytes,8,opt,name=theme_color_primary,json=themeColorPrimary,proto3" json:"theme_color_primary,omitempty"`
+	ThemeColorSecondary string                 `protobuf:"bytes,9,opt,name=theme_color_secondary,json=themeColorSecondary,proto3" json:"theme_color_secondary,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *PublicUser) Reset() {
+	*x = PublicUser{}
+	mi := &file_meza_v1_models_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PublicUser) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PublicUser) ProtoMessage() {}
+
+func (x *PublicUser) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PublicUser.ProtoReflect.Descriptor instead.
+func (*PublicUser) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *PublicUser) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PublicUser) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *PublicUser) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *PublicUser) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *PublicUser) GetBio() string {
+	if x != nil {
+		return x.Bio
+	}
+	return ""
+}
+
+func (x *PublicUser) GetPronouns() string {
+	if x != nil {
+		return x.Pronouns
+	}
+	return ""
+}
+
+func (x *PublicUser) GetBannerUrl() string {
+	if x != nil {
+		return x.BannerUrl
+	}
+	return ""
+}
+
+func (x *PublicUser) GetThemeColorPrimary() string {
+	if x != nil {
+		return x.ThemeColorPrimary
+	}
+	return ""
+}
+
+func (x *PublicUser) GetThemeColorSecondary() string {
+	if x != nil {
+		return x.ThemeColorSecondary
+	}
+	return ""
+}
+
 var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
@@ -2632,7 +2742,20 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x0f_leave_templateB\x10\n" +
 	"\x0e_kick_templateB\x0f\n" +
 	"\r_ban_templateB\x13\n" +
-	"\x11_timeout_template*\x8a\x01\n" +
+	"\x11_timeout_template\"\xab\x02\n" +
+	"\n" +
+	"PublicUser\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x10\n" +
+	"\x03bio\x18\x05 \x01(\tR\x03bio\x12\x1a\n" +
+	"\bpronouns\x18\x06 \x01(\tR\bpronouns\x12\x1d\n" +
+	"\n" +
+	"banner_url\x18\a \x01(\tR\tbannerUrl\x12.\n" +
+	"\x13theme_color_primary\x18\b \x01(\tR\x11themeColorPrimary\x122\n" +
+	"\x15theme_color_secondary\x18\t \x01(\tR\x13themeColorSecondary*\x8a\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -2661,7 +2784,7 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_meza_v1_models_proto_goTypes = []any{
 	(ChannelType)(0),                  // 0: meza.v1.ChannelType
 	(MessageType)(0),                  // 1: meza.v1.MessageType
@@ -2688,36 +2811,37 @@ var file_meza_v1_models_proto_goTypes = []any{
 	(*ReadState)(nil),                 // 22: meza.v1.ReadState
 	(*AudioPreferences)(nil),          // 23: meza.v1.AudioPreferences
 	(*ServerSystemMessageConfig)(nil), // 24: meza.v1.ServerSystemMessageConfig
-	(*timestamppb.Timestamp)(nil),     // 25: google.protobuf.Timestamp
+	(*PublicUser)(nil),                // 25: meza.v1.PublicUser
+	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	25, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	26, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	23, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
 	3,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
-	25, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	26, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	25, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	25, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	26, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	26, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
 	5,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
 	2,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
 	11, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	25, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	25, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	26, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	26, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
 	10, // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
 	1,  // 13: meza.v1.Message.type:type_name -> meza.v1.MessageType
-	25, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	25, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	25, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	25, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	25, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	25, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	25, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	26, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	26, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	26, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	26, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	26, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	26, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	26, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 21: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	25, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	25, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	25, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	25, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	25, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	26, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	26, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	26, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	26, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	26, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
 	27, // [27:27] is the sub-list for method output_type
 	27, // [27:27] is the sub-list for method input_type
 	27, // [27:27] is the sub-list for extension type_name
@@ -2741,7 +2865,7 @@ func file_meza_v1_models_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
