@@ -653,9 +653,7 @@ tasks:
         trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
         gh release download "$TAG" --dir "$DOWNLOAD_DIR" \
-          --pattern "Meza-${VERSION}-linux-x86_64.AppImage" \
-          --pattern "Meza-${VERSION}-mac-arm64.zip" \
-          --pattern "Meza-${VERSION}-mac-x64.zip"
+          --pattern "Meza-${VERSION}-linux-x86_64.AppImage"
 
         # Portable sha256: GNU coreutils (Linux) or shasum (macOS)
         sha256portable() {
@@ -667,13 +665,9 @@ tasks:
         }
 
         HASH_LINUX=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-linux-x86_64.AppImage")
-        HASH_MAC_ARM=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-mac-arm64.zip")
-        HASH_MAC_X64=$(sha256portable "$DOWNLOAD_DIR/Meza-${VERSION}-mac-x64.zip")
 
-        echo "Checksums:"
+        echo "Checksum:"
         echo "  Linux AppImage: ${HASH_LINUX}"
-        echo "  macOS arm64:    ${HASH_MAC_ARM}"
-        echo "  macOS x64:      ${HASH_MAC_X64}"
 
         # Portable sed -i: GNU sed (Linux) vs BSD sed (macOS)
         sedi() {
@@ -691,16 +685,8 @@ tasks:
         sedi "s/^sha256sums=.*/sha256sums=('${HASH_LINUX}')/" "$PKGBUILD"
         echo "Updated ${PKGBUILD}"
 
-        # Update Homebrew cask
-        CASK="packaging/homebrew/meza.rb"
-        sedi "s/^  version \".*\"/  version \"${VERSION}\"/" "$CASK"
-        sedi "/on_arm/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${HASH_MAC_ARM}\"/}" "$CASK"
-        sedi "/on_intel/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${HASH_MAC_X64}\"/}" "$CASK"
-        echo "Updated ${CASK}"
-
         # Validate updates were applied
         grep -q "pkgver=${VERSION}" "$PKGBUILD" || { echo "ERROR: PKGBUILD version update failed"; exit 1; }
-        grep -q "version \"${VERSION}\"" "$CASK" || { echo "ERROR: Cask version update failed"; exit 1; }
 
         # Generate .SRCINFO if makepkg is available (required for AUR submission)
         if command -v makepkg >/dev/null 2>&1; then
@@ -712,6 +698,4 @@ tasks:
 
         echo ""
         echo "Packaging files updated for v${VERSION}."
-        echo "Review changes, then:"
-        echo "  1. Push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"
-        echo "  2. Push meza.rb to mezalabs/homebrew-tap"
+        echo "Review changes, then push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"

@@ -35,8 +35,17 @@ package() {
   install -dm755 "${pkgdir}/opt/meza"
   cp -r squashfs-root/* "${pkgdir}/opt/meza/"
 
-  # Ensure the binary is executable
+  # Fix permissions — AppImage extraction creates root-only dirs
+  find "${pkgdir}/opt/meza" -type d -exec chmod 755 {} +
+  find "${pkgdir}/opt/meza" -type f -exec chmod 644 {} +
   chmod 755 "${pkgdir}/opt/meza/meza"
+  chmod 755 "${pkgdir}/opt/meza/chrome-sandbox"
+  chmod 755 "${pkgdir}/opt/meza/chrome_crashpad_handler"
+
+  # Ensure icon is available for Electron window/tray
+  if [ ! -f "${pkgdir}/opt/meza/resources/icon.png" ]; then
+    install -Dm644 squashfs-root/meza.png "${pkgdir}/opt/meza/resources/icon.png"
+  fi
 
   # Symlink binary into PATH
   install -dm755 "${pkgdir}/usr/bin"

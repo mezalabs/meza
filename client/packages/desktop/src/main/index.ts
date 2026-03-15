@@ -62,6 +62,11 @@ function createWindow(): BrowserWindow {
     minWidth: 800,
     minHeight: 500,
     frame: false,
+    ...(!isMac
+      ? {
+          icon: path.join(process.resourcesPath, 'icon.png'),
+        }
+      : {}),
     ...(isMac
       ? {
           titleBarStyle: 'hiddenInset',

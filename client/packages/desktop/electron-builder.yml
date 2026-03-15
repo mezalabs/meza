@@ -11,6 +11,10 @@ directories:
 files:
   - out/**/*
 
+extraResources:
+  - from: build/icon.png
+    to: icon.png
+
 # macOS
 mac:
   category: public.app-category.social-networking
