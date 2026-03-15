@@ -15,6 +15,7 @@ import {
   listDMChannels as fetchDMChannels,
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
+import { publicUserToStored } from '../api/auth.ts';
 import {
   clearStatusOverride,
   getMyPresence,
@@ -1013,25 +1014,12 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         const { user } = event.payload.value;
         if (user) {
           const store = useUsersStore.getState();
+          const converted = publicUserToStored(user);
           const existing = store.profiles[user.id];
-          store.setProfile(user.id, {
-            ...(existing ?? {
-              emojiScale: 1,
-              simpleMode: false,
-              dmPrivacy: 'message_requests',
-              connections: [],
-              createdAt: '',
-            }),
-            id: user.id,
-            username: user.username,
-            displayName: user.displayName,
-            avatarUrl: user.avatarUrl,
-            bio: user.bio,
-            pronouns: user.pronouns,
-            bannerUrl: user.bannerUrl,
-            themeColorPrimary: user.themeColorPrimary,
-            themeColorSecondary: user.themeColorSecondary,
-          });
+          store.setProfile(
+            user.id,
+            existing ? { ...existing, ...converted } : converted,
+          );
         }
       }
       // Presence update events.

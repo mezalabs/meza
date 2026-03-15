@@ -33,7 +33,12 @@ export const useUsersStore = create<UsersState & UsersActions>()(
       set((state) => {
         const now = Date.now();
         for (const profile of profiles) {
-          state.profiles[profile.id] = profile;
+          // Merge onto existing profile to avoid overwriting richer data
+          // (e.g., full getProfile result) with PublicUser defaults.
+          const existing = state.profiles[profile.id];
+          state.profiles[profile.id] = existing
+            ? { ...existing, ...profile }
+            : profile;
           state.profileFetchedAt[profile.id] = now;
         }
       });
