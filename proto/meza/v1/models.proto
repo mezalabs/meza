@@ -289,4 +289,18 @@ message ServerSystemMessageConfig {
   optional string timeout_template = 13;
 }
 
+// PublicUser is a safe subset of User for broadcasting to other users.
+// It excludes private fields like dm_privacy, audio_preferences, signing_public_key, etc.
+message PublicUser {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+  string bio = 5;
+  string pronouns = 6;
+  string banner_url = 7;
+  string theme_color_primary = 8;
+  string theme_color_secondary = 9;
+}
+
 // E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.

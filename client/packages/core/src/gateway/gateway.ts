@@ -15,6 +15,7 @@ import {
   listDMChannels as fetchDMChannels,
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
+import { publicUserToStored } from '../api/auth.ts';
 import {
   clearStatusOverride,
   getMyPresence,
@@ -57,6 +58,7 @@ import { useRoleStore } from '../store/roles.ts';
 import { useServerStore } from '../store/servers.ts';
 import { useSoundStore } from '../store/sounds.ts';
 import { useTypingStore } from '../store/typing.ts';
+import { useUsersStore } from '../store/users.ts';
 import { useVoiceStore } from '../store/voice.ts';
 import { getBaseUrl } from '../utils/platform.ts';
 import { retryWithBackoff } from '../utils/retry.ts';
@@ -998,6 +1000,26 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
               }
             })();
           }, jitterMs);
+        }
+      }
+      // Server metadata update events.
+      if (event.payload.case === 'serverUpdate' && event.payload.value) {
+        const { server } = event.payload.value;
+        if (server) {
+          useServerStore.getState().addServer(server);
+        }
+      }
+      // User profile update events.
+      if (event.payload.case === 'userUpdate' && event.payload.value) {
+        const { user } = event.payload.value;
+        if (user) {
+          const store = useUsersStore.getState();
+          const converted = publicUserToStored(user);
+          const existing = store.profiles[user.id];
+          store.setProfile(
+            user.id,
+            existing ? { ...existing, ...converted } : converted,
+          );
         }
       }
       // Presence update events.

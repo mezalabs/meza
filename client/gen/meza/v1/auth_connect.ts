@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { ApproveDeviceRecoveryRequest, ApproveDeviceRecoveryResponse, ChangePasswordRequest, ChangePasswordResponse, CompleteDeviceRecoveryRequest, CompleteDeviceRecoveryResponse, GetKeyBundleRequest, GetKeyBundleResponse, GetPendingRecoveryRequestRequest, GetPendingRecoveryRequestResponse, GetProfileRequest, GetProfileResponse, GetRecoveryBundleRequest, GetRecoveryBundleResponse, GetSaltRequest, GetSaltResponse, InitiateDeviceRecoveryRequest, InitiateDeviceRecoveryResponse, ListDevicesRequest, ListDevicesResponse, LoginRequest, LoginResponse, PollDeviceRecoveryRequest, PollDeviceRecoveryResponse, RecoverAccountRequest, RecoverAccountResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterDeviceRequest, RegisterDeviceResponse, RegisterRequest, RegisterResponse, RevokeAllOtherDevicesRequest, RevokeAllOtherDevicesResponse, RevokeDeviceRequest, RevokeDeviceResponse, UpdateProfileRequest, UpdateProfileResponse, VerifyRecoveryEmailRequest, VerifyRecoveryEmailResponse } from "./auth_pb.js";
+import { ApproveDeviceRecoveryRequest, ApproveDeviceRecoveryResponse, ChangePasswordRequest, ChangePasswordResponse, CompleteDeviceRecoveryRequest, CompleteDeviceRecoveryResponse, GetKeyBundleRequest, GetKeyBundleResponse, GetPendingRecoveryRequestRequest, GetPendingRecoveryRequestResponse, GetProfileRequest, GetProfileResponse, GetRecoveryBundleRequest, GetRecoveryBundleResponse, GetSaltRequest, GetSaltResponse, InitiateDeviceRecoveryRequest, InitiateDeviceRecoveryResponse, ListDevicesRequest, ListDevicesResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, PollDeviceRecoveryRequest, PollDeviceRecoveryResponse, RecoverAccountRequest, RecoverAccountResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterDeviceRequest, RegisterDeviceResponse, RegisterRequest, RegisterResponse, RevokeAllOtherDevicesRequest, RevokeAllOtherDevicesResponse, RevokeDeviceRequest, RevokeDeviceResponse, UpdateProfileRequest, UpdateProfileResponse, VerifyRecoveryEmailRequest, VerifyRecoveryEmailResponse } from "./auth_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -28,6 +28,15 @@ export const AuthService = {
       name: "Login",
       I: LoginRequest,
       O: LoginResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.AuthService.Logout
+     */
+    logout: {
+      name: "Logout",
+      I: LogoutRequest,
+      O: LogoutResponse,
       kind: MethodKind.Unary,
     },
     /**

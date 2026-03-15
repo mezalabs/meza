@@ -2371,8 +2371,30 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	updatedProto := serverToProto(updated)
+
+	// Broadcast server update to all members.
+	event := &v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_SERVER_UPDATE,
+		Timestamp: timestamppb.New(time.Now()),
+		Payload: &v1.Event_ServerUpdate{
+			ServerUpdate: &v1.ServerUpdateEvent{
+				Server: updatedProto,
+			},
+		},
+	}
+	eventData, err := proto.Marshal(event)
+	if err != nil {
+		slog.Error("marshaling server update event", "err", err)
+	} else {
+		if err := s.nc.Publish(subjects.ServerMeta(req.Msg.ServerId), eventData); err != nil {
+			slog.Warn("nats publish failed", "subject", subjects.ServerMeta(req.Msg.ServerId), "err", err)
+		}
+	}
+
 	return connect.NewResponse(&v1.UpdateServerResponse{
-		Server: serverToProto(updated),
+		Server: updatedProto,
 	}), nil
 }
 

@@ -41,12 +41,39 @@ func (s *chatService) ListMembers(ctx context.Context, req *connect.Request[v1.L
 	}
 
 	protoMembers := make([]*v1.Member, len(members))
+	userIDs := make([]string, len(members))
 	for i, m := range members {
 		protoMembers[i] = memberToProto(m)
+		userIDs[i] = m.UserID
+	}
+
+	// Enrich with public profile data (best-effort — don't fail the request).
+	var protoUsers []*v1.PublicUser
+	if len(userIDs) > 0 && s.authStore != nil {
+		users, err := s.authStore.GetUsersByIDs(ctx, userIDs)
+		if err != nil {
+			slog.Warn("fetching user profiles for member list", "err", err, "server", req.Msg.ServerId)
+		} else {
+			protoUsers = make([]*v1.PublicUser, len(users))
+			for i, u := range users {
+				protoUsers[i] = &v1.PublicUser{
+					Id:                  u.ID,
+					Username:            u.Username,
+					DisplayName:         u.DisplayName,
+					AvatarUrl:           u.AvatarURL,
+					Bio:                 u.Bio,
+					Pronouns:            u.Pronouns,
+					BannerUrl:           u.BannerURL,
+					ThemeColorPrimary:   u.ThemeColorPrimary,
+					ThemeColorSecondary: u.ThemeColorSecondary,
+				}
+			}
+		}
 	}
 
 	return connect.NewResponse(&v1.ListMembersResponse{
 		Members: protoMembers,
+		Users:   protoUsers,
 	}), nil
 }
 

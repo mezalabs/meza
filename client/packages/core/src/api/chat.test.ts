@@ -415,6 +415,7 @@ describe('listMembers', () => {
     const { listMembers } = await import('./chat.ts');
     mockClient.listMembers.mockResolvedValue({
       members: [{ userId: 'u1', serverId: 's1' }],
+      users: [],
     });
 
     await listMembers('s1');

@@ -182,6 +182,49 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 	return &u, nil
 }
 
+func (s *AuthStore) GetUsersByIDs(ctx context.Context, userIDs []string) ([]*models.User, error) {
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
+		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
+		        audio_preferences, dm_privacy,
+		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
+		        connections
+		 FROM users WHERE id = ANY($1)`, userIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query users by ids: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var u models.User
+		var audioPrefsJSON []byte
+		var connectionsJSON []byte
+		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
+			&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
+			&audioPrefsJSON, &u.DMPrivacy,
+			&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
+			&connectionsJSON); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		u.AudioPreferences = models.DefaultAudioPreferences()
+		unmarshalJSONField(audioPrefsJSON, &u.AudioPreferences, "audio_preferences", u.ID)
+		unmarshalJSONField(connectionsJSON, &u.Connections, "connections", u.ID)
+		users = append(users, &u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate users: %w", err)
+	}
+	return users, nil
+}
+
 func (s *AuthStore) GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

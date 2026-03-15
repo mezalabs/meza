@@ -118,6 +118,18 @@ func (m *mockAuthStore) GetUserByID(_ context.Context, userID string) (*models.U
 	return u, nil
 }
 
+func (m *mockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) ([]*models.User, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var users []*models.User
+	for _, id := range userIDs {
+		if u, ok := m.users[id]; ok {
+			users = append(users, u)
+		}
+	}
+	return users, nil
+}
+
 func (m *mockAuthStore) UpdateUser(_ context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, _ *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

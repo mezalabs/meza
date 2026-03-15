@@ -122,9 +122,10 @@ function ProfileCardContent({
   useEffect(() => {
     const id = ++fetchIdRef.current;
 
-    // If cached profile is fresh (<30s old), skip the network fetch.
-    // Voice activity and mutual servers are always refetched (ephemeral).
-    const fresh = useUsersStore.getState().isProfileFresh(userId, 30_000);
+    // If cached profile is fresh (<5min old), skip the network fetch.
+    // With userUpdate events keeping profiles current during active sessions,
+    // the TTL is a safety net for missed events (e.g., reconnection).
+    const fresh = useUsersStore.getState().isProfileFresh(userId, 300_000);
     const profilePromise =
       fresh && cachedProfile
         ? Promise.resolve(cachedProfile)

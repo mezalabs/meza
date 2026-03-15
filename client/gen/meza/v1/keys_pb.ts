@@ -188,7 +188,7 @@ export type VersionedKeyEnvelope = Message<"meza.v1.VersionedKeyEnvelope"> & {
   keyVersion: number;
 
   /**
-   * 93 bytes: version(1) || ephemeral_pub(32) || nonce(12) || wrapped_key(48)
+   * 93 bytes
    *
    * @generated from field: bytes envelope = 2;
    */
