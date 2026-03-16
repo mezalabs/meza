@@ -26,8 +26,32 @@ export class AuthPage {
     this.signInButton = page.getByRole('button', { name: /sign in/i });
   }
 
+  /**
+   * If the marketing landing page is showing, click "Continue in browser"
+   * to get to the auth form. No-op if the auth form is already visible.
+   */
+  async dismissMarketingPage() {
+    // Wait for either the marketing page or the auth form to appear
+    const continueButton = this.page.getByRole('button', {
+      name: /continue in browser/i,
+    });
+    const authForm = this.signUpTab;
+
+    // Race: whichever appears first
+    await Promise.race([
+      continueButton.waitFor({ state: 'visible', timeout: 15_000 }),
+      authForm.waitFor({ state: 'visible', timeout: 15_000 }),
+    ]).catch(() => {});
+
+    if (await continueButton.isVisible()) {
+      await continueButton.click();
+      await expect(authForm).toBeVisible({ timeout: 10_000 });
+    }
+  }
+
   async goto() {
     await this.page.goto('/');
+    await this.dismissMarketingPage();
   }
 
   async switchToSignUp() {

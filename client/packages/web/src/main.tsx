@@ -16,7 +16,7 @@ import {
   useAuthStore,
   useInviteStore,
 } from '@meza/core';
-import { InviteLanding, LandingPage, Shell, TitleBar } from '@meza/ui';
+import { InviteLanding, Shell, TitleBar, WebLandingPage } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
@@ -159,7 +159,7 @@ function App() {
   let content: React.ReactNode;
   if (isAuthenticated && sessionReady) content = <Shell />;
   else if (hasPendingInvite) content = <InviteLanding />;
-  else if (!isAuthenticated) content = <LandingPage />;
+  else if (!isAuthenticated) content = <WebLandingPage />;
   else {
     // Authenticated but session not ready yet — show a loading state
     content = (

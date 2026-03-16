@@ -2,6 +2,7 @@ export { MEZA_VERSION } from '@meza/core';
 export { ChannelView } from './components/chat/ChannelView.tsx';
 export { InviteLanding } from './components/lobby/InviteLanding.tsx';
 export { LandingPage } from './components/lobby/LandingPage.tsx';
+export { WebLandingPage } from './components/lobby/WebLandingPage.tsx';
 export { SettingsView } from './components/settings/SettingsView.tsx';
 export { ContentArea } from './components/shell/ContentArea.tsx';
 export { MobileShell } from './components/shell/MobileShell.tsx';
