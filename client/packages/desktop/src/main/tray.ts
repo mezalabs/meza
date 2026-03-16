@@ -1,5 +1,5 @@
-import { app, type BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 import path from 'node:path';
+import { app, type BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 
 let tray: Tray | null = null;
 
