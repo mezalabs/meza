@@ -1,21 +1,23 @@
 # Maintainer: Meza Chat <hello@meza.chat>
 pkgname=meza-desktop-bin
-pkgver=0.0.7
+pkgver=0.0.8
 pkgrel=1
-pkgdesc='Meza desktop client — real-time encrypted chat'
+pkgdesc='Meza desktop client - real-time encrypted chat'
 arch=('x86_64')
 url='https://meza.chat'
 license=('AGPL-3.0-or-later')
 depends=(
+  'alsa-lib'
+  'at-spi2-core'
   'gtk3'
+  'libcups'
   'libnotify'
-  'nss'
+  'libsecret'
   'libxss'
   'libxtst'
-  'xdg-utils'
-  'at-spi2-core'
+  'nss'
   'util-linux-libs'
-  'libsecret'
+  'xdg-utils'
 )
 provides=('meza-desktop')
 conflicts=('meza-desktop')
@@ -23,7 +25,7 @@ options=('!strip' '!debug')
 source=(
   "${pkgname}-${pkgver}.AppImage::https://github.com/mezalabs/meza/releases/download/desktop-v${pkgver}/Meza-${pkgver}-linux-x86_64.AppImage"
 )
-sha256sums=('ce5877d9794b52f08bc17f4515792c05333e2ca051003905974c47af54fd0ace')
+sha256sums=('a4e6b02dc150a7063816d7867279b70aaffc009811e115ace83d948c0bb95fe0')
 
 prepare() {
   chmod +x "${pkgname}-${pkgver}.AppImage"
@@ -39,7 +41,7 @@ package() {
   find "${pkgdir}/opt/meza" -type d -exec chmod 755 {} +
   find "${pkgdir}/opt/meza" -type f -exec chmod 644 {} +
   chmod 755 "${pkgdir}/opt/meza/meza"
-  chmod 755 "${pkgdir}/opt/meza/chrome-sandbox"
+  chmod 4755 "${pkgdir}/opt/meza/chrome-sandbox"
   chmod 755 "${pkgdir}/opt/meza/chrome_crashpad_handler"
 
   # Ensure icon is available for Electron window/tray
