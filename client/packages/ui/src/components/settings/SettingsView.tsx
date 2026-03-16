@@ -1,6 +1,7 @@
 import { gatewayDisconnect, logout } from '@meza/core';
 import { ArrowLeftIcon, SignOutIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useAppVersion } from '../../hooks/useAppVersion.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { AccountSection } from './AccountSection.tsx';
 import { AppearanceSection } from './AppearanceSection.tsx';
@@ -39,10 +40,19 @@ export function SettingsView({ section }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<SectionId | null>(
     isMobile ? null : (section as SectionId) || 'account',
   );
+  const [copied, setCopied] = useState(false);
+  const version = useAppVersion();
 
   const activeSectionLabel = SETTINGS_SECTIONS.find(
     (s) => s.id === activeSection,
   )?.label;
+
+  const handleCopyVersion = () => {
+    navigator.clipboard?.writeText(`v${version}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   // Mobile: show nav list or content, not both
   if (isMobile) {
@@ -87,18 +97,28 @@ export function SettingsView({ section }: SettingsViewProps) {
             {s.label}
           </button>
         ))}
-        <button
-          type="button"
-          className="mt-auto flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-danger transition-colors"
-          onClick={() => {
-            gatewayDisconnect();
-            logout();
-          }}
-          aria-label="Log out"
-        >
-          <SignOutIcon size={14} aria-hidden="true" />
-          Log Out
-        </button>
+        <div className="mt-auto flex flex-col gap-1">
+          <button
+            type="button"
+            className="px-3 py-1 text-xs text-text-subtle hover:text-text-muted transition-colors"
+            onClick={handleCopyVersion}
+            aria-label={`Version ${version}. Click to copy.`}
+          >
+            {copied ? 'Copied!' : `v${version}`}
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-danger transition-colors"
+            onClick={() => {
+              gatewayDisconnect();
+              logout();
+            }}
+            aria-label="Log out"
+          >
+            <SignOutIcon size={14} aria-hidden="true" />
+            Log Out
+          </button>
+        </div>
       </nav>
     );
   }
@@ -128,18 +148,28 @@ export function SettingsView({ section }: SettingsViewProps) {
             {s.label}
           </button>
         ))}
-        <button
-          type="button"
-          className="mt-auto flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-danger transition-colors"
-          onClick={() => {
-            gatewayDisconnect();
-            logout();
-          }}
-          aria-label="Log out"
-        >
-          <SignOutIcon size={14} aria-hidden="true" />
-          Log Out
-        </button>
+        <div className="mt-auto flex flex-col gap-1">
+          <button
+            type="button"
+            className="px-2 py-1 text-xs text-text-subtle hover:text-text-muted transition-colors"
+            onClick={handleCopyVersion}
+            aria-label={`Version ${version}. Click to copy.`}
+          >
+            {copied ? 'Copied!' : `v${version}`}
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-text-muted hover:bg-bg-surface hover:text-danger transition-colors"
+            onClick={() => {
+              gatewayDisconnect();
+              logout();
+            }}
+            aria-label="Log out"
+          >
+            <SignOutIcon size={14} aria-hidden="true" />
+            Log Out
+          </button>
+        </div>
       </nav>
 
       {/* Settings content area */}
