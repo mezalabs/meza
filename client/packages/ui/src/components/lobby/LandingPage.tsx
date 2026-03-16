@@ -3,7 +3,11 @@ import { IconContext } from '@phosphor-icons/react';
 import { AuthForm } from './AuthForm.tsx';
 import { MezaLogo } from './MezaLogo.tsx';
 
-export function LandingPage() {
+export function LandingPage({
+  showDownloads,
+}: {
+  showDownloads?: boolean;
+} = {}) {
   return (
     <IconContext.Provider value={{ weight: 'fill' }}>
       <div className="flex min-h-0 w-full flex-1 items-start justify-center bg-bg-base pt-[20vh]">
@@ -20,9 +24,19 @@ export function LandingPage() {
           <AuthForm />
 
           {/* Footer */}
-          <p className="text-center text-xs text-text-subtle">
-            v{MEZA_VERSION}
-          </p>
+          <div className="flex flex-col items-center gap-2">
+            {showDownloads && (
+              <a
+                href="https://github.com/mezalabs/meza/releases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-text-muted transition-colors hover:text-text"
+              >
+                View downloads
+              </a>
+            )}
+            <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
+          </div>
         </div>
       </div>
     </IconContext.Provider>

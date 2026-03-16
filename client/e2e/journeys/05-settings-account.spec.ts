@@ -139,13 +139,13 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       .getByRole('button', { name: 'Settings', exact: true })
       .click();
     await alicePage.getByLabel('Log out').click();
+
+    // After logout, the marketing landing page shows — click through to auth
+    const auth = new AuthPage(alicePage);
+    await auth.dismissMarketingPage();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
     ).toBeVisible({ timeout: 15_000 });
-
-    // Login with correct credentials
-    const auth = new AuthPage(alicePage);
-    await auth.goto();
     await auth.login('e2e_alice@test.local', 'testpass123');
     await expect(
       alicePage.getByRole('button', { name: 'Settings', exact: true }),
@@ -175,11 +175,13 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       .getByRole('button', { name: 'Settings', exact: true })
       .click();
     await alicePage.getByLabel('Log out').click();
+
+    const auth = new AuthPage(alicePage);
+    await auth.dismissMarketingPage();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
     ).toBeVisible({ timeout: 15_000 });
 
-    const auth = new AuthPage(alicePage);
     await auth.switchToRecover();
 
     // Recover with correct phrase + new password
@@ -200,12 +202,13 @@ test('Journey 5: Settings & Account', async ({ browser }, testInfo) => {
       .getByRole('button', { name: 'Settings', exact: true })
       .click();
     await alicePage.getByLabel('Log out').click();
+
+    const newAuth = new AuthPage(alicePage);
+    await newAuth.dismissMarketingPage();
     await expect(
       alicePage.getByRole('button', { name: /sign in/i }),
     ).toBeVisible({ timeout: 15_000 });
 
-    const newAuth = new AuthPage(alicePage);
-    await newAuth.goto();
     await newAuth.login('e2e_alice@test.local', newPassword);
     await expect(
       alicePage.getByRole('button', { name: 'Settings', exact: true }),
