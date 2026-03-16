@@ -1,20 +1,32 @@
 import path from 'node:path';
-import { type BrowserWindow, Menu, nativeImage, Tray } from 'electron';
+import { app, type BrowserWindow, Menu, nativeImage, Tray } from 'electron';
 
 let tray: Tray | null = null;
 
-export function createTray(win: BrowserWindow): Tray {
-  const iconPath = path.join(process.resourcesPath, 'icon.png');
-  let icon = nativeImage.createFromPath(iconPath);
+function resourcePath(filename: string): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, filename);
+  }
+  return path.join(__dirname, '../../build', filename);
+}
 
-  // On macOS, use template image for proper dark/light mode
-  if (process.platform === 'darwin' && !icon.isEmpty()) {
-    icon.setTemplateImage(true);
+export function createTray(win: BrowserWindow): Tray {
+  let icon: Electron.NativeImage;
+
+  if (process.platform === 'darwin') {
+    // macOS: use dedicated small monochrome template icon for the menu bar
+    const trayIconPath = resourcePath('trayTemplate.png');
+    icon = nativeImage.createFromPath(trayIconPath);
+    if (!icon.isEmpty()) {
+      icon.setTemplateImage(true);
+    }
+  } else {
+    // Windows/Linux: use the full app icon
+    icon = nativeImage.createFromPath(resourcePath('icon.png'));
   }
 
-  // If icon file is missing, create a minimal 16x16 transparent PNG
   if (icon.isEmpty()) {
-    icon = nativeImage.createFromBuffer(Buffer.alloc(0));
+    console.warn('Tray icon not found; tray may be invisible.');
   }
 
   tray = new Tray(icon);
@@ -40,14 +52,16 @@ export function createTray(win: BrowserWindow): Tray {
 
   tray.setContextMenu(contextMenu);
 
-  tray.on('click', () => {
-    if (win.isVisible()) {
-      win.hide();
-    } else {
-      win.show();
-      win.focus();
-    }
-  });
+  if (process.platform !== 'darwin') {
+    tray.on('click', () => {
+      if (win.isVisible()) {
+        win.hide();
+      } else {
+        win.show();
+        win.focus();
+      }
+    });
+  }
 
   return tray;
 }
