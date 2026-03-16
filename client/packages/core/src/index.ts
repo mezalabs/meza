@@ -1,4 +1,4 @@
-export const MEZA_VERSION = '0.0.1';
+export const MEZA_VERSION = '0.0.8';
 
 export type { Device } from '@meza/gen/meza/v1/auth_pb.ts';
 export type {
