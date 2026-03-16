@@ -24,7 +24,7 @@
     "@capacitor/status-bar": "^7"
   },
   "devDependencies": {
-    "@capacitor/android": "^7",
+    "@capacitor/android": "^8",
     "@capacitor/cli": "^7",
     "@capacitor/ios": "^7"
   }
