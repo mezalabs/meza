@@ -20,7 +20,7 @@
     "@capacitor/core": "^7",
     "@capacitor/keyboard": "^7.0.4",
     "@capacitor/push-notifications": "^7",
-    "@capacitor/splash-screen": "^7",
+    "@capacitor/splash-screen": "^8",
     "@capacitor/status-bar": "^7"
   },
   "devDependencies": {
