@@ -11,7 +11,7 @@
     <key>provisioningProfiles</key>
     <dict>
         <key>chat.meza.app</key>
-        <string>Meza App Store</string>
+        <string>Meza iOS</string>
     </dict>
 </dict>
 </plist>
