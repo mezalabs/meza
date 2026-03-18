@@ -206,12 +206,13 @@ jobs:
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*/CURRENT_PROJECT_VERSION = ${{ github.run_number }}/" \
             client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
 
-      - name: Extract provisioning profile UUID
+      - name: Extract provisioning profile name
         id: profile
         run: |
-          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< \
+          NAME=$(/usr/libexec/PlistBuddy -c "Print Name" /dev/stdin <<< \
             "$(security cms -D -i "$RUNNER_TEMP/meza.mobileprovision")")
-          echo "uuid=$UUID" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Profile: $NAME"
 
       - name: Archive
         working-directory: client/packages/mobile/ios/App
@@ -224,7 +225,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=KD587V52FJ \
-            PROVISIONING_PROFILE=${{ steps.profile.outputs.uuid }}
+            'PROVISIONING_PROFILE_SPECIFIER=${{ steps.profile.outputs.name }}'
 
       - name: Export IPA
         run: |
