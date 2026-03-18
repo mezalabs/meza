@@ -193,12 +193,25 @@ jobs:
           # Install provisioning profile
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode \
-            > ~/Library/MobileDevice/Provisioning\ Profiles/meza.mobileprovision
+            > "$RUNNER_TEMP/meza.mobileprovision"
+          # Extract UUID and install with correct filename
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< \
+            "$(security cms -D -i "$RUNNER_TEMP/meza.mobileprovision")")
+          cp "$RUNNER_TEMP/meza.mobileprovision" \
+            ~/Library/MobileDevice/Provisioning\ Profiles/"$PROFILE_UUID".mobileprovision
+          echo "Installed profile: $PROFILE_UUID"
 
       - name: Patch build number from run number
         run: |
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*/CURRENT_PROJECT_VERSION = ${{ github.run_number }}/" \
             client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
+
+      - name: Extract provisioning profile UUID
+        id: profile
+        run: |
+          UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< \
+            "$(security cms -D -i "$RUNNER_TEMP/meza.mobileprovision")")
+          echo "uuid=$UUID" >> "$GITHUB_OUTPUT"
 
       - name: Archive
         working-directory: client/packages/mobile/ios/App
@@ -210,7 +223,8 @@ jobs:
             -destination "generic/platform=iOS" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=KD587V52FJ
+            DEVELOPMENT_TEAM=KD587V52FJ \
+            PROVISIONING_PROFILE=${{ steps.profile.outputs.uuid }}
 
       - name: Export IPA
         run: |
