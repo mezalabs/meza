@@ -635,6 +635,51 @@ tasks:
         echo "Created tag desktop-v${VERSION}"
         echo "Run 'git push && git push --tags' to trigger the release build"
 
+  release:mobile:
+    desc: "Bump mobile version, commit, and tag (usage: task release:mobile -- 0.1.0)"
+    cmds:
+      - |
+        VERSION="{{.CLI_ARGS}}"
+        if [ -z "$VERSION" ]; then
+          echo "Usage: task release:mobile -- <version>"
+          echo "  Example: task release:mobile -- 0.1.0"
+          exit 1
+        fi
+        if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+          echo "Error: version must be valid semver (got: $VERSION)"
+          exit 1
+        fi
+
+        # Portable sed -i: GNU sed (Linux) vs BSD sed (macOS)
+        sedi() {
+          if sed --version >/dev/null 2>&1; then
+            sed -i "$@"
+          else
+            sed -i '' "$@"
+          fi
+        }
+
+        # Update package.json
+        cd client/packages/mobile
+        jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp
+        mv package.json.tmp package.json
+
+        # Update Android versionName
+        sedi "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
+
+        # Update iOS MARKETING_VERSION (both Debug and Release configs)
+        sedi "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/" ios/App/App.xcodeproj/project.pbxproj
+
+        cd ../../..
+        git add client/packages/mobile/package.json \
+                client/packages/mobile/android/app/build.gradle \
+                client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
+        git commit -m "chore(mobile): bump version to $VERSION"
+        git tag "mobile-v${VERSION}"
+        echo ""
+        echo "Created tag mobile-v${VERSION}"
+        echo "Run 'git push && git push --tags' to trigger the release build"
+
   release:desktop:update-packaging:
     desc: "Update packaging files with checksums from a desktop release (usage: task release:desktop:update-packaging -- 0.2.0)"
     cmds:
