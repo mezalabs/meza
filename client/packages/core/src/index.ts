@@ -403,5 +403,31 @@ export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
+// Emoji data & search
+export type {
+  EmojiGroup,
+  ShortcodeMap,
+  UnicodeEmoji,
+} from './lib/emojiData.ts';
+export {
+  applySkinTone,
+  getAllUnicodeEmojis,
+  getEmojiGroups,
+  getGroupLabel,
+  getShortcodes,
+  loadEmojiData,
+} from './lib/emojiData.ts';
+export type {
+  CustomSearchResult,
+  SearchResult,
+  UnicodeSearchResult,
+} from './lib/emojiSearch.ts';
+export { searchEmojis } from './lib/emojiSearch.ts';
+export type { FrequentEmojiEntry } from './lib/frequentEmojis.ts';
+export {
+  clearFrequentEmojis,
+  getFrequentEmojis,
+  recordUsage,
+} from './lib/frequentEmojis.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';

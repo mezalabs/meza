@@ -3,6 +3,7 @@ import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
 import type { AudioPreferences, User } from '@meza/gen/meza/v1/models_pb.ts';
 import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
+import { clearFrequentEmojis } from '../lib/frequentEmojis.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
@@ -366,6 +367,7 @@ export async function logout() {
   useBlockStore.getState().reset();
   useFriendStore.getState().reset();
   resetSearchState();
+  clearFrequentEmojis();
   await clearCryptoStorage();
   useAuthStore.getState().clearAuth();
 }

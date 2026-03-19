@@ -10,13 +10,15 @@
     }
   },
   "dependencies": {
-    "@meza/gen": "workspace:*",
     "@bufbuild/protobuf": "^2.0.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-web": "^2.0.0",
-    "flexsearch": "^0.8.0",
+    "@meza/gen": "workspace:*",
     "@noble/curves": "^2",
     "@scure/bip39": "^2.0.1",
+    "emojibase": "^17.0.0",
+    "emojibase-data": "^17.0.0",
+    "flexsearch": "^0.8.0",
     "hash-wasm": "^4.12.0",
     "immer": "^11.1.4",
     "nanoid": "^5.1.6",

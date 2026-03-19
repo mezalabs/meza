@@ -1,0 +1,623 @@
+import {
+  type CustomEmoji,
+  type EmojiGroup,
+  type FrequentEmojiEntry,
+  type SearchResult,
+  type UnicodeEmoji,
+  applySkinTone,
+  getMediaURL,
+} from '@meza/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
+
+// ----- Constants -----
+
+const COLS = 9;
+const EMOJI_SIZE = 32;
+const BUTTON_SIZE = 40;
+const HEADER_HEIGHT = 28;
+const ROW_HEIGHT = BUTTON_SIZE;
+
+// ----- Types -----
+
+interface SectionHeader {
+  kind: 'header';
+  label: string;
+}
+
+interface EmojiRow {
+  kind: 'row';
+  items: GridItem[];
+}
+
+type GridRow = SectionHeader | EmojiRow;
+
+interface CustomGridItem {
+  type: 'custom';
+  emoji: CustomEmoji;
+}
+
+interface UnicodeGridItem {
+  type: 'unicode';
+  emoji: UnicodeEmoji;
+}
+
+type GridItem = CustomGridItem | UnicodeGridItem;
+
+// ----- Props -----
+
+interface EmojiPickerGridProps {
+  personalEmojis: CustomEmoji[];
+  serverEmojis: CustomEmoji[];
+  frequentEmojis: FrequentEmojiEntry[];
+  emojiGroups: EmojiGroup[] | null;
+  searchResults: SearchResult[] | null;
+  skinTone: number;
+  serverName?: string;
+  onSelect: (emojiText: string) => void;
+  onHover: (preview: PreviewEmoji | null) => void;
+  onEscape: () => void;
+  searchFocused: boolean;
+  onFocusSearch: () => void;
+}
+
+// ----- Helpers -----
+
+function customToRef(e: CustomEmoji): string {
+  return e.animated
+    ? `<a:${e.name}:${e.id}>`
+    : `<:${e.name}:${e.id}>`;
+}
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function buildRows(
+  personalEmojis: CustomEmoji[],
+  serverEmojis: CustomEmoji[],
+  frequentEntries: FrequentEmojiEntry[],
+  emojiGroups: EmojiGroup[] | null,
+  allCustom: CustomEmoji[],
+  unicodeMap: Map<string, UnicodeEmoji> | null,
+): GridRow[] {
+  const rows: GridRow[] = [];
+
+  // Personal emojis
+  if (personalEmojis.length > 0) {
+    rows.push({ kind: 'header', label: 'My Emojis' });
+    const items: CustomGridItem[] = personalEmojis.map((e) => ({
+      type: 'custom',
+      emoji: e,
+    }));
+    for (const chunk of chunkArray(items, COLS)) {
+      rows.push({ kind: 'row', items: chunk });
+    }
+  }
+
+  // Server emojis
+  if (serverEmojis.length > 0) {
+    rows.push({ kind: 'header', label: 'Server Emojis' });
+    const items: CustomGridItem[] = serverEmojis.map((e) => ({
+      type: 'custom',
+      emoji: e,
+    }));
+    for (const chunk of chunkArray(items, COLS)) {
+      rows.push({ kind: 'row', items: chunk });
+    }
+  }
+
+  // Frequently used
+  if (frequentEntries.length > 0) {
+    const resolved: GridItem[] = [];
+    const customById = new Map(allCustom.map((e) => [e.id, e]));
+
+    for (const entry of frequentEntries) {
+      if (entry.type === 'custom') {
+        const emoji = customById.get(entry.key);
+        if (emoji) resolved.push({ type: 'custom', emoji });
+      } else if (unicodeMap) {
+        const emoji = unicodeMap.get(entry.key);
+        if (emoji) resolved.push({ type: 'unicode', emoji });
+      }
+    }
+
+    if (resolved.length > 0) {
+      rows.push({ kind: 'header', label: 'Frequently Used' });
+      for (const chunk of chunkArray(resolved, COLS)) {
+        rows.push({ kind: 'row', items: chunk });
+      }
+    }
+  }
+
+  // Unicode categories
+  if (emojiGroups) {
+    for (const group of emojiGroups) {
+      if (group.emojis.length === 0) continue;
+      rows.push({ kind: 'header', label: group.label });
+      const items: UnicodeGridItem[] = group.emojis.map((e) => ({
+        type: 'unicode',
+        emoji: e,
+      }));
+      for (const chunk of chunkArray(items, COLS)) {
+        rows.push({ kind: 'row', items: chunk });
+      }
+    }
+  }
+
+  return rows;
+}
+
+function buildSearchRows(results: SearchResult[]): GridRow[] {
+  const items: GridItem[] = results.map((r) => {
+    if (r.type === 'custom') {
+      return {
+        type: 'custom' as const,
+        emoji: {
+          id: r.id,
+          name: r.name,
+          imageUrl: r.imageUrl,
+          animated: r.animated,
+          serverId: r.serverId,
+          userId: r.userId,
+        } as CustomEmoji,
+      };
+    }
+    return {
+      type: 'unicode' as const,
+      emoji: {
+        emoji: r.emoji,
+        label: r.label,
+        hexcode: r.hexcode,
+        group: r.group,
+        order: 0,
+        skins: r.skins,
+      },
+    };
+  });
+
+  const rows: GridRow[] = [];
+  for (const chunk of chunkArray(items, COLS)) {
+    rows.push({ kind: 'row', items: chunk });
+  }
+  return rows;
+}
+
+// ----- Component -----
+
+export const EmojiPickerGrid = memo(function EmojiPickerGrid({
+  personalEmojis,
+  serverEmojis,
+  frequentEmojis,
+  emojiGroups,
+  searchResults,
+  skinTone,
+  serverName,
+  onSelect,
+  onHover,
+  onEscape,
+  searchFocused,
+  onFocusSearch,
+}: EmojiPickerGridProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  // Build a map of all custom emojis for frequent lookup
+  const allCustom = useMemo(
+    () => [...personalEmojis, ...serverEmojis],
+    [personalEmojis, serverEmojis],
+  );
+
+  // Build unicode map for frequent emoji lookup
+  const unicodeMap = useMemo(() => {
+    if (!emojiGroups) return null;
+    const map = new Map<string, UnicodeEmoji>();
+    for (const group of emojiGroups) {
+      for (const e of group.emojis) {
+        map.set(e.emoji, e);
+      }
+    }
+    return map;
+  }, [emojiGroups]);
+
+  const rows = useMemo(() => {
+    if (searchResults) return buildSearchRows(searchResults);
+    return buildRows(
+      personalEmojis,
+      serverEmojis,
+      frequentEmojis,
+      emojiGroups,
+      allCustom,
+      unicodeMap,
+    );
+  }, [
+    searchResults,
+    personalEmojis,
+    serverEmojis,
+    frequentEmojis,
+    emojiGroups,
+    allCustom,
+    unicodeMap,
+  ]);
+
+  // Flatten all emoji items for keyboard navigation
+  const flatItems = useMemo(() => {
+    const items: { rowIndex: number; colIndex: number; item: GridItem }[] = [];
+    for (let ri = 0; ri < rows.length; ri++) {
+      const row = rows[ri];
+      if (row.kind === 'row') {
+        for (let ci = 0; ci < row.items.length; ci++) {
+          items.push({ rowIndex: ri, colIndex: ci, item: row.items[ci] });
+        }
+      }
+    }
+    return items;
+  }, [rows]);
+
+  // Build lookup map: "rowIndex:colIndex" -> flat index (avoids O(n) findIndex per cell)
+  const flatIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < flatItems.length; i++) {
+      const fi = flatItems[i];
+      map.set(`${fi.rowIndex}:${fi.colIndex}`, i);
+    }
+    return map;
+  }, [flatItems]);
+
+  // Virtualizer
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) =>
+      rows[index].kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT,
+    overscan: 5,
+  });
+
+  // Reset focus when search changes
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [searchResults]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Only handle when picker is the active context
+      if (focusedIndex === -1 && !searchFocused) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onEscape();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (searchFocused || focusedIndex === -1) {
+          // Move from search to first emoji
+          if (flatItems.length > 0) setFocusedIndex(0);
+          return;
+        }
+        // Move down one row
+        const current = flatItems[focusedIndex];
+        if (!current) return;
+        const targetCol = current.colIndex;
+        // Find the next row's item at the same column
+        let nextIdx = focusedIndex + 1;
+        while (nextIdx < flatItems.length) {
+          const next = flatItems[nextIdx];
+          if (
+            next.rowIndex > current.rowIndex &&
+            next.colIndex === targetCol
+          ) {
+            setFocusedIndex(nextIdx);
+            return;
+          }
+          // If we've moved past the target column in a new row, use first item of that row
+          if (
+            next.rowIndex > current.rowIndex &&
+            next.colIndex >= targetCol
+          ) {
+            setFocusedIndex(nextIdx);
+            return;
+          }
+          nextIdx++;
+        }
+        // If no match at same column, go to the next row's closest item
+        for (let i = focusedIndex + 1; i < flatItems.length; i++) {
+          if (flatItems[i].rowIndex > current.rowIndex) {
+            setFocusedIndex(i);
+            return;
+          }
+        }
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (focusedIndex <= 0) {
+          setFocusedIndex(-1);
+          onFocusSearch();
+          return;
+        }
+        const current = flatItems[focusedIndex];
+        if (!current) return;
+        const targetCol = current.colIndex;
+        // Find the previous row's item at the same column
+        for (let i = focusedIndex - 1; i >= 0; i--) {
+          if (
+            flatItems[i].rowIndex < current.rowIndex &&
+            flatItems[i].colIndex === targetCol
+          ) {
+            setFocusedIndex(i);
+            return;
+          }
+          if (
+            flatItems[i].rowIndex < current.rowIndex &&
+            flatItems[i].colIndex <= targetCol
+          ) {
+            setFocusedIndex(i);
+            return;
+          }
+        }
+        // Fallback to first item of previous row
+        for (let i = focusedIndex - 1; i >= 0; i--) {
+          if (flatItems[i].rowIndex < current.rowIndex) {
+            setFocusedIndex(i);
+            return;
+          }
+        }
+        // Go to search
+        setFocusedIndex(-1);
+        onFocusSearch();
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (focusedIndex < flatItems.length - 1) {
+          setFocusedIndex(focusedIndex + 1);
+        }
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (focusedIndex > 0) {
+          setFocusedIndex(focusedIndex - 1);
+        }
+      }
+
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (focusedIndex >= 0 && focusedIndex < flatItems.length) {
+          e.preventDefault();
+          const item = flatItems[focusedIndex].item;
+          handleItemSelect(item);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
+  }, [
+    focusedIndex,
+    flatItems,
+    searchFocused,
+    onEscape,
+    onFocusSearch,
+  ]);
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex < 0 || focusedIndex >= flatItems.length) return;
+    const fi = flatItems[focusedIndex];
+    virtualizer.scrollToIndex(fi.rowIndex, { align: 'auto' });
+  }, [focusedIndex, flatItems, virtualizer]);
+
+  // Update preview on focus
+  useEffect(() => {
+    if (focusedIndex < 0 || focusedIndex >= flatItems.length) {
+      return;
+    }
+    const item = flatItems[focusedIndex].item;
+    onHover(itemToPreview(item, serverName));
+  }, [focusedIndex, flatItems, onHover, serverName]);
+
+  const handleItemSelect = useCallback(
+    (item: GridItem) => {
+      if (item.type === 'custom') {
+        onSelect(customToRef(item.emoji));
+      } else {
+        onSelect(applySkinTone(item.emoji, skinTone));
+      }
+    },
+    [onSelect, skinTone],
+  );
+
+  const handleItemHover = useCallback(
+    (item: GridItem) => {
+      onHover(itemToPreview(item, serverName));
+    },
+    [onHover, serverName],
+  );
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-48 text-sm text-text-muted">
+        {searchResults !== null ? 'No emojis found' : 'Loading…'}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={scrollRef}
+      className="emoji-picker-grid overflow-y-auto overflow-x-hidden"
+      style={{ height: 350 }}
+      onMouseLeave={() => onHover(null)}
+      role="grid"
+      aria-label="Emoji grid"
+    >
+      <div
+        style={{
+          height: virtualizer.getTotalSize(),
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          return (
+            <div
+              key={virtualRow.key}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              {row.kind === 'header' ? (
+                <div
+                  className="px-3 pt-2 pb-0.5 text-xs font-semibold uppercase tracking-wider text-text-subtle"
+                  role="rowheader"
+                  style={{ height: HEADER_HEIGHT }}
+                >
+                  {row.label}
+                </div>
+              ) : (
+                <div
+                  className="flex px-1"
+                  role="row"
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  {row.items.map((item, colIdx) => {
+                    const globalIdx = flatIndexMap.get(`${virtualRow.index}:${colIdx}`) ?? -1;
+                    const isFocused = globalIdx === focusedIndex;
+
+                    return (
+                      <EmojiButton
+                        key={
+                          item.type === 'custom'
+                            ? item.emoji.id
+                            : item.emoji.hexcode
+                        }
+                        item={item}
+                        skinTone={skinTone}
+                        focused={isFocused}
+                        onSelect={handleItemSelect}
+                        onHover={handleItemHover}
+                        onClick={() => setFocusedIndex(globalIdx)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+// ----- EmojiButton -----
+
+const EmojiButton = memo(function EmojiButton({
+  item,
+  skinTone,
+  focused,
+  onSelect,
+  onHover,
+  onClick,
+}: {
+  item: GridItem;
+  skinTone: number;
+  focused: boolean;
+  onSelect: (item: GridItem) => void;
+  onHover: (item: GridItem) => void;
+  onClick: () => void;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (focused && ref.current) {
+      ref.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [focused]);
+
+  const label =
+    item.type === 'custom' ? `:${item.emoji.name}:` : item.emoji.label;
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      role="gridcell"
+      aria-label={label}
+      className={`flex items-center justify-center rounded-md transition-colors ${
+        focused
+          ? 'bg-accent/20 ring-2 ring-accent'
+          : 'hover:bg-bg-elevated'
+      }`}
+      style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
+      onClick={() => {
+        onClick();
+        onSelect(item);
+      }}
+      onMouseEnter={() => onHover(item)}
+    >
+      {item.type === 'custom' ? (
+        <img
+          src={getMediaURL(item.emoji.imageUrl.replace('/media/', ''))}
+          alt={label}
+          className="object-contain"
+          style={{ width: EMOJI_SIZE, height: EMOJI_SIZE }}
+          loading="lazy"
+        />
+      ) : (
+        <span
+          className="leading-none"
+          style={{ fontSize: EMOJI_SIZE }}
+        >
+          {applySkinTone(item.emoji, skinTone)}
+        </span>
+      )}
+    </button>
+  );
+});
+
+// ----- Preview helper -----
+
+function itemToPreview(
+  item: GridItem,
+  serverName?: string,
+): PreviewEmoji {
+  if (item.type === 'custom') {
+    const attachmentId = item.emoji.imageUrl.replace('/media/', '');
+    return {
+      type: 'custom',
+      display: attachmentId,
+      name: item.emoji.name,
+      source: item.emoji.userId ? 'Personal' : serverName ?? 'Server',
+      animated: item.emoji.animated,
+    };
+  }
+  return {
+    type: 'unicode',
+    display: item.emoji.emoji,
+    name: item.emoji.label,
+    source: '',
+  };
+}

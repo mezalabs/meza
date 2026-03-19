@@ -1,73 +1,73 @@
 import {
-  getMediaURL,
+  type CustomEmoji,
+  type SearchResult,
+  getAllUnicodeEmojis,
+  getEmojiGroups,
+  getFrequentEmojis,
+  getShortcodes,
   listEmojis,
   listUserEmojis,
+  loadEmojiData,
+  recordUsage,
+  searchEmojis,
   useEmojiStore,
+  useServerStore,
 } from '@meza/core';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { EmojiPickerGrid } from './EmojiPickerGrid.tsx';
+import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
+import { EmojiPickerPreview } from './EmojiPickerPreview.tsx';
+import { EmojiPickerSearch } from './EmojiPickerSearch.tsx';
+import { EmojiPickerSkinTone } from './EmojiPickerSkinTone.tsx';
 
-// emoji-mart data is an opaque JSON blob consumed by the Picker component.
-// @emoji-mart/data does not export a usable type definition.
-type EmojiData = Record<string, unknown>;
+// ----- Constants -----
 
-// Hand-written props for emoji-mart Picker v5.6.x
-// Ref: https://github.com/missive/emoji-mart#options--props
-interface EmojiMartPickerProps {
-  data: EmojiData;
-  onEmojiSelect: (emoji: { native: string }) => void;
-  theme: 'dark' | 'light' | 'auto';
-  set: 'native' | 'apple' | 'google' | 'twitter' | 'facebook';
-  perLine: number;
-  emojiSize: number;
-  emojiButtonSize: number;
-  previewPosition: 'none' | 'bottom' | 'top';
-  skinTonePosition: 'none' | 'search' | 'preview';
-  maxFrequentRows?: number;
-  autoFocus?: boolean;
-}
+const PICKER_WIDTH = 380;
+const SKIN_TONE_KEY = 'meza:skin-tone';
 
-// Module-scope cache -- survives component unmount/remount (pane rearrangement)
-let cachedData: EmojiData | null = null;
-let cachedPicker: React.ComponentType<EmojiMartPickerProps> | null = null;
-let loadPromise: Promise<void> | null = null;
-
-function loadEmojiMart(): Promise<void> {
-  if (!loadPromise) {
-    loadPromise = Promise.all([
-      import('@emoji-mart/data'),
-      import('@emoji-mart/react'),
-    ])
-      .then(([dataModule, pickerModule]) => {
-        cachedData = dataModule.default as EmojiData;
-        cachedPicker =
-          pickerModule.default as React.ComponentType<EmojiMartPickerProps>;
-      })
-      .catch((err) => {
-        loadPromise = null; // Allow retry on next open
-        throw err;
-      });
+function getSavedSkinTone(): number {
+  try {
+    const val = localStorage.getItem(SKIN_TONE_KEY);
+    if (val) {
+      const n = Number.parseInt(val, 10);
+      if (n >= 0 && n <= 5) return n;
+    }
+  } catch {
+    // ignore
   }
-  return loadPromise;
+  return 0;
 }
 
-interface EmojiPickerProps {
+// ----- Component -----
+
+export interface EmojiPickerProps {
   onEmojiSelect: (text: string) => void;
   serverId?: string;
+  closeOnSelect?: boolean;
+  autoFocus?: boolean;
 }
 
 export const EmojiPicker = memo(function EmojiPicker({
   onEmojiSelect,
   serverId,
+  autoFocus = true,
 }: EmojiPickerProps) {
-  const [, forceUpdate] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [previewEmoji, setPreviewEmoji] = useState<PreviewEmoji | null>(null);
+  const [skinTone, setSkinTone] = useState(getSavedSkinTone);
+  const [dataLoaded, setDataLoaded] = useState(
+    () => getEmojiGroups() !== null,
+  );
   const [loadError, setLoadError] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(true);
 
+  // Fetch emoji data
   useEffect(() => {
-    if (cachedData && cachedPicker) return;
+    if (dataLoaded) return;
     let cancelled = false;
-    loadEmojiMart()
+    loadEmojiData()
       .then(() => {
-        if (!cancelled) forceUpdate((n) => n + 1);
+        if (!cancelled) setDataLoaded(true);
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -75,26 +75,93 @@ export const EmojiPicker = memo(function EmojiPicker({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [dataLoaded]);
 
-  // Clean up emoji-mart localStorage keys on unmount (privacy)
+  // Fetch custom emojis
+  const serverEmojis = useEmojiStore((s) =>
+    serverId ? s.byServer[serverId] : undefined,
+  );
+  const personalEmojis = useEmojiStore((s) => s.personal);
+
   useEffect(() => {
-    return () => {
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith('emoji-mart.'))
-        // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach cleanup does not need a return
-        .forEach((k) => localStorage.removeItem(k));
-    };
-  }, []);
+    if (serverId && !serverEmojis) {
+      listEmojis(serverId).catch(() => {});
+    }
+  }, [serverId, serverEmojis]);
 
+  useEffect(() => {
+    if (personalEmojis.length === 0) {
+      listUserEmojis().catch(() => {});
+    }
+  }, [personalEmojis.length]);
+
+  // Server name for preview
+  const serverName = useServerStore((s) =>
+    serverId ? s.servers[serverId]?.name : undefined,
+  );
+
+  // Frequently used (read once on mount)
+  const [frequentEmojis] = useState(() => getFrequentEmojis());
+
+  // Search
+  const allCustom: CustomEmoji[] = useMemo(() => {
+    const result = [...personalEmojis];
+    if (serverEmojis) {
+      const seenIds = new Set(result.map((e) => e.id));
+      for (const e of serverEmojis) {
+        if (!seenIds.has(e.id)) result.push(e);
+      }
+    }
+    return result;
+  }, [personalEmojis, serverEmojis]);
+
+  const searchResults: SearchResult[] | null = useMemo(() => {
+    if (!searchQuery) return null;
+    return searchEmojis(
+      searchQuery,
+      allCustom,
+      getAllUnicodeEmojis(),
+      getShortcodes(),
+    );
+  }, [searchQuery, allCustom]);
+
+  // Handlers
   const handleSelect = useCallback(
-    (emoji: { native: string }) => onEmojiSelect(emoji.native),
+    (emojiText: string) => {
+      // Track usage
+      const isCustom = emojiText.startsWith('<');
+      if (isCustom) {
+        // Extract emoji ID from <:name:id> or <a:name:id>
+        const match = emojiText.match(/:([^:>]+)>$/);
+        if (match) recordUsage(match[1], 'custom');
+      } else {
+        recordUsage(emojiText, 'unicode');
+      }
+      onEmojiSelect(emojiText);
+    },
     [onEmojiSelect],
   );
 
+  const handleSkinToneChange = useCallback((tone: number) => {
+    setSkinTone(tone);
+    try {
+      localStorage.setItem(SKIN_TONE_KEY, String(tone));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleFocusSearch = useCallback(() => {
+    setSearchFocused(true);
+  }, []);
+
+  // Loading/error states
   if (loadError) {
     return (
-      <div className="flex h-[435px] w-[352px] items-center justify-center rounded-xl bg-bg-elevated">
+      <div
+        className="flex items-center justify-center rounded-xl bg-bg-elevated"
+        style={{ width: PICKER_WIDTH, height: 420 }}
+      >
         <span className="text-sm text-text-muted">
           Failed to load emoji picker
         </span>
@@ -102,130 +169,54 @@ export const EmojiPicker = memo(function EmojiPicker({
     );
   }
 
-  if (!cachedData || !cachedPicker) {
+  if (!dataLoaded) {
     return (
-      <div className="flex h-[435px] w-[352px] items-center justify-center rounded-xl bg-bg-elevated">
+      <div
+        className="flex items-center justify-center rounded-xl bg-bg-elevated"
+        style={{ width: PICKER_WIDTH, height: 420 }}
+      >
         <span className="text-sm text-text-muted">Loading emoji…</span>
       </div>
     );
   }
 
-  const Picker = cachedPicker;
   return (
-    <div>
-      <Picker
-        data={cachedData}
-        onEmojiSelect={handleSelect}
-        theme="dark"
-        set="native"
-        perLine={9}
-        emojiSize={24}
-        emojiButtonSize={36}
-        previewPosition="none"
-        skinTonePosition="search"
-        maxFrequentRows={0}
-        autoFocus
+    <div
+      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden"
+      style={{ width: PICKER_WIDTH }}
+    >
+      {/* Search + skin tone */}
+      <div className="flex items-end gap-1 pr-2">
+        <div className="flex-1">
+          <EmojiPickerSearch
+            value={searchQuery}
+            onChange={setSearchQuery}
+            autoFocus={autoFocus}
+          />
+        </div>
+        <EmojiPickerSkinTone value={skinTone} onChange={handleSkinToneChange} />
+      </div>
+
+      {/* Emoji grid */}
+      <EmojiPickerGrid
+        personalEmojis={personalEmojis}
+        serverEmojis={serverEmojis ?? []}
+        frequentEmojis={frequentEmojis}
+        emojiGroups={getEmojiGroups()}
+        searchResults={searchResults}
+        skinTone={skinTone}
+        serverName={serverName}
+        onSelect={handleSelect}
+        onHover={setPreviewEmoji}
+        onEscape={() => {
+          // Let parent handle close via popover
+        }}
+        searchFocused={searchFocused}
+        onFocusSearch={handleFocusSearch}
       />
-      <CustomEmojiGrid serverId={serverId} onSelect={onEmojiSelect} />
+
+      {/* Preview bar (desktop only) */}
+      <EmojiPickerPreview emoji={previewEmoji} />
     </div>
   );
 });
-
-function CustomEmojiGrid({
-  serverId,
-  onSelect,
-}: {
-  serverId?: string;
-  onSelect: (text: string) => void;
-}) {
-  const serverEmojis = useEmojiStore((s) =>
-    serverId ? s.byServer[serverId] : undefined,
-  );
-  const personalEmojis = useEmojiStore((s) => s.personal);
-
-  // Fetch server emojis on mount if not already loaded
-  useEffect(() => {
-    if (serverId && !serverEmojis) {
-      listEmojis(serverId).catch(() => {});
-    }
-  }, [serverId, serverEmojis]);
-
-  // Fetch personal emojis on mount if not already loaded
-  useEffect(() => {
-    if (personalEmojis.length === 0) {
-      listUserEmojis().catch(() => {});
-    }
-  }, [personalEmojis.length]);
-
-  const hasPersonal = personalEmojis.length > 0;
-  const hasServer = serverEmojis && serverEmojis.length > 0;
-
-  if (!hasPersonal && !hasServer) return null;
-
-  return (
-    <div className="border-t border-border bg-bg-elevated px-3 py-2">
-      {hasPersonal && (
-        <div>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-            My Emojis
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {personalEmojis.map((emoji) => {
-              const attachmentId = emoji.imageUrl.replace('/media/', '');
-              const ref = emoji.animated
-                ? `<a:${emoji.name}:${emoji.id}>`
-                : `<:${emoji.name}:${emoji.id}>`;
-              return (
-                <button
-                  key={emoji.id}
-                  type="button"
-                  title={`:${emoji.name}:`}
-                  className="flex h-9 w-9 items-center justify-center rounded hover:bg-bg-surface"
-                  onClick={() => onSelect(ref)}
-                >
-                  <img
-                    src={getMediaURL(attachmentId)}
-                    alt={`:${emoji.name}:`}
-                    className="h-6 w-6 object-contain"
-                    loading="lazy"
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {hasServer && (
-        <div className={hasPersonal ? 'mt-2' : ''}>
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-            Server Emojis
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {serverEmojis.map((emoji) => {
-              const attachmentId = emoji.imageUrl.replace('/media/', '');
-              const ref = emoji.animated
-                ? `<a:${emoji.name}:${emoji.id}>`
-                : `<:${emoji.name}:${emoji.id}>`;
-              return (
-                <button
-                  key={emoji.id}
-                  type="button"
-                  title={`:${emoji.name}:`}
-                  className="flex h-9 w-9 items-center justify-center rounded hover:bg-bg-surface"
-                  onClick={() => onSelect(ref)}
-                >
-                  <img
-                    src={getMediaURL(attachmentId)}
-                    alt={`:${emoji.name}:`}
-                    className="h-6 w-6 object-contain"
-                    loading="lazy"
-                  />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
