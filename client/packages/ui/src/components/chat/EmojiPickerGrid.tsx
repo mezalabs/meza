@@ -561,7 +561,10 @@ const EmojiButton = memo(function EmojiButton({
       ) : (
         <span
           className="leading-none"
-          style={{ fontSize: EMOJI_SIZE }}
+          style={{
+            fontSize: EMOJI_SIZE,
+            fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
+          }}
         >
           {applySkinTone(item.emoji, skinTone)}
         </span>

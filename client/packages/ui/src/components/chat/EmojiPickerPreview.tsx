@@ -32,7 +32,12 @@ export const EmojiPickerPreview = memo(function EmojiPickerPreview({
                 className="h-7 w-7 object-contain"
               />
             ) : (
-              <span className="text-2xl leading-none">{emoji.display}</span>
+              <span
+                className="text-2xl leading-none"
+                style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" }}
+              >
+                {emoji.display}
+              </span>
             )}
           </div>
           <div className="min-w-0 flex-1">
