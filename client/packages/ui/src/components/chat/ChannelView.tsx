@@ -1436,7 +1436,10 @@ const MessageItem = memo(function MessageItem({
               setMobileEmojiPickerOpen(false);
             }}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up">
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up"
+            style={{ maxHeight: '70dvh' }}
+          >
             <div className="mx-auto mt-2 mb-1 h-1 w-8 rounded-full bg-border" />
             <EmojiPicker
               onEmojiSelect={(emoji) => {

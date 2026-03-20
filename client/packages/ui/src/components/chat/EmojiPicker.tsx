@@ -22,7 +22,7 @@ import { EmojiPickerSkinTone } from './EmojiPickerSkinTone.tsx';
 
 // ----- Constants -----
 
-const PICKER_WIDTH = 380;
+const PICKER_MAX_WIDTH = 380;
 const SKIN_TONE_KEY = 'meza:skin-tone';
 
 function getSavedSkinTone(): number {
@@ -159,7 +159,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     return (
       <div
         className="flex items-center justify-center rounded-xl bg-bg-elevated"
-        style={{ width: PICKER_WIDTH, height: 420 }}
+        style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw' }}
       >
         <span className="text-sm text-text-muted">
           Failed to load emoji picker
@@ -172,7 +172,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     return (
       <div
         className="flex items-center justify-center rounded-xl bg-bg-elevated"
-        style={{ width: PICKER_WIDTH, height: 420 }}
+        style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw' }}
       >
         <span className="text-sm text-text-muted">Loading emoji…</span>
       </div>
@@ -181,8 +181,8 @@ export const EmojiPicker = memo(function EmojiPicker({
 
   return (
     <div
-      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden"
-      style={{ width: PICKER_WIDTH }}
+      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden h-[420px]"
+      style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw', maxHeight: '100%' }}
     >
       {/* Search + skin tone */}
       <div className="flex items-end gap-1 pr-2">

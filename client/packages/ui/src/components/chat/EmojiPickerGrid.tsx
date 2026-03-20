@@ -439,8 +439,7 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   return (
     <div
       ref={scrollRef}
-      className="emoji-picker-grid overflow-y-auto overflow-x-hidden"
-      style={{ height: 350 }}
+      className="emoji-picker-grid flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
       onMouseLeave={() => onHover(null)}
       role="grid"
       aria-label="Emoji grid"
