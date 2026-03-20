@@ -128,11 +128,6 @@ export function getAllUnicodeEmojis(): UnicodeEmoji[] | null {
   return cachedAllEmojis;
 }
 
-/** Get the group label for a given group number */
-export function getGroupLabel(group: number): string {
-  return GROUP_META.find((m) => m.order === group)?.label ?? 'Other';
-}
-
 /** Apply a skin tone modifier to an emoji. Index 0 = default (no modifier), 1-5 = Fitzpatrick modifiers. */
 export function applySkinTone(
   emoji: UnicodeEmoji,

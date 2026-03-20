@@ -43,7 +43,6 @@ function getSavedSkinTone(): number {
 export interface EmojiPickerProps {
   onEmojiSelect: (text: string) => void;
   serverId?: string;
-  closeOnSelect?: boolean;
   autoFocus?: boolean;
 }
 
@@ -208,11 +207,9 @@ export const EmojiPicker = memo(function EmojiPicker({
         serverName={serverName}
         onSelect={handleSelect}
         onHover={setPreviewEmoji}
-        onEscape={() => {
-          // Let parent handle close via popover
-        }}
         searchFocused={searchFocused}
         onFocusSearch={handleFocusSearch}
+        onGridFocus={() => setSearchFocused(false)}
       />
 
       {/* Preview bar (desktop only) */}

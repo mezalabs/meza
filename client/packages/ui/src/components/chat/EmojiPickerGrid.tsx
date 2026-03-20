@@ -64,9 +64,9 @@ interface EmojiPickerGridProps {
   serverName?: string;
   onSelect: (emojiText: string) => void;
   onHover: (preview: PreviewEmoji | null) => void;
-  onEscape: () => void;
   searchFocused: boolean;
   onFocusSearch: () => void;
+  onGridFocus: () => void;
 }
 
 // ----- Helpers -----
@@ -207,9 +207,9 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   serverName,
   onSelect,
   onHover,
-  onEscape,
   searchFocused,
   onFocusSearch,
+  onGridFocus,
 }: EmojiPickerGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -290,53 +290,60 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     setFocusedIndex(-1);
   }, [searchResults]);
 
-  // Keyboard navigation
+  // Keyboard navigation — use refs to avoid re-registering listener on every state change
+  const focusedIndexRef = useRef(focusedIndex);
+  focusedIndexRef.current = focusedIndex;
+  const flatItemsRef = useRef(flatItems);
+  flatItemsRef.current = flatItems;
+  const searchFocusedRef = useRef(searchFocused);
+  searchFocusedRef.current = searchFocused;
+
+  const handleItemSelect = useCallback(
+    (item: GridItem) => {
+      if (item.type === 'custom') {
+        onSelect(customToRef(item.emoji));
+      } else {
+        onSelect(applySkinTone(item.emoji, skinTone));
+      }
+    },
+    [onSelect, skinTone],
+  );
+  const handleItemSelectRef = useRef(handleItemSelect);
+  handleItemSelectRef.current = handleItemSelect;
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      // Only handle when picker is the active context
-      if (focusedIndex === -1 && !searchFocused) return;
+      const idx = focusedIndexRef.current;
+      const items = flatItemsRef.current;
+      const isSearchFocused = searchFocusedRef.current;
 
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onEscape();
-        return;
-      }
+      // Only handle when picker is the active context
+      if (idx === -1 && !isSearchFocused) return;
+
+      // Let Escape propagate to Radix Popover for closing
+      if (e.key === 'Escape') return;
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (searchFocused || focusedIndex === -1) {
-          // Move from search to first emoji
-          if (flatItems.length > 0) setFocusedIndex(0);
+        if (isSearchFocused || idx === -1) {
+          if (items.length > 0) {
+            setFocusedIndex(0);
+            onGridFocus();
+          }
           return;
         }
-        // Move down one row
-        const current = flatItems[focusedIndex];
+        const current = items[idx];
         if (!current) return;
         const targetCol = current.colIndex;
-        // Find the next row's item at the same column
-        let nextIdx = focusedIndex + 1;
-        while (nextIdx < flatItems.length) {
-          const next = flatItems[nextIdx];
-          if (
-            next.rowIndex > current.rowIndex &&
-            next.colIndex === targetCol
-          ) {
-            setFocusedIndex(nextIdx);
+        for (let i = idx + 1; i < items.length; i++) {
+          if (items[i].rowIndex > current.rowIndex && items[i].colIndex >= targetCol) {
+            setFocusedIndex(i);
             return;
           }
-          // If we've moved past the target column in a new row, use first item of that row
-          if (
-            next.rowIndex > current.rowIndex &&
-            next.colIndex >= targetCol
-          ) {
-            setFocusedIndex(nextIdx);
-            return;
-          }
-          nextIdx++;
         }
-        // If no match at same column, go to the next row's closest item
-        for (let i = focusedIndex + 1; i < flatItems.length; i++) {
-          if (flatItems[i].rowIndex > current.rowIndex) {
+        // Fallback: first item of next row
+        for (let i = idx + 1; i < items.length; i++) {
+          if (items[i].rowIndex > current.rowIndex) {
             setFocusedIndex(i);
             return;
           }
@@ -345,77 +352,60 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
 
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        if (focusedIndex <= 0) {
+        if (idx <= 0) {
           setFocusedIndex(-1);
           onFocusSearch();
           return;
         }
-        const current = flatItems[focusedIndex];
+        const current = items[idx];
         if (!current) return;
         const targetCol = current.colIndex;
-        // Find the previous row's item at the same column
-        for (let i = focusedIndex - 1; i >= 0; i--) {
-          if (
-            flatItems[i].rowIndex < current.rowIndex &&
-            flatItems[i].colIndex === targetCol
-          ) {
-            setFocusedIndex(i);
-            return;
-          }
-          if (
-            flatItems[i].rowIndex < current.rowIndex &&
-            flatItems[i].colIndex <= targetCol
-          ) {
+        for (let i = idx - 1; i >= 0; i--) {
+          if (items[i].rowIndex < current.rowIndex && items[i].colIndex <= targetCol) {
             setFocusedIndex(i);
             return;
           }
         }
-        // Fallback to first item of previous row
-        for (let i = focusedIndex - 1; i >= 0; i--) {
-          if (flatItems[i].rowIndex < current.rowIndex) {
+        // Fallback: first item of previous row
+        for (let i = idx - 1; i >= 0; i--) {
+          if (items[i].rowIndex < current.rowIndex) {
             setFocusedIndex(i);
             return;
           }
         }
-        // Go to search
         setFocusedIndex(-1);
         onFocusSearch();
       }
 
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        if (focusedIndex < flatItems.length - 1) {
-          setFocusedIndex(focusedIndex + 1);
+        if (idx < items.length - 1) {
+          setFocusedIndex(idx + 1);
+          onGridFocus();
         }
       }
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        if (focusedIndex > 0) {
-          setFocusedIndex(focusedIndex - 1);
+        if (idx > 0) {
+          setFocusedIndex(idx - 1);
+          onGridFocus();
         }
       }
 
       if (e.key === 'Enter' || e.key === 'Tab') {
-        if (focusedIndex >= 0 && focusedIndex < flatItems.length) {
+        if (idx >= 0 && idx < items.length) {
           e.preventDefault();
-          const item = flatItems[focusedIndex].item;
-          handleItemSelect(item);
+          handleItemSelectRef.current(items[idx].item);
         }
       }
     }
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [
-    focusedIndex,
-    flatItems,
-    searchFocused,
-    onEscape,
-    onFocusSearch,
-  ]);
+  }, [onFocusSearch, onGridFocus]);
 
-  // Scroll focused item into view
+  // Scroll focused item into view via virtualizer
   useEffect(() => {
     if (focusedIndex < 0 || focusedIndex >= flatItems.length) return;
     const fi = flatItems[focusedIndex];
@@ -430,17 +420,6 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     const item = flatItems[focusedIndex].item;
     onHover(itemToPreview(item, serverName));
   }, [focusedIndex, flatItems, onHover, serverName]);
-
-  const handleItemSelect = useCallback(
-    (item: GridItem) => {
-      if (item.type === 'custom') {
-        onSelect(customToRef(item.emoji));
-      } else {
-        onSelect(applySkinTone(item.emoji, skinTone));
-      }
-    },
-    [onSelect, skinTone],
-  );
 
   const handleItemHover = useCallback(
     (item: GridItem) => {
@@ -518,7 +497,10 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
                         focused={isFocused}
                         onSelect={handleItemSelect}
                         onHover={handleItemHover}
-                        onClick={() => setFocusedIndex(globalIdx)}
+                        onClick={() => {
+                          setFocusedIndex(globalIdx);
+                          onGridFocus();
+                        }}
                       />
                     );
                   })}
@@ -549,20 +531,11 @@ const EmojiButton = memo(function EmojiButton({
   onHover: (item: GridItem) => void;
   onClick: () => void;
 }) {
-  const ref = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (focused && ref.current) {
-      ref.current.scrollIntoView({ block: 'nearest' });
-    }
-  }, [focused]);
-
   const label =
     item.type === 'custom' ? `:${item.emoji.name}:` : item.emoji.label;
 
   return (
     <button
-      ref={ref}
       type="button"
       role="gridcell"
       aria-label={label}

@@ -413,7 +413,6 @@ export {
   applySkinTone,
   getAllUnicodeEmojis,
   getEmojiGroups,
-  getGroupLabel,
   getShortcodes,
   loadEmojiData,
 } from './lib/emojiData.ts';
