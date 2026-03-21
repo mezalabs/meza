@@ -35,6 +35,24 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
 	}
 
+	// Per-user rate limit: max 10 friend requests per hour via Redis counter.
+	// MUST run before username resolution to prevent unlimited username probing.
+	if s.rdb != nil {
+		key := fmt.Sprintf("friend_request:%s", userID)
+		count, err := s.rdb.Incr(ctx, key).Result()
+		if err != nil {
+			slog.Error("redis incr for friend request rate limit", "err", err, "user", userID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		// Set TTL on first increment so the window auto-expires.
+		if count == 1 {
+			s.rdb.Expire(ctx, key, friendRequestRateWindow)
+		}
+		if count > friendRequestRateLimit {
+			return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many friend requests, please try again later"))
+		}
+	}
+
 	// Resolve target: either by user_id or by username (exactly one must be provided).
 	targetID := req.Msg.UserId
 	var targetUser *models.User
@@ -59,23 +77,6 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 
 	if userID == targetID {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot send friend request to yourself"))
-	}
-
-	// Per-user rate limit: max 10 friend requests per hour via Redis counter.
-	if s.rdb != nil {
-		key := fmt.Sprintf("friend_request:%s", userID)
-		count, err := s.rdb.Incr(ctx, key).Result()
-		if err != nil {
-			slog.Error("redis incr for friend request rate limit", "err", err, "user", userID)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		// Set TTL on first increment so the window auto-expires.
-		if count == 1 {
-			s.rdb.Expire(ctx, key, friendRequestRateWindow)
-		}
-		if count > friendRequestRateLimit {
-			return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many friend requests, please try again later"))
-		}
 	}
 
 	// Cap on pending outgoing requests: max 100 at any time.

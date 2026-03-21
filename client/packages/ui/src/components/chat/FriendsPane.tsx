@@ -10,7 +10,7 @@ import {
   sendFriendRequest,
   useFriendStore,
 } from '@meza/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
 
@@ -201,10 +201,12 @@ function AddFriendTab() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const inFlightRef = useRef(false);
 
   const handleSubmit = async () => {
     const parsed = parseUsername(username);
-    if (!parsed) return;
+    if (!parsed || inFlightRef.current) return;
+    inFlightRef.current = true;
 
     setIsSubmitting(true);
     setFeedback(null);
@@ -247,6 +249,7 @@ function AddFriendTab() {
       setFeedback({ type: 'error', message: mapped });
     } finally {
       setIsSubmitting(false);
+      inFlightRef.current = false;
     }
   };
 
