@@ -216,7 +216,7 @@ export function ChannelView({
   // Close emoji panel when switching channels
   useEffect(() => {
     setMobileEmojiOpen(false);
-  }, [channelId]);
+  }, []);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
