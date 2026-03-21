@@ -165,11 +165,8 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
   })),
 );
 
-// Defer persistence setup to a microtask so all store modules finish
-// evaluating first. This avoids side effects during module evaluation
-// that can race with auth store initialization.
-queueMicrotask(() => {
-  import('../lib/emojiCache.ts').then(({ initEmojiCachePersistence }) => {
-    initEmojiCachePersistence();
-  });
-});
+// Defer persistence setup to next tick so all store modules finish
+// evaluating first. Static import keeps Vite's module graph clean;
+// setTimeout(0) defers the actual subscription setup.
+import { initEmojiCachePersistence } from '../lib/emojiCache.ts';
+setTimeout(initEmojiCachePersistence, 0);
