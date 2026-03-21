@@ -112,8 +112,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const friendRequestCount = useFriendStore((s) => s.incomingRequests.length);
   const dmUnreadCount = useReadStateStore((s) =>
     dmChannels.reduce(
-      (sum, dm) =>
-        sum + (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0),
+      (sum, dm) => sum + (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0),
       0,
     ),
   );
