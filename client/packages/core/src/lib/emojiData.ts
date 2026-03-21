@@ -52,9 +52,10 @@ interface RawEmoji {
   skins?: { emoji: string; label: string }[];
 }
 
-function buildGroups(
-  raw: RawEmoji[],
-): { groups: EmojiGroup[]; allEmojis: UnicodeEmoji[] } {
+function buildGroups(raw: RawEmoji[]): {
+  groups: EmojiGroup[];
+  allEmojis: UnicodeEmoji[];
+} {
   const byGroup = new Map<number, UnicodeEmoji[]>();
   const allEmojis: UnicodeEmoji[] = [];
 

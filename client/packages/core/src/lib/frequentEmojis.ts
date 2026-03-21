@@ -43,13 +43,10 @@ function computeScore(
   now: number,
 ): number {
   const daysSince = (now - entry.lastUsed) / (1000 * 60 * 60 * 24);
-  return entry.count * Math.pow(DECAY_RATE, daysSince);
+  return entry.count * DECAY_RATE ** daysSince;
 }
 
-export function recordUsage(
-  key: string,
-  type: 'custom' | 'unicode',
-): void {
+export function recordUsage(key: string, type: 'custom' | 'unicode'): void {
   const data = readStore();
   const existing = data[key];
   const now = Date.now();
@@ -65,7 +62,10 @@ export function recordUsage(
   // Evict lowest-scored entries if over cap
   const keys = Object.keys(data);
   if (keys.length > MAX_ENTRIES) {
-    const scored = keys.map((k) => ({ key: k, score: computeScore(data[k], now) }));
+    const scored = keys.map((k) => ({
+      key: k,
+      score: computeScore(data[k], now),
+    }));
     scored.sort((a, b) => b.score - a.score);
     const keep = new Set(scored.slice(0, MAX_ENTRIES).map((s) => s.key));
     for (const k of keys) {
