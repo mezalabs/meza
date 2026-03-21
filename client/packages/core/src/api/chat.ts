@@ -687,14 +687,20 @@ export async function listEmojis(serverId: string) {
   if (existing) return existing;
 
   const promise = (async () => {
+    const sessionUserId = useAuthStore.getState().user?.id;
     const store = useEmojiStore.getState();
     store.setError(null);
     try {
       const res = await chatClient.listEmojis({ serverId });
-      store.setEmojis(serverId, res.emojis);
+      // Only write if still in the same session (prevents stale writes after logout)
+      if (useAuthStore.getState().user?.id === sessionUserId) {
+        store.setEmojis(serverId, res.emojis);
+      }
       return res.emojis;
     } catch (err) {
-      store.setError(mapChatError(err));
+      if (useAuthStore.getState().user?.id === sessionUserId) {
+        store.setError(mapChatError(err));
+      }
       throw err;
     } finally {
       emojiInflight.delete(serverId);
@@ -711,14 +717,19 @@ export async function listUserEmojis() {
   if (personalEmojiInflight) return personalEmojiInflight;
 
   personalEmojiInflight = (async () => {
+    const sessionUserId = useAuthStore.getState().user?.id;
     const store = useEmojiStore.getState();
     store.setError(null);
     try {
       const res = await chatClient.listUserEmojis({});
-      store.setPersonalEmojis(res.emojis);
+      if (useAuthStore.getState().user?.id === sessionUserId) {
+        store.setPersonalEmojis(res.emojis);
+      }
       return res.emojis;
     } catch (err) {
-      store.setError(mapChatError(err));
+      if (useAuthStore.getState().user?.id === sessionUserId) {
+        store.setError(mapChatError(err));
+      }
       throw err;
     } finally {
       personalEmojiInflight = null;

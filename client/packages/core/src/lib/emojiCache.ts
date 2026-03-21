@@ -52,8 +52,10 @@ export function loadEmojiCache(userId: string): {
     if (!raw) return null;
     const cache = JSON.parse(raw) as EmojiCache;
     if (
+      typeof cache !== 'object' || cache === null ||
       cache.version !== CACHE_VERSION ||
-      cache.userId !== userId
+      cache.userId !== userId ||
+      typeof cache.byServer !== 'object'
     ) {
       localStorage.removeItem(CACHE_KEY);
       return null;
@@ -68,8 +70,12 @@ export function loadEmojiCache(userId: string): {
   }
 }
 
-/** Remove the emoji cache from localStorage. */
+/** Remove the emoji cache from localStorage and cancel any pending write. */
 export function clearEmojiCache(): void {
+  if (writeTimer) {
+    clearTimeout(writeTimer);
+    writeTimer = null;
+  }
   try {
     localStorage.removeItem(CACHE_KEY);
   } catch {
@@ -111,6 +117,8 @@ function writeCache(): void {
  */
 export function initEmojiCachePersistence(): void {
   useEmojiStore.subscribe(() => {
+    // Skip writes when logged out (prevents ghost writes after reset)
+    if (!useAuthStore.getState().user?.id) return;
     if (writeTimer) clearTimeout(writeTimer);
     writeTimer = setTimeout(() => {
       writeTimer = null;
