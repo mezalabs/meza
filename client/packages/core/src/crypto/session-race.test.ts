@@ -39,6 +39,31 @@ vi.stubGlobal('sessionStorage', {
   key: vi.fn((_index: number) => null),
 });
 
+// Stub BroadcastChannel to prevent cross-test message leakage
+vi.stubGlobal(
+  'BroadcastChannel',
+  class {
+    onmessage: ((ev: MessageEvent) => void) | null = null;
+    postMessage() {}
+    close() {}
+  },
+);
+
+// Mock localStorage (used by persistentStorage() in clearMasterKey)
+const localStorageMap = new Map<string, string>();
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn((key: string) => localStorageMap.get(key) ?? null),
+  setItem: vi.fn((key: string, value: string) =>
+    localStorageMap.set(key, value),
+  ),
+  removeItem: vi.fn((key: string) => localStorageMap.delete(key)),
+  clear: vi.fn(() => localStorageMap.clear()),
+  get length() {
+    return localStorageMap.size;
+  },
+  key: vi.fn((_index: number) => null),
+});
+
 // Dynamic imports after mocks
 const { bootstrapSession, teardownSession, getIdentity, onSessionReady } =
   await import('./session.ts');
@@ -58,6 +83,7 @@ const alice = generateIdentityKeypair();
 beforeEach(async () => {
   vi.clearAllMocks();
   sessionStorageMap.clear();
+  localStorageMap.clear();
   await teardownSession();
 });
 
