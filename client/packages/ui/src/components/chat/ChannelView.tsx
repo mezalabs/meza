@@ -39,6 +39,7 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
+import { hideKeyboard } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
 
 import * as Dialog from '@radix-ui/react-dialog';
@@ -59,6 +60,7 @@ import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight.ts';
 import { useContentWarningStore } from '../../stores/contentWarnings.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
@@ -72,6 +74,7 @@ import { EmojiPicker } from './EmojiPicker.tsx';
 import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
+import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
@@ -174,6 +177,44 @@ export function ChannelView({
 
   // Compute whether the current user can manage (delete) other users' messages
   const canManageMessages = useCanManageMessages(serverId, currentUser?.id);
+
+  // Mobile emoji panel state
+  const isMobile = useMobile();
+  const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
+  const { lastKnownHeight: keyboardHeight } = useKeyboardHeight();
+
+  // Ref to the composer's insertEmoji callback (set by MessageComposer)
+  const insertEmojiRef = useRef<((text: string) => void) | null>(null);
+
+  const handleMobileEmojiToggle = useCallback(() => {
+    setMobileEmojiOpen((prev) => {
+      if (!prev) {
+        // Opening picker: dismiss keyboard
+        hideKeyboard();
+        // Also blur textarea to ensure keyboard hides on web
+        const active = document.activeElement;
+        if (active instanceof HTMLTextAreaElement) active.blur();
+      }
+      return !prev;
+    });
+  }, []);
+
+  const handleMobileEmojiSelect = useCallback((text: string) => {
+    insertEmojiRef.current?.(text);
+  }, []);
+
+  const handleMobileSearchFocusChange = useCallback((focused: boolean) => {
+    if (!focused) {
+      // Search blurred: hide keyboard, keep picker open
+      hideKeyboard();
+    }
+    // When focused, keyboard shows natively via the input focus
+  }, []);
+
+  // Close emoji panel when switching channels
+  useEffect(() => {
+    setMobileEmojiOpen(false);
+  }, [channelId]);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -541,9 +582,10 @@ export function ChannelView({
           className="flex flex-1 flex-col overflow-y-auto px-4 pt-2 pb-4"
           onScroll={handleScroll}
           onTouchStart={() => {
-            // On mobile, tapping the message list dismisses the keyboard
+            // On mobile, tapping the message list dismisses keyboard and emoji panel
             const active = document.activeElement;
             if (active instanceof HTMLTextAreaElement) active.blur();
+            if (mobileEmojiOpen) setMobileEmojiOpen(false);
           }}
           data-testid="message-list"
         >
@@ -643,6 +685,19 @@ export function ChannelView({
             channelId={channelId}
             serverId={serverId}
             disabled={viewMode === 'historical'}
+            mobileEmojiOpen={mobileEmojiOpen}
+            onMobileEmojiToggle={handleMobileEmojiToggle}
+            insertEmojiRef={insertEmojiRef}
+          />
+        )}
+
+        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {isMobile && mobileEmojiOpen && (
+          <MobileEmojiPanel
+            serverId={serverId}
+            panelHeight={keyboardHeight}
+            onEmojiSelect={handleMobileEmojiSelect}
+            onSearchFocusChange={handleMobileSearchFocusChange}
           />
         )}
       </div>

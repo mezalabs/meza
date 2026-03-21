@@ -434,4 +434,9 @@ export {
   loadEmojiCache,
 } from './lib/emojiCache.ts';
 // Utils
+export {
+  hideKeyboard,
+  onKeyboardWillHide,
+  onKeyboardWillShow,
+} from './utils/keyboard.ts';
 export { formatRelativeTime, toISO } from './utils/time.ts';

@@ -48,12 +48,15 @@ export interface EmojiPickerProps {
   onEmojiSelect: (text: string) => void;
   serverId?: string;
   autoFocus?: boolean;
+  /** Called when the search input gains or loses focus (mobile panel mode). */
+  onSearchFocusChange?: (focused: boolean) => void;
 }
 
 export const EmojiPicker = memo(function EmojiPicker({
   onEmojiSelect,
   serverId,
   autoFocus = true,
+  onSearchFocusChange,
 }: EmojiPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [previewEmoji, setPreviewEmoji] = useState<PreviewEmoji | null>(null);
@@ -221,10 +224,17 @@ export const EmojiPicker = memo(function EmojiPicker({
     );
   }
 
+  // When embedded in mobile panel (onSearchFocusChange provided), fill container
+  const isEmbedded = !!onSearchFocusChange;
+
   return (
     <div
-      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden"
-      style={{ width: pickerWidth, height: pickerHeight, maxWidth: '100vw', maxHeight: '100%' }}
+      className="flex flex-col bg-bg-elevated overflow-hidden"
+      style={
+        isEmbedded
+          ? { width: '100%', height: '100%' }
+          : { width: pickerWidth, height: pickerHeight, maxWidth: '100vw', maxHeight: '100%', borderRadius: '0.75rem' }
+      }
     >
       {/* Search + skin tone */}
       <div className="flex items-end gap-1 pr-2">
@@ -233,6 +243,7 @@ export const EmojiPicker = memo(function EmojiPicker({
             value={searchQuery}
             onChange={setSearchQuery}
             autoFocus={autoFocus}
+            onFocusChange={onSearchFocusChange}
           />
         </div>
         <EmojiPickerSkinTone value={skinTone} onChange={handleSkinToneChange} />

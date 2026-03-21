@@ -5,12 +5,15 @@ interface EmojiPickerSearchProps {
   value: string;
   onChange: (value: string) => void;
   autoFocus?: boolean;
+  /** Called when the search input gains or loses focus (for mobile panel mode). */
+  onFocusChange?: (focused: boolean) => void;
 }
 
 export const EmojiPickerSearch = memo(function EmojiPickerSearch({
   value,
   onChange,
   autoFocus = true,
+  onFocusChange,
 }: EmojiPickerSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,6 +39,8 @@ export const EmojiPickerSearch = memo(function EmojiPickerSearch({
         placeholder="Search emojis…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => onFocusChange?.(true)}
+        onBlur={() => onFocusChange?.(false)}
         className="w-full rounded-md bg-bg-base px-3 py-1.5 pl-8 text-sm text-text placeholder:text-text-muted outline-none focus:ring-1 focus:ring-accent border border-border"
       />
     </div>
