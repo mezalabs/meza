@@ -1,35 +1,30 @@
 /**
  * Capacitor Keyboard plugin helpers.
  *
- * Uses dynamic import so the @capacitor/keyboard package (only in the
- * mobile package) doesn't need to be a dependency of @meza/core.
- * On web/desktop, all functions are safe no-ops.
+ * Accesses the Keyboard plugin through the global Capacitor plugin
+ * registry so we don't need @capacitor/keyboard as a dependency of
+ * @meza/core (it's only in the mobile package). On web/desktop,
+ * all functions are safe no-ops.
  */
 
 import { isCapacitor } from './platform.ts';
 
-type KeyboardPlugin = {
+interface KeyboardPlugin {
   hide: () => Promise<void>;
   addListener: (
     event: string,
     cb: (info: { keyboardHeight: number }) => void,
   ) => Promise<{ remove: () => void }>;
-};
+}
 
-let keyboardPlugin: KeyboardPlugin | null = null;
-let pluginLoaded = false;
-
-async function getKeyboard(): Promise<KeyboardPlugin | null> {
-  if (pluginLoaded) return keyboardPlugin;
-  pluginLoaded = true;
+function getKeyboard(): KeyboardPlugin | null {
   if (!isCapacitor()) return null;
   try {
-    // Dynamic import — @capacitor/keyboard is in the mobile package, not core.
-    // The module is available at runtime when running in Capacitor.
-    // @ts-expect-error — module not in core's deps but available at runtime
-    const mod = await import('@capacitor/keyboard');
-    keyboardPlugin = mod.Keyboard as unknown as KeyboardPlugin;
-    return keyboardPlugin;
+    const cap = (window as unknown as Record<string, unknown>).Capacitor as
+      | { Plugins?: Record<string, unknown> }
+      | undefined;
+    const kb = cap?.Plugins?.Keyboard as KeyboardPlugin | undefined;
+    return kb ?? null;
   } catch {
     return null;
   }
@@ -37,9 +32,8 @@ async function getKeyboard(): Promise<KeyboardPlugin | null> {
 
 /** Programmatically hide the native keyboard. No-op on web. */
 export async function hideKeyboard(): Promise<void> {
-  const kb = await getKeyboard();
   try {
-    await kb?.hide();
+    await getKeyboard()?.hide();
   } catch {}
 }
 
@@ -47,18 +41,16 @@ export async function hideKeyboard(): Promise<void> {
 export function onKeyboardWillShow(
   cb: (height: number) => void,
 ): (() => void) | undefined {
-  if (!isCapacitor()) return undefined;
-  let cleanup: (() => void) | null = null;
-  getKeyboard().then((kb) => {
-    if (!kb) return;
-    kb.addListener('keyboardWillShow', (info) => {
-      cb(info.keyboardHeight);
-    }).then((handle) => {
-      cleanup = () => handle.remove();
-    });
+  const kb = getKeyboard();
+  if (!kb) return undefined;
+  let handle: { remove: () => void } | null = null;
+  kb.addListener('keyboardWillShow', (info) => {
+    cb(info.keyboardHeight);
+  }).then((h) => {
+    handle = h;
   });
   return () => {
-    cleanup?.();
+    handle?.remove();
   };
 }
 
@@ -66,17 +58,15 @@ export function onKeyboardWillShow(
 export function onKeyboardWillHide(
   cb: () => void,
 ): (() => void) | undefined {
-  if (!isCapacitor()) return undefined;
-  let cleanup: (() => void) | null = null;
-  getKeyboard().then((kb) => {
-    if (!kb) return;
-    kb.addListener('keyboardWillHide', () => {
-      cb();
-    }).then((handle) => {
-      cleanup = () => handle.remove();
-    });
+  const kb = getKeyboard();
+  if (!kb) return undefined;
+  let handle: { remove: () => void } | null = null;
+  kb.addListener('keyboardWillHide', () => {
+    cb();
+  }).then((h) => {
+    handle = h;
   });
   return () => {
-    cleanup?.();
+    handle?.remove();
   };
 }
