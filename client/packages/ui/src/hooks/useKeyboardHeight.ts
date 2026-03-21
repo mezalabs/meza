@@ -3,28 +3,32 @@ import { useEffect, useRef } from 'react';
 
 /**
  * Tracks the last known native keyboard height via Capacitor Keyboard events.
- * Uses a ref (not state) to avoid triggering re-renders on every keyboard
- * show/hide — this prevents layout thrashing on Android where the OS
- * resizes the WebView natively.
  *
- * Returns a ref containing the last known keyboard height (defaults to 300
- * if the keyboard hasn't been shown yet). Use .current to read the value.
+ * Only subscribes to keyboard events when `active` is true. This is critical
+ * on Android: registering Keyboard plugin listeners can interfere with the
+ * native `adjustResize` behavior, preventing the composer from moving above
+ * the keyboard during normal typing. Only activate when the emoji panel is
+ * open and we need the height.
+ *
+ * Uses a ref (not state) to avoid triggering re-renders.
  */
-export function useKeyboardHeight(): React.MutableRefObject<number> {
+export function useKeyboardHeight(active: boolean): React.MutableRefObject<number> {
   const heightRef = useRef(300); // sensible default before first keyboard show
 
   useEffect(() => {
+    if (!active) return;
+
     const unsub1 = onKeyboardWillShow((h) => {
       heightRef.current = h;
     });
     const unsub2 = onKeyboardWillHide(() => {
-      // Keep lastKnownHeight — don't reset to 0
+      // Keep lastKnownHeight — don't reset
     });
     return () => {
       unsub1?.();
       unsub2?.();
     };
-  }, []);
+  }, [active]);
 
   return heightRef;
 }

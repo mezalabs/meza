@@ -183,7 +183,7 @@ export function ChannelView({
   // Mobile emoji panel state
   const isMobile = useMobile();
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
-  const keyboardHeightRef = useKeyboardHeight();
+  const keyboardHeightRef = useKeyboardHeight(mobileEmojiOpen);
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
