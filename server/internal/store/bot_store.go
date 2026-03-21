@@ -21,6 +21,11 @@ func NewBotStore(pool *pgxpool.Pool) *BotStore {
 	return &BotStore{pool: pool}
 }
 
+// Pool returns the underlying connection pool (used by webhook service for bulk queries).
+func (s *BotStore) Pool() *pgxpool.Pool {
+	return s.pool
+}
+
 func (s *BotStore) CreateBotUser(ctx context.Context, user *models.User, signingPublicKey []byte) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

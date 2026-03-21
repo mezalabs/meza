@@ -471,6 +471,9 @@ func (s *chatService) CreateWebhook(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Signal webhook service to reload.
+	s.nc.Publish(subjects.InternalWebhookReload(), nil)
+
 	return connect.NewResponse(&v1.CreateWebhookResponse{
 		Webhook: &v1.Webhook{
 			Id:        webhook.ID,
@@ -514,6 +517,9 @@ func (s *chatService) DeleteWebhook(ctx context.Context, req *connect.Request[v1
 		slog.Error("deleting webhook", "err", err)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
+
+	// Signal webhook service to reload.
+	s.nc.Publish(subjects.InternalWebhookReload(), nil)
 
 	return connect.NewResponse(&v1.DeleteWebhookResponse{}), nil
 }

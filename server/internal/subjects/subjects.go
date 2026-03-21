@@ -221,3 +221,9 @@ func EmbedFetch() string {
 func InternalKeyRotation() string {
 	return "meza.internal.keyrotation"
 }
+
+// Internal webhook reload subject — chat service publishes, webhook service subscribes.
+
+func InternalWebhookReload() string {
+	return "meza.internal.webhook.reload"
+}
