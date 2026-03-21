@@ -133,6 +133,9 @@ function VoiceEventHandler() {
     };
 
     const onParticipantConnected = (participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (participant.identity.startsWith('preview:')) return;
+
       applyParticipantVolume(participant);
       applySoundboardVolume(participant);
       // Play voice-join sound for non-self participants
@@ -154,6 +157,9 @@ function VoiceEventHandler() {
     };
 
     const onParticipantDisconnected = (_participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (_participant.identity.startsWith('preview:')) return;
+
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
       if (soundEnabled && enabledSounds['voice-leave']) {
