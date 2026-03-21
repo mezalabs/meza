@@ -33,9 +33,7 @@ export const EmojiPickerButton = memo(function EmojiPickerButton({
         type="button"
         aria-label="Insert emoji"
         className={`flex-shrink-0 self-start mt-5 mr-5 transition-colors disabled:opacity-50 ${
-          mobileEmojiOpen
-            ? 'text-accent'
-            : 'text-text-muted hover:text-text'
+          mobileEmojiOpen ? 'text-accent' : 'text-text-muted hover:text-text'
         }`}
         disabled={disabled}
         onClick={onMobileToggle}

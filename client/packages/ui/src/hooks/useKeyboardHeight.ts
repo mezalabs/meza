@@ -12,7 +12,9 @@ import { useEffect, useRef } from 'react';
  *
  * Uses a ref (not state) to avoid triggering re-renders.
  */
-export function useKeyboardHeight(active: boolean): React.MutableRefObject<number> {
+export function useKeyboardHeight(
+  active: boolean,
+): React.MutableRefObject<number> {
   const heightRef = useRef(300); // sensible default before first keyboard show
 
   useEffect(() => {

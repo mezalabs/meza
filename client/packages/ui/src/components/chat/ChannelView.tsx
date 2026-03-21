@@ -4,6 +4,7 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
+  cachedServerIds,
   decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
@@ -16,9 +17,9 @@ import {
   getReplies,
   hasChannelKey,
   hasPermission,
-  isSessionReady,
-  cachedServerIds,
+  hideKeyboard,
   isPersonalFromCache,
+  isSessionReady,
   listEmojis,
   listMembers,
   listRoles,
@@ -41,7 +42,6 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { hideKeyboard } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
 
 import * as Dialog from '@radix-ui/react-dialog';
@@ -60,9 +60,9 @@ import {
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
-import { useKeyboardHeight } from '../../hooks/useKeyboardHeight.ts';
 import { useContentWarningStore } from '../../stores/contentWarnings.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
@@ -76,8 +76,8 @@ import { EmojiPicker } from './EmojiPicker.tsx';
 import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
-import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
+import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';

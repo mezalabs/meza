@@ -1,21 +1,14 @@
 import {
+  applySkinTone,
   type CustomEmoji,
   type EmojiGroup,
   type FrequentEmojiEntry,
+  getMediaURL,
   type SearchResult,
   type UnicodeEmoji,
-  applySkinTone,
-  getMediaURL,
 } from '@meza/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 
@@ -81,9 +74,7 @@ interface EmojiPickerGridProps {
 // ----- Helpers -----
 
 function customToRef(e: CustomEmoji): string {
-  return e.animated
-    ? `<a:${e.name}:${e.id}>`
-    : `<:${e.name}:${e.id}>`;
+  return e.animated ? `<a:${e.name}:${e.id}>` : `<:${e.name}:${e.id}>`;
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -361,7 +352,10 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
         if (!current) return;
         const targetCol = current.colIndex;
         for (let i = idx + 1; i < items.length; i++) {
-          if (items[i].rowIndex > current.rowIndex && items[i].colIndex >= targetCol) {
+          if (
+            items[i].rowIndex > current.rowIndex &&
+            items[i].colIndex >= targetCol
+          ) {
             setFocusedIndex(i);
             return;
           }
@@ -386,7 +380,10 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
         if (!current) return;
         const targetCol = current.colIndex;
         for (let i = idx - 1; i >= 0; i--) {
-          if (items[i].rowIndex < current.rowIndex && items[i].colIndex <= targetCol) {
+          if (
+            items[i].rowIndex < current.rowIndex &&
+            items[i].colIndex <= targetCol
+          ) {
             setFocusedIndex(i);
             return;
           }
@@ -443,7 +440,10 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     if (serverName) {
       // Find the current server's ID from the server emojis
       for (const e of serverEmojis) {
-        if (e.serverId) { map.set(e.serverId, serverName); break; }
+        if (e.serverId) {
+          map.set(e.serverId, serverName);
+          break;
+        }
       }
     }
     for (const group of otherServerEmojiGroups) {
@@ -521,7 +521,8 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
                   style={{ height: ROW_HEIGHT }}
                 >
                   {row.items.map((item, colIdx) => {
-                    const globalIdx = flatIndexMap.get(`${virtualRow.index}:${colIdx}`) ?? -1;
+                    const globalIdx =
+                      flatIndexMap.get(`${virtualRow.index}:${colIdx}`) ?? -1;
                     const isFocused = globalIdx === focusedIndex;
 
                     return (
@@ -588,9 +589,7 @@ const EmojiButton = memo(function EmojiButton({
       role="gridcell"
       aria-label={label}
       className={`flex items-center justify-center rounded-md transition-colors ${
-        focused
-          ? 'bg-accent/20 ring-2 ring-accent'
-          : 'hover:bg-bg-elevated'
+        focused ? 'bg-accent/20 ring-2 ring-accent' : 'hover:bg-bg-elevated'
       }`}
       style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
       onClick={() => {
@@ -615,7 +614,8 @@ const EmojiButton = memo(function EmojiButton({
           className="leading-none"
           style={{
             fontSize: EMOJI_SIZE,
-            fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
+            fontFamily:
+              "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
           }}
         >
           {applySkinTone(item.emoji, skinTone)}
@@ -635,7 +635,7 @@ function itemToPreview(
     const attachmentId = item.emoji.imageUrl.replace('/media/', '');
     const source = item.emoji.userId
       ? 'Personal'
-      : serverNames.get(item.emoji.serverId) ?? 'Server';
+      : (serverNames.get(item.emoji.serverId) ?? 'Server');
     return {
       type: 'custom',
       display: attachmentId,

@@ -33,7 +33,13 @@ interface EmojiCache {
 }
 
 function toStored({
-  id, serverId, name, imageUrl, animated, creatorId, userId,
+  id,
+  serverId,
+  name,
+  imageUrl,
+  animated,
+  creatorId,
+  userId,
 }: StoredEmoji): StoredEmoji {
   return { id, serverId, name, imageUrl, animated, creatorId, userId };
 }
@@ -52,7 +58,8 @@ export function loadEmojiCache(userId: string): {
     if (!raw) return null;
     const cache = JSON.parse(raw) as EmojiCache;
     if (
-      typeof cache !== 'object' || cache === null ||
+      typeof cache !== 'object' ||
+      cache === null ||
       cache.version !== CACHE_VERSION ||
       cache.userId !== userId ||
       typeof cache.byServer !== 'object'

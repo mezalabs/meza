@@ -1,6 +1,5 @@
 import {
   type CustomEmoji,
-  type SearchResult,
   getAllUnicodeEmojis,
   getEmojiGroups,
   getFrequentEmojis,
@@ -9,6 +8,7 @@ import {
   listUserEmojis,
   loadEmojiData,
   recordUsage,
+  type SearchResult,
   searchEmojis,
   useEmojiStore,
   useServerStore,
@@ -61,9 +61,7 @@ export const EmojiPicker = memo(function EmojiPicker({
   const [searchQuery, setSearchQuery] = useState('');
   const [previewEmoji, setPreviewEmoji] = useState<PreviewEmoji | null>(null);
   const [skinTone, setSkinTone] = useState(getSavedSkinTone);
-  const [dataLoaded, setDataLoaded] = useState(
-    () => getEmojiGroups() !== null,
-  );
+  const [dataLoaded, setDataLoaded] = useState(() => getEmojiGroups() !== null);
   const [loadError, setLoadError] = useState(false);
   const [searchFocused, setSearchFocused] = useState(true);
   const isMobile = useMobile();
@@ -119,7 +117,11 @@ export const EmojiPicker = memo(function EmojiPicker({
 
   // Build other-server emoji groups (servers that aren't the current one)
   const otherServerEmojiGroups = useMemo(() => {
-    const groups: { serverId: string; serverName: string; emojis: CustomEmoji[] }[] = [];
+    const groups: {
+      serverId: string;
+      serverName: string;
+      emojis: CustomEmoji[];
+    }[] = [];
     for (const [sid, emojis] of Object.entries(emojisByServer)) {
       if (sid === serverId || emojis.length === 0) continue;
       groups.push({
@@ -144,16 +146,25 @@ export const EmojiPicker = memo(function EmojiPicker({
     const seenIds = new Set<string>();
     const result: CustomEmoji[] = [];
     for (const e of personalEmojis ?? []) {
-      if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
+      if (!seenIds.has(e.id)) {
+        seenIds.add(e.id);
+        result.push(e);
+      }
     }
     if (serverEmojis) {
       for (const e of serverEmojis) {
-        if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
+        if (!seenIds.has(e.id)) {
+          seenIds.add(e.id);
+          result.push(e);
+        }
       }
     }
     for (const group of otherServerEmojiGroups) {
       for (const e of group.emojis) {
-        if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
+        if (!seenIds.has(e.id)) {
+          seenIds.add(e.id);
+          result.push(e);
+        }
       }
     }
     return result;
@@ -233,7 +244,13 @@ export const EmojiPicker = memo(function EmojiPicker({
       style={
         isEmbedded
           ? { width: '100%', height: '100%' }
-          : { width: pickerWidth, height: pickerHeight, maxWidth: '100vw', maxHeight: '100%', borderRadius: '0.75rem' }
+          : {
+              width: pickerWidth,
+              height: pickerHeight,
+              maxWidth: '100vw',
+              maxHeight: '100%',
+              borderRadius: '0.75rem',
+            }
       }
     >
       {/* Search + skin tone */}

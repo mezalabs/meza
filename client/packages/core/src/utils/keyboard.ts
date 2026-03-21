@@ -53,8 +53,13 @@ export function onKeyboardWillShow(
       cb(info.keyboardHeight);
     });
     // addListener may return a handle directly (sync) or a Promise
-    if (result && typeof (result as Promise<PluginListenerHandle>).then === 'function') {
-      (result as Promise<PluginListenerHandle>).then((h) => { handle = h; });
+    if (
+      result &&
+      typeof (result as Promise<PluginListenerHandle>).then === 'function'
+    ) {
+      (result as Promise<PluginListenerHandle>).then((h) => {
+        handle = h;
+      });
     } else {
       handle = result as PluginListenerHandle;
     }
@@ -65,9 +70,7 @@ export function onKeyboardWillShow(
 }
 
 /** Listen for the native keyboard about to hide. Returns an unsubscribe function. */
-export function onKeyboardWillHide(
-  cb: () => void,
-): (() => void) | undefined {
+export function onKeyboardWillHide(cb: () => void): (() => void) | undefined {
   const kb = getKeyboard();
   if (!kb) return undefined;
   let handle: PluginListenerHandle | null = null;
@@ -75,8 +78,13 @@ export function onKeyboardWillHide(
     const result = kb.addListener('keyboardWillHide', () => {
       cb();
     });
-    if (result && typeof (result as Promise<PluginListenerHandle>).then === 'function') {
-      (result as Promise<PluginListenerHandle>).then((h) => { handle = h; });
+    if (
+      result &&
+      typeof (result as Promise<PluginListenerHandle>).then === 'function'
+    ) {
+      (result as Promise<PluginListenerHandle>).then((h) => {
+        handle = h;
+      });
     } else {
       handle = result as PluginListenerHandle;
     }

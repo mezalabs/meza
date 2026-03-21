@@ -16,7 +16,9 @@ function loadFromCache(): Partial<EmojiState> {
     // Read userId directly from localStorage to avoid circular import
     // timing issues with useAuthStore (which may not be initialized yet).
     const userJson = localStorage.getItem('meza:user');
-    const userId = userJson ? (JSON.parse(userJson) as { id?: string }).id : undefined;
+    const userId = userJson
+      ? (JSON.parse(userJson) as { id?: string }).id
+      : undefined;
     if (!userId) return {};
     const cached = loadEmojiCache(userId);
     if (!cached) return {};
@@ -169,4 +171,5 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
 // evaluating first. Static import keeps Vite's module graph clean;
 // setTimeout(0) defers the actual subscription setup.
 import { initEmojiCachePersistence } from '../lib/emojiCache.ts';
+
 setTimeout(initEmojiCachePersistence, 0);

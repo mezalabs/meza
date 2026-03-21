@@ -33,8 +33,7 @@ export const EmojiPickerSearch = memo(function EmojiPickerSearch({
       />
       <input
         ref={inputRef}
-        type="text"
-        role="searchbox"
+        type="search"
         aria-label="Search emojis"
         placeholder="Search emojis…"
         value={value}
