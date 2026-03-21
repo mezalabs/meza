@@ -16,18 +16,6 @@ export function isCapacitor(): boolean {
   );
 }
 
-export function getCapacitorPlatform(): 'ios' | 'android' | 'web' {
-  if (!isCapacitor()) return 'web';
-  try {
-    const cap = (window as unknown as Record<string, unknown>).Capacitor as
-      | { getPlatform?: () => string }
-      | undefined;
-    const p = cap?.getPlatform?.();
-    if (p === 'ios' || p === 'android') return p;
-  } catch {}
-  return 'web';
-}
-
 export function getBaseUrl(): string {
   if (typeof window === 'undefined') return '';
 

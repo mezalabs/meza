@@ -1,4 +1,3 @@
-import { getCapacitorPlatform } from '@meza/core';
 import { SmileyIcon } from '@phosphor-icons/react';
 import * as Popover from '@radix-ui/react-popover';
 import { memo, useState } from 'react';
@@ -27,10 +26,8 @@ export const EmojiPickerButton = memo(function EmojiPickerButton({
   const isMobile = useMobile();
   const [open, setOpen] = useState(false);
 
-  // On iOS mobile, render a toggle button — the panel is rendered by ChannelView.
-  // On Android, keyboard listeners interfere with adjustResize, so use the Popover.
-  const usePanel = isMobile && getCapacitorPlatform() === 'ios';
-  if (usePanel) {
+  // On mobile, just render a toggle button — the panel is rendered by ChannelView
+  if (isMobile) {
     return (
       <button
         type="button"
