@@ -49,7 +49,14 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   // --- Settings ---
   ipcMain.on('settings:getServerUrlSync', (event) => {
-    event.returnValue = store.get('settings.serverUrl');
+    // In dev mode (not packaged), return empty so the web app uses same-origin
+    // (http://localhost:4080). In prod, fall back to https://meza.chat so the
+    // bundled meza://app origin can reach the real server.
+    const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
+    event.returnValue =
+      process.env.MEZA_SERVER_URL ||
+      store.get('settings.serverUrl') ||
+      (prodMode ? 'https://meza.chat' : '');
   });
 
   ipcMain.handle('settings:getServerUrl', () =>
