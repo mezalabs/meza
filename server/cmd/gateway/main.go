@@ -93,7 +93,11 @@ func main() {
 		slog.Warn("SECURITY: MEZA_REDIS_URL is not set -- device revocation checks are disabled on WebSocket auth")
 	}
 
-	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins, tokenBlocklist)
+	// Bot token authentication for WebSocket connections.
+	botStore := store.NewBotStore(pool)
+	botTokenAuth := auth.NewTokenAuthenticator(botStore, auth.NewVerificationCache())
+
+	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins, tokenBlocklist, botTokenAuth)
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.InstanceURL
 	gw.verificationCache = auth.NewVerificationCache()

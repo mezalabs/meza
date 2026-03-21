@@ -39,6 +39,7 @@ const (
 type Client struct {
 	UserID   string
 	DeviceID string
+	IsBot    bool
 	Conn     *websocket.Conn
 	Channels []string
 	Servers  []string
@@ -77,6 +78,7 @@ type Gateway struct {
 	instanceURL       string                  // This instance's URL for iss claim
 	verificationCache *auth.VerificationCache // Caches validated JWT claims to avoid repeated Ed25519 verification
 	tokenBlocklist    *auth.TokenBlocklist     // Redis-backed blocklist for revoked devices
+	botAuthenticator  *auth.TokenAuthenticator // Bot token authenticator
 	originPatterns    []string
 	chatStore      store.ChatStorer
 	readStateStore store.ReadStateStorer
@@ -94,14 +96,15 @@ type Gateway struct {
 	heartbeatBatch map[string]struct{} // userIDs to flush
 }
 
-func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string, tokenBlocklist *auth.TokenBlocklist) *Gateway {
+func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string, tokenBlocklist *auth.TokenBlocklist, botAuth *auth.TokenAuthenticator) *Gateway {
 	// Fix 3: Read allowed origins from config instead of os.Getenv.
 	// Defaults to "*" for development, but logs a WARNING to alert operators.
 	origins := parseAllowedOrigins(allowedOrigins)
 
 	return &Gateway{
-		originPatterns: origins,
-		tokenBlocklist: tokenBlocklist,
+		originPatterns:   origins,
+		tokenBlocklist:   tokenBlocklist,
+		botAuthenticator: botAuth,
 		chatStore:      chatStore,
 		readStateStore: readStateStore,
 		messageStore:   messageStore,
@@ -481,6 +484,7 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	client := &Client{
 		UserID:      claims.UserID,
 		DeviceID:    claims.DeviceID,
+		IsBot:       claims.IsBot,
 		Conn:        conn,
 		Send:        make(chan []byte, sendBufSize),
 		cancel:      cancel,
@@ -652,6 +656,18 @@ func (gw *Gateway) authenticateFirstMessage(conn *websocket.Conn) (*auth.Claims,
 	}
 	if identifyPayload.Token == "" {
 		return nil, fmt.Errorf("empty token in identify payload")
+	}
+
+	// Route bot tokens to the bot authenticator
+	if auth.IsBotToken(identifyPayload.Token) {
+		if gw.botAuthenticator == nil {
+			return nil, fmt.Errorf("bot token authentication not configured")
+		}
+		claims, err := gw.botAuthenticator.Authenticate(ctx, identifyPayload.Token)
+		if err != nil {
+			return nil, fmt.Errorf("invalid bot token: %w", err)
+		}
+		return claims, nil
 	}
 
 	// Check verification cache first to avoid repeated Ed25519 verification

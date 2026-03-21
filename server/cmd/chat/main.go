@@ -119,9 +119,13 @@ func main() {
 
 	// Build interceptor options: user existence check, token blocklist, + optional Ed25519 dual validation
 	blocklist := auth.NewTokenBlocklist(rdb)
+	// Enable bot token authentication alongside JWT.
+	botTokenAuth := auth.NewTokenAuthenticator(botStore, auth.NewVerificationCache())
+
 	interceptorOpts := []auth.InterceptorOption{
 		auth.WithUserExistenceCheck(authStore),
 		auth.WithTokenBlocklist(blocklist),
+		auth.WithBotTokenAuth(botTokenAuth),
 	}
 
 	// Load Ed25519 public key (required for JWT verification).

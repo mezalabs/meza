@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -37,15 +38,15 @@ func NewOptionalConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...Inte
 				return next(ctx, req)
 			}
 			token := strings.TrimPrefix(header, "Bearer ")
-			claims, err := validateWithConfig(token, cfg)
+			claims, err := validateWithConfig(ctx, token, cfg)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("invalid token"))
 			}
 			if claims.IsRefresh {
 				return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token cannot be used for authentication"))
 			}
-			// Check if the device has been revoked
-			if cfg.tokenBlocklist != nil && claims.DeviceID != "" {
+			// Check if the device has been revoked (skip for bot tokens)
+			if cfg.tokenBlocklist != nil && claims.DeviceID != "" && !claims.IsBot {
 				if cfg.tokenBlocklist.IsDeviceBlocked(ctx, claims.DeviceID) {
 					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("device has been revoked"))
 				}
@@ -53,6 +54,10 @@ func NewOptionalConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...Inte
 			// Check if federated user is blocked from this RPC
 			if cfg.blockFederated && claims.IsFederated {
 				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("operation not available for federated users"))
+			}
+			// Check if bot is blocked from this RPC
+			if cfg.blockBots && claims.IsBot {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("operation not available for bots"))
 			}
 			ctx = context.WithValue(ctx, userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, deviceIDKey, claims.DeviceID)
@@ -88,7 +93,7 @@ func NewConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...InterceptorO
 				return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing authorization header"))
 			}
 			token := strings.TrimPrefix(header, "Bearer ")
-			claims, err := validateWithConfig(token, cfg)
+			claims, err := validateWithConfig(ctx, token, cfg)
 			if err != nil {
 				if isPublic {
 					// Public procedure with invalid token — proceed unauthenticated.
@@ -99,13 +104,14 @@ func NewConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...InterceptorO
 			if claims.IsRefresh {
 				return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token cannot be used for authentication"))
 			}
-			// Check if the device has been revoked
-			if cfg.tokenBlocklist != nil && claims.DeviceID != "" {
+			// Check if the device has been revoked (skip for bot tokens)
+			if cfg.tokenBlocklist != nil && claims.DeviceID != "" && !claims.IsBot {
 				if cfg.tokenBlocklist.IsDeviceBlocked(ctx, claims.DeviceID) {
 					return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("device has been revoked"))
 				}
 			}
-			if cfg.userChecker != nil {
+			// Bot tokens already verified user existence via DB lookup
+			if cfg.userChecker != nil && !claims.IsBot {
 				exists, err := cfg.userChecker.UserExists(ctx, claims.UserID)
 				if err != nil {
 					slog.Error("checking user existence", "err", err, "user", claims.UserID)
@@ -119,6 +125,10 @@ func NewConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...InterceptorO
 			if cfg.blockFederated && claims.IsFederated {
 				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("operation not available for federated users"))
 			}
+			// Check if bot is blocked from this RPC
+			if cfg.blockBots && claims.IsBot {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("operation not available for bots"))
+			}
 			ctx = context.WithValue(ctx, userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, deviceIDKey, claims.DeviceID)
 			return next(ctx, req)
@@ -127,8 +137,17 @@ func NewConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...InterceptorO
 }
 
 // validateWithConfig validates a token using the interceptor's configured keys.
-// Uses verification cache if available, then Ed25519 validation.
-func validateWithConfig(tokenString string, cfg *interceptorConfig) (*Claims, error) {
+// Bot tokens (meza_bot_ prefix) are routed to the TokenAuthenticator.
+// JWT tokens use verification cache if available, then Ed25519 validation.
+func validateWithConfig(ctx context.Context, tokenString string, cfg *interceptorConfig) (*Claims, error) {
+	// Route bot tokens to the bot authenticator
+	if IsBotToken(tokenString) {
+		if cfg.botAuthenticator == nil {
+			return nil, fmt.Errorf("bot token authentication not configured")
+		}
+		return cfg.botAuthenticator.Authenticate(ctx, tokenString)
+	}
+
 	// Check verification cache first
 	if cfg.verificationCache != nil {
 		if claims, ok := cfg.verificationCache.Get(tokenString); ok {
@@ -152,10 +171,12 @@ func validateWithConfig(tokenString string, cfg *interceptorConfig) (*Claims, er
 type interceptorConfig struct {
 	userChecker       UserExistenceChecker
 	blockFederated    bool
+	blockBots         bool
 	ed25519Key        ed25519.PublicKey
 	verificationCache *VerificationCache
 	publicProcedures  map[string]bool
 	tokenBlocklist    *TokenBlocklist
+	botAuthenticator  *TokenAuthenticator
 }
 
 // InterceptorOption configures the Connect auth interceptor.
@@ -203,5 +224,21 @@ func WithPublicProcedures(procedures ...string) InterceptorOption {
 		for _, p := range procedures {
 			cfg.publicProcedures[p] = true
 		}
+	}
+}
+
+// WithBlockBots blocks bot tokens from calling this service's RPCs.
+// Bot status is determined by the token prefix (meza_bot_) — no DB query needed.
+func WithBlockBots() InterceptorOption {
+	return func(cfg *interceptorConfig) {
+		cfg.blockBots = true
+	}
+}
+
+// WithBotTokenAuth enables bot token authentication alongside JWT.
+// Bot tokens with the meza_bot_ prefix are routed to the TokenAuthenticator.
+func WithBotTokenAuth(authenticator *TokenAuthenticator) InterceptorOption {
+	return func(cfg *interceptorConfig) {
+		cfg.botAuthenticator = authenticator
 	}
 }

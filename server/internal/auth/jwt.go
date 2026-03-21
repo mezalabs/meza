@@ -27,6 +27,7 @@ type Claims struct {
 	DeviceID    string
 	IsRefresh   bool
 	IsFederated bool      // true for federated shadow users (embedded in JWT)
+	IsBot       bool      // true for bot token authentication (not JWT)
 	Issuer      string    // Origin URL (e.g. "https://meza.chat")
 	ExpiresAt   time.Time // Token expiry, used for verification cache TTL
 }
