@@ -34,7 +34,10 @@ export const EmojiPickerPreview = memo(function EmojiPickerPreview({
             ) : (
               <span
                 className="text-2xl leading-none"
-                style={{ fontFamily: "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif" }}
+                style={{
+                  fontFamily:
+                    "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
+                }}
               >
                 {emoji.display}
               </span>
