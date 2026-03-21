@@ -114,9 +114,6 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 
 	autoAccepted, err := s.friendStore.SendFriendRequest(ctx, userID, targetID)
 	if err != nil {
-		if strings.Contains(err.Error(), "already") {
-			return nil, connect.NewError(connect.CodeAlreadyExists, err)
-		}
 		slog.Error("sending friend request", "err", err, "requester", userID, "addressee", targetID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
