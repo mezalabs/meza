@@ -14,6 +14,8 @@ import { publicUserToStored } from '../api/auth.ts';
 import {
   listChannels as fetchChannels,
   listDMChannels as fetchDMChannels,
+  listEmojis,
+  listUserEmojis,
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
 import {
@@ -515,6 +517,14 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
             if (res) scheduleOverrideExpiry();
           })
           .catch(() => {});
+        // Catch up on any emoji changes missed during disconnection.
+        // On first connect the UI components also trigger fetches, but
+        // the dedup logic in chat.ts collapses duplicate in-flight requests.
+        const serverIds = Object.keys(useServerStore.getState().servers);
+        for (const sid of serverIds) {
+          listEmojis(sid).catch(() => {});
+        }
+        listUserEmojis().catch(() => {});
       } catch (err) {
         console.error(
           '[Gateway] READY payload parse failed, reconnecting:',
@@ -705,6 +715,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           useChannelStore.getState().removeServerChannels(serverId);
           useRoleStore.getState().removeServerRoles(serverId);
           useChannelGroupStore.getState().removeServerGroups(serverId);
+          useEmojiStore.getState().removeServerEmojis(serverId);
         }
       } else if (event.payload.case === 'roleCreate' && event.payload.value) {
         useRoleStore.getState().addRole(event.payload.value);

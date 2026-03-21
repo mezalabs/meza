@@ -4,6 +4,7 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
+  cachedServerIds,
   decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
@@ -16,6 +17,8 @@ import {
   getReplies,
   hasChannelKey,
   hasPermission,
+  hideKeyboard,
+  isPersonalFromCache,
   isSessionReady,
   listEmojis,
   listMembers,
@@ -57,6 +60,7 @@ import {
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { useContentWarningStore } from '../../stores/contentWarnings.ts';
@@ -73,6 +77,7 @@ import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
+import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
@@ -174,6 +179,44 @@ export function ChannelView({
 
   // Compute whether the current user can manage (delete) other users' messages
   const canManageMessages = useCanManageMessages(serverId, currentUser?.id);
+
+  // Mobile emoji panel state
+  const isMobile = useMobile();
+  const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
+  const keyboardHeightRef = useKeyboardHeight(mobileEmojiOpen);
+
+  // Ref to the composer's insertEmoji callback (set by MessageComposer)
+  const insertEmojiRef = useRef<((text: string) => void) | null>(null);
+
+  const handleMobileEmojiToggle = useCallback(() => {
+    setMobileEmojiOpen((prev) => {
+      if (!prev) {
+        // Opening picker: dismiss keyboard
+        hideKeyboard();
+        // Also blur textarea to ensure keyboard hides on web
+        const active = document.activeElement;
+        if (active instanceof HTMLTextAreaElement) active.blur();
+      }
+      return !prev;
+    });
+  }, []);
+
+  const handleMobileEmojiSelect = useCallback((text: string) => {
+    insertEmojiRef.current?.(text);
+  }, []);
+
+  const handleMobileSearchFocusChange = useCallback((focused: boolean) => {
+    if (!focused) {
+      // Search blurred: hide keyboard, keep picker open
+      hideKeyboard();
+    }
+    // When focused, keyboard shows natively via the input focus
+  }, []);
+
+  // Close emoji panel when switching channels
+  useEffect(() => {
+    setMobileEmojiOpen(false);
+  }, []);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -356,16 +399,21 @@ export function ChannelView({
   }, [keysAvailable, channelId]);
 
   // Fetch server emojis so MarkdownRenderer can resolve emoji tags in messages.
+  // If data came from cache, still fetch from API (stale-while-revalidate).
   useEffect(() => {
-    if (!isAuthenticated || !serverId || hasEmojis) return;
-    listEmojis(serverId).catch(() => {});
+    if (!isAuthenticated || !serverId) return;
+    if (!hasEmojis || cachedServerIds.has(serverId)) {
+      listEmojis(serverId).catch(() => {});
+    }
   }, [serverId, isAuthenticated, hasEmojis]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
-  const hasPersonalEmojis = useEmojiStore((s) => s.personal.length > 0);
+  const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
   useEffect(() => {
-    if (!isAuthenticated || hasPersonalEmojis) return;
-    listUserEmojis().catch(() => {});
+    if (!isAuthenticated) return;
+    if (!hasPersonalEmojis || isPersonalFromCache()) {
+      listUserEmojis().catch(() => {});
+    }
   }, [isAuthenticated, hasPersonalEmojis]);
 
   // Fetch server members so MessageItem can resolve author display names.
@@ -541,9 +589,10 @@ export function ChannelView({
           className="flex flex-1 flex-col overflow-y-auto px-4 pt-2 pb-4"
           onScroll={handleScroll}
           onTouchStart={() => {
-            // On mobile, tapping the message list dismisses the keyboard
+            // On mobile, tapping the message list dismisses keyboard and emoji panel
             const active = document.activeElement;
             if (active instanceof HTMLTextAreaElement) active.blur();
+            if (mobileEmojiOpen) setMobileEmojiOpen(false);
           }}
           data-testid="message-list"
         >
@@ -643,6 +692,19 @@ export function ChannelView({
             channelId={channelId}
             serverId={serverId}
             disabled={viewMode === 'historical'}
+            mobileEmojiOpen={mobileEmojiOpen}
+            onMobileEmojiToggle={handleMobileEmojiToggle}
+            insertEmojiRef={insertEmojiRef}
+          />
+        )}
+
+        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {isMobile && mobileEmojiOpen && (
+          <MobileEmojiPanel
+            serverId={serverId}
+            panelHeight={keyboardHeightRef.current}
+            onEmojiSelect={handleMobileEmojiSelect}
+            onSearchFocusChange={handleMobileSearchFocusChange}
           />
         )}
       </div>
@@ -1436,7 +1498,10 @@ const MessageItem = memo(function MessageItem({
               setMobileEmojiPickerOpen(false);
             }}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up">
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-bg-elevated border-t border-border safe-bottom animate-slide-up"
+            style={{ maxHeight: '70dvh' }}
+          >
             <div className="mx-auto mt-2 mb-1 h-1 w-8 rounded-full bg-border" />
             <EmojiPicker
               onEmojiSelect={(emoji) => {

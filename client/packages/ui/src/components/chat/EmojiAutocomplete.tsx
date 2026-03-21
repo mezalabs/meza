@@ -24,7 +24,7 @@ export function EmojiAutocomplete({
   const serverEmojis = useEmojiStore((s) =>
     serverId ? s.byServer[serverId] : undefined,
   );
-  const personalEmojis = useEmojiStore((s) => s.personal);
+  const personalEmojis = useEmojiStore((s) => s.personal) ?? [];
 
   const items = useMemo(() => {
     if (!query) return [];

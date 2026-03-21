@@ -43,10 +43,13 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   );
   const personalEmojis = useEmojiStore((s) => s.personal);
   const emojiScale = useAuthStore((s) => s.user?.emojiScale ?? 1);
-  const [failedEmojiIds, setFailedEmojiIds] = useState<Set<string>>(new Set());
+  const [emojiRetries, setEmojiRetries] = useState<Record<string, number>>({});
 
   const handleEmojiError = useCallback((id: string) => {
-    setFailedEmojiIds((prev) => new Set(prev).add(id));
+    setEmojiRetries((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
   }, []);
 
   const remarkPlugins = useMemo(
@@ -229,15 +232,19 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       }) => {
         const emoji =
           serverEmojis?.find((e) => e.id === emojiId) ??
-          personalEmojis.find((e) => e.id === emojiId);
-        if (!emoji || failedEmojiIds.has(emojiId)) {
+          personalEmojis?.find((e) => e.id === emojiId);
+        const retryCount = emojiRetries[emojiId] ?? 0;
+        if (!emoji || retryCount >= 2) {
           return <span>:{emojiName}:</span>;
         }
         const attachmentId = emoji.imageUrl.replace('/media/', '');
+        const url =
+          getMediaURL(attachmentId) +
+          (retryCount > 0 ? `&_r=${retryCount}` : '');
         const size = 20 * emojiScale;
         return (
           <img
-            src={getMediaURL(attachmentId)}
+            src={url}
             alt={`:${emojiName}:`}
             title={`:${emojiName}:`}
             className="inline-block align-text-bottom"
@@ -270,7 +277,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       serverEmojis,
       personalEmojis,
       emojiScale,
-      failedEmojiIds,
+      emojiRetries,
       handleEmojiError,
       serverId,
     ],

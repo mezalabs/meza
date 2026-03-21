@@ -369,15 +369,9 @@ select:focus {
   font-weight: 600;
 }
 
-/* emoji-mart theme overrides */
-em-emoji-picker {
-  /* emoji-mart requires comma-separated RGB integers (used in rgba() internally) */
-  --em-rgb-background: 46, 46, 46; /* sRGB of bg-elevated oklch(0.26 0 0) */
-  --em-rgb-input: 36, 36, 36; /* sRGB of bg-base oklch(0.18 0 0) */
-  --em-rgb-color: 229, 229, 229; /* sRGB of text oklch(0.93 0 0) */
-  --em-rgb-accent: 100, 255, 175;
-  --em-color-border: var(--color-border);
-  --em-color-border-over: var(--color-border-hover);
-  --font-family: var(--font-sans);
-  --em-font-size: 0.875rem;
+/* Pause animated emoji images when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .emoji-picker-grid img {
+    animation-play-state: paused !important;
+  }
 }

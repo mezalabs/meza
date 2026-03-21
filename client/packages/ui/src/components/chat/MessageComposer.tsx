@@ -47,12 +47,21 @@ interface MessageComposerProps {
   channelId: string;
   serverId?: string;
   disabled?: boolean;
+  /** Mobile-only: whether the emoji panel is open below the composer. */
+  mobileEmojiOpen?: boolean;
+  /** Mobile-only: toggle the emoji panel. */
+  onMobileEmojiToggle?: () => void;
+  /** Ref that ChannelView uses to call insertEmoji from the mobile panel. */
+  insertEmojiRef?: React.MutableRefObject<((text: string) => void) | null>;
 }
 
 export function MessageComposer({
   channelId,
   serverId,
   disabled,
+  mobileEmojiOpen,
+  onMobileEmojiToggle,
+  insertEmojiRef,
 }: MessageComposerProps) {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -103,6 +112,10 @@ export function MessageComposer({
     cursorPositionRef.current = textareaRef.current?.selectionStart ?? 0;
   }
 
+  // Track mobile emoji state via ref so insertEmoji doesn't need to re-create
+  const mobileEmojiOpenRef = useRef(mobileEmojiOpen);
+  mobileEmojiOpenRef.current = mobileEmojiOpen;
+
   // Stable ref -- uses functional setDraft updater so no draft dependency
   const insertEmoji = useCallback((native: string) => {
     const pos = cursorPositionRef.current;
@@ -115,8 +128,19 @@ export function MessageComposer({
     // DOM is committed after flushSync -- safe to touch textarea
     cursorPositionRef.current = newPos;
     textareaRef.current?.setSelectionRange(newPos, newPos);
-    textareaRef.current?.focus();
+    // Don't focus textarea when mobile emoji panel is open (avoids keyboard popup)
+    if (!mobileEmojiOpenRef.current) {
+      textareaRef.current?.focus();
+    }
   }, []);
+
+  // Expose insertEmoji to ChannelView for the mobile emoji panel
+  useEffect(() => {
+    if (insertEmojiRef) insertEmojiRef.current = insertEmoji;
+    return () => {
+      if (insertEmojiRef) insertEmojiRef.current = null;
+    };
+  }, [insertEmoji, insertEmojiRef]);
 
   const focusTextarea = useCallback(() => {
     textareaRef.current?.focus();
@@ -788,6 +812,10 @@ export function MessageComposer({
             }}
             onSelect={handleSelect}
             onKeyDown={handleKeyDown}
+            onFocus={() => {
+              // Close mobile emoji panel when user taps to type
+              if (mobileEmojiOpen && onMobileEmojiToggle) onMobileEmojiToggle();
+            }}
             onBlur={handleBlur}
             disabled={sending || disabled}
           />
@@ -797,6 +825,8 @@ export function MessageComposer({
             onClose={focusTextarea}
             disabled={sending || disabled}
             serverId={serverId}
+            mobileEmojiOpen={mobileEmojiOpen}
+            onMobileToggle={onMobileEmojiToggle}
           />
 
           {/* Mobile send button */}

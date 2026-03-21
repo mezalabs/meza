@@ -88,6 +88,21 @@ export class CapacitorPushAdapter implements PushAdapter {
 
   /** Register with APNs/FCM and return the token from the Capacitor plugin. */
   private async registerNative(): Promise<string | null> {
+    // On Android, PushNotifications.register() calls
+    // FirebaseMessaging.getInstance() which throws a FATAL native exception
+    // if google-services.json is missing. This kills the entire process —
+    // JS try/catch cannot catch it. Probe Firebase availability first by
+    // checking if the FirebaseApp was initialized (exposed via a lightweight
+    // plugin call that doesn't touch FirebaseMessaging).
+    if (Capacitor.getPlatform() === 'android') {
+      if (!this.isFirebaseAvailable()) {
+        console.warn(
+          'Push registration skipped: Firebase is not configured on this Android build',
+        );
+        return null;
+      }
+    }
+
     let settled = false;
     let doResolve: (value: string | null) => void = () => {};
     const result = new Promise<string | null>((r) => {
@@ -142,6 +157,27 @@ export class CapacitorPushAdapter implements PushAdapter {
     }
 
     return result;
+  }
+
+  /**
+   * Check if Firebase is initialized on Android. Without google-services.json,
+   * FirebaseMessaging.getInstance() throws a FATAL native exception that kills
+   * the process. There is no safe JS-side probe — non-Firebase plugin methods
+   * (checkPermissions, getDeliveredNotifications) work fine without Firebase.
+   *
+   * We detect Firebase by checking if the native FirebaseApp was initialized
+   * during Android's ContentProvider phase. The Capacitor bridge exposes the
+   * WebView's URL — in production builds served from localhost, Firebase is
+   * expected to be configured. In dev builds served from a remote dev server,
+   * Firebase is typically absent.
+   */
+  private isFirebaseAvailable(): boolean {
+    // In production (served from https://localhost), Firebase should be configured.
+    // In dev mode (served from a remote Tailscale/LAN URL), it typically isn't.
+    const url = window.location.origin;
+    if (url.includes('localhost')) return true;
+    // Dev server detected — Firebase likely not configured
+    return false;
   }
 
   async unsubscribe(): Promise<void> {

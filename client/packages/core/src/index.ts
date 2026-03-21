@@ -259,6 +259,36 @@ export {
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
 export * from './keybinds/index.ts';
+export {
+  clearEmojiCache,
+  initEmojiCachePersistence,
+  loadEmojiCache,
+} from './lib/emojiCache.ts';
+// Emoji data & search
+export type {
+  EmojiGroup,
+  ShortcodeMap,
+  UnicodeEmoji,
+} from './lib/emojiData.ts';
+export {
+  applySkinTone,
+  getAllUnicodeEmojis,
+  getEmojiGroups,
+  getShortcodes,
+  loadEmojiData,
+} from './lib/emojiData.ts';
+export type {
+  CustomSearchResult,
+  SearchResult,
+  UnicodeSearchResult,
+} from './lib/emojiSearch.ts';
+export { searchEmojis } from './lib/emojiSearch.ts';
+export type { FrequentEmojiEntry } from './lib/frequentEmojis.ts';
+export {
+  clearFrequentEmojis,
+  getFrequentEmojis,
+  recordUsage,
+} from './lib/frequentEmojis.ts';
 // Onboarding templates
 export {
   SERVER_TEMPLATES,
@@ -302,7 +332,11 @@ export { useChannelStore } from './store/channels.ts';
 export type { DMActions, DMState } from './store/dms.ts';
 export { useDMStore } from './store/dms.ts';
 export type { EmojiActions, EmojiState } from './store/emojis.ts';
-export { useEmojiStore } from './store/emojis.ts';
+export {
+  cachedServerIds,
+  isPersonalFromCache,
+  useEmojiStore,
+} from './store/emojis.ts';
 export type { FriendActions, FriendState } from './store/friends.ts';
 export { useFriendStore } from './store/friends.ts';
 export type {
@@ -400,8 +434,13 @@ export * from './tiling/index.ts';
 export type { ElectronAPI } from './types/electron.d.ts';
 export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
+// Utils
+export {
+  hideKeyboard,
+  onKeyboardWillHide,
+  onKeyboardWillShow,
+} from './utils/keyboard.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
-// Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';
