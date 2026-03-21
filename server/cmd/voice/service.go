@@ -212,6 +212,61 @@ func (s *voiceService) GetVoiceChannelState(ctx context.Context, req *connect.Re
 	}), nil
 }
 
+func (s *voiceService) GetStreamPreviewToken(ctx context.Context, req *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+
+	if req.Msg.ChannelId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
+	}
+
+	channel, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, req.Msg.ChannelId, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
+		}
+		slog.Error("get channel", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if !isMember {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member of this server"))
+	}
+
+	if channel.Type != channelTypeVoice {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel is not a voice channel"))
+	}
+
+	name := roomName(req.Msg.ChannelId)
+
+	token, err := s.newPreviewToken(userID, name)
+	if err != nil {
+		slog.Error("generate preview token", "err", err, "user", userID, "room", name)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.GetStreamPreviewTokenResponse{
+		LivekitUrl:   s.lkPublicURL,
+		LivekitToken: token,
+		RoomName:     name,
+	}), nil
+}
+
+// newPreviewToken generates a hidden, subscribe-only LiveKit JWT for stream preview.
+func (s *voiceService) newPreviewToken(userID, room string) (string, error) {
+	at := lkauth.NewAccessToken(s.lkKey, s.lkSecret)
+	at.SetVideoGrant(&lkauth.VideoGrant{
+		RoomJoin: true,
+		Room:     room,
+		Hidden:   true,
+	}).
+		SetIdentity("preview:" + userID).
+		SetValidFor(60 * time.Second)
+
+	return at.ToJWT()
+}
+
 // newLiveKitToken generates a signed LiveKit JWT for the given user and room.
 // Every token grants microphone and unknown (soundboard) publish sources.
 // When canScreenShare is true, the token also grants screen_share and screen_share_audio.

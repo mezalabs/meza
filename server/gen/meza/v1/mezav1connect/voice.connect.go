@@ -45,6 +45,9 @@ const (
 	// VoiceServiceGetUserVoiceActivityProcedure is the fully-qualified name of the VoiceService's
 	// GetUserVoiceActivity RPC.
 	VoiceServiceGetUserVoiceActivityProcedure = "/meza.v1.VoiceService/GetUserVoiceActivity"
+	// VoiceServiceGetStreamPreviewTokenProcedure is the fully-qualified name of the VoiceService's
+	// GetStreamPreviewToken RPC.
+	VoiceServiceGetStreamPreviewTokenProcedure = "/meza.v1.VoiceService/GetStreamPreviewToken"
 )
 
 // VoiceServiceClient is a client for the meza.v1.VoiceService service.
@@ -53,6 +56,7 @@ type VoiceServiceClient interface {
 	LeaveVoiceChannel(context.Context, *connect.Request[v1.LeaveVoiceChannelRequest]) (*connect.Response[v1.LeaveVoiceChannelResponse], error)
 	GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error)
 	GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error)
+	GetStreamPreviewToken(context.Context, *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error)
 }
 
 // NewVoiceServiceClient constructs a client for the meza.v1.VoiceService service. By default, it
@@ -90,15 +94,22 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("GetUserVoiceActivity")),
 			connect.WithClientOptions(opts...),
 		),
+		getStreamPreviewToken: connect.NewClient[v1.GetStreamPreviewTokenRequest, v1.GetStreamPreviewTokenResponse](
+			httpClient,
+			baseURL+VoiceServiceGetStreamPreviewTokenProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("GetStreamPreviewToken")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // voiceServiceClient implements VoiceServiceClient.
 type voiceServiceClient struct {
-	joinVoiceChannel     *connect.Client[v1.JoinVoiceChannelRequest, v1.JoinVoiceChannelResponse]
-	leaveVoiceChannel    *connect.Client[v1.LeaveVoiceChannelRequest, v1.LeaveVoiceChannelResponse]
-	getVoiceChannelState *connect.Client[v1.GetVoiceChannelStateRequest, v1.GetVoiceChannelStateResponse]
-	getUserVoiceActivity *connect.Client[v1.GetUserVoiceActivityRequest, v1.GetUserVoiceActivityResponse]
+	joinVoiceChannel      *connect.Client[v1.JoinVoiceChannelRequest, v1.JoinVoiceChannelResponse]
+	leaveVoiceChannel     *connect.Client[v1.LeaveVoiceChannelRequest, v1.LeaveVoiceChannelResponse]
+	getVoiceChannelState  *connect.Client[v1.GetVoiceChannelStateRequest, v1.GetVoiceChannelStateResponse]
+	getUserVoiceActivity  *connect.Client[v1.GetUserVoiceActivityRequest, v1.GetUserVoiceActivityResponse]
+	getStreamPreviewToken *connect.Client[v1.GetStreamPreviewTokenRequest, v1.GetStreamPreviewTokenResponse]
 }
 
 // JoinVoiceChannel calls meza.v1.VoiceService.JoinVoiceChannel.
@@ -121,12 +132,18 @@ func (c *voiceServiceClient) GetUserVoiceActivity(ctx context.Context, req *conn
 	return c.getUserVoiceActivity.CallUnary(ctx, req)
 }
 
+// GetStreamPreviewToken calls meza.v1.VoiceService.GetStreamPreviewToken.
+func (c *voiceServiceClient) GetStreamPreviewToken(ctx context.Context, req *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error) {
+	return c.getStreamPreviewToken.CallUnary(ctx, req)
+}
+
 // VoiceServiceHandler is an implementation of the meza.v1.VoiceService service.
 type VoiceServiceHandler interface {
 	JoinVoiceChannel(context.Context, *connect.Request[v1.JoinVoiceChannelRequest]) (*connect.Response[v1.JoinVoiceChannelResponse], error)
 	LeaveVoiceChannel(context.Context, *connect.Request[v1.LeaveVoiceChannelRequest]) (*connect.Response[v1.LeaveVoiceChannelResponse], error)
 	GetVoiceChannelState(context.Context, *connect.Request[v1.GetVoiceChannelStateRequest]) (*connect.Response[v1.GetVoiceChannelStateResponse], error)
 	GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error)
+	GetStreamPreviewToken(context.Context, *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error)
 }
 
 // NewVoiceServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -160,6 +177,12 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("GetUserVoiceActivity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceGetStreamPreviewTokenHandler := connect.NewUnaryHandler(
+		VoiceServiceGetStreamPreviewTokenProcedure,
+		svc.GetStreamPreviewToken,
+		connect.WithSchema(voiceServiceMethods.ByName("GetStreamPreviewToken")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.VoiceService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case VoiceServiceJoinVoiceChannelProcedure:
@@ -170,6 +193,8 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceGetVoiceChannelStateHandler.ServeHTTP(w, r)
 		case VoiceServiceGetUserVoiceActivityProcedure:
 			voiceServiceGetUserVoiceActivityHandler.ServeHTTP(w, r)
+		case VoiceServiceGetStreamPreviewTokenProcedure:
+			voiceServiceGetStreamPreviewTokenHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -193,4 +218,8 @@ func (UnimplementedVoiceServiceHandler) GetVoiceChannelState(context.Context, *c
 
 func (UnimplementedVoiceServiceHandler) GetUserVoiceActivity(context.Context, *connect.Request[v1.GetUserVoiceActivityRequest]) (*connect.Response[v1.GetUserVoiceActivityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.VoiceService.GetUserVoiceActivity is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) GetStreamPreviewToken(context.Context, *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.VoiceService.GetStreamPreviewToken is not implemented"))
 }
