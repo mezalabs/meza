@@ -1,26 +1,24 @@
 import { onKeyboardWillHide, onKeyboardWillShow } from '@meza/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Tracks the native keyboard height via Capacitor Keyboard events.
- * Returns 0 when the keyboard is hidden, and the pixel height when visible.
- * Also exposes the last known height (persists after keyboard hides) for
- * sizing the emoji panel to match the keyboard's space.
+ * Tracks the last known native keyboard height via Capacitor Keyboard events.
+ * Uses a ref (not state) to avoid triggering re-renders on every keyboard
+ * show/hide — this prevents layout thrashing on Android where the OS
+ * resizes the WebView natively.
+ *
+ * Returns a ref containing the last known keyboard height (defaults to 300
+ * if the keyboard hasn't been shown yet). Use .current to read the value.
  */
-export function useKeyboardHeight(): {
-  height: number;
-  lastKnownHeight: number;
-} {
-  const [height, setHeight] = useState(0);
-  const lastKnownRef = useRef(0);
+export function useKeyboardHeight(): React.MutableRefObject<number> {
+  const heightRef = useRef(300); // sensible default before first keyboard show
 
   useEffect(() => {
     const unsub1 = onKeyboardWillShow((h) => {
-      lastKnownRef.current = h;
-      setHeight(h);
+      heightRef.current = h;
     });
     const unsub2 = onKeyboardWillHide(() => {
-      setHeight(0);
+      // Keep lastKnownHeight — don't reset to 0
     });
     return () => {
       unsub1?.();
@@ -28,5 +26,5 @@ export function useKeyboardHeight(): {
     };
   }, []);
 
-  return { height, lastKnownHeight: lastKnownRef.current || 300 };
+  return heightRef;
 }

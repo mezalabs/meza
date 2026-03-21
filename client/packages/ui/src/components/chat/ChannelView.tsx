@@ -41,7 +41,7 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { getCapacitorPlatform, hideKeyboard } from '@meza/core';
+import { hideKeyboard } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
 
 import * as Dialog from '@radix-ui/react-dialog';
@@ -180,14 +180,10 @@ export function ChannelView({
   // Compute whether the current user can manage (delete) other users' messages
   const canManageMessages = useCanManageMessages(serverId, currentUser?.id);
 
-  // Mobile emoji panel state (iOS only — Android uses Popover)
+  // Mobile emoji panel state
   const isMobile = useMobile();
-  const isIOSCapacitor = isMobile && getCapacitorPlatform() === 'ios';
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
-  const { height: keyboardCurrentHeight, lastKnownHeight: keyboardHeight } =
-    useKeyboardHeight();
-  // Track whether the emoji picker's search input is focused (keyboard expected)
-  const emojiSearchFocusedRef = useRef(false);
+  const keyboardHeightRef = useKeyboardHeight();
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
@@ -210,26 +206,12 @@ export function ChannelView({
   }, []);
 
   const handleMobileSearchFocusChange = useCallback((focused: boolean) => {
-    emojiSearchFocusedRef.current = focused;
     if (!focused) {
       // Search blurred: hide keyboard, keep picker open
       hideKeyboard();
     }
     // When focused, keyboard shows natively via the input focus
   }, []);
-
-  // Close emoji panel when the keyboard shows from the COMPOSER textarea
-  // (not from the picker's search input). This handles the case where the
-  // user taps the text input while the picker is open.
-  useEffect(() => {
-    if (
-      mobileEmojiOpen &&
-      keyboardCurrentHeight > 0 &&
-      !emojiSearchFocusedRef.current
-    ) {
-      setMobileEmojiOpen(false);
-    }
-  }, [mobileEmojiOpen, keyboardCurrentHeight]);
 
   // Close emoji panel when switching channels
   useEffect(() => {
@@ -716,13 +698,11 @@ export function ChannelView({
           />
         )}
 
-        {/* Mobile emoji picker panel — replaces the keyboard (iOS only).
-            On Android, keyboard listeners interfere with adjustResize,
-            so the Popover is used instead. */}
-        {isMobile && mobileEmojiOpen && isIOSCapacitor && (
+        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {isMobile && mobileEmojiOpen && (
           <MobileEmojiPanel
             serverId={serverId}
-            panelHeight={keyboardHeight}
+            panelHeight={keyboardHeightRef.current}
             onEmojiSelect={handleMobileEmojiSelect}
             onSearchFocusChange={handleMobileSearchFocusChange}
           />
