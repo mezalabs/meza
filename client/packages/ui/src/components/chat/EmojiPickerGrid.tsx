@@ -16,11 +16,13 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useMobile } from '../../hooks/useMobile.ts';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 
 // ----- Constants -----
 
-const COLS = 9;
+const COLS_DESKTOP = 9;
+const COLS_MOBILE = 8;
 const EMOJI_SIZE = 32;
 const BUTTON_SIZE = 40;
 const HEADER_HEIGHT = 28;
@@ -54,9 +56,16 @@ type GridItem = CustomGridItem | UnicodeGridItem;
 
 // ----- Props -----
 
+interface OtherServerEmojiGroup {
+  serverId: string;
+  serverName: string;
+  emojis: CustomEmoji[];
+}
+
 interface EmojiPickerGridProps {
   personalEmojis: CustomEmoji[];
   serverEmojis: CustomEmoji[];
+  otherServerEmojiGroups: OtherServerEmojiGroup[];
   frequentEmojis: FrequentEmojiEntry[];
   emojiGroups: EmojiGroup[] | null;
   searchResults: SearchResult[] | null;
@@ -85,41 +94,36 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+function addCustomSection(
+  rows: GridRow[],
+  label: string,
+  emojis: CustomEmoji[],
+  cols: number,
+) {
+  if (emojis.length === 0) return;
+  rows.push({ kind: 'header', label });
+  const items: CustomGridItem[] = emojis.map((e) => ({
+    type: 'custom',
+    emoji: e,
+  }));
+  for (const chunk of chunkArray(items, cols)) {
+    rows.push({ kind: 'row', items: chunk });
+  }
+}
+
 function buildRows(
   personalEmojis: CustomEmoji[],
   serverEmojis: CustomEmoji[],
+  otherServerEmojiGroups: OtherServerEmojiGroup[],
   frequentEntries: FrequentEmojiEntry[],
   emojiGroups: EmojiGroup[] | null,
   allCustom: CustomEmoji[],
   unicodeMap: Map<string, UnicodeEmoji> | null,
+  cols: number,
 ): GridRow[] {
   const rows: GridRow[] = [];
 
-  // Personal emojis
-  if (personalEmojis.length > 0) {
-    rows.push({ kind: 'header', label: 'My Emojis' });
-    const items: CustomGridItem[] = personalEmojis.map((e) => ({
-      type: 'custom',
-      emoji: e,
-    }));
-    for (const chunk of chunkArray(items, COLS)) {
-      rows.push({ kind: 'row', items: chunk });
-    }
-  }
-
-  // Server emojis
-  if (serverEmojis.length > 0) {
-    rows.push({ kind: 'header', label: 'Server Emojis' });
-    const items: CustomGridItem[] = serverEmojis.map((e) => ({
-      type: 'custom',
-      emoji: e,
-    }));
-    for (const chunk of chunkArray(items, COLS)) {
-      rows.push({ kind: 'row', items: chunk });
-    }
-  }
-
-  // Frequently used
+  // 1. Frequently used
   if (frequentEntries.length > 0) {
     const resolved: GridItem[] = [];
     const customById = new Map(allCustom.map((e) => [e.id, e]));
@@ -136,13 +140,24 @@ function buildRows(
 
     if (resolved.length > 0) {
       rows.push({ kind: 'header', label: 'Frequently Used' });
-      for (const chunk of chunkArray(resolved, COLS)) {
+      for (const chunk of chunkArray(resolved, cols)) {
         rows.push({ kind: 'row', items: chunk });
       }
     }
   }
 
-  // Unicode categories
+  // 2. My Emojis (personal)
+  addCustomSection(rows, 'My Emojis', personalEmojis, cols);
+
+  // 3. Current server emojis
+  addCustomSection(rows, 'Server Emojis', serverEmojis, cols);
+
+  // 4. Other server emojis
+  for (const group of otherServerEmojiGroups) {
+    addCustomSection(rows, group.serverName, group.emojis, cols);
+  }
+
+  // 5. Unicode categories
   if (emojiGroups) {
     for (const group of emojiGroups) {
       if (group.emojis.length === 0) continue;
@@ -151,7 +166,7 @@ function buildRows(
         type: 'unicode',
         emoji: e,
       }));
-      for (const chunk of chunkArray(items, COLS)) {
+      for (const chunk of chunkArray(items, cols)) {
         rows.push({ kind: 'row', items: chunk });
       }
     }
@@ -160,7 +175,7 @@ function buildRows(
   return rows;
 }
 
-function buildSearchRows(results: SearchResult[]): GridRow[] {
+function buildSearchRows(results: SearchResult[], cols: number): GridRow[] {
   const items: GridItem[] = results.map((r) => {
     if (r.type === 'custom') {
       return {
@@ -189,7 +204,7 @@ function buildSearchRows(results: SearchResult[]): GridRow[] {
   });
 
   const rows: GridRow[] = [];
-  for (const chunk of chunkArray(items, COLS)) {
+  for (const chunk of chunkArray(items, cols)) {
     rows.push({ kind: 'row', items: chunk });
   }
   return rows;
@@ -200,6 +215,7 @@ function buildSearchRows(results: SearchResult[]): GridRow[] {
 export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   personalEmojis,
   serverEmojis,
+  otherServerEmojiGroups,
   frequentEmojis,
   emojiGroups,
   searchResults,
@@ -213,12 +229,17 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
 }: EmojiPickerGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const isMobile = useMobile();
+  const cols = isMobile ? COLS_MOBILE : COLS_DESKTOP;
 
   // Build a map of all custom emojis for frequent lookup
-  const allCustom = useMemo(
-    () => [...personalEmojis, ...serverEmojis],
-    [personalEmojis, serverEmojis],
-  );
+  const allCustom = useMemo(() => {
+    const result = [...personalEmojis, ...serverEmojis];
+    for (const group of otherServerEmojiGroups) {
+      result.push(...group.emojis);
+    }
+    return result;
+  }, [personalEmojis, serverEmojis, otherServerEmojiGroups]);
 
   // Build unicode map for frequent emoji lookup
   const unicodeMap = useMemo(() => {
@@ -233,23 +254,27 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   }, [emojiGroups]);
 
   const rows = useMemo(() => {
-    if (searchResults) return buildSearchRows(searchResults);
+    if (searchResults) return buildSearchRows(searchResults, cols);
     return buildRows(
       personalEmojis,
       serverEmojis,
+      otherServerEmojiGroups,
       frequentEmojis,
       emojiGroups,
       allCustom,
       unicodeMap,
+      cols,
     );
   }, [
     searchResults,
     personalEmojis,
     serverEmojis,
+    otherServerEmojiGroups,
     frequentEmojis,
     emojiGroups,
     allCustom,
     unicodeMap,
+    cols,
   ]);
 
   // Flatten all emoji items for keyboard navigation
@@ -412,20 +437,35 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     virtualizer.scrollToIndex(fi.rowIndex, { align: 'auto' });
   }, [focusedIndex, flatItems, virtualizer]);
 
+  // Build server name lookup for preview
+  const serverNames = useMemo(() => {
+    const map = new Map<string, string>();
+    if (serverName) {
+      // Find the current server's ID from the server emojis
+      for (const e of serverEmojis) {
+        if (e.serverId) { map.set(e.serverId, serverName); break; }
+      }
+    }
+    for (const group of otherServerEmojiGroups) {
+      map.set(group.serverId, group.serverName);
+    }
+    return map;
+  }, [serverName, serverEmojis, otherServerEmojiGroups]);
+
   // Update preview on focus
   useEffect(() => {
     if (focusedIndex < 0 || focusedIndex >= flatItems.length) {
       return;
     }
     const item = flatItems[focusedIndex].item;
-    onHover(itemToPreview(item, serverName));
-  }, [focusedIndex, flatItems, onHover, serverName]);
+    onHover(itemToPreview(item, serverNames));
+  }, [focusedIndex, flatItems, onHover, serverNames]);
 
   const handleItemHover = useCallback(
     (item: GridItem) => {
-      onHover(itemToPreview(item, serverName));
+      onHover(itemToPreview(item, serverNames));
     },
-    [onHover, serverName],
+    [onHover, serverNames],
   );
 
   if (rows.length === 0) {
@@ -532,6 +572,15 @@ const EmojiButton = memo(function EmojiButton({
 }) {
   const label =
     item.type === 'custom' ? `:${item.emoji.name}:` : item.emoji.label;
+  const [retries, setRetries] = useState(0);
+
+  const handleImgError = useCallback(() => {
+    // Retry once after a short delay to handle transient network failures
+    // (e.g. proxy dropping connections under load on mobile dev)
+    if (retries < 1) {
+      setTimeout(() => setRetries((r) => r + 1), 500);
+    }
+  }, [retries]);
 
   return (
     <button
@@ -552,11 +601,14 @@ const EmojiButton = memo(function EmojiButton({
     >
       {item.type === 'custom' ? (
         <img
-          src={getMediaURL(item.emoji.imageUrl.replace('/media/', ''))}
+          src={
+            getMediaURL(item.emoji.imageUrl.replace('/media/', '')) +
+            (retries > 0 ? `&_r=${retries}` : '')
+          }
           alt={label}
           className="object-contain"
           style={{ width: EMOJI_SIZE, height: EMOJI_SIZE }}
-          loading="lazy"
+          onError={handleImgError}
         />
       ) : (
         <span
@@ -577,15 +629,18 @@ const EmojiButton = memo(function EmojiButton({
 
 function itemToPreview(
   item: GridItem,
-  serverName?: string,
+  serverNames: Map<string, string>,
 ): PreviewEmoji {
   if (item.type === 'custom') {
     const attachmentId = item.emoji.imageUrl.replace('/media/', '');
+    const source = item.emoji.userId
+      ? 'Personal'
+      : serverNames.get(item.emoji.serverId) ?? 'Server';
     return {
       type: 'custom',
       display: attachmentId,
       name: item.emoji.name,
-      source: item.emoji.userId ? 'Personal' : serverName ?? 'Server',
+      source,
       animated: item.emoji.animated,
     };
   }

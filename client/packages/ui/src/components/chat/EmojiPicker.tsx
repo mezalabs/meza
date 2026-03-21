@@ -14,6 +14,7 @@ import {
   useServerStore,
 } from '@meza/core';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useMobile } from '../../hooks/useMobile.ts';
 import { EmojiPickerGrid } from './EmojiPickerGrid.tsx';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 import { EmojiPickerPreview } from './EmojiPickerPreview.tsx';
@@ -23,6 +24,9 @@ import { EmojiPickerSkinTone } from './EmojiPickerSkinTone.tsx';
 // ----- Constants -----
 
 const PICKER_MAX_WIDTH = 380;
+const PICKER_MAX_WIDTH_MOBILE = 340;
+const PICKER_HEIGHT = 420;
+const PICKER_HEIGHT_MOBILE = 272; // search (~44px) + header (28px) + 5 rows (5×40px)
 const SKIN_TONE_KEY = 'meza:skin-tone';
 
 function getSavedSkinTone(): number {
@@ -59,6 +63,9 @@ export const EmojiPicker = memo(function EmojiPicker({
   );
   const [loadError, setLoadError] = useState(false);
   const [searchFocused, setSearchFocused] = useState(true);
+  const isMobile = useMobile();
+  const pickerWidth = isMobile ? PICKER_MAX_WIDTH_MOBILE : PICKER_MAX_WIDTH;
+  const pickerHeight = isMobile ? PICKER_HEIGHT_MOBILE : PICKER_HEIGHT;
 
   // Fetch emoji data
   useEffect(() => {
@@ -81,6 +88,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     serverId ? s.byServer[serverId] : undefined,
   );
   const personalEmojis = useEmojiStore((s) => s.personal);
+  const emojisByServer = useEmojiStore((s) => s.byServer);
 
   useEffect(() => {
     if (serverId && !serverEmojis) {
@@ -94,6 +102,32 @@ export const EmojiPicker = memo(function EmojiPicker({
     }
   }, [personalEmojis.length]);
 
+  // All servers the user is in (for other-server emojis + names)
+  const servers = useServerStore((s) => s.servers);
+
+  // Load emojis for other servers the user is in
+  useEffect(() => {
+    for (const sid of Object.keys(servers)) {
+      if (sid !== serverId && !emojisByServer[sid]) {
+        listEmojis(sid).catch(() => {});
+      }
+    }
+  }, [servers, serverId, emojisByServer]);
+
+  // Build other-server emoji groups (servers that aren't the current one)
+  const otherServerEmojiGroups = useMemo(() => {
+    const groups: { serverId: string; serverName: string; emojis: CustomEmoji[] }[] = [];
+    for (const [sid, emojis] of Object.entries(emojisByServer)) {
+      if (sid === serverId || emojis.length === 0) continue;
+      groups.push({
+        serverId: sid,
+        serverName: servers[sid]?.name ?? sid,
+        emojis,
+      });
+    }
+    return groups;
+  }, [emojisByServer, serverId, servers]);
+
   // Server name for preview
   const serverName = useServerStore((s) =>
     serverId ? s.servers[serverId]?.name : undefined,
@@ -102,17 +136,25 @@ export const EmojiPicker = memo(function EmojiPicker({
   // Frequently used (read once on mount)
   const [frequentEmojis] = useState(() => getFrequentEmojis());
 
-  // Search
+  // Search — include all custom emojis from all sources
   const allCustom: CustomEmoji[] = useMemo(() => {
-    const result = [...personalEmojis];
+    const seenIds = new Set<string>();
+    const result: CustomEmoji[] = [];
+    for (const e of personalEmojis) {
+      if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
+    }
     if (serverEmojis) {
-      const seenIds = new Set(result.map((e) => e.id));
       for (const e of serverEmojis) {
-        if (!seenIds.has(e.id)) result.push(e);
+        if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
+      }
+    }
+    for (const group of otherServerEmojiGroups) {
+      for (const e of group.emojis) {
+        if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
       }
     }
     return result;
-  }, [personalEmojis, serverEmojis]);
+  }, [personalEmojis, serverEmojis, otherServerEmojiGroups]);
 
   const searchResults: SearchResult[] | null = useMemo(() => {
     if (!searchQuery) return null;
@@ -159,7 +201,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     return (
       <div
         className="flex items-center justify-center rounded-xl bg-bg-elevated"
-        style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw' }}
+        style={{ width: pickerWidth, maxWidth: '100vw' }}
       >
         <span className="text-sm text-text-muted">
           Failed to load emoji picker
@@ -172,7 +214,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     return (
       <div
         className="flex items-center justify-center rounded-xl bg-bg-elevated"
-        style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw' }}
+        style={{ width: pickerWidth, maxWidth: '100vw' }}
       >
         <span className="text-sm text-text-muted">Loading emoji…</span>
       </div>
@@ -181,8 +223,8 @@ export const EmojiPicker = memo(function EmojiPicker({
 
   return (
     <div
-      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden h-[420px]"
-      style={{ width: PICKER_MAX_WIDTH, maxWidth: '100vw', maxHeight: '100%' }}
+      className="flex flex-col rounded-xl bg-bg-elevated overflow-hidden"
+      style={{ width: pickerWidth, height: pickerHeight, maxWidth: '100vw', maxHeight: '100%' }}
     >
       {/* Search + skin tone */}
       <div className="flex items-end gap-1 pr-2">
@@ -200,6 +242,7 @@ export const EmojiPicker = memo(function EmojiPicker({
       <EmojiPickerGrid
         personalEmojis={personalEmojis}
         serverEmojis={serverEmojis ?? []}
+        otherServerEmojiGroups={otherServerEmojiGroups}
         frequentEmojis={frequentEmojis}
         emojiGroups={getEmojiGroups()}
         searchResults={searchResults}
