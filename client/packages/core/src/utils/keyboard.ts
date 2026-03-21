@@ -7,7 +7,7 @@
  * all functions are safe no-ops.
  */
 
-import { isCapacitor } from './platform.ts';
+import { getCapacitorPlatform, isCapacitor } from './platform.ts';
 
 interface PluginListenerHandle {
   remove: () => void;
@@ -41,10 +41,13 @@ export async function hideKeyboard(): Promise<void> {
   } catch {}
 }
 
-/** Listen for the native keyboard about to show. Returns an unsubscribe function. */
+/** Listen for the native keyboard about to show. Returns an unsubscribe function.
+ *  iOS only — on Android, registering keyboard listeners interferes with
+ *  the native adjustResize behavior, causing the keyboard to cover content. */
 export function onKeyboardWillShow(
   cb: (height: number) => void,
 ): (() => void) | undefined {
+  if (getCapacitorPlatform() !== 'ios') return undefined;
   const kb = getKeyboard();
   if (!kb) return undefined;
   let handle: PluginListenerHandle | null = null;
@@ -64,10 +67,12 @@ export function onKeyboardWillShow(
   };
 }
 
-/** Listen for the native keyboard about to hide. Returns an unsubscribe function. */
+/** Listen for the native keyboard about to hide. Returns an unsubscribe function.
+ *  iOS only — see onKeyboardWillShow for rationale. */
 export function onKeyboardWillHide(
   cb: () => void,
 ): (() => void) | undefined {
+  if (getCapacitorPlatform() !== 'ios') return undefined;
   const kb = getKeyboard();
   if (!kb) return undefined;
   let handle: PluginListenerHandle | null = null;

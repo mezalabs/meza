@@ -41,7 +41,7 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { hideKeyboard } from '@meza/core';
+import { getCapacitorPlatform, hideKeyboard } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
 
 import * as Dialog from '@radix-ui/react-dialog';
@@ -180,8 +180,9 @@ export function ChannelView({
   // Compute whether the current user can manage (delete) other users' messages
   const canManageMessages = useCanManageMessages(serverId, currentUser?.id);
 
-  // Mobile emoji panel state
+  // Mobile emoji panel state (iOS only — Android uses Popover)
   const isMobile = useMobile();
+  const isIOSCapacitor = isMobile && getCapacitorPlatform() === 'ios';
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
   const { height: keyboardCurrentHeight, lastKnownHeight: keyboardHeight } =
     useKeyboardHeight();
@@ -715,8 +716,10 @@ export function ChannelView({
           />
         )}
 
-        {/* Mobile emoji picker panel — replaces the keyboard */}
-        {isMobile && mobileEmojiOpen && (
+        {/* Mobile emoji picker panel — replaces the keyboard (iOS only).
+            On Android, keyboard listeners interfere with adjustResize,
+            so the Popover is used instead. */}
+        {isMobile && mobileEmojiOpen && isIOSCapacitor && (
           <MobileEmojiPanel
             serverId={serverId}
             panelHeight={keyboardHeight}

@@ -406,7 +406,12 @@ export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
-export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
+export {
+  getBaseUrl,
+  getCapacitorPlatform,
+  isCapacitor,
+  isElectron,
+} from './utils/platform.ts';
 // Emoji data & search
 export type {
   EmojiGroup,
