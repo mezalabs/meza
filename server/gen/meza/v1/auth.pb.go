@@ -1062,22 +1062,24 @@ func (x *Device) GetPushEnabled() bool {
 }
 
 type UpdateProfileRequest struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	DisplayName         *string                `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
-	AvatarUrl           *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
-	EmojiScale          *float32               `protobuf:"fixed32,3,opt,name=emoji_scale,json=emojiScale,proto3,oneof" json:"emoji_scale,omitempty"`
-	Bio                 *string                `protobuf:"bytes,4,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
-	Pronouns            *string                `protobuf:"bytes,5,opt,name=pronouns,proto3,oneof" json:"pronouns,omitempty"`
-	BannerUrl           *string                `protobuf:"bytes,6,opt,name=banner_url,json=bannerUrl,proto3,oneof" json:"banner_url,omitempty"`
-	ThemeColorPrimary   *string                `protobuf:"bytes,7,opt,name=theme_color_primary,json=themeColorPrimary,proto3,oneof" json:"theme_color_primary,omitempty"`
-	ThemeColorSecondary *string                `protobuf:"bytes,8,opt,name=theme_color_secondary,json=themeColorSecondary,proto3,oneof" json:"theme_color_secondary,omitempty"`
-	SimpleMode          *bool                  `protobuf:"varint,9,opt,name=simple_mode,json=simpleMode,proto3,oneof" json:"simple_mode,omitempty"`
-	AudioPreferences    *AudioPreferences      `protobuf:"bytes,10,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
-	DmPrivacy           *string                `protobuf:"bytes,11,opt,name=dm_privacy,json=dmPrivacy,proto3,oneof" json:"dm_privacy,omitempty"` // "anyone", "message_requests", "mutual_servers", "nobody"
-	Connections         []*UserConnection      `protobuf:"bytes,12,rep,name=connections,proto3" json:"connections,omitempty"`
-	ClearConnections    bool                   `protobuf:"varint,13,opt,name=clear_connections,json=clearConnections,proto3" json:"clear_connections,omitempty"` // when true, replace all connections (empty list = clear)
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	DisplayName          *string                `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3,oneof" json:"display_name,omitempty"`
+	AvatarUrl            *string                `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	EmojiScale           *float32               `protobuf:"fixed32,3,opt,name=emoji_scale,json=emojiScale,proto3,oneof" json:"emoji_scale,omitempty"`
+	Bio                  *string                `protobuf:"bytes,4,opt,name=bio,proto3,oneof" json:"bio,omitempty"`
+	Pronouns             *string                `protobuf:"bytes,5,opt,name=pronouns,proto3,oneof" json:"pronouns,omitempty"`
+	BannerUrl            *string                `protobuf:"bytes,6,opt,name=banner_url,json=bannerUrl,proto3,oneof" json:"banner_url,omitempty"`
+	ThemeColorPrimary    *string                `protobuf:"bytes,7,opt,name=theme_color_primary,json=themeColorPrimary,proto3,oneof" json:"theme_color_primary,omitempty"`
+	ThemeColorSecondary  *string                `protobuf:"bytes,8,opt,name=theme_color_secondary,json=themeColorSecondary,proto3,oneof" json:"theme_color_secondary,omitempty"`
+	SimpleMode           *bool                  `protobuf:"varint,9,opt,name=simple_mode,json=simpleMode,proto3,oneof" json:"simple_mode,omitempty"`
+	AudioPreferences     *AudioPreferences      `protobuf:"bytes,10,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
+	DmPrivacy            *string                `protobuf:"bytes,11,opt,name=dm_privacy,json=dmPrivacy,proto3,oneof" json:"dm_privacy,omitempty"` // "anyone", "message_requests", "mutual_servers", "nobody"
+	Connections          []*UserConnection      `protobuf:"bytes,12,rep,name=connections,proto3" json:"connections,omitempty"`
+	ClearConnections     bool                   `protobuf:"varint,13,opt,name=clear_connections,json=clearConnections,proto3" json:"clear_connections,omitempty"`                    // when true, replace all connections (empty list = clear)
+	FriendRequestPrivacy *string                `protobuf:"bytes,14,opt,name=friend_request_privacy,json=friendRequestPrivacy,proto3,oneof" json:"friend_request_privacy,omitempty"` // "everyone", "server_co_members", "nobody"
+	ProfilePrivacy       *string                `protobuf:"bytes,15,opt,name=profile_privacy,json=profilePrivacy,proto3,oneof" json:"profile_privacy,omitempty"`                     // "everyone", "server_co_members", "friends", "nobody"
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *UpdateProfileRequest) Reset() {
@@ -1199,6 +1201,20 @@ func (x *UpdateProfileRequest) GetClearConnections() bool {
 		return x.ClearConnections
 	}
 	return false
+}
+
+func (x *UpdateProfileRequest) GetFriendRequestPrivacy() string {
+	if x != nil && x.FriendRequestPrivacy != nil {
+		return *x.FriendRequestPrivacy
+	}
+	return ""
+}
+
+func (x *UpdateProfileRequest) GetProfilePrivacy() string {
+	if x != nil && x.ProfilePrivacy != nil {
+		return *x.ProfilePrivacy
+	}
+	return ""
 }
 
 type UpdateProfileResponse struct {
@@ -2555,7 +2571,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"is_current\x18\x05 \x01(\bR\tisCurrent\x12\x1a\n" +
 	"\bplatform\x18\x06 \x01(\tR\bplatform\x12!\n" +
-	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\x8c\x06\n" +
+	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\xa4\a\n" +
 	"\x14UpdateProfileRequest\x12&\n" +
 	"\fdisplay_name\x18\x01 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -2576,7 +2592,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"dm_privacy\x18\v \x01(\tH\n" +
 	"R\tdmPrivacy\x88\x01\x01\x129\n" +
 	"\vconnections\x18\f \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x12+\n" +
-	"\x11clear_connections\x18\r \x01(\bR\x10clearConnectionsB\x0f\n" +
+	"\x11clear_connections\x18\r \x01(\bR\x10clearConnections\x129\n" +
+	"\x16friend_request_privacy\x18\x0e \x01(\tH\vR\x14friendRequestPrivacy\x88\x01\x01\x12,\n" +
+	"\x0fprofile_privacy\x18\x0f \x01(\tH\fR\x0eprofilePrivacy\x88\x01\x01B\x0f\n" +
 	"\r_display_nameB\r\n" +
 	"\v_avatar_urlB\x0e\n" +
 	"\f_emoji_scaleB\x06\n" +
@@ -2587,7 +2605,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\x16_theme_color_secondaryB\x0e\n" +
 	"\f_simple_modeB\x14\n" +
 	"\x12_audio_preferencesB\r\n" +
-	"\v_dm_privacy\":\n" +
+	"\v_dm_privacyB\x19\n" +
+	"\x17_friend_request_privacyB\x12\n" +
+	"\x10_profile_privacy\":\n" +
 	"\x15UpdateProfileResponse\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.meza.v1.UserR\x04user\"\x94\x03\n" +
 	"\x15ChangePasswordRequest\x12 \n" +

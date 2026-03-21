@@ -364,7 +364,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
                     try {
                       switch (action) {
                         case 'add': {
-                          const res = await sendFriendRequest(userId);
+                          const res = await sendFriendRequest({ userId });
                           if (res.autoAccepted) {
                             if (profile)
                               useFriendStore

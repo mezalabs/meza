@@ -69,11 +69,13 @@ func main() {
 
 	authStore := store.NewAuthStore(pool)
 	chatStore := store.NewChatStore(pool)
+	friendStore := store.NewFriendStore(pool)
 	deviceStore := store.NewDeviceStore(pool)
 	inviteStore := store.NewInviteStore(pool)
 	federationStore := store.NewFederationStore(pool)
 	svc := newAuthService(authStore, deviceStore, cfg.HMACSecret, ed25519Keys)
 	svc.chatStore = chatStore
+	svc.friendStore = friendStore
 	svc.instanceURL = cfg.InstanceURL
 
 	// Connect Redis for per-email recovery rate limiting and device blocklist.

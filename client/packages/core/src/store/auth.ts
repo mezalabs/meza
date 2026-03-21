@@ -55,6 +55,8 @@ export interface StoredUser {
   themeColorSecondary: string;
   simpleMode: boolean;
   dmPrivacy: string;
+  friendRequestPrivacy: string;
+  profilePrivacy: string;
   connections: StoredUserConnection[];
   createdAt: string;
 }

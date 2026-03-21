@@ -146,18 +146,20 @@ type User struct {
 	CreatedAt   *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	EmojiScale  float32                `protobuf:"fixed32,7,opt,name=emoji_scale,json=emojiScale,proto3" json:"emoji_scale,omitempty"`
 	// Profile fields
-	Bio                 string            `protobuf:"bytes,8,opt,name=bio,proto3" json:"bio,omitempty"`
-	Pronouns            string            `protobuf:"bytes,9,opt,name=pronouns,proto3" json:"pronouns,omitempty"`
-	BannerUrl           string            `protobuf:"bytes,10,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
-	ThemeColorPrimary   string            `protobuf:"bytes,11,opt,name=theme_color_primary,json=themeColorPrimary,proto3" json:"theme_color_primary,omitempty"`
-	ThemeColorSecondary string            `protobuf:"bytes,12,opt,name=theme_color_secondary,json=themeColorSecondary,proto3" json:"theme_color_secondary,omitempty"`
-	SimpleMode          bool              `protobuf:"varint,13,opt,name=simple_mode,json=simpleMode,proto3" json:"simple_mode,omitempty"`
-	AudioPreferences    *AudioPreferences `protobuf:"bytes,14,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
-	DmPrivacy           string            `protobuf:"bytes,15,opt,name=dm_privacy,json=dmPrivacy,proto3" json:"dm_privacy,omitempty"`                        // "anyone", "message_requests", "mutual_servers", "nobody"
-	SigningPublicKey    []byte            `protobuf:"bytes,16,opt,name=signing_public_key,json=signingPublicKey,proto3" json:"signing_public_key,omitempty"` // 32-byte Ed25519 verify key for E2EE signature verification
-	Connections         []*UserConnection `protobuf:"bytes,17,rep,name=connections,proto3" json:"connections,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	Bio                  string            `protobuf:"bytes,8,opt,name=bio,proto3" json:"bio,omitempty"`
+	Pronouns             string            `protobuf:"bytes,9,opt,name=pronouns,proto3" json:"pronouns,omitempty"`
+	BannerUrl            string            `protobuf:"bytes,10,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
+	ThemeColorPrimary    string            `protobuf:"bytes,11,opt,name=theme_color_primary,json=themeColorPrimary,proto3" json:"theme_color_primary,omitempty"`
+	ThemeColorSecondary  string            `protobuf:"bytes,12,opt,name=theme_color_secondary,json=themeColorSecondary,proto3" json:"theme_color_secondary,omitempty"`
+	SimpleMode           bool              `protobuf:"varint,13,opt,name=simple_mode,json=simpleMode,proto3" json:"simple_mode,omitempty"`
+	AudioPreferences     *AudioPreferences `protobuf:"bytes,14,opt,name=audio_preferences,json=audioPreferences,proto3,oneof" json:"audio_preferences,omitempty"`
+	DmPrivacy            string            `protobuf:"bytes,15,opt,name=dm_privacy,json=dmPrivacy,proto3" json:"dm_privacy,omitempty"`                        // "anyone", "message_requests", "mutual_servers", "nobody"
+	SigningPublicKey     []byte            `protobuf:"bytes,16,opt,name=signing_public_key,json=signingPublicKey,proto3" json:"signing_public_key,omitempty"` // 32-byte Ed25519 verify key for E2EE signature verification
+	Connections          []*UserConnection `protobuf:"bytes,17,rep,name=connections,proto3" json:"connections,omitempty"`
+	FriendRequestPrivacy string            `protobuf:"bytes,18,opt,name=friend_request_privacy,json=friendRequestPrivacy,proto3" json:"friend_request_privacy,omitempty"` // "everyone", "server_co_members", "nobody"
+	ProfilePrivacy       string            `protobuf:"bytes,19,opt,name=profile_privacy,json=profilePrivacy,proto3" json:"profile_privacy,omitempty"`                     // "everyone", "server_co_members", "friends", "nobody"
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
@@ -300,6 +302,20 @@ func (x *User) GetConnections() []*UserConnection {
 		return x.Connections
 	}
 	return nil
+}
+
+func (x *User) GetFriendRequestPrivacy() string {
+	if x != nil {
+		return x.FriendRequestPrivacy
+	}
+	return ""
+}
+
+func (x *User) GetProfilePrivacy() string {
+	if x != nil {
+		return x.ProfilePrivacy
+	}
+	return ""
 }
 
 type UserConnection struct {
@@ -2483,7 +2499,7 @@ var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
-	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x05\n" +
+	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x05\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -2507,7 +2523,9 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
 	"dm_privacy\x18\x0f \x01(\tR\tdmPrivacy\x12,\n" +
 	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKey\x129\n" +
-	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnectionsB\x14\n" +
+	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x124\n" +
+	"\x16friend_request_privacy\x18\x12 \x01(\tR\x14friendRequestPrivacy\x12'\n" +
+	"\x0fprofile_privacy\x18\x13 \x01(\tR\x0eprofilePrivacyB\x14\n" +
 	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"T\n" +
 	"\x0eUserConnection\x12\x1a\n" +
 	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x10\n" +

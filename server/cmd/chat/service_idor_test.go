@@ -354,7 +354,7 @@ func (s *idorMockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) (
 func (s *idorMockAuthStore) CreateUser(context.Context, *models.User, string, []byte, models.EncryptedBundle) (*models.User, error) {
 	panic("not implemented")
 }
-func (s *idorMockAuthStore) UpdateUser(context.Context, string, *string, *string, *float32, *string, *string, *string, *string, *string, *bool, *models.AudioPreferences, *string, []models.UserConnection) (*models.User, error) {
+func (s *idorMockAuthStore) UpdateUser(context.Context, string, *string, *string, *float32, *string, *string, *string, *string, *string, *bool, *models.AudioPreferences, *string, []models.UserConnection, *string, *string) (*models.User, error) {
 	panic("not implemented")
 }
 func (s *idorMockAuthStore) GetAuthDataByUserID(context.Context, string) (*models.AuthData, error) {
