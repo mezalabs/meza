@@ -15,6 +15,10 @@ export function mapVoiceError(err: unknown): string {
         return 'Voice channel not found';
       case Code.InvalidArgument:
         return 'Invalid voice channel';
+      case Code.ResourceExhausted:
+        return 'Too many preview requests, please wait';
+      case Code.FailedPrecondition:
+        return 'No active screen share';
       default:
         return 'Failed to connect to voice';
     }
