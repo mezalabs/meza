@@ -2,7 +2,6 @@ import type { CustomEmoji } from '@meza/gen/meza/v1/models_pb.ts';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { loadEmojiCache } from '../lib/emojiCache.ts';
-import { useAuthStore } from './auth.ts';
 
 /**
  * Tracks which server IDs were populated from cache (not yet refreshed
@@ -14,7 +13,10 @@ let personalFromCache = false;
 
 function loadFromCache(): Partial<EmojiState> {
   try {
-    const userId = useAuthStore.getState().user?.id;
+    // Read userId directly from localStorage to avoid circular import
+    // timing issues with useAuthStore (which may not be initialized yet).
+    const userJson = localStorage.getItem('meza:user');
+    const userId = userJson ? (JSON.parse(userJson) as { id?: string }).id : undefined;
     if (!userId) return {};
     const cached = loadEmojiCache(userId);
     if (!cached) return {};

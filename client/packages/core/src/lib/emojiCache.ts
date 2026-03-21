@@ -116,6 +116,7 @@ function writeCache(): void {
  * Call once at app startup (e.g. in the store module or app entry).
  */
 export function initEmojiCachePersistence(): void {
+  // Persist emoji store changes to localStorage (debounced)
   useEmojiStore.subscribe(() => {
     // Skip writes when logged out (prevents ghost writes after reset)
     if (!useAuthStore.getState().user?.id) return;
@@ -124,5 +125,18 @@ export function initEmojiCachePersistence(): void {
       writeTimer = null;
       writeCache();
     }, DEBOUNCE_MS);
+  });
+
+  // Reset emoji store + cache when user logs out.
+  // This avoids a circular import (auth.ts cannot import emojis.ts).
+  let prevUserId = useAuthStore.getState().user?.id ?? null;
+  useAuthStore.subscribe(() => {
+    const userId = useAuthStore.getState().user?.id ?? null;
+    if (prevUserId && !userId) {
+      // User logged out — clean up
+      useEmojiStore.getState().reset();
+      clearEmojiCache();
+    }
+    prevUserId = userId;
   });
 }
