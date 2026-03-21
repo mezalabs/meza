@@ -9,12 +9,16 @@
 
 import { isCapacitor } from './platform.ts';
 
+interface PluginListenerHandle {
+  remove: () => void;
+}
+
 interface KeyboardPlugin {
   hide: () => Promise<void>;
   addListener: (
     event: string,
     cb: (info: { keyboardHeight: number }) => void,
-  ) => Promise<{ remove: () => void }>;
+  ) => PluginListenerHandle | Promise<PluginListenerHandle>;
 }
 
 function getKeyboard(): KeyboardPlugin | null {
@@ -43,12 +47,18 @@ export function onKeyboardWillShow(
 ): (() => void) | undefined {
   const kb = getKeyboard();
   if (!kb) return undefined;
-  let handle: { remove: () => void } | null = null;
-  kb.addListener('keyboardWillShow', (info) => {
-    cb(info.keyboardHeight);
-  }).then((h) => {
-    handle = h;
-  });
+  let handle: PluginListenerHandle | null = null;
+  try {
+    const result = kb.addListener('keyboardWillShow', (info) => {
+      cb(info.keyboardHeight);
+    });
+    // addListener may return a handle directly (sync) or a Promise
+    if (result && typeof (result as Promise<PluginListenerHandle>).then === 'function') {
+      (result as Promise<PluginListenerHandle>).then((h) => { handle = h; });
+    } else {
+      handle = result as PluginListenerHandle;
+    }
+  } catch {}
   return () => {
     handle?.remove();
   };
@@ -60,12 +70,17 @@ export function onKeyboardWillHide(
 ): (() => void) | undefined {
   const kb = getKeyboard();
   if (!kb) return undefined;
-  let handle: { remove: () => void } | null = null;
-  kb.addListener('keyboardWillHide', () => {
-    cb();
-  }).then((h) => {
-    handle = h;
-  });
+  let handle: PluginListenerHandle | null = null;
+  try {
+    const result = kb.addListener('keyboardWillHide', () => {
+      cb();
+    });
+    if (result && typeof (result as Promise<PluginListenerHandle>).then === 'function') {
+      (result as Promise<PluginListenerHandle>).then((h) => { handle = h; });
+    } else {
+      handle = result as PluginListenerHandle;
+    }
+  } catch {}
   return () => {
     handle?.remove();
   };
