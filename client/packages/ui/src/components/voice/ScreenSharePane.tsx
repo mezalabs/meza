@@ -17,6 +17,9 @@ import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 
+const encoder = new TextEncoder();
+const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
+
 interface ScreenSharePaneProps {
   paneId: PaneId;
   participantIdentity: string;
@@ -49,10 +52,7 @@ export function ScreenSharePane({
   const room = useRoomContext();
 
   useEffect(() => {
-    const encoder = new TextEncoder();
-    const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
-
-    // Send join notification
+    // Notify the streamer that we started watching
     room.localParticipant
       .publishData(
         encoder.encode(JSON.stringify({ type: 'join' })),
@@ -62,11 +62,11 @@ export function ScreenSharePane({
           destinationIdentities: [participantIdentity],
         },
       )
-      .catch(() => {});
+      .catch(() => {}); // best-effort — may fail during teardown
 
     return () => {
-      // Only send leave if room is still connected (prevents stale messages during channel switch)
-      if (room.state === 'connected') {
+      // Only send leave if room is still connected or reconnecting
+      if (room.state === 'connected' || room.state === 'reconnecting') {
         room.localParticipant
           .publishData(
             encoder.encode(JSON.stringify({ type: 'leave' })),
@@ -76,7 +76,7 @@ export function ScreenSharePane({
               destinationIdentities: [participantIdentity],
             },
           )
-          .catch(() => {});
+          .catch(() => {}); // best-effort — may fail during teardown
       }
     };
   }, [room, participantIdentity]);

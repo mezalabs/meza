@@ -53,7 +53,7 @@ import {
   WrenchIcon,
 } from '@phosphor-icons/react';
 import { ParticipantEvent } from 'livekit-client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
@@ -1328,48 +1328,45 @@ function SidebarChannelItem({
 
       {isVoice && voiceParticipants.length > 0 && (
         <div className="flex flex-col gap-0.5 py-0.5 pl-6">
-          {showStreamPreview ? (
-            <StreamPreviewTrackProvider>
-              {voiceParticipants.map((p) => {
-                const isSelf = p.userId === currentUserId;
-                const participantEl = (
-                  <SidebarVoiceParticipant
-                    key={p.userId}
-                    userId={p.userId}
-                    isMuted={p.isMuted}
-                    isDeafened={p.isDeafened}
-                    isStreamingVideo={p.isStreamingVideo}
-                    serverId={serverId}
-                  />
+          <MaybeStreamPreview enabled={showStreamPreview}>
+            {voiceParticipants.map((p) => {
+              const isSelf = p.userId === currentUserId;
+              const el = (
+                <SidebarVoiceParticipant
+                  userId={p.userId}
+                  isMuted={p.isMuted}
+                  isDeafened={p.isDeafened}
+                  isStreamingVideo={p.isStreamingVideo}
+                  serverId={serverId}
+                />
+              );
+              if (showStreamPreview && p.isStreamingVideo && !isSelf) {
+                return (
+                  <StreamPreviewTrigger key={p.userId} participantId={p.userId}>
+                    {el}
+                  </StreamPreviewTrigger>
                 );
-                if (p.isStreamingVideo && !isSelf) {
-                  return (
-                    <StreamPreviewTrigger
-                      key={p.userId}
-                      participantId={p.userId}
-                    >
-                      {participantEl}
-                    </StreamPreviewTrigger>
-                  );
-                }
-                return participantEl;
-              })}
-            </StreamPreviewTrackProvider>
-          ) : (
-            voiceParticipants.map((p) => (
-              <SidebarVoiceParticipant
-                key={p.userId}
-                userId={p.userId}
-                isMuted={p.isMuted}
-                isDeafened={p.isDeafened}
-                isStreamingVideo={p.isStreamingVideo}
-                serverId={serverId}
-              />
-            ))
-          )}
+              }
+              return <div key={p.userId}>{el}</div>;
+            })}
+          </MaybeStreamPreview>
         </div>
       )}
     </div>
+  );
+}
+
+function MaybeStreamPreview({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  return enabled ? (
+    <StreamPreviewTrackProvider>{children}</StreamPreviewTrackProvider>
+  ) : (
+    <>{children}</>
   );
 }
 

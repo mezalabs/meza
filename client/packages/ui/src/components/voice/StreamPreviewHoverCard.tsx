@@ -13,6 +13,10 @@ import {
   useState,
 } from 'react';
 
+const HOVER_OPEN_DELAY_MS = 400;
+const HOVER_SWAP_DELAY_MS = 100;
+const HOVER_CLOSE_DELAY_MS = 300;
+
 interface StreamPreviewContextValue {
   hoveredId: string | null;
   onEnter: (participantId: string) => void;
@@ -38,6 +42,11 @@ export function StreamPreviewTrackProvider({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const mountedRef = useRef(true);
+  const hoveredIdRef = useRef<string | null>(null);
+
+  // Keep ref in sync for use in stable callbacks
+  hoveredIdRef.current = hoveredId;
 
   const allTracks = useTracks([Track.Source.ScreenShare]);
   const screenShareTracks = useMemo(
@@ -63,9 +72,10 @@ export function StreamPreviewTrackProvider({
     }
   }, [hoveredId, getTrackRef]);
 
-  // Cleanup timers on unmount
+  // Cleanup timers and mounted flag on unmount
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       clearTimeout(openTimeoutRef.current);
       clearTimeout(closeTimeoutRef.current);
     };
@@ -74,16 +84,18 @@ export function StreamPreviewTrackProvider({
   const onEnter = useCallback((participantId: string) => {
     clearTimeout(closeTimeoutRef.current);
     clearTimeout(openTimeoutRef.current);
+    // Quick swap when already showing a preview, cold open otherwise
+    const delay = hoveredIdRef.current !== null ? HOVER_SWAP_DELAY_MS : HOVER_OPEN_DELAY_MS;
     openTimeoutRef.current = setTimeout(() => {
-      setHoveredId(participantId);
-    }, 400);
+      if (mountedRef.current) setHoveredId(participantId);
+    }, delay);
   }, []);
 
   const onLeave = useCallback(() => {
     clearTimeout(openTimeoutRef.current);
     closeTimeoutRef.current = setTimeout(() => {
-      setHoveredId(null);
-    }, 300);
+      if (mountedRef.current) setHoveredId(null);
+    }, HOVER_CLOSE_DELAY_MS);
   }, []);
 
   const cancelClose = useCallback(() => {
@@ -121,8 +133,13 @@ export function StreamPreviewTrigger({
   const isOpen = hoveredId === participantId;
   const trackRef = isOpen ? getTrackRef(participantId) : undefined;
 
+  // Keep last known track ref so exit animation shows frozen frame instead of empty card
+  const lastTrackRef = useRef<TrackReference | undefined>(undefined);
+  if (trackRef) lastTrackRef.current = trackRef;
+  const displayTrackRef = trackRef ?? (isOpen ? lastTrackRef.current : undefined);
+
   return (
-    <HoverCard.Root open={isOpen && trackRef !== undefined}>
+    <HoverCard.Root open={isOpen && displayTrackRef !== undefined}>
       <HoverCard.Trigger asChild>
         <div
           onMouseEnter={() => onEnter(participantId)}
@@ -140,7 +157,7 @@ export function StreamPreviewTrigger({
           onPointerEnter={cancelClose}
           onPointerLeave={onLeave}
         >
-          {trackRef && <StreamPreviewContent trackRef={trackRef} />}
+          {displayTrackRef && <StreamPreviewContent trackRef={displayTrackRef} />}
         </HoverCard.Content>
       </HoverCard.Portal>
     </HoverCard.Root>
