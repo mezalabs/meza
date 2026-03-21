@@ -110,11 +110,15 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const dmError = useDMStore((s) => s.error);
   const pendingRequestCount = useDMStore((s) => s.messageRequests.length);
   const friendRequestCount = useFriendStore((s) => s.incomingRequests.length);
-  const hasDMUnread = useReadStateStore((s) =>
-    dmChannels.some(
-      (dm) => (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0) > 0,
+  const dmUnreadCount = useReadStateStore((s) =>
+    dmChannels.reduce(
+      (sum, dm) =>
+        sum + (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0),
+      0,
     ),
   );
+  const totalDMNotifications =
+    dmUnreadCount + pendingRequestCount + friendRequestCount;
   const sidebarFocusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const sidebarSetPaneContent = useTilingStore((s) => s.setPaneContent);
 
@@ -206,14 +210,21 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     navigateToDefaultChannel,
   ]);
 
-  // Fetch DM channels and message requests when entering DM mode (and on reconnect)
+  // Always fetch DM channels and message requests so the unread badge on
+  // the DM icon works even when the user is viewing a server.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    listDMChannels().catch(() => {});
+    listMessageRequests().catch(() => {});
+    listFriendRequests().catch(() => {});
+  }, [isAuthenticated, reconnectCount]);
+
+  // Fetch friends list when entering DM mode (and on reconnect)
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated || !showDMs) return;
-    listDMChannels().catch(() => {});
-    listMessageRequests().catch(() => {});
     listFriends().catch(() => {});
-    listFriendRequests().catch(() => {});
   }, [showDMs, isAuthenticated, reconnectCount]);
 
   // Fetch channels and channel groups when selected server changes (and on reconnect)
@@ -367,8 +378,10 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               onClick={selectDMs}
             >
               <MezaIcon className="h-7 w-7 md:h-6 md:w-6" />
-              {hasDMUnread && !showDMs && (
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
+              {totalDMNotifications > 0 && !showDMs && (
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-black ring-2 ring-bg-overlay">
+                  {totalDMNotifications > 9 ? '9+' : totalDMNotifications}
+                </span>
               )}
             </button>
           </div>
