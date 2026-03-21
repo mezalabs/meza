@@ -149,6 +149,46 @@ Channel keys are versioned for availability, not for forward secrecy. Versioning
 
 ---
 
+## Voice & Video E2EE
+
+Voice and video streams are encrypted at the frame level using LiveKit's Insertable Streams / Encoded Transforms API. The SFU forwards opaque encrypted frames without modification.
+
+### Domain Separation
+
+A **voice-specific subkey** is derived from the channel key to prevent multi-context key reuse:
+
+```
+voiceKey = HKDF-SHA256(channelKey, salt="meza-voice-e2ee-v1", info=channelId)
+```
+
+This ensures the text encryption key (used directly with Meza's AAD scheme) and the voice encryption key (used by LiveKit's SFrame-style encryption) are cryptographically independent. A compromise of one cannot yield the other.
+
+### Key Lifecycle
+
+1. User joins voice channel → `fetchAndCacheChannelKeys(channelId)` ensures key is available
+2. `deriveVoiceKey(channelKey, channelId)` produces the voice subkey via HKDF
+3. `ExternalE2EEKeyProvider.setKey(voiceKey)` feeds the key to LiveKit's E2EE worker
+4. LiveKit worker encrypts outbound frames and decrypts inbound frames in a dedicated Web Worker
+5. On disconnect: `setKey(new ArrayBuffer(0))` clears the key provider
+6. On logout: `resetE2EEKeyProvider()` is called alongside `clearChannelKeyCache()`
+
+### Threat Model (Voice-Specific)
+
+| Threat | Status |
+|--------|--------|
+| Passive SFU content observer | Mitigated (frame-level AES-GCM) |
+| Passive SFU metadata observer | Accepted risk (participant IDs, room names, join/leave visible via TLS) |
+| Malicious participant without E2EE | Client-side detection (`ParticipantEncryptionStatusChanged`) |
+| Removed member still in session | Accepted (key frozen for session; `RemoveParticipant` ejects from room) |
+
+### Configuration
+
+- `ratchetWindowSize: 0` — auto-ratchet disabled (no coordination protocol)
+- `failureTolerance: 10` — consecutive decryption failures before the worker gives up
+- Browser gate: `isE2EESupported()` blocks unsupported browsers entirely
+
+---
+
 ## Message Encryption
 
 Messages use a **sign-then-encrypt** scheme. This is stateless — no ratchet state, no ordering dependencies.

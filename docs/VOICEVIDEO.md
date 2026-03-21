@@ -128,9 +128,34 @@ For clients behind restrictive NATs/firewalls, LiveKit supports TURN relay (UDP 
 
 ## Voice E2EE
 
-> **[Planned]** Voice E2EE is not yet implemented.
+All voice and video frames are end-to-end encrypted using LiveKit's frame-level encryption (Insertable Streams / Encoded Transforms API). The SFU forwards opaque encrypted frames without being able to decode them.
 
-LiveKit supports frame-level encryption via Insertable Streams API. The SFU forwards encrypted frames without being able to decode them. Trade-off: prevents server-side recording and transcription.
+### Key Derivation
+
+Voice encryption uses a **domain-separated subkey** derived from the channel's AES-256-GCM key via HKDF-SHA256:
+
+```
+voiceKey = HKDF-SHA256(channelKey, salt="meza-voice-e2ee-v1", info=channelId)
+```
+
+This ensures the same raw key is never used for both text AES-256-GCM encryption and LiveKit frame-level AES-GCM encryption. A compromise of the voice key cannot directly yield the text encryption key.
+
+### Integration
+
+- **Key provider**: `ExternalE2EEKeyProvider` from `livekit-client` with `ratchetWindowSize: 0` (ratchet disabled — no coordination protocol).
+- **Worker**: LiveKit's pre-built `livekit-client/e2ee-worker` handles frame encryption/decryption in a dedicated Web Worker.
+- **Key lifecycle**: Key set before connection, cleared on disconnect, reset on logout.
+- **Browser gate**: `isE2EESupported()` blocks unsupported browsers from joining voice.
+- **Enforcement**: `ParticipantEncryptionStatusChanged` detects unencrypted participants and warns.
+
+### Limitations
+
+- No key rotation during active voice sessions (key at join time = key for session).
+- No forward secrecy per voice session (derived from the static channel key).
+- Stopping screen share may break E2EE (LiveKit issue #973).
+- Metadata leakage: room names, participant identities, and track metadata are visible to the LiveKit server (TLS only).
+
+Trade-off: E2EE prevents server-side recording and transcription.
 
 ---
 

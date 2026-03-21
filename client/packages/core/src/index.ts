@@ -195,6 +195,7 @@ export {
   decryptRecoveryBundle,
   deriveKeys,
   deriveRecoveryKey,
+  deriveVoiceKey,
   deriveRecoveryVerifier,
   deserializeIdentity,
   distributeKeyToMember,

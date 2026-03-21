@@ -16,7 +16,13 @@ import {
   useAuthStore,
   useInviteStore,
 } from '@meza/core';
-import { InviteLanding, Shell, TitleBar, WebLandingPage } from '@meza/ui';
+import {
+  InviteLanding,
+  resetE2EEKeyProvider,
+  Shell,
+  TitleBar,
+  WebLandingPage,
+} from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
@@ -82,6 +88,7 @@ useAuthStore.subscribe((state, prevState) => {
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();
+    resetE2EEKeyProvider();
   }
 });
 

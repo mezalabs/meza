@@ -24,7 +24,12 @@ import type {
   RemoteTrackPublication,
   TrackPublication,
 } from 'livekit-client';
-import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
+import {
+  type DataPacket_Kind,
+  ExternalE2EEKeyProvider,
+  RoomEvent,
+  Track,
+} from 'livekit-client';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   preloadRnnoiseWorklet,
@@ -36,6 +41,26 @@ import { setVoiceRoom } from '../../utils/voiceControls.ts';
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+
+// --- E2EE setup ---
+
+/** Module-level key provider — survives channel switches, cleared on logout. */
+export const e2eeKeyProvider = new ExternalE2EEKeyProvider({
+  ratchetWindowSize: 0, // disabled — no ratchet coordination protocol
+  failureTolerance: 10,
+});
+
+function createE2EEWorker() {
+  return new Worker(
+    new URL('livekit-client/e2ee-worker', import.meta.url),
+    { type: 'module' },
+  );
+}
+
+/** Clear E2EE key material. Call from session teardown alongside clearChannelKeyCache(). */
+export function resetE2EEKeyProvider() {
+  e2eeKeyProvider.setKey(new ArrayBuffer(0));
+}
 
 /** Applies per-user and global output volumes to a remote participant. */
 function applyParticipantVolume(participant: RemoteParticipant) {
@@ -337,6 +362,43 @@ function VoiceEventHandler() {
     room.on(RoomEvent.TrackMuted, onTrackMuted);
     room.on(RoomEvent.TrackUnmuted, onTrackUnmuted);
 
+    // --- E2EE event listeners ---
+
+    let e2eeErrorCount = 0;
+
+    const onEncryptionStatusChanged = (
+      enabled: boolean,
+      participant?: Participant,
+    ) => {
+      if (!enabled && participant) {
+        useToastStore
+          .getState()
+          .addToast(
+            `${participant.identity} is not using encryption`,
+            'warning',
+          );
+      }
+    };
+
+    const onEncryptionError = (error: Error) => {
+      e2eeErrorCount++;
+      console.error('[E2EE] Encryption error:', error);
+      if (e2eeErrorCount >= 10) {
+        useToastStore
+          .getState()
+          .addToast(
+            'Encryption issue \u2014 please rejoin the voice channel',
+            'error',
+          );
+      }
+    };
+
+    room.on(
+      RoomEvent.ParticipantEncryptionStatusChanged,
+      onEncryptionStatusChanged,
+    );
+    room.on(RoomEvent.EncryptionError, onEncryptionError);
+
     // Seed remote participants from current room state on mount.
     // Local user is already handled optimistically by useVoiceConnection.
     const channelId = useVoiceStore.getState().channelId;
@@ -366,6 +428,11 @@ function VoiceEventHandler() {
       room.off(RoomEvent.DataReceived, onDataReceived);
       room.off(RoomEvent.TrackMuted, onTrackMuted);
       room.off(RoomEvent.TrackUnmuted, onTrackUnmuted);
+      room.off(
+        RoomEvent.ParticipantEncryptionStatusChanged,
+        onEncryptionStatusChanged,
+      );
+      room.off(RoomEvent.EncryptionError, onEncryptionError);
     };
   }, [room]);
 
@@ -593,6 +660,28 @@ export function PersistentVoiceConnection({
     [inputDeviceId, noiseSuppression, echoCancellation, autoGainControl],
   );
 
+  // E2EE worker — created once, terminated on unmount
+  const e2eeWorker = useMemo(() => createE2EEWorker(), []);
+  useEffect(() => () => e2eeWorker.terminate(), [e2eeWorker]);
+
+  const roomOptions = useMemo(
+    () => ({
+      webAudioMix: true,
+      encryption: {
+        keyProvider: e2eeKeyProvider,
+        worker: e2eeWorker,
+      },
+    }),
+    [e2eeWorker],
+  );
+
+  const handleEncryptionError = useCallback((error: Error) => {
+    console.error('[E2EE] LiveKitRoom encryption error:', error);
+    useToastStore
+      .getState()
+      .addToast('Voice encryption error \u2014 try rejoining', 'error');
+  }, []);
+
   return (
     <LiveKitRoom
       serverUrl={url ?? undefined}
@@ -600,7 +689,8 @@ export function PersistentVoiceConnection({
       audio={audioConstraints}
       video={false}
       connect={isActive}
-      options={{ webAudioMix: true }}
+      options={roomOptions}
+      onEncryptionError={handleEncryptionError}
       onDisconnected={() => {
         // Don't reset state if we're mid-switch (connecting to a new channel).
         // The old room's disconnect event would otherwise nuke the new connection.

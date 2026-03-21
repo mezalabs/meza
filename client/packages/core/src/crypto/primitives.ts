@@ -273,6 +273,43 @@ export async function unwrapChannelKey(
   return new Uint8Array(channelKey);
 }
 
+// --- Voice E2EE key derivation ---
+
+/**
+ * Derive a voice-specific subkey from a channel key via HKDF-SHA256.
+ *
+ * Domain separation ensures the same raw channel key is never used directly
+ * for both text AES-256-GCM encryption and LiveKit frame-level AES-GCM
+ * encryption. A compromise of the voice key cannot yield the text key.
+ *
+ * @param channelKey - The raw 32-byte channel key
+ * @param channelId - Channel ID used as HKDF info for channel binding
+ * @returns A 32-byte derived key suitable for LiveKit E2EE
+ */
+export async function deriveVoiceKey(
+  channelKey: Uint8Array,
+  channelId: string,
+): Promise<Uint8Array> {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    channelKey as BufferSource,
+    'HKDF',
+    false,
+    ['deriveBits'],
+  );
+  const derived = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new TextEncoder().encode('meza-voice-e2ee-v1'),
+      info: new TextEncoder().encode(channelId),
+    },
+    keyMaterial,
+    256,
+  );
+  return new Uint8Array(derived);
+}
+
 // --- AES-GCM CryptoKey cache ---
 
 /**
