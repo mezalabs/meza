@@ -37,6 +37,50 @@ const DM_PRIVACY_OPTIONS = [
   },
 ] as const;
 
+const FRIEND_REQUEST_PRIVACY_OPTIONS = [
+  {
+    value: 'everyone',
+    label: 'Everyone',
+    description: 'Anyone can send you a friend request.',
+  },
+  {
+    value: 'server_co_members',
+    label: 'Server Members',
+    description:
+      'Only people who share a server with you can send friend requests.',
+  },
+  {
+    value: 'nobody',
+    label: 'Nobody',
+    description: 'No one can send you friend requests.',
+  },
+] as const;
+
+const PROFILE_PRIVACY_OPTIONS = [
+  {
+    value: 'everyone',
+    label: 'Everyone',
+    description: 'Anyone can see your full profile.',
+  },
+  {
+    value: 'server_co_members',
+    label: 'Server Members',
+    description:
+      'Only people who share a server with you can see your full profile.',
+  },
+  {
+    value: 'friends',
+    label: 'Friends Only',
+    description: 'Only friends can see your full profile.',
+  },
+  {
+    value: 'nobody',
+    label: 'Nobody',
+    description:
+      'No one can see your full profile. Others see only your username and avatar.',
+  },
+] as const;
+
 export function PrivacySection() {
   const user = useAuthStore((s) => s.user);
   const blockedUsers = useBlockStore((s) => s.blockedUsers);
@@ -54,6 +98,8 @@ export function PrivacySection() {
   if (!user) return null;
 
   const currentPrivacy = user.dmPrivacy || 'message_requests';
+  const currentFriendRequestPrivacy = user.friendRequestPrivacy || 'everyone';
+  const currentProfilePrivacy = user.profilePrivacy || 'everyone';
 
   async function handlePrivacyChange(value: string) {
     if (saving) return;
@@ -61,6 +107,40 @@ export function PrivacySection() {
     setFeedback(null);
     try {
       await updateProfile({ dmPrivacy: value });
+      setFeedback({ type: 'success', message: 'Privacy setting updated.' });
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to save.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleFriendRequestPrivacyChange(value: string) {
+    if (saving) return;
+    setSaving(true);
+    setFeedback(null);
+    try {
+      await updateProfile({ friendRequestPrivacy: value });
+      setFeedback({ type: 'success', message: 'Privacy setting updated.' });
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to save.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleProfilePrivacyChange(value: string) {
+    if (saving) return;
+    setSaving(true);
+    setFeedback(null);
+    try {
+      await updateProfile({ profilePrivacy: value });
       setFeedback({ type: 'success', message: 'Privacy setting updated.' });
     } catch (err) {
       setFeedback({
@@ -111,6 +191,80 @@ export function PrivacySection() {
                 checked={currentPrivacy === option.value}
                 disabled={saving}
                 onChange={() => handlePrivacyChange(option.value)}
+                className="mt-0.5 accent-accent"
+              />
+              <div>
+                <div className="text-sm font-medium text-text">
+                  {option.label}
+                </div>
+                <div className="text-xs text-text-muted">
+                  {option.description}
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Friend Request Privacy */}
+      <div className="space-y-3">
+        <span className="block text-sm font-medium text-text">
+          Who can send you friend requests?
+        </span>
+        <div className="space-y-2">
+          {FRIEND_REQUEST_PRIVACY_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
+                currentFriendRequestPrivacy === option.value
+                  ? 'border-accent bg-accent-subtle'
+                  : 'border-border hover:border-border-hover'
+              }`}
+            >
+              <input
+                type="radio"
+                name="friend-request-privacy"
+                value={option.value}
+                checked={currentFriendRequestPrivacy === option.value}
+                disabled={saving}
+                onChange={() => handleFriendRequestPrivacyChange(option.value)}
+                className="mt-0.5 accent-accent"
+              />
+              <div>
+                <div className="text-sm font-medium text-text">
+                  {option.label}
+                </div>
+                <div className="text-xs text-text-muted">
+                  {option.description}
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Profile Privacy */}
+      <div className="space-y-3">
+        <span className="block text-sm font-medium text-text">
+          Who can see your full profile?
+        </span>
+        <div className="space-y-2">
+          {PROFILE_PRIVACY_OPTIONS.map((option) => (
+            <label
+              key={option.value}
+              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
+                currentProfilePrivacy === option.value
+                  ? 'border-accent bg-accent-subtle'
+                  : 'border-border hover:border-border-hover'
+              }`}
+            >
+              <input
+                type="radio"
+                name="profile-privacy"
+                value={option.value}
+                checked={currentProfilePrivacy === option.value}
+                disabled={saving}
+                onChange={() => handleProfilePrivacyChange(option.value)}
                 className="mt-0.5 accent-accent"
               />
               <div>

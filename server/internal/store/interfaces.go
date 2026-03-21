@@ -21,7 +21,7 @@ type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	GetUsersByIDs(ctx context.Context, userIDs []string) ([]*models.User, error)
-	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection) (*models.User, error)
+	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection, friendRequestPrivacy, profilePrivacy *string) (*models.User, error)
 	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error)

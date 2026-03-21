@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -33,10 +34,29 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
 	}
+
+	// Resolve target: either by user_id or by username (exactly one must be provided).
 	targetID := req.Msg.UserId
-	if targetID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("user_id is required"))
+	var targetUser *models.User
+
+	if req.Msg.Username != nil && *req.Msg.Username != "" {
+		if targetID != "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("provide either user_id or username, not both"))
+		}
+		username := strings.ToLower(strings.TrimSpace(*req.Msg.Username))
+		if username == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("username is required"))
+		}
+		u, _, err := s.authStore.GetUserByUsername(ctx, username)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+		}
+		targetUser = u
+		targetID = u.ID
+	} else if targetID == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("user_id or username is required"))
 	}
+
 	if userID == targetID {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot send friend request to yourself"))
 	}
@@ -69,23 +89,34 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 	}
 
 	// Block check: cannot friend someone who is blocked in either direction.
+	// Returns CodeNotFound (same as non-existent user) to prevent enumeration.
 	blocked, err := s.blockStore.IsBlockedEither(ctx, userID, targetID)
 	if err != nil {
 		slog.Error("checking block for friend request", "err", err, "user", userID, "target", targetID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 	if blocked {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot send friend request to this user"))
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
 	}
 
-	// Verify target user exists.
-	targetUser, err := s.authStore.GetUserByID(ctx, targetID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+	// Verify target user exists (skip if already fetched via username lookup).
+	if targetUser == nil {
+		targetUser, err = s.authStore.GetUserByID(ctx, targetID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+		}
+	}
+
+	// Friend request privacy check.
+	if err := s.checkFriendRequestPrivacy(ctx, userID, targetUser); err != nil {
+		return nil, err
 	}
 
 	autoAccepted, err := s.friendStore.SendFriendRequest(ctx, userID, targetID)
 	if err != nil {
+		if strings.Contains(err.Error(), "already") {
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		}
 		slog.Error("sending friend request", "err", err, "requester", userID, "addressee", targetID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -108,6 +139,35 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(&v1.SendFriendRequestResponse{
 		AutoAccepted: autoAccepted,
 	}), nil
+}
+
+// checkFriendRequestPrivacy verifies that the caller is allowed to send a
+// friend request to the target user based on the target's
+// friend_request_privacy setting.
+func (s *chatService) checkFriendRequestPrivacy(ctx context.Context, callerID string, target *models.User) error {
+	switch target.FriendRequestPrivacy {
+	case "nobody":
+		return connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+	case "server_co_members":
+		areFriends, err := s.friendStore.AreFriends(ctx, callerID, target.ID)
+		if err != nil {
+			slog.Error("checking friendship for friend request privacy", "err", err)
+			return connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if !areFriends {
+			mutual, err := s.chatStore.ShareAnyServer(ctx, callerID, target.ID)
+			if err != nil {
+				slog.Error("checking mutual servers", "err", err)
+				return connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if !mutual {
+				return connect.NewError(connect.CodeNotFound, errors.New("user not found"))
+			}
+		}
+	case "everyone", "":
+		// allow
+	}
+	return nil
 }
 
 func (s *chatService) AcceptFriendRequest(ctx context.Context, req *connect.Request[v1.AcceptFriendRequestRequest]) (*connect.Response[v1.AcceptFriendRequestResponse], error) {

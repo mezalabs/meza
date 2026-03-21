@@ -1337,9 +1337,9 @@ export async function listBlocks() {
 
 // --- Friend API ---
 
-export async function sendFriendRequest(userId: string) {
+export async function sendFriendRequest(params: { userId?: string; username?: string }) {
   try {
-    const res = await chatClient.sendFriendRequest({ userId });
+    const res = await chatClient.sendFriendRequest(params);
     return { autoAccepted: res.autoAccepted };
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });

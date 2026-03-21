@@ -7,6 +7,7 @@ import {
   listFriendRequests,
   listFriends,
   removeFriend,
+  sendFriendRequest,
   useFriendStore,
 } from '@meza/core';
 import { useEffect, useState } from 'react';
@@ -185,15 +186,111 @@ function PendingTab({
   );
 }
 
+function parseUsername(raw: string): string {
+  let s = raw.trim();
+  if (s.startsWith('@')) s = s.slice(1);
+  const hashIdx = s.indexOf('#');
+  if (hashIdx !== -1) s = s.slice(0, hashIdx);
+  return s.trim().toLowerCase();
+}
+
 function AddFriendTab() {
+  const [username, setUsername] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  const handleSubmit = async () => {
+    const parsed = parseUsername(username);
+    if (!parsed) return;
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const res = await sendFriendRequest({ username: parsed });
+      if (res.autoAccepted) {
+        setFeedback({
+          type: 'success',
+          message: `You are now friends with ${parsed}!`,
+        });
+      } else {
+        setFeedback({
+          type: 'success',
+          message: `Friend request sent to ${parsed}!`,
+        });
+      }
+      setUsername('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const lower = msg.toLowerCase();
+      let mapped: string;
+      if (lower.includes('not found')) {
+        mapped =
+          'No user found with that username. Check the spelling and try again.';
+      } else if (lower.includes('too many')) {
+        mapped = "You're sending too many requests. Try again later.";
+      } else if (lower.includes('pending')) {
+        mapped =
+          'You have too many pending requests. Cancel some before sending new ones.';
+      } else if (lower.includes('yourself')) {
+        mapped = "You can't add yourself as a friend.";
+      } else if (lower.includes('already friends')) {
+        mapped = 'You are already friends with that user.';
+      } else if (lower.includes('already')) {
+        mapped = 'You already have a pending friend request to that user.';
+      } else {
+        mapped = msg;
+      }
+      setFeedback({ type: 'error', message: mapped });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center h-full text-text-subtle text-sm p-8">
+    <div className="flex flex-col items-center justify-center h-full p-8 max-w-md mx-auto">
       <p className="font-medium text-text-primary">Add Friend</p>
-      <p className="mt-2 text-center text-xs max-w-sm">
-        You can add friends from profile cards and member lists throughout Meza.
-        Click on a user's avatar or name to view their profile, then click "Add
-        Friend".
+      <p className="mt-2 text-center text-xs text-text-subtle">
+        You can add a friend with their Meza username.
       </p>
+      <div className="mt-4 w-full flex flex-col gap-2">
+        <input
+          aria-label="Username"
+          type="text"
+          className="w-full rounded border border-border bg-bg-secondary px-3 py-2 text-sm text-text-primary placeholder:text-text-subtle outline-none focus:border-accent transition-colors"
+          placeholder="Enter a username"
+          value={username}
+          disabled={isSubmitting}
+          onChange={(e) => setUsername(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="w-full rounded bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+          disabled={isSubmitting || !username.trim()}
+          onClick={handleSubmit}
+        >
+          {isSubmitting ? 'Sending...' : 'Send Friend Request'}
+        </button>
+      </div>
+      {feedback && (
+        <p
+          role="alert"
+          className={`mt-3 text-xs text-center ${
+            feedback.type === 'success' ? 'text-success' : 'text-error'
+          }`}
+        >
+          {feedback.message}
+        </p>
+      )}
     </div>
   );
 }

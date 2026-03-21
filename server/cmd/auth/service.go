@@ -30,6 +30,7 @@ type authService struct {
 	store          store.AuthStorer
 	deviceStore    store.DeviceStorer
 	chatStore      store.ChatStorer
+	friendStore    store.FriendStorer
 	hmacSecret     string              // HMAC secret for anti-enumeration (fake salts/recovery bundles)
 	ed25519Keys    *auth.Ed25519Keys   // Ed25519 keys for JWT signing
 	instanceURL    string              // This instance's public URL
@@ -468,6 +469,28 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		dmPrivacy = &v
 	}
 
+	var friendRequestPrivacy *string
+	if r.FriendRequestPrivacy != nil {
+		v := *r.FriendRequestPrivacy
+		switch v {
+		case "everyone", "server_co_members", "nobody":
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("friend_request_privacy must be one of: everyone, server_co_members, nobody"))
+		}
+		friendRequestPrivacy = &v
+	}
+
+	var profilePrivacy *string
+	if r.ProfilePrivacy != nil {
+		v := *r.ProfilePrivacy
+		switch v {
+		case "everyone", "server_co_members", "friends", "nobody":
+		default:
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("profile_privacy must be one of: everyone, server_co_members, friends, nobody"))
+		}
+		profilePrivacy = &v
+	}
+
 	var connections []models.UserConnection
 	if r.ClearConnections || len(r.Connections) > 0 {
 		if len(r.Connections) > 10 {
@@ -503,7 +526,7 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
-	user, err := s.store.UpdateUser(ctx, userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefs, dmPrivacy, connections)
+	user, err := s.store.UpdateUser(ctx, userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefs, dmPrivacy, connections, friendRequestPrivacy, profilePrivacy)
 	if err != nil {
 		slog.Error("updating profile", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -554,10 +577,18 @@ func (s *authService) GetProfile(ctx context.Context, req *connect.Request[v1.Ge
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Apply profile privacy redaction.
+	user, err = s.redactProfile(ctx, callerID, user)
+	if err != nil {
+		return nil, err
+	}
+
 	proto := userToProto(user)
-	// Strip dm_privacy from other users' profiles to prevent information leakage.
+	// Strip privacy settings from other users' profiles to prevent information leakage.
 	if callerID != req.Msg.UserId {
 		proto.DmPrivacy = ""
+		proto.FriendRequestPrivacy = ""
+		proto.ProfilePrivacy = ""
 	}
 
 	return connect.NewResponse(&v1.GetProfileResponse{
@@ -910,27 +941,76 @@ func (s *authService) RecoverAccount(ctx context.Context, req *connect.Request[v
 	}), nil
 }
 
+// redactProfile returns a minimal profile if the caller is not allowed to see
+// the target's full profile based on profile_privacy settings.
+func (s *authService) redactProfile(ctx context.Context, callerID string, target *models.User) (*models.User, error) {
+	if callerID == target.ID {
+		return target, nil
+	}
+	switch target.ProfilePrivacy {
+	case "nobody":
+		return minimalProfile(target), nil
+	case "friends":
+		areFriends, err := s.friendStore.AreFriends(ctx, callerID, target.ID)
+		if err != nil {
+			slog.Error("checking friendship for profile privacy", "err", err)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if !areFriends {
+			return minimalProfile(target), nil
+		}
+	case "server_co_members":
+		areFriends, err := s.friendStore.AreFriends(ctx, callerID, target.ID)
+		if err != nil {
+			slog.Error("checking friendship for profile privacy", "err", err)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if !areFriends {
+			mutual, err := s.chatStore.ShareAnyServer(ctx, callerID, target.ID)
+			if err != nil {
+				slog.Error("checking mutual servers for profile privacy", "err", err)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if !mutual {
+				return minimalProfile(target), nil
+			}
+		}
+	}
+	return target, nil
+}
+
+func minimalProfile(u *models.User) *models.User {
+	return &models.User{
+		ID:          u.ID,
+		Username:    u.Username,
+		DisplayName: u.DisplayName,
+		AvatarURL:   u.AvatarURL,
+	}
+}
+
 func userToProto(u *models.User) *v1.User {
 	proto := &v1.User{
-		Id:                  u.ID,
-		Username:            u.Username,
-		DisplayName:         u.DisplayName,
-		AvatarUrl:           u.AvatarURL,
-		EmojiScale:          u.EmojiScale,
-		CreatedAt:           timestamppb.New(u.CreatedAt),
-		Bio:                 u.Bio,
-		Pronouns:            u.Pronouns,
-		BannerUrl:           u.BannerURL,
-		ThemeColorPrimary:   u.ThemeColorPrimary,
-		ThemeColorSecondary: u.ThemeColorSecondary,
-		SimpleMode:          u.SimpleMode,
+		Id:                   u.ID,
+		Username:             u.Username,
+		DisplayName:          u.DisplayName,
+		AvatarUrl:            u.AvatarURL,
+		EmojiScale:           u.EmojiScale,
+		CreatedAt:            timestamppb.New(u.CreatedAt),
+		Bio:                  u.Bio,
+		Pronouns:             u.Pronouns,
+		BannerUrl:            u.BannerURL,
+		ThemeColorPrimary:    u.ThemeColorPrimary,
+		ThemeColorSecondary:  u.ThemeColorSecondary,
+		SimpleMode:           u.SimpleMode,
 		AudioPreferences: &v1.AudioPreferences{
 			NoiseSuppression:      u.AudioPreferences.NoiseSuppression,
 			EchoCancellation:      u.AudioPreferences.EchoCancellation,
 			AutoGainControl:       u.AudioPreferences.AutoGainControl,
 			NoiseCancellationMode: u.AudioPreferences.NoiseCancellationMode,
 		},
-		DmPrivacy: u.DMPrivacy,
+		DmPrivacy:            u.DMPrivacy,
+		FriendRequestPrivacy: u.FriendRequestPrivacy,
+		ProfilePrivacy:       u.ProfilePrivacy,
 	}
 	for _, c := range u.Connections {
 		proto.Connections = append(proto.Connections, &v1.UserConnection{

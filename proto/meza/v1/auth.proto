@@ -145,6 +145,8 @@ message UpdateProfileRequest {
   optional string dm_privacy = 11;  // "anyone", "message_requests", "mutual_servers", "nobody"
   repeated UserConnection connections = 12;
   bool clear_connections = 13;  // when true, replace all connections (empty list = clear)
+  optional string friend_request_privacy = 14;  // "everyone", "server_co_members", "nobody"
+  optional string profile_privacy = 15;          // "everyone", "server_co_members", "friends", "nobody"
 }
 
 message UpdateProfileResponse {

@@ -1160,6 +1160,7 @@ message FriendRequestEntry {
 
 message SendFriendRequestRequest {
   string user_id = 1;
+  optional string username = 2;  // alternative to user_id — server resolves to user_id
 }
 
 message SendFriendRequestResponse {

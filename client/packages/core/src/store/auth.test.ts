@@ -15,6 +15,8 @@ const mockUser: StoredUser = {
   themeColorSecondary: '',
   simpleMode: false,
   dmPrivacy: 'message_requests',
+  friendRequestPrivacy: 'everyone',
+  profilePrivacy: 'everyone',
   connections: [],
   createdAt: '',
 };
