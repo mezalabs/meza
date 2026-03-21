@@ -24,7 +24,7 @@ const emoji3: any = {
 };
 
 beforeEach(() => {
-  useEmojiStore.setState({ byServer: {}, isLoading: false, error: null });
+  useEmojiStore.setState({ byServer: {}, personal: null, error: null });
 });
 
 describe('emoji store', () => {
@@ -94,7 +94,7 @@ describe('emoji store', () => {
 
     const state = useEmojiStore.getState();
     expect(state.byServer).toEqual({});
-    expect(state.isLoading).toBe(false);
+    expect(state.personal).toBeNull();
     expect(state.error).toBeNull();
   });
 });

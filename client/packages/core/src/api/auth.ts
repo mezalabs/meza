@@ -3,6 +3,7 @@ import { AuthService } from '@meza/gen/meza/v1/auth_pb.ts';
 import type { AudioPreferences, User } from '@meza/gen/meza/v1/models_pb.ts';
 import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
+import { clearEmojiCache } from '../lib/emojiCache.ts';
 import { clearFrequentEmojis } from '../lib/frequentEmojis.ts';
 import { disconnect } from '../gateway/gateway.ts';
 import { resetSearchState } from '../search/index.ts';
@@ -14,6 +15,7 @@ import {
 } from '../store/auth.ts';
 import { useBlockStore } from '../store/blocks.ts';
 import { useChannelStore } from '../store/channels.ts';
+import { useEmojiStore } from '../store/emojis.ts';
 import { useFriendStore } from '../store/friends.ts';
 import { useMessageStore } from '../store/messages.ts';
 import { usePresenceStore } from '../store/presence.ts';
@@ -366,6 +368,8 @@ export async function logout() {
   useStreamSettingsStore.getState().reset();
   useBlockStore.getState().reset();
   useFriendStore.getState().reset();
+  useEmojiStore.getState().reset();
+  clearEmojiCache();
   resetSearchState();
   clearFrequentEmojis();
   await clearCryptoStorage();

@@ -24,7 +24,7 @@ interface EmojisSectionProps {
 export function EmojisSection({ serverId }: EmojisSectionProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const emojis = useEmojiStore((s) =>
-    serverId ? (s.byServer[serverId] ?? EMPTY_EMOJIS) : s.personal,
+    serverId ? (s.byServer[serverId] ?? EMPTY_EMOJIS) : (s.personal ?? EMPTY_EMOJIS),
   );
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');

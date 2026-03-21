@@ -97,10 +97,10 @@ export const EmojiPicker = memo(function EmojiPicker({
   }, [serverId, serverEmojis]);
 
   useEffect(() => {
-    if (personalEmojis.length === 0) {
+    if (personalEmojis === null) {
       listUserEmojis().catch(() => {});
     }
-  }, [personalEmojis.length]);
+  }, [personalEmojis]);
 
   // All servers the user is in (for other-server emojis + names)
   const servers = useServerStore((s) => s.servers);
@@ -140,7 +140,7 @@ export const EmojiPicker = memo(function EmojiPicker({
   const allCustom: CustomEmoji[] = useMemo(() => {
     const seenIds = new Set<string>();
     const result: CustomEmoji[] = [];
-    for (const e of personalEmojis) {
+    for (const e of personalEmojis ?? []) {
       if (!seenIds.has(e.id)) { seenIds.add(e.id); result.push(e); }
     }
     if (serverEmojis) {
@@ -240,7 +240,7 @@ export const EmojiPicker = memo(function EmojiPicker({
 
       {/* Emoji grid */}
       <EmojiPickerGrid
-        personalEmojis={personalEmojis}
+        personalEmojis={personalEmojis ?? []}
         serverEmojis={serverEmojis ?? []}
         otherServerEmojiGroups={otherServerEmojiGroups}
         frequentEmojis={frequentEmojis}

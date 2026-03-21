@@ -175,7 +175,7 @@ beforeEach(() => {
   });
   useMemberStore.setState({ byServer: {}, isLoading: false, error: null });
   useRoleStore.setState({ byServer: {}, isLoading: false, error: null });
-  useEmojiStore.setState({ byServer: {}, isLoading: false, error: null });
+  useEmojiStore.setState({ byServer: {}, personal: null, error: null });
   usePinStore.setState({
     byChannel: {},
     hasMore: {},

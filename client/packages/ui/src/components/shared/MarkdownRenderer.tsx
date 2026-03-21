@@ -232,7 +232,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       }) => {
         const emoji =
           serverEmojis?.find((e) => e.id === emojiId) ??
-          personalEmojis.find((e) => e.id === emojiId);
+          personalEmojis?.find((e) => e.id === emojiId);
         const retryCount = emojiRetries[emojiId] ?? 0;
         if (!emoji || retryCount >= 2) {
           return <span>:{emojiName}:</span>;

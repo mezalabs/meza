@@ -4,6 +4,7 @@ import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import {
   AttachmentSchema,
   ChannelType,
+  type CustomEmoji,
   type DMChannel,
   MessageSchema,
 } from '@meza/gen/meza/v1/models_pb.ts';
@@ -679,32 +680,52 @@ export async function getPinnedMessages(channelId: string, before?: string) {
 
 // --- Emoji API ---
 
+const emojiInflight = new Map<string, Promise<CustomEmoji[]>>();
+
 export async function listEmojis(serverId: string) {
-  const store = useEmojiStore.getState();
-  store.setLoading(true);
-  store.setError(null);
-  try {
-    const res = await chatClient.listEmojis({ serverId });
-    store.setEmojis(serverId, res.emojis);
-    return res.emojis;
-  } catch (err) {
-    store.setError(mapChatError(err));
-    throw err;
-  }
+  const existing = emojiInflight.get(serverId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    const store = useEmojiStore.getState();
+    store.setError(null);
+    try {
+      const res = await chatClient.listEmojis({ serverId });
+      store.setEmojis(serverId, res.emojis);
+      return res.emojis;
+    } catch (err) {
+      store.setError(mapChatError(err));
+      throw err;
+    } finally {
+      emojiInflight.delete(serverId);
+    }
+  })();
+
+  emojiInflight.set(serverId, promise);
+  return promise;
 }
 
+let personalEmojiInflight: Promise<CustomEmoji[]> | null = null;
+
 export async function listUserEmojis() {
-  const store = useEmojiStore.getState();
-  store.setLoading(true);
-  store.setError(null);
-  try {
-    const res = await chatClient.listUserEmojis({});
-    store.setPersonalEmojis(res.emojis);
-    return res.emojis;
-  } catch (err) {
-    store.setError(mapChatError(err));
-    throw err;
-  }
+  if (personalEmojiInflight) return personalEmojiInflight;
+
+  personalEmojiInflight = (async () => {
+    const store = useEmojiStore.getState();
+    store.setError(null);
+    try {
+      const res = await chatClient.listUserEmojis({});
+      store.setPersonalEmojis(res.emojis);
+      return res.emojis;
+    } catch (err) {
+      store.setError(mapChatError(err));
+      throw err;
+    } finally {
+      personalEmojiInflight = null;
+    }
+  })();
+
+  return personalEmojiInflight;
 }
 
 export async function createEmoji(

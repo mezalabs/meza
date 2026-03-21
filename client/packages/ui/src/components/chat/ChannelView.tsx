@@ -362,7 +362,7 @@ export function ChannelView({
   }, [serverId, isAuthenticated, hasEmojis]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
-  const hasPersonalEmojis = useEmojiStore((s) => s.personal.length > 0);
+  const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
   useEffect(() => {
     if (!isAuthenticated || hasPersonalEmojis) return;
     listUserEmojis().catch(() => {});

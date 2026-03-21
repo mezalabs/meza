@@ -428,5 +428,10 @@ export {
   getFrequentEmojis,
   recordUsage,
 } from './lib/frequentEmojis.ts';
+export {
+  clearEmojiCache,
+  initEmojiCachePersistence,
+  loadEmojiCache,
+} from './lib/emojiCache.ts';
 // Utils
 export { formatRelativeTime, toISO } from './utils/time.ts';
