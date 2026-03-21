@@ -31,21 +31,26 @@ export function useStreamPreview() {
       mountedRef.current = false;
       abortRef.current?.abort();
       const room = roomRef.current;
-      if (room && room.state !== ConnectionState.Disconnected) {
-        room.disconnect(true);
+      if (room) {
         room.removeAllListeners();
+        if (room.state !== ConnectionState.Disconnected) {
+          room.disconnect(true);
+        }
       }
     };
   }, []);
 
   const connect = useCallback(
     async (channelId: string, participantId: string) => {
-      // Cancel any previous preview
+      // Cancel any previous preview — remove listeners first to prevent
+      // stale events firing during disconnect
       abortRef.current?.abort();
       const prevRoom = roomRef.current;
-      if (prevRoom && prevRoom.state !== ConnectionState.Disconnected) {
-        await prevRoom.disconnect(true);
+      if (prevRoom) {
         prevRoom.removeAllListeners();
+        if (prevRoom.state !== ConnectionState.Disconnected) {
+          await prevRoom.disconnect(true);
+        }
       }
 
       const abort = new AbortController();
@@ -131,9 +136,11 @@ export function useStreamPreview() {
   const disconnect = useCallback(async () => {
     abortRef.current?.abort();
     const room = roomRef.current;
-    if (room && room.state !== ConnectionState.Disconnected) {
-      await room.disconnect(true);
+    if (room) {
       room.removeAllListeners();
+      if (room.state !== ConnectionState.Disconnected) {
+        await room.disconnect(true);
+      }
     }
     roomRef.current = null;
     if (mountedRef.current) {
