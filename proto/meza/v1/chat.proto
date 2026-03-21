@@ -98,6 +98,20 @@ service ChatService {
   rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
   rpc GetSystemMessageConfig(GetSystemMessageConfigRequest) returns (GetSystemMessageConfigResponse);
   rpc UpdateSystemMessageConfig(UpdateSystemMessageConfigRequest) returns (UpdateSystemMessageConfigResponse);
+
+  // Bot management
+  rpc CreateBot(CreateBotRequest) returns (CreateBotResponse);
+  rpc DeleteBot(DeleteBotRequest) returns (DeleteBotResponse);
+  rpc RegenerateBotToken(RegenerateBotTokenRequest) returns (RegenerateBotTokenResponse);
+  rpc ListBots(ListBotsRequest) returns (ListBotsResponse);
+  rpc GetBot(GetBotRequest) returns (GetBotResponse);
+  rpc AddBotToServer(AddBotToServerRequest) returns (AddBotToServerResponse);
+  rpc RemoveBotFromServer(RemoveBotFromServerRequest) returns (RemoveBotFromServerResponse);
+
+  // Webhook management
+  rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
+  rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
+  rpc ListWebhooks(ListWebhooksRequest) returns (ListWebhooksResponse);
 }
 
 // Messages
@@ -1297,4 +1311,85 @@ message UpdateSystemMessageConfigRequest {
 
 message UpdateSystemMessageConfigResponse {
   ServerSystemMessageConfig config = 1;
+}
+
+// Bot Management
+
+message CreateBotRequest {
+  string username = 1;
+  string display_name = 2;
+}
+
+message CreateBotResponse {
+  BotWithToken bot = 1;
+}
+
+message DeleteBotRequest {
+  string bot_id = 1;
+}
+
+message DeleteBotResponse {}
+
+message RegenerateBotTokenRequest {
+  string bot_id = 1;
+}
+
+message RegenerateBotTokenResponse {
+  string token = 1;  // new plaintext token, shown once
+}
+
+message ListBotsRequest {}
+
+message ListBotsResponse {
+  repeated Bot bots = 1;
+}
+
+message GetBotRequest {
+  string bot_id = 1;
+}
+
+message GetBotResponse {
+  Bot bot = 1;
+}
+
+message AddBotToServerRequest {
+  string bot_id = 1;
+  string server_id = 2;
+}
+
+message AddBotToServerResponse {
+  Member member = 1;
+}
+
+message RemoveBotFromServerRequest {
+  string bot_id = 1;
+  string server_id = 2;
+}
+
+message RemoveBotFromServerResponse {}
+
+// Webhook Management
+
+message CreateWebhookRequest {
+  string bot_id = 1;
+  string server_id = 2;
+  string url = 3;
+}
+
+message CreateWebhookResponse {
+  Webhook webhook = 1;  // includes secret, shown once
+}
+
+message DeleteWebhookRequest {
+  string webhook_id = 1;
+}
+
+message DeleteWebhookResponse {}
+
+message ListWebhooksRequest {
+  string server_id = 1;
+}
+
+message ListWebhooksResponse {
+  repeated Webhook webhooks = 1;
 }

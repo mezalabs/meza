@@ -45,6 +45,9 @@ type User struct {
 	DMPrivacy        string // "anyone", "message_requests", "mutual_servers", "nobody"
 	SigningPublicKey []byte             // 32-byte Ed25519 verify key for E2EE signature verification
 	Connections     []UserConnection   // Profile social links
+	// Bot fields
+	IsBot      bool
+	BotOwnerID string // owner user ID (only set for bot users)
 	// Federation fields (populated for shadow users on remote instances)
 	IsFederated  bool
 	HomeServer   string // e.g. "https://home.example.com"

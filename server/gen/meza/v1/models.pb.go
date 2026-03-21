@@ -156,6 +156,8 @@ type User struct {
 	DmPrivacy           string            `protobuf:"bytes,15,opt,name=dm_privacy,json=dmPrivacy,proto3" json:"dm_privacy,omitempty"`                        // "anyone", "message_requests", "mutual_servers", "nobody"
 	SigningPublicKey    []byte            `protobuf:"bytes,16,opt,name=signing_public_key,json=signingPublicKey,proto3" json:"signing_public_key,omitempty"` // 32-byte Ed25519 verify key for E2EE signature verification
 	Connections         []*UserConnection `protobuf:"bytes,17,rep,name=connections,proto3" json:"connections,omitempty"`
+	IsBot               bool              `protobuf:"varint,18,opt,name=is_bot,json=isBot,proto3" json:"is_bot,omitempty"`
+	BotOwnerId          string            `protobuf:"bytes,19,opt,name=bot_owner_id,json=botOwnerId,proto3" json:"bot_owner_id,omitempty"` // owner user ID (only set for bot users)
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -300,6 +302,20 @@ func (x *User) GetConnections() []*UserConnection {
 		return x.Connections
 	}
 	return nil
+}
+
+func (x *User) GetIsBot() bool {
+	if x != nil {
+		return x.IsBot
+	}
+	return false
+}
+
+func (x *User) GetBotOwnerId() string {
+	if x != nil {
+		return x.BotOwnerId
+	}
+	return ""
 }
 
 type UserConnection struct {
@@ -2382,6 +2398,7 @@ type PublicUser struct {
 	BannerUrl           string                 `protobuf:"bytes,7,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
 	ThemeColorPrimary   string                 `protobuf:"bytes,8,opt,name=theme_color_primary,json=themeColorPrimary,proto3" json:"theme_color_primary,omitempty"`
 	ThemeColorSecondary string                 `protobuf:"bytes,9,opt,name=theme_color_secondary,json=themeColorSecondary,proto3" json:"theme_color_secondary,omitempty"`
+	IsBot               bool                   `protobuf:"varint,10,opt,name=is_bot,json=isBot,proto3" json:"is_bot,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2479,11 +2496,246 @@ func (x *PublicUser) GetThemeColorSecondary() string {
 	return ""
 }
 
+func (x *PublicUser) GetIsBot() bool {
+	if x != nil {
+		return x.IsBot
+	}
+	return false
+}
+
+type Bot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // bot user ID
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	OwnerId       string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Bot) Reset() {
+	*x = Bot{}
+	mi := &file_meza_v1_models_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Bot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Bot) ProtoMessage() {}
+
+func (x *Bot) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Bot.ProtoReflect.Descriptor instead.
+func (*Bot) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *Bot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Bot) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *Bot) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *Bot) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *Bot) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *Bot) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type BotWithToken struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bot           *Bot                   `protobuf:"bytes,1,opt,name=bot,proto3" json:"bot,omitempty"`
+	Token         string                 `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`                             // plaintext token, shown once
+	PrivateKey    []byte                 `protobuf:"bytes,3,opt,name=private_key,json=privateKey,proto3" json:"private_key,omitempty"` // Ed25519 private key, shown once at creation
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BotWithToken) Reset() {
+	*x = BotWithToken{}
+	mi := &file_meza_v1_models_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BotWithToken) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BotWithToken) ProtoMessage() {}
+
+func (x *BotWithToken) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BotWithToken.ProtoReflect.Descriptor instead.
+func (*BotWithToken) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *BotWithToken) GetBot() *Bot {
+	if x != nil {
+		return x.Bot
+	}
+	return nil
+}
+
+func (x *BotWithToken) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *BotWithToken) GetPrivateKey() []byte {
+	if x != nil {
+		return x.PrivateKey
+	}
+	return nil
+}
+
+type Webhook struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	BotUserId     string                 `protobuf:"bytes,2,opt,name=bot_user_id,json=botUserId,proto3" json:"bot_user_id,omitempty"`
+	ServerId      string                 `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	Url           string                 `protobuf:"bytes,4,opt,name=url,proto3" json:"url,omitempty"`
+	Secret        string                 `protobuf:"bytes,5,opt,name=secret,proto3" json:"secret,omitempty"` // HMAC secret, shown once at creation
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Webhook) Reset() {
+	*x = Webhook{}
+	mi := &file_meza_v1_models_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Webhook) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Webhook) ProtoMessage() {}
+
+func (x *Webhook) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Webhook.ProtoReflect.Descriptor instead.
+func (*Webhook) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *Webhook) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Webhook) GetBotUserId() string {
+	if x != nil {
+		return x.BotUserId
+	}
+	return ""
+}
+
+func (x *Webhook) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *Webhook) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *Webhook) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *Webhook) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
-	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x93\x05\n" +
+	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcc\x05\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -2507,7 +2759,10 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
 	"dm_privacy\x18\x0f \x01(\tR\tdmPrivacy\x12,\n" +
 	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKey\x129\n" +
-	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnectionsB\x14\n" +
+	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x12\x15\n" +
+	"\x06is_bot\x18\x12 \x01(\bR\x05isBot\x12 \n" +
+	"\fbot_owner_id\x18\x13 \x01(\tR\n" +
+	"botOwnerIdB\x14\n" +
 	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"T\n" +
 	"\x0eUserConnection\x12\x1a\n" +
 	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x10\n" +
@@ -2742,7 +2997,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x0f_leave_templateB\x10\n" +
 	"\x0e_kick_templateB\x0f\n" +
 	"\r_ban_templateB\x13\n" +
-	"\x11_timeout_template\"\xab\x02\n" +
+	"\x11_timeout_template\"\xc2\x02\n" +
 	"\n" +
 	"PublicUser\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
@@ -2755,7 +3010,31 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
 	"banner_url\x18\a \x01(\tR\tbannerUrl\x12.\n" +
 	"\x13theme_color_primary\x18\b \x01(\tR\x11themeColorPrimary\x122\n" +
-	"\x15theme_color_secondary\x18\t \x01(\tR\x13themeColorSecondary*\x8a\x01\n" +
+	"\x15theme_color_secondary\x18\t \x01(\tR\x13themeColorSecondary\x12\x15\n" +
+	"\x06is_bot\x18\n" +
+	" \x01(\bR\x05isBot\"\xc9\x01\n" +
+	"\x03Bot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
+	"\fdisplay_name\x18\x03 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x19\n" +
+	"\bowner_id\x18\x05 \x01(\tR\aownerId\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"e\n" +
+	"\fBotWithToken\x12\x1e\n" +
+	"\x03bot\x18\x01 \x01(\v2\f.meza.v1.BotR\x03bot\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1f\n" +
+	"\vprivate_key\x18\x03 \x01(\fR\n" +
+	"privateKey\"\xbb\x01\n" +
+	"\aWebhook\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\vbot_user_id\x18\x02 \x01(\tR\tbotUserId\x12\x1b\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12\x10\n" +
+	"\x03url\x18\x04 \x01(\tR\x03url\x12\x16\n" +
+	"\x06secret\x18\x05 \x01(\tR\x06secret\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt*\x8a\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -2784,7 +3063,7 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
+var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_meza_v1_models_proto_goTypes = []any{
 	(ChannelType)(0),                  // 0: meza.v1.ChannelType
 	(MessageType)(0),                  // 1: meza.v1.MessageType
@@ -2812,41 +3091,47 @@ var file_meza_v1_models_proto_goTypes = []any{
 	(*AudioPreferences)(nil),          // 23: meza.v1.AudioPreferences
 	(*ServerSystemMessageConfig)(nil), // 24: meza.v1.ServerSystemMessageConfig
 	(*PublicUser)(nil),                // 25: meza.v1.PublicUser
-	(*timestamppb.Timestamp)(nil),     // 26: google.protobuf.Timestamp
+	(*Bot)(nil),                       // 26: meza.v1.Bot
+	(*BotWithToken)(nil),              // 27: meza.v1.BotWithToken
+	(*Webhook)(nil),                   // 28: meza.v1.Webhook
+	(*timestamppb.Timestamp)(nil),     // 29: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	26, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	29, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	23, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
 	3,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
-	26, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	29, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	26, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	26, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	29, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	29, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
 	5,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
 	2,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
 	11, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	26, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	26, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	29, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	29, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
 	10, // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
 	1,  // 13: meza.v1.Message.type:type_name -> meza.v1.MessageType
-	26, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	26, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	26, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	26, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	26, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	26, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	26, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	29, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	29, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	29, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	29, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	29, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	29, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	29, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 21: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	26, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	26, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	26, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	26, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	26, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	29, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	29, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	29, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	29, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	29, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	29, // 27: meza.v1.Bot.created_at:type_name -> google.protobuf.Timestamp
+	26, // 28: meza.v1.BotWithToken.bot:type_name -> meza.v1.Bot
+	29, // 29: meza.v1.Webhook.created_at:type_name -> google.protobuf.Timestamp
+	30, // [30:30] is the sub-list for method output_type
+	30, // [30:30] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_models_proto_init() }
@@ -2865,7 +3150,7 @@ func file_meza_v1_models_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   24,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -100,12 +100,14 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		        audio_preferences, dm_privacy,
+		        is_bot, COALESCE(bot_owner_id,''),
 		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
 		        connections
 		 FROM users WHERE id = $1`, userID,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 		&audioPrefsJSON, &u.DMPrivacy,
+		&u.IsBot, &u.BotOwnerID,
 		&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
 		&connectionsJSON)
 	if err != nil {
@@ -193,6 +195,7 @@ func (s *AuthStore) GetUsersByIDs(ctx context.Context, userIDs []string) ([]*mod
 		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		        audio_preferences, dm_privacy,
+		        is_bot, COALESCE(bot_owner_id,''),
 		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
 		        connections
 		 FROM users WHERE id = ANY($1)`, userIDs,
@@ -210,6 +213,7 @@ func (s *AuthStore) GetUsersByIDs(ctx context.Context, userIDs []string) ([]*mod
 		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 			&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 			&audioPrefsJSON, &u.DMPrivacy,
+			&u.IsBot, &u.BotOwnerID,
 			&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
 			&connectionsJSON); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)

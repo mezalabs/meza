@@ -387,6 +387,24 @@ type MediaAccessChecker interface {
 	CheckAttachmentAccess(ctx context.Context, attachment *models.Attachment, userID string) error
 }
 
+// BotStorer provides access to bot token and webhook data in Postgres.
+type BotStorer interface {
+	CreateBotUser(ctx context.Context, user *models.User, signingPublicKey []byte) (*models.User, error)
+	CreateBotToken(ctx context.Context, token *models.BotToken) error
+	GetBotByTokenHash(ctx context.Context, tokenHash []byte) (*models.User, error)
+	RevokeBotTokens(ctx context.Context, botUserID string) error
+	ListBotsByOwner(ctx context.Context, ownerID string) ([]*models.User, error)
+	CountBotsByOwner(ctx context.Context, ownerID string) (int, error)
+	GetBotUser(ctx context.Context, botID string) (*models.User, error)
+	DeleteBotUser(ctx context.Context, botID string) error
+	UpdateBotTokenLastUsed(ctx context.Context, tokenHash []byte) error
+	CreateWebhook(ctx context.Context, webhook *models.BotWebhook) (*models.BotWebhook, error)
+	DeleteWebhook(ctx context.Context, webhookID string) error
+	ListWebhooksByServer(ctx context.Context, serverID string) ([]*models.BotWebhook, error)
+	GetWebhooksForChannel(ctx context.Context, channelID string) ([]*models.BotWebhook, error)
+	GetWebhook(ctx context.Context, webhookID string) (*models.BotWebhook, error)
+}
+
 // MediaStorer provides access to attachment data in Postgres.
 type MediaStorer interface {
 	CreateAttachment(ctx context.Context, attachment *models.Attachment) (*models.Attachment, error)

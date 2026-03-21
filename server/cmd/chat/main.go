@@ -80,6 +80,7 @@ func main() {
 	blockStore := store.NewBlockStore(pool)
 	friendStore := store.NewFriendStore(pool)
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
+	botStore := store.NewBotStore(pool)
 	permCache := permissions.NewCache(rdb)
 
 	// Clean up key bundles on expired/revoked invites (best-effort, non-blocking).
@@ -109,6 +110,7 @@ func main() {
 		LinkPreviewStore:        linkPreviewStore,
 		ChannelGroupStore:       channelGroupStore,
 		PermissionOverrideStore: permissionOverrideStore,
+		BotStore:               botStore,
 		EncryptionChecker:       keyEnvelopeStore,
 		NC:                      nc,
 		RDB:                     rdb,

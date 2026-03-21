@@ -1,0 +1,9 @@
+BEGIN;
+
+DROP TABLE IF EXISTS bot_webhooks;
+DROP TABLE IF EXISTS bot_tokens;
+DROP INDEX IF EXISTS idx_users_bot_owner;
+ALTER TABLE users DROP COLUMN IF EXISTS bot_owner_id;
+ALTER TABLE users DROP COLUMN IF EXISTS is_bot;
+
+COMMIT;
