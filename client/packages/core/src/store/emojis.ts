@@ -4,12 +4,25 @@ import { immer } from 'zustand/middleware/immer';
 import { loadEmojiCache } from '../lib/emojiCache.ts';
 import { useAuthStore } from './auth.ts';
 
+/**
+ * Tracks which server IDs were populated from cache (not yet refreshed
+ * from the API). UI components use this to know they should still
+ * fire an API call even though the store has data.
+ */
+export const cachedServerIds = new Set<string>();
+let personalFromCache = false;
+
 function loadFromCache(): Partial<EmojiState> {
   try {
     const userId = useAuthStore.getState().user?.id;
     if (!userId) return {};
     const cached = loadEmojiCache(userId);
     if (!cached) return {};
+    // Track which data came from cache so UI components know to refresh
+    for (const sid of Object.keys(cached.byServer)) {
+      cachedServerIds.add(sid);
+    }
+    if (cached.personal) personalFromCache = true;
     // StoredEmoji objects are structurally compatible with CustomEmoji
     return {
       byServer: cached.byServer as unknown as Record<string, CustomEmoji[]>,
@@ -18,6 +31,21 @@ function loadFromCache(): Partial<EmojiState> {
   } catch {
     return {};
   }
+}
+
+/** Returns true if the personal emojis came from cache and haven't been refreshed. */
+export function isPersonalFromCache(): boolean {
+  return personalFromCache;
+}
+
+/** Mark a server as refreshed (API data received). */
+export function markServerRefreshed(serverId: string): void {
+  cachedServerIds.delete(serverId);
+}
+
+/** Mark personal emojis as refreshed. */
+export function markPersonalRefreshed(): void {
+  personalFromCache = false;
 }
 
 export interface EmojiState {

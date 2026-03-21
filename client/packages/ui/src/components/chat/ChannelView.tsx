@@ -17,6 +17,8 @@ import {
   hasChannelKey,
   hasPermission,
   isSessionReady,
+  cachedServerIds,
+  isPersonalFromCache,
   listEmojis,
   listMembers,
   listRoles,
@@ -397,16 +399,21 @@ export function ChannelView({
   }, [keysAvailable, channelId]);
 
   // Fetch server emojis so MarkdownRenderer can resolve emoji tags in messages.
+  // If data came from cache, still fetch from API (stale-while-revalidate).
   useEffect(() => {
-    if (!isAuthenticated || !serverId || hasEmojis) return;
-    listEmojis(serverId).catch(() => {});
+    if (!isAuthenticated || !serverId) return;
+    if (!hasEmojis || cachedServerIds.has(serverId)) {
+      listEmojis(serverId).catch(() => {});
+    }
   }, [serverId, isAuthenticated, hasEmojis]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
   const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
   useEffect(() => {
-    if (!isAuthenticated || hasPersonalEmojis) return;
-    listUserEmojis().catch(() => {});
+    if (!isAuthenticated) return;
+    if (!hasPersonalEmojis || isPersonalFromCache()) {
+      listUserEmojis().catch(() => {});
+    }
   }, [isAuthenticated, hasPersonalEmojis]);
 
   // Fetch server members so MessageItem can resolve author display names.
