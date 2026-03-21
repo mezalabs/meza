@@ -6,6 +6,7 @@ import {
   useVoiceStore,
 } from '@meza/core';
 import {
+  LockKey,
   MonitorArrowUpIcon,
   MonitorIcon,
   PhoneSlashIcon,
@@ -61,7 +62,8 @@ export function VoiceConnectionBar() {
             setPaneContent(focusedPaneId, { type: 'voice', channelId });
           }}
         >
-          <span className="truncate text-[11px] font-mono tracking-wide text-success">
+          <span className="inline-flex items-center gap-1 truncate text-[11px] font-mono tracking-wide text-success">
+            <LockKey size={10} weight="fill" aria-hidden="true" />
             Voice Connected
           </span>
           <span className="truncate text-xs text-text">
