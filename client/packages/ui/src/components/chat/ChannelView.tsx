@@ -108,10 +108,16 @@ function parseJoinUserId(raw: Uint8Array): string | null {
  * and a set of message IDs that should be hidden (absorbed into a group).
  */
 function groupJoinMessages(messages: Message[]): {
-  joinGroups: Map<string, { userIds: string[]; lastCreatedAt: Message['createdAt'] }>;
+  joinGroups: Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >;
   hiddenIds: Set<string>;
 } {
-  const joinGroups = new Map<string, { userIds: string[]; lastCreatedAt: Message['createdAt'] }>();
+  const joinGroups = new Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >();
   const hiddenIds = new Set<string>();
 
   let groupStartIdx = -1;
@@ -124,7 +130,9 @@ function groupJoinMessages(messages: Message[]): {
     let withinWindow = false;
     if (isJoin && groupStartIdx >= 0) {
       const prevMsg = messages[i - 1];
-      const prevSecs = prevMsg?.createdAt ? Number(prevMsg.createdAt.seconds) : 0;
+      const prevSecs = prevMsg?.createdAt
+        ? Number(prevMsg.createdAt.seconds)
+        : 0;
       const curSecs = msg.createdAt ? Number(msg.createdAt.seconds) : 0;
       withinWindow = Math.abs(curSecs - prevSecs) <= JOIN_GROUP_WINDOW_SECS;
     }
@@ -696,42 +704,42 @@ export function ChannelView({
               const joinGroup = joinGroups.get(msg.id);
 
               return (
-              <Fragment key={msg.id}>
-                {newActivityAnchor &&
-                  idx > 0 &&
-                  messages[idx - 1]?.id === newActivityAnchor && (
-                    <div className="my-2 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-accent" />
-                      <span className="text-xs font-semibold text-accent">
-                        New Activity
-                      </span>
-                      <div className="h-px flex-1 bg-accent" />
-                    </div>
+                <Fragment key={msg.id}>
+                  {newActivityAnchor &&
+                    idx > 0 &&
+                    messages[idx - 1]?.id === newActivityAnchor && (
+                      <div className="my-2 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-accent" />
+                        <span className="text-xs font-semibold text-accent">
+                          New Activity
+                        </span>
+                        <div className="h-px flex-1 bg-accent" />
+                      </div>
+                    )}
+                  {joinGroup ? (
+                    <GroupedJoinMessage
+                      userIds={joinGroup.userIds}
+                      createdAt={joinGroup.lastCreatedAt}
+                      serverId={serverId}
+                    />
+                  ) : (
+                    <MessageItem
+                      msg={msg}
+                      channelId={channelId}
+                      currentUserId={currentUser?.id}
+                      serverId={serverId}
+                      needsEncryption={needsEncryption}
+                      timeTick={timeTick}
+                      isEditing={editingMessageId === msg.id}
+                      onStartEdit={() => requestEdit(msg.id)}
+                      onCancelEdit={cancelEdit}
+                      onEditDirtyChange={setEditDirty}
+                      onReply={() => handleReply(msg)}
+                      onJumpToMessage={scrollToMessage}
+                      canManageMessages={canManageMessages}
+                    />
                   )}
-                {joinGroup ? (
-                  <GroupedJoinMessage
-                    userIds={joinGroup.userIds}
-                    createdAt={joinGroup.lastCreatedAt}
-                    serverId={serverId}
-                  />
-                ) : (
-                <MessageItem
-                  msg={msg}
-                  channelId={channelId}
-                  currentUserId={currentUser?.id}
-                  serverId={serverId}
-                  needsEncryption={needsEncryption}
-                  timeTick={timeTick}
-                  isEditing={editingMessageId === msg.id}
-                  onStartEdit={() => requestEdit(msg.id)}
-                  onCancelEdit={cancelEdit}
-                  onEditDirtyChange={setEditDirty}
-                  onReply={() => handleReply(msg)}
-                  onJumpToMessage={scrollToMessage}
-                  canManageMessages={canManageMessages}
-                />
-                )}
-              </Fragment>
+                </Fragment>
               );
             })}
           </div>

@@ -1337,7 +1337,10 @@ export async function listBlocks() {
 
 // --- Friend API ---
 
-export async function sendFriendRequest(params: { userId?: string; username?: string }) {
+export async function sendFriendRequest(params: {
+  userId?: string;
+  username?: string;
+}) {
   try {
     const res = await chatClient.sendFriendRequest(params);
     return { autoAccepted: res.autoAccepted };

@@ -304,15 +304,19 @@ export const GroupedJoinMessage = memo(function GroupedJoinMessage({
                   >
                     <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
                       {userIds.slice(1).map((uid) => (
-                        <PopoverUserName key={uid} userId={uid} serverId={serverId} />
+                        <PopoverUserName
+                          key={uid}
+                          userId={uid}
+                          serverId={serverId}
+                        />
                       ))}
                     </div>
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>
             </>
-          )}
-          {' '}joined the {serverId ? 'server' : 'group'}
+          )}{' '}
+          joined the {serverId ? 'server' : 'group'}
         </span>
         {time && (
           <span className="text-text-subtle" title={toISO(time)}>
