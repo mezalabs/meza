@@ -32,24 +32,10 @@ interface EmojiCache {
   personal: StoredEmoji[] | null;
 }
 
-function toStored(emoji: {
-  id: string;
-  serverId: string;
-  name: string;
-  imageUrl: string;
-  animated: boolean;
-  creatorId: string;
-  userId: string;
-}): StoredEmoji {
-  return {
-    id: emoji.id,
-    serverId: emoji.serverId,
-    name: emoji.name,
-    imageUrl: emoji.imageUrl,
-    animated: emoji.animated,
-    creatorId: emoji.creatorId,
-    userId: emoji.userId,
-  };
+function toStored({
+  id, serverId, name, imageUrl, animated, creatorId, userId,
+}: StoredEmoji): StoredEmoji {
+  return { id, serverId, name, imageUrl, animated, creatorId, userId };
 }
 
 /**
