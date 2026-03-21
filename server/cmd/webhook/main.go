@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -30,17 +31,17 @@ import (
 )
 
 const (
-	webhookHTTPTimeout  = 5 * time.Second
-	webhookReloadSubject = "meza.internal.webhook.reload"
+	webhookHTTPTimeout    = 5 * time.Second
+	maxConcurrentDelivery = 500 // bounded goroutine pool for webhook delivery
 )
 
 type webhookService struct {
 	botStore   store.BotStorer
 	nc         *nats.Conn
 	httpClient *http.Client
+	deliverSem chan struct{} // semaphore to bound concurrent HTTP deliveries
 
-	mu       sync.RWMutex
-	// serverWebhooks maps serverID -> list of webhooks for that server.
+	mu             sync.RWMutex
 	serverWebhooks map[string][]*models.BotWebhook
 }
 
@@ -69,14 +70,17 @@ func main() {
 	botStore := store.NewBotStore(pool)
 
 	svc := &webhookService{
-		botStore: botStore,
-		nc:       nc,
+		botStore:   botStore,
+		nc:         nc,
+		deliverSem: make(chan struct{}, maxConcurrentDelivery),
 		httpClient: &http.Client{
 			Timeout: webhookHTTPTimeout,
 			Transport: &http.Transport{
 				MaxIdleConns:        100,
 				MaxIdleConnsPerHost: 10,
 				IdleConnTimeout:     90 * time.Second,
+				// SSRF protection: reject connections to private/internal IPs.
+				DialContext: safeDialContext,
 			},
 		},
 		serverWebhooks: make(map[string][]*models.BotWebhook),
@@ -96,8 +100,8 @@ func main() {
 	}
 	defer deliverSub.Drain()
 
-	// Subscribe to reload signals.
-	reloadSub, err := nc.Subscribe(webhookReloadSubject, func(msg *nats.Msg) {
+	// Subscribe to reload signals (use canonical subject from subjects package).
+	reloadSub, err := nc.Subscribe(subjects.InternalWebhookReload(), func(msg *nats.Msg) {
 		slog.Info("reloading webhooks")
 		if err := svc.loadAllWebhooks(context.Background()); err != nil {
 			slog.Error("reloading webhooks", "err", err)
@@ -136,40 +140,60 @@ func main() {
 	server.Shutdown(shutdownCtx)
 }
 
-func (svc *webhookService) loadAllWebhooks(ctx context.Context) error {
-	// Query all webhooks by iterating servers with webhooks.
-	// For simplicity, we reload from the bot_webhooks table directly.
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	rows, err := svc.botStore.(*store.BotStore).Pool().Query(ctx,
-		`SELECT id, bot_user_id, server_id, url, secret, created_at FROM bot_webhooks`)
+// safeDialContext rejects connections to private, loopback, and link-local IPs
+// to prevent SSRF attacks via webhook URLs.
+func safeDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return fmt.Errorf("query all webhooks: %w", err)
+		return nil, fmt.Errorf("invalid address: %w", err)
 	}
-	defer rows.Close()
+
+	// Resolve the hostname to IPs.
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, fmt.Errorf("dns lookup failed: %w", err)
+	}
+
+	for _, ip := range ips {
+		if isPrivateIP(ip.IP) {
+			return nil, fmt.Errorf("webhook URL resolves to private IP %s (blocked)", ip.IP)
+		}
+	}
+
+	// Connect to the first allowed IP.
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+}
+
+// isPrivateIP returns true for loopback, private (RFC1918/RFC4193), link-local,
+// and cloud metadata IP ranges.
+func isPrivateIP(ip net.IP) bool {
+	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+		return true
+	}
+	// AWS/GCP/Azure metadata endpoint: 169.254.169.254
+	if ip.Equal(net.ParseIP("169.254.169.254")) {
+		return true
+	}
+	return false
+}
+
+func (svc *webhookService) loadAllWebhooks(ctx context.Context) error {
+	webhookList, err := svc.botStore.ListAllWebhooks(ctx)
+	if err != nil {
+		return fmt.Errorf("list all webhooks: %w", err)
+	}
 
 	webhooks := make(map[string][]*models.BotWebhook)
-	for rows.Next() {
-		var w models.BotWebhook
-		if err := rows.Scan(&w.ID, &w.BotUserID, &w.ServerID, &w.URL, &w.Secret, &w.CreatedAt); err != nil {
-			return fmt.Errorf("scan webhook: %w", err)
-		}
-		webhooks[w.ServerID] = append(webhooks[w.ServerID], &w)
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("iterate webhooks: %w", err)
+	for _, w := range webhookList {
+		webhooks[w.ServerID] = append(webhooks[w.ServerID], w)
 	}
 
 	svc.mu.Lock()
 	svc.serverWebhooks = webhooks
 	svc.mu.Unlock()
 
-	total := 0
-	for _, wl := range webhooks {
-		total += len(wl)
-	}
-	slog.Info("loaded webhooks", "count", total, "servers", len(webhooks))
+	slog.Info("loaded webhooks", "count", len(webhookList), "servers", len(webhooks))
 	return nil
 }
 
@@ -179,8 +203,17 @@ func (svc *webhookService) handleDelivery(msg *nats.Msg) {
 	if len(parts) < 4 {
 		return
 	}
+	channelID := parts[3]
 
-	// Parse the event to get server info.
+	// Quick check: are there any webhooks at all? Skip deserialization if not.
+	svc.mu.RLock()
+	hasAny := len(svc.serverWebhooks) > 0
+	svc.mu.RUnlock()
+	if !hasAny {
+		return
+	}
+
+	// Parse the event.
 	var event v1.Event
 	if err := proto.Unmarshal(msg.Data, &event); err != nil {
 		return
@@ -201,7 +234,6 @@ func (svc *webhookService) handleDelivery(msg *nats.Msg) {
 	}
 
 	// Build JSON payload.
-	channelID := parts[3]
 	payload := buildWebhookPayload(&event, serverID, channelID)
 	if payload == nil {
 		return
@@ -213,9 +245,14 @@ func (svc *webhookService) handleDelivery(msg *nats.Msg) {
 		return
 	}
 
-	// Deliver to all webhooks for this server (best-effort).
+	// Deliver to all webhooks for this server with bounded concurrency.
 	for _, webhook := range webhooks {
-		go svc.deliver(webhook, payloadBytes, event.Type.String())
+		wh := webhook
+		svc.deliverSem <- struct{}{} // backpressure
+		go func() {
+			defer func() { <-svc.deliverSem }()
+			svc.deliver(wh, payloadBytes, event.Type.String())
+		}()
 	}
 }
 
@@ -265,8 +302,6 @@ func buildWebhookPayload(event *v1.Event, serverID, channelID string) *webhookPa
 
 func extractServerID(event *v1.Event) string {
 	switch p := event.Payload.(type) {
-	case *v1.Event_MessageCreate:
-		return "" // Messages don't have server_id directly; we rely on the channel lookup.
 	case *v1.Event_MemberJoin:
 		return p.MemberJoin.ServerId
 	case *v1.Event_MemberRemove:
@@ -284,6 +319,9 @@ func extractServerID(event *v1.Event) string {
 	case *v1.Event_ChannelUpdate:
 		return p.ChannelUpdate.ServerId
 	default:
+		// Message events and other types without an embedded server_id are
+		// skipped for now. Message delivery requires a channel-to-server lookup
+		// cache which will be added in a follow-up.
 		return ""
 	}
 }

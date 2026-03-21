@@ -61,6 +61,7 @@ func NewOptionalConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...Inte
 			}
 			ctx = context.WithValue(ctx, userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, deviceIDKey, claims.DeviceID)
+			ctx = context.WithValue(ctx, isBotKey, claims.IsBot)
 			return next(ctx, req)
 		}
 	}
@@ -131,6 +132,7 @@ func NewConnectInterceptor(ed25519PubKey ed25519.PublicKey, opts ...InterceptorO
 			}
 			ctx = context.WithValue(ctx, userIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, deviceIDKey, claims.DeviceID)
+			ctx = context.WithValue(ctx, isBotKey, claims.IsBot)
 			return next(ctx, req)
 		}
 	}

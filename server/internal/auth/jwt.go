@@ -361,6 +361,14 @@ func (vc *VerificationCache) Put(tokenString string, claims *Claims, expiresAt t
 	vc.mu.Unlock()
 }
 
+// Invalidate removes a specific token from the cache (e.g., on revocation).
+func (vc *VerificationCache) Invalidate(tokenString string) {
+	hash := vc.tokenHash(tokenString)
+	vc.mu.Lock()
+	delete(vc.cache, hash)
+	vc.mu.Unlock()
+}
+
 func (vc *VerificationCache) cleanupLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()

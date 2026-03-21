@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,11 +20,6 @@ type BotStore struct {
 // NewBotStore creates a new BotStore backed by a pgxpool.Pool.
 func NewBotStore(pool *pgxpool.Pool) *BotStore {
 	return &BotStore{pool: pool}
-}
-
-// Pool returns the underlying connection pool (used by webhook service for bulk queries).
-func (s *BotStore) Pool() *pgxpool.Pool {
-	return s.pool
 }
 
 func (s *BotStore) CreateBotUser(ctx context.Context, user *models.User, signingPublicKey []byte) (*models.User, error) {
@@ -242,18 +238,14 @@ func (s *BotStore) ListWebhooksByServer(ctx context.Context, serverID string) ([
 	return webhooks, rows.Err()
 }
 
-func (s *BotStore) GetWebhooksForChannel(ctx context.Context, channelID string) ([]*models.BotWebhook, error) {
-	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+func (s *BotStore) ListAllWebhooks(ctx context.Context) ([]*models.BotWebhook, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	rows, err := s.pool.Query(ctx,
-		`SELECT w.id, w.bot_user_id, w.server_id, w.url, w.secret, w.created_at
-		 FROM bot_webhooks w
-		 JOIN channels c ON c.server_id = w.server_id
-		 WHERE c.id = $1`, channelID,
-	)
+		`SELECT id, bot_user_id, server_id, url, secret, created_at FROM bot_webhooks`)
 	if err != nil {
-		return nil, fmt.Errorf("get webhooks for channel: %w", err)
+		return nil, fmt.Errorf("list all webhooks: %w", err)
 	}
 	defer rows.Close()
 

@@ -401,7 +401,7 @@ type BotStorer interface {
 	CreateWebhook(ctx context.Context, webhook *models.BotWebhook) (*models.BotWebhook, error)
 	DeleteWebhook(ctx context.Context, webhookID string) error
 	ListWebhooksByServer(ctx context.Context, serverID string) ([]*models.BotWebhook, error)
-	GetWebhooksForChannel(ctx context.Context, channelID string) ([]*models.BotWebhook, error)
+	ListAllWebhooks(ctx context.Context) ([]*models.BotWebhook, error)
 	GetWebhook(ctx context.Context, webhookID string) (*models.BotWebhook, error)
 }
 

@@ -54,6 +54,9 @@ func (s *chatService) CreateBot(ctx context.Context, req *connect.Request[v1.Cre
 	if displayName == "" {
 		displayName = username
 	}
+	if len(displayName) > 100 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("display_name must be 100 characters or fewer"))
+	}
 
 	// Check bot limit.
 	count, err := s.botStore.CountBotsByOwner(ctx, userID)
@@ -423,7 +426,7 @@ func (s *chatService) CreateWebhook(ctx context.Context, req *connect.Request[v1
 	if req.Msg.BotId == "" || req.Msg.ServerId == "" || req.Msg.Url == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("bot_id, server_id, and url are required"))
 	}
-	if !strings.HasPrefix(req.Msg.Url, "https://") && !strings.HasPrefix(req.Msg.Url, "http://localhost") {
+	if !strings.HasPrefix(req.Msg.Url, "https://") {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("webhook URL must use HTTPS"))
 	}
 
