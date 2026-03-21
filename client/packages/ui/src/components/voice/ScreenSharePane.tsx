@@ -1,5 +1,6 @@
 import {
   useRemoteParticipants,
+  useRoomContext,
   useTracks,
   VideoTrack,
 } from '@livekit/components-react';
@@ -11,7 +12,7 @@ import {
   SpeakerSlashIcon,
 } from '@phosphor-icons/react';
 import { type RemoteParticipant, Track, VideoQuality } from 'livekit-client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
@@ -44,6 +45,41 @@ export function ScreenSharePane({
     return undefined;
   });
   const displayName = useDisplayName(participantIdentity, serverId);
+
+  const room = useRoomContext();
+
+  useEffect(() => {
+    const encoder = new TextEncoder();
+    const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
+
+    // Send join notification
+    room.localParticipant
+      .publishData(
+        encoder.encode(JSON.stringify({ type: 'join' })),
+        {
+          reliable: true,
+          topic: STREAM_VIEWER_TOPIC,
+          destinationIdentities: [participantIdentity],
+        },
+      )
+      .catch(() => {});
+
+    return () => {
+      // Only send leave if room is still connected (prevents stale messages during channel switch)
+      if (room.state === 'connected') {
+        room.localParticipant
+          .publishData(
+            encoder.encode(JSON.stringify({ type: 'leave' })),
+            {
+              reliable: true,
+              topic: STREAM_VIEWER_TOPIC,
+              destinationIdentities: [participantIdentity],
+            },
+          )
+          .catch(() => {});
+      }
+    };
+  }, [room, participantIdentity]);
 
   if (!track) {
     return (

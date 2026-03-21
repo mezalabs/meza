@@ -34,7 +34,6 @@ import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
-const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 /** Applies per-user and global output volumes to a remote participant. */
@@ -130,31 +129,7 @@ function VoiceEventHandler() {
             publication.setVideoQuality(quality);
           }
         }
-        // Notify the streamer that we started watching
-        room.localParticipant
-          .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
-            reliable: true,
-            topic: STREAM_VIEWER_TOPIC,
-            destinationIdentities: [participant.identity],
-          })
-          .catch(() => {});
       }
-    };
-
-    const onTrackUnsubscribed = (
-      track: RemoteTrack,
-      _publication: RemoteTrackPublication,
-      participant: RemoteParticipant,
-    ) => {
-      if (track.source !== Track.Source.ScreenShare) return;
-      // Notify the streamer that we stopped watching
-      room.localParticipant
-        .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
-          reliable: true,
-          topic: STREAM_VIEWER_TOPIC,
-          destinationIdentities: [participant.identity],
-        })
-        .catch(() => {});
     };
 
     const onParticipantConnected = (participant: RemoteParticipant) => {
@@ -326,7 +301,6 @@ function VoiceEventHandler() {
     room.on(RoomEvent.Reconnecting, onReconnecting);
     room.on(RoomEvent.Reconnected, onReconnected);
     room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
-    room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
     room.on(RoomEvent.ParticipantConnected, onParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
     room.on(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
@@ -356,7 +330,6 @@ function VoiceEventHandler() {
       room.off(RoomEvent.Reconnecting, onReconnecting);
       room.off(RoomEvent.Reconnected, onReconnected);
       room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
-      room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
       room.off(RoomEvent.ParticipantConnected, onParticipantConnected);
       room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
       room.off(RoomEvent.LocalTrackPublished, onLocalTrackPublished);

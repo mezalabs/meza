@@ -87,6 +87,7 @@
   --animate-scale-out: scale-out 100ms var(--ease-smooth);
   --animate-slide-down: slide-down 150ms var(--ease-snappy);
   --animate-slide-up: slide-up 150ms var(--ease-snappy);
+  --animate-shimmer: shimmer 1.5s ease-in-out infinite;
 
   @keyframes fade-in {
     from {
@@ -142,6 +143,14 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
     }
   }
 }
