@@ -200,8 +200,8 @@ func (s *voiceService) GetVoiceChannelState(ctx context.Context, req *connect.Re
 
 	participants := make([]*v1.VoiceParticipant, 0, len(resp.Participants))
 	for _, p := range resp.Participants {
-		// Skip hidden preview participants — they should be invisible to users.
-		if strings.HasPrefix(p.Identity, "preview:") {
+		// Skip hidden participants (e.g. stream preview connections).
+		if p.GetPermission().GetHidden() {
 			continue
 		}
 		participants = append(participants, &v1.VoiceParticipant{
