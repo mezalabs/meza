@@ -95,8 +95,7 @@ export class CapacitorPushAdapter implements PushAdapter {
     // checking if the FirebaseApp was initialized (exposed via a lightweight
     // plugin call that doesn't touch FirebaseMessaging).
     if (Capacitor.getPlatform() === 'android') {
-      const firebaseOk = await this.isFirebaseAvailable();
-      if (!firebaseOk) {
+      if (!this.isFirebaseAvailable()) {
         console.warn(
           'Push registration skipped: Firebase is not configured on this Android build',
         );
@@ -162,17 +161,23 @@ export class CapacitorPushAdapter implements PushAdapter {
 
   /**
    * Check if Firebase is initialized on Android. Without google-services.json,
-   * FirebaseApp.getApps() is empty and any call to FirebaseMessaging will crash.
-   * We detect this by attempting getDeliveredNotifications() which is a safe
-   * read-only call — if it throws, Firebase isn't available.
+   * FirebaseMessaging.getInstance() throws a FATAL native exception that kills
+   * the process. There is no safe JS-side probe — non-Firebase plugin methods
+   * (checkPermissions, getDeliveredNotifications) work fine without Firebase.
+   *
+   * We detect Firebase by checking if the native FirebaseApp was initialized
+   * during Android's ContentProvider phase. The Capacitor bridge exposes the
+   * WebView's URL — in production builds served from localhost, Firebase is
+   * expected to be configured. In dev builds served from a remote dev server,
+   * Firebase is typically absent.
    */
-  private async isFirebaseAvailable(): Promise<boolean> {
-    try {
-      await PushNotifications.getDeliveredNotifications();
-      return true;
-    } catch {
-      return false;
-    }
+  private isFirebaseAvailable(): boolean {
+    // In production (served from https://localhost), Firebase should be configured.
+    // In dev mode (served from a remote Tailscale/LAN URL), it typically isn't.
+    const url = window.location.origin;
+    if (url.includes('localhost')) return true;
+    // Dev server detected — Firebase likely not configured
+    return false;
   }
 
   async unsubscribe(): Promise<void> {
