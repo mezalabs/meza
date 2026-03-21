@@ -12,11 +12,18 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useStreamPreview } from '../../hooks/useStreamPreview.ts';
+import {
+  useStreamPreview,
+  type PreviewStatus,
+} from '../../hooks/useStreamPreview.ts';
 
 const HOVER_OPEN_DELAY_MS = 400;
 const HOVER_SWAP_DELAY_MS = 100;
 const HOVER_CLOSE_DELAY_MS = 300;
+
+const NOOP_GET_TRACK = () => undefined as TrackReference | undefined;
+
+// ── Context ──────────────────────────────────────────────────────────
 
 interface StreamPreviewContextValue {
   hoveredId: string | null;
@@ -26,13 +33,17 @@ interface StreamPreviewContextValue {
   onLeave: () => void;
   cancelClose: () => void;
   getTrackRef: (participantId: string) => TrackReference | undefined;
+  // Cross-channel preview state (only meaningful when sameChannel is false)
+  previewStatus: PreviewStatus;
+  previewVideoElement: HTMLVideoElement | null;
 }
 
 const StreamPreviewContext = createContext<StreamPreviewContextValue | null>(
   null,
 );
 
-// Shared hover state logic used by both same-channel and cross-channel providers
+// ── Shared hover timer logic ─────────────────────────────────────────
+
 function useHoverState() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -41,14 +52,11 @@ function useHoverState() {
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const mountedRef = useRef(true);
   const hoveredIdRef = useRef<string | null>(null);
-
   hoveredIdRef.current = hoveredId;
 
   useEffect(() => {
     return () => {
-      mountedRef.current = false;
       clearTimeout(openTimeoutRef.current);
       clearTimeout(closeTimeoutRef.current);
     };
@@ -62,14 +70,14 @@ function useHoverState() {
         ? HOVER_SWAP_DELAY_MS
         : HOVER_OPEN_DELAY_MS;
     openTimeoutRef.current = setTimeout(() => {
-      if (mountedRef.current) setHoveredId(participantId);
+      setHoveredId(participantId);
     }, delay);
   }, []);
 
   const onLeave = useCallback(() => {
     clearTimeout(openTimeoutRef.current);
     closeTimeoutRef.current = setTimeout(() => {
-      if (mountedRef.current) setHoveredId(null);
+      setHoveredId(null);
     }, HOVER_CLOSE_DELAY_MS);
   }, []);
 
@@ -80,9 +88,8 @@ function useHoverState() {
   return { hoveredId, setHoveredId, onEnter, onLeave, cancelClose };
 }
 
-/**
- * Same-channel provider: calls useTracks() from the primary LiveKit room.
- */
+// ── Same-channel provider ────────────────────────────────────────────
+
 function SameChannelProvider({
   channelId,
   children,
@@ -110,7 +117,6 @@ function SameChannelProvider({
     [screenShareTracks],
   );
 
-  // Close popover when hovered track disappears (stream ended)
   useEffect(() => {
     if (hoveredId && !getTrackRef(hoveredId)) {
       setHoveredId(null);
@@ -126,6 +132,8 @@ function SameChannelProvider({
       onLeave,
       cancelClose,
       getTrackRef,
+      previewStatus: 'idle' as PreviewStatus,
+      previewVideoElement: null,
     }),
     [hoveredId, channelId, onEnter, onLeave, cancelClose, getTrackRef],
   );
@@ -137,10 +145,8 @@ function SameChannelProvider({
   );
 }
 
-/**
- * Cross-channel provider: does NOT call useTracks(). Track access is handled
- * per-trigger via useStreamPreview.
- */
+// ── Cross-channel provider ───────────────────────────────────────────
+
 function CrossChannelProvider({
   channelId,
   children,
@@ -150,10 +156,22 @@ function CrossChannelProvider({
 }) {
   const { hoveredId, onEnter, onLeave, cancelClose } = useHoverState();
 
-  const noopGetTrackRef = useCallback(
-    () => undefined as TrackReference | undefined,
-    [],
-  );
+  // Single preview connection shared across all triggers in this channel
+  const preview = useStreamPreview();
+
+  // Drive connect/disconnect from hoveredId changes
+  useEffect(() => {
+    if (hoveredId) {
+      preview.connect(channelId, hoveredId);
+    } else {
+      preview.disconnect();
+    }
+    return () => {
+      preview.disconnect();
+    };
+    // preview.connect/disconnect are stable useCallback refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoveredId, channelId]);
 
   const contextValue = useMemo(
     () => ({
@@ -163,9 +181,19 @@ function CrossChannelProvider({
       onEnter,
       onLeave,
       cancelClose,
-      getTrackRef: noopGetTrackRef,
+      getTrackRef: NOOP_GET_TRACK,
+      previewStatus: preview.status,
+      previewVideoElement: preview.videoElement,
     }),
-    [hoveredId, channelId, onEnter, onLeave, cancelClose, noopGetTrackRef],
+    [
+      hoveredId,
+      channelId,
+      onEnter,
+      onLeave,
+      cancelClose,
+      preview.status,
+      preview.videoElement,
+    ],
   );
 
   return (
@@ -175,10 +203,8 @@ function CrossChannelProvider({
   );
 }
 
-/**
- * Public API: picks the correct provider based on whether the user is
- * connected to the same channel. This avoids conditionally calling useTracks().
- */
+// ── Public provider facade ───────────────────────────────────────────
+
 export function StreamPreviewTrackProvider({
   channelId,
   sameChannel,
@@ -202,11 +228,8 @@ export function StreamPreviewTrackProvider({
   );
 }
 
-/**
- * Wraps a streaming participant row. Renders a Radix HoverCard whose
- * open state is controlled by the parent provider.
- * Only one trigger can be open at a time — no overlapping popovers.
- */
+// ── Trigger (wraps each streaming participant row) ───────────────────
+
 export function StreamPreviewTrigger({
   participantId,
   children,
@@ -215,42 +238,35 @@ export function StreamPreviewTrigger({
   children: ReactNode;
 }) {
   const ctx = useContext(StreamPreviewContext);
+
+  // Keep refs above the early return so hook count is stable
+  const lastTrackRef = useRef<TrackReference | undefined>(undefined);
+
   if (!ctx) return <>{children}</>;
 
   const {
     hoveredId,
     sameChannel,
-    channelId,
     onEnter,
     onLeave,
     cancelClose,
     getTrackRef,
+    previewStatus,
+    previewVideoElement,
   } = ctx;
   const isOpen = hoveredId === participantId;
 
   // Same-channel: get track from primary room
   const trackRef =
     isOpen && sameChannel ? getTrackRef(participantId) : undefined;
-  const lastTrackRef = useRef<TrackReference | undefined>(undefined);
   if (trackRef) lastTrackRef.current = trackRef;
   const displayTrackRef =
     trackRef ?? (isOpen && sameChannel ? lastTrackRef.current : undefined);
 
-  // Cross-channel: use secondary preview connection
-  const preview = useStreamPreview();
-
-  useEffect(() => {
-    if (!sameChannel && isOpen) {
-      preview.connect(channelId, participantId);
-    } else if (!sameChannel && !isOpen) {
-      preview.disconnect();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sameChannel, isOpen, channelId, participantId]);
-
   const hasContent = sameChannel
     ? displayTrackRef !== undefined
-    : preview.status === 'connected' || preview.status === 'connecting';
+    : isOpen &&
+      (previewStatus === 'connected' || previewStatus === 'connecting');
 
   return (
     <HoverCard.Root open={isOpen && hasContent}>
@@ -273,10 +289,10 @@ export function StreamPreviewTrigger({
         >
           {sameChannel && displayTrackRef ? (
             <SameChannelPreview trackRef={displayTrackRef} />
-          ) : !sameChannel ? (
+          ) : !sameChannel && isOpen ? (
             <CrossChannelPreview
-              videoElement={preview.videoElement}
-              status={preview.status}
+              videoElement={previewVideoElement}
+              status={previewStatus}
             />
           ) : null}
         </HoverCard.Content>
@@ -284,6 +300,8 @@ export function StreamPreviewTrigger({
     </HoverCard.Root>
   );
 }
+
+// ── Preview content components ───────────────────────────────────────
 
 function SameChannelPreview({ trackRef }: { trackRef: TrackReference }) {
   return (
@@ -302,7 +320,7 @@ function CrossChannelPreview({
   status,
 }: {
   videoElement: HTMLVideoElement | null;
-  status: string;
+  status: PreviewStatus;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -317,6 +335,8 @@ function CrossChannelPreview({
       if (container.contains(videoElement)) {
         container.removeChild(videoElement);
       }
+      videoElement.pause();
+      videoElement.srcObject = null;
     };
   }, [videoElement]);
 

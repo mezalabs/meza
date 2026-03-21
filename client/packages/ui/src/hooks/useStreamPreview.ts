@@ -6,10 +6,14 @@ import {
   Track,
   VideoQuality,
 } from 'livekit-client';
-import type { RemoteParticipant, RemoteTrack } from 'livekit-client';
+import type {
+  RemoteParticipant,
+  RemoteTrack,
+  RemoteTrackPublication,
+} from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-type PreviewStatus = 'idle' | 'connecting' | 'connected' | 'error';
+export type PreviewStatus = 'idle' | 'connecting' | 'connected' | 'error';
 
 /**
  * Manages a secondary LiveKit room connection for cross-channel stream preview.
@@ -23,15 +27,14 @@ export function useStreamPreview() {
   );
   const roomRef = useRef<Room | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const mountedRef = useRef(true);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      mountedRef.current = false;
       abortRef.current?.abort();
       const room = roomRef.current;
       if (room) {
+        detachAllTracks(room);
         room.removeAllListeners();
         if (room.state !== ConnectionState.Disconnected) {
           room.disconnect(true);
@@ -42,11 +45,13 @@ export function useStreamPreview() {
 
   const connect = useCallback(
     async (channelId: string, participantId: string) => {
-      // Cancel any previous preview — remove listeners first to prevent
-      // stale events firing during disconnect
+      // Cancel any previous preview
       abortRef.current?.abort();
       const prevRoom = roomRef.current;
+      // Null out ref before awaiting to prevent concurrent disconnect calls
+      roomRef.current = null;
       if (prevRoom) {
+        detachAllTracks(prevRoom);
         prevRoom.removeAllListeners();
         if (prevRoom.state !== ConnectionState.Disconnected) {
           await prevRoom.disconnect(true);
@@ -55,19 +60,14 @@ export function useStreamPreview() {
 
       const abort = new AbortController();
       abortRef.current = abort;
-      roomRef.current = null;
 
-      if (mountedRef.current) {
-        setStatus('connecting');
-        setVideoElement(null);
-      }
+      setStatus('connecting');
+      setVideoElement(null);
 
       try {
-        // Fetch preview token from server
         const res = await getStreamPreviewToken(channelId);
         if (abort.signal.aborted) return;
 
-        // Create secondary room with minimal options
         const room = new Room({
           adaptiveStream: false,
           dynacast: false,
@@ -75,17 +75,15 @@ export function useStreamPreview() {
         });
         roomRef.current = room;
 
-        // Listen for the target screen share track
         room.on(
           RoomEvent.TrackSubscribed,
           (
             track: RemoteTrack,
-            _pub: unknown,
+            _pub: RemoteTrackPublication,
             participant: RemoteParticipant,
           ) => {
             if (
               abort.signal.aborted ||
-              !mountedRef.current ||
               participant.identity !== participantId ||
               track.source !== Track.Source.ScreenShare
             )
@@ -97,20 +95,22 @@ export function useStreamPreview() {
           },
         );
 
-        // Close preview if the track is unpublished while connected
-        room.on(RoomEvent.TrackUnpublished, (_pub: unknown, participant: RemoteParticipant) => {
-          if (participant.identity === participantId) {
-            if (mountedRef.current) {
+        room.on(
+          RoomEvent.TrackUnpublished,
+          (_pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+            if (abort.signal.aborted) return;
+            if (participant.identity === participantId) {
               setStatus('idle');
               setVideoElement(null);
             }
-          }
-        });
+          },
+        );
 
         await room.connect(res.livekitUrl, res.livekitToken, {
           autoSubscribe: false,
         });
         if (abort.signal.aborted) {
+          room.removeAllListeners();
           await room.disconnect(true);
           return;
         }
@@ -125,7 +125,7 @@ export function useStreamPreview() {
           if (pub.simulcasted) pub.setVideoQuality(VideoQuality.LOW);
         }
       } catch {
-        if (mountedRef.current && !abort.signal.aborted) {
+        if (!abort.signal.aborted) {
           setStatus('error');
         }
       }
@@ -136,18 +136,26 @@ export function useStreamPreview() {
   const disconnect = useCallback(async () => {
     abortRef.current?.abort();
     const room = roomRef.current;
+    roomRef.current = null;
     if (room) {
+      detachAllTracks(room);
       room.removeAllListeners();
       if (room.state !== ConnectionState.Disconnected) {
         await room.disconnect(true);
       }
     }
-    roomRef.current = null;
-    if (mountedRef.current) {
-      setStatus('idle');
-      setVideoElement(null);
-    }
+    setStatus('idle');
+    setVideoElement(null);
   }, []);
 
   return { status, videoElement, connect, disconnect };
+}
+
+/** Detach all remote tracks to prevent leaked video elements. */
+function detachAllTracks(room: Room) {
+  for (const p of room.remoteParticipants.values()) {
+    for (const pub of p.trackPublications.values()) {
+      pub.track?.detach();
+    }
+  }
 }
