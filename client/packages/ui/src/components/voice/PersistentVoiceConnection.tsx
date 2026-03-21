@@ -322,7 +322,7 @@ function VoiceEventHandler() {
     const channelId = useVoiceStore.getState().channelId;
     if (channelId) {
       for (const p of room.remoteParticipants.values()) {
-        if (!p.identity) continue;
+        if (!p.identity || p.identity.startsWith('preview:')) continue;
         useVoiceParticipantsStore.getState().upsertParticipant(channelId, {
           userId: p.identity,
           isMuted: !p.isMicrophoneEnabled,
