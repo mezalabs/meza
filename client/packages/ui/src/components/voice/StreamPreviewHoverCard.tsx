@@ -32,20 +32,8 @@ const StreamPreviewContext = createContext<StreamPreviewContextValue | null>(
   null,
 );
 
-/**
- * Wraps a voice channel's participant list. When sameChannel is true,
- * uses useTracks() from the primary LiveKit room context. When false,
- * delegates to useStreamPreview for a secondary hidden connection.
- */
-export function StreamPreviewTrackProvider({
-  channelId,
-  sameChannel,
-  children,
-}: {
-  channelId: string;
-  sameChannel: boolean;
-  children: ReactNode;
-}) {
+// Shared hover state logic used by both same-channel and cross-channel providers
+function useHoverState() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const openTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -58,35 +46,6 @@ export function StreamPreviewTrackProvider({
 
   hoveredIdRef.current = hoveredId;
 
-  // Same-channel: get tracks from the primary LiveKit room
-  const allTracks = sameChannel
-    ? // eslint-disable-next-line react-hooks/rules-of-hooks
-      useTracks([Track.Source.ScreenShare])
-    : [];
-  const screenShareTracks = useMemo(
-    () =>
-      allTracks.filter(
-        (t): t is TrackReference => t.publication !== undefined,
-      ),
-    [allTracks],
-  );
-
-  const getTrackRef = useCallback(
-    (participantId: string) =>
-      screenShareTracks.find(
-        (t) => t.participant.identity === participantId,
-      ),
-    [screenShareTracks],
-  );
-
-  // Close popover when hovered track disappears (same-channel only)
-  useEffect(() => {
-    if (sameChannel && hoveredId && !getTrackRef(hoveredId)) {
-      setHoveredId(null);
-    }
-  }, [sameChannel, hoveredId, getTrackRef]);
-
-  // Cleanup timers and mounted flag on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -118,17 +77,57 @@ export function StreamPreviewTrackProvider({
     clearTimeout(closeTimeoutRef.current);
   }, []);
 
+  return { hoveredId, setHoveredId, onEnter, onLeave, cancelClose };
+}
+
+/**
+ * Same-channel provider: calls useTracks() from the primary LiveKit room.
+ */
+function SameChannelProvider({
+  channelId,
+  children,
+}: {
+  channelId: string;
+  children: ReactNode;
+}) {
+  const { hoveredId, setHoveredId, onEnter, onLeave, cancelClose } =
+    useHoverState();
+
+  const allTracks = useTracks([Track.Source.ScreenShare]);
+  const screenShareTracks = useMemo(
+    () =>
+      allTracks.filter(
+        (t): t is TrackReference => t.publication !== undefined,
+      ),
+    [allTracks],
+  );
+
+  const getTrackRef = useCallback(
+    (participantId: string) =>
+      screenShareTracks.find(
+        (t) => t.participant.identity === participantId,
+      ),
+    [screenShareTracks],
+  );
+
+  // Close popover when hovered track disappears (stream ended)
+  useEffect(() => {
+    if (hoveredId && !getTrackRef(hoveredId)) {
+      setHoveredId(null);
+    }
+  }, [hoveredId, getTrackRef, setHoveredId]);
+
   const contextValue = useMemo(
     () => ({
       hoveredId,
-      sameChannel,
+      sameChannel: true,
       channelId,
       onEnter,
       onLeave,
       cancelClose,
       getTrackRef,
     }),
-    [hoveredId, sameChannel, channelId, onEnter, onLeave, cancelClose, getTrackRef],
+    [hoveredId, channelId, onEnter, onLeave, cancelClose, getTrackRef],
   );
 
   return (
@@ -139,12 +138,74 @@ export function StreamPreviewTrackProvider({
 }
 
 /**
+ * Cross-channel provider: does NOT call useTracks(). Track access is handled
+ * per-trigger via useStreamPreview.
+ */
+function CrossChannelProvider({
+  channelId,
+  children,
+}: {
+  channelId: string;
+  children: ReactNode;
+}) {
+  const { hoveredId, onEnter, onLeave, cancelClose } = useHoverState();
+
+  const noopGetTrackRef = useCallback(
+    () => undefined as TrackReference | undefined,
+    [],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      hoveredId,
+      sameChannel: false,
+      channelId,
+      onEnter,
+      onLeave,
+      cancelClose,
+      getTrackRef: noopGetTrackRef,
+    }),
+    [hoveredId, channelId, onEnter, onLeave, cancelClose, noopGetTrackRef],
+  );
+
+  return (
+    <StreamPreviewContext.Provider value={contextValue}>
+      {children}
+    </StreamPreviewContext.Provider>
+  );
+}
+
+/**
+ * Public API: picks the correct provider based on whether the user is
+ * connected to the same channel. This avoids conditionally calling useTracks().
+ */
+export function StreamPreviewTrackProvider({
+  channelId,
+  sameChannel,
+  children,
+}: {
+  channelId: string;
+  sameChannel: boolean;
+  children: ReactNode;
+}) {
+  if (sameChannel) {
+    return (
+      <SameChannelProvider channelId={channelId}>
+        {children}
+      </SameChannelProvider>
+    );
+  }
+  return (
+    <CrossChannelProvider channelId={channelId}>
+      {children}
+    </CrossChannelProvider>
+  );
+}
+
+/**
  * Wraps a streaming participant row. Renders a Radix HoverCard whose
- * open state is controlled by the parent StreamPreviewTrackProvider.
+ * open state is controlled by the parent provider.
  * Only one trigger can be open at a time — no overlapping popovers.
- *
- * For same-channel: uses TrackReference from the primary room.
- * For cross-channel: uses useStreamPreview to establish a secondary connection.
  */
 export function StreamPreviewTrigger({
   participantId,
@@ -168,7 +229,8 @@ export function StreamPreviewTrigger({
   const isOpen = hoveredId === participantId;
 
   // Same-channel: get track from primary room
-  const trackRef = isOpen && sameChannel ? getTrackRef(participantId) : undefined;
+  const trackRef =
+    isOpen && sameChannel ? getTrackRef(participantId) : undefined;
   const lastTrackRef = useRef<TrackReference | undefined>(undefined);
   if (trackRef) lastTrackRef.current = trackRef;
   const displayTrackRef =
@@ -177,7 +239,6 @@ export function StreamPreviewTrigger({
   // Cross-channel: use secondary preview connection
   const preview = useStreamPreview();
 
-  // Connect/disconnect secondary room based on hover state
   useEffect(() => {
     if (!sameChannel && isOpen) {
       preview.connect(channelId, participantId);
@@ -245,7 +306,6 @@ function CrossChannelPreview({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Attach the video element from the secondary room
   useEffect(() => {
     const container = containerRef.current;
     if (!container || !videoElement) return;
