@@ -88,6 +88,22 @@ export class CapacitorPushAdapter implements PushAdapter {
 
   /** Register with APNs/FCM and return the token from the Capacitor plugin. */
   private async registerNative(): Promise<string | null> {
+    // On Android, PushNotifications.register() calls
+    // FirebaseMessaging.getInstance() which throws a FATAL native exception
+    // if google-services.json is missing. This kills the entire process —
+    // JS try/catch cannot catch it. Probe Firebase availability first by
+    // checking if the FirebaseApp was initialized (exposed via a lightweight
+    // plugin call that doesn't touch FirebaseMessaging).
+    if (Capacitor.getPlatform() === 'android') {
+      const firebaseOk = await this.isFirebaseAvailable();
+      if (!firebaseOk) {
+        console.warn(
+          'Push registration skipped: Firebase is not configured on this Android build',
+        );
+        return null;
+      }
+    }
+
     let settled = false;
     let doResolve: (value: string | null) => void = () => {};
     const result = new Promise<string | null>((r) => {
@@ -142,6 +158,21 @@ export class CapacitorPushAdapter implements PushAdapter {
     }
 
     return result;
+  }
+
+  /**
+   * Check if Firebase is initialized on Android. Without google-services.json,
+   * FirebaseApp.getApps() is empty and any call to FirebaseMessaging will crash.
+   * We detect this by attempting getDeliveredNotifications() which is a safe
+   * read-only call — if it throws, Firebase isn't available.
+   */
+  private async isFirebaseAvailable(): Promise<boolean> {
+    try {
+      await PushNotifications.getDeliveredNotifications();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async unsubscribe(): Promise<void> {
