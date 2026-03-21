@@ -165,6 +165,11 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
   })),
 );
 
-// Start persisting emoji changes to localStorage (debounced).
-import { initEmojiCachePersistence } from '../lib/emojiCache.ts';
-initEmojiCachePersistence();
+// Defer persistence setup to a microtask so all store modules finish
+// evaluating first. This avoids side effects during module evaluation
+// that can race with auth store initialization.
+queueMicrotask(() => {
+  import('../lib/emojiCache.ts').then(({ initEmojiCachePersistence }) => {
+    initEmojiCachePersistence();
+  });
+});
