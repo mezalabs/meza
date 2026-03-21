@@ -33,3 +33,7 @@ export async function leaveVoiceChannel(channelId: string) {
 export async function getVoiceChannelState(channelId: string) {
   return voiceClient.getVoiceChannelState({ channelId });
 }
+
+export async function getStreamPreviewToken(channelId: string) {
+  return voiceClient.getStreamPreviewToken({ channelId });
+}

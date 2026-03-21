@@ -164,6 +164,7 @@ export {
 } from './api/profile.ts';
 // API — voice
 export {
+  getStreamPreviewToken,
   getVoiceChannelState,
   joinVoiceChannel,
   leaveVoiceChannel,
