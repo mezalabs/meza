@@ -248,7 +248,7 @@ func (s *chatService) AddBotToServer(ctx context.Context, req *connect.Request[v
 	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 		return nil, err
 	}
-	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageBots)
 	if err != nil {
 		return nil, err
 	}
@@ -347,12 +347,12 @@ func (s *chatService) RemoveBotFromServer(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
 	}
 
-	// Allow removal by: server admin (ManageServer) OR bot owner.
+	// Allow removal by: server admin (ManageBots) OR bot owner.
 	if bot.BotOwnerID != userID {
 		if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 			return nil, err
 		}
-		_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+		_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageBots)
 		if err != nil {
 			return nil, err
 		}
@@ -427,11 +427,11 @@ func (s *chatService) CreateWebhook(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("webhook URL must use HTTPS"))
 	}
 
-	// Require ManageServer permission.
+	// Require ManageWebhooks permission.
 	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 		return nil, err
 	}
-	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageWebhooks)
 	if err != nil {
 		return nil, err
 	}
@@ -497,14 +497,14 @@ func (s *chatService) DeleteWebhook(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("webhook not found"))
 	}
 
-	// Allow deletion by: server admin (ManageServer) OR bot owner.
+	// Allow deletion by: server admin (ManageWebhooks) OR bot owner.
 	bot, err := s.botStore.GetBotUser(ctx, webhook.BotUserID)
 	if err != nil || bot.BotOwnerID != userID {
-		// Check ManageServer permission.
+		// Check ManageWebhooks permission.
 		if err := s.requireMembership(ctx, userID, webhook.ServerID); err != nil {
 			return nil, err
 		}
-		_, _, _, err := s.requirePermission(ctx, userID, webhook.ServerID, permissions.ManageServer)
+		_, _, _, err := s.requirePermission(ctx, userID, webhook.ServerID, permissions.ManageWebhooks)
 		if err != nil {
 			return nil, err
 		}
@@ -527,11 +527,11 @@ func (s *chatService) ListWebhooks(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
 	}
 
-	// Require ManageServer permission.
+	// Require ManageWebhooks permission.
 	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
 		return nil, err
 	}
-	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageServer)
+	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageWebhooks)
 	if err != nil {
 		return nil, err
 	}

@@ -28,9 +28,11 @@ export const Permissions = {
   MOVE_MEMBERS: 1n << 26n,
   CHANGE_NICKNAME: 1n << 27n,
   MANAGE_NICKNAMES: 1n << 28n,
+  MANAGE_BOTS: 1n << 29n,
+  MANAGE_WEBHOOKS: 1n << 30n,
 } as const;
 
-/** OR of all 29 permission bits. */
+/** OR of all 31 permission bits. */
 export const ALL_PERMISSIONS = Object.values(Permissions).reduce(
   (acc, v) => acc | v,
   0n,
@@ -250,6 +252,16 @@ export const PERMISSION_INFO = {
     description: "Allows changing other members' nicknames",
     category: 'moderation',
   },
+  MANAGE_BOTS: {
+    name: 'Manage Bots',
+    description: 'Allows adding and removing bots from the server',
+    category: 'server',
+  },
+  MANAGE_WEBHOOKS: {
+    name: 'Manage Webhooks',
+    description: 'Allows configuring outgoing webhooks for bots',
+    category: 'server',
+  },
 } as const satisfies Record<string, PermInfo>;
 
 /** Group permission keys by category for UI rendering. */
@@ -287,6 +299,8 @@ export const PERMISSIONS_BY_CATEGORY: Record<PermCategory, PermissionKey[]> = {
     'MANAGE_CHANNELS',
     'MANAGE_ROLES',
     'MANAGE_EMOJIS',
+    'MANAGE_BOTS',
+    'MANAGE_WEBHOOKS',
     'VIEW_AUDIT_LOG',
   ],
 };

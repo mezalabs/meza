@@ -33,6 +33,8 @@ const (
 	MoveMembers        int64 = 1 << 26 // voice: move users between channels
 	ChangeNickname     int64 = 1 << 27 // self nickname
 	ManageNicknames    int64 = 1 << 28 // others' nicknames
+	ManageBots         int64 = 1 << 29 // add/remove bots from server
+	ManageWebhooks     int64 = 1 << 30 // configure outgoing webhooks
 
 	// AllPermissions is the union of all defined permissions.
 	AllPermissions = KickMembers | BanMembers | ManageRoles | Administrator |
@@ -41,7 +43,8 @@ const (
 		AddReactions | ViewChannel | SendMessages | Connect | MentionEveryone |
 		ManageServer | CreateInvite | EmbedLinks | AttachFiles |
 		ReadMessageHistory | UseExternalEmojis | Speak | MuteMembers |
-		DeafenMembers | MoveMembers | ChangeNickname | ManageNicknames
+		DeafenMembers | MoveMembers | ChangeNickname | ManageNicknames |
+		ManageBots | ManageWebhooks
 
 	// ChannelScopedPermissions contains the bits valid in permission overrides.
 	// Server-wide permissions (NOT overridable per-channel):
@@ -61,9 +64,8 @@ const (
 )
 
 // Intentionally excluded Discord permissions (no corresponding Meza feature):
-// - ManageWebhooks: no webhook system
 // - SendTTSMessages: no TTS feature
-// - UseApplicationCommands: no bot/application framework
+// - UseApplicationCommands: no slash commands (yet)
 // - ManageEvents: no scheduled events
 // - ManageThreads/CreatePublicThreads/CreatePrivateThreads/SendMessagesInThreads: no threads
 // - UseVAD: not a meaningful restriction
