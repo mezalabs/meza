@@ -1,15 +1,15 @@
 import { getStreamPreviewToken } from '@meza/core';
+import type {
+  RemoteParticipant,
+  RemoteTrack,
+  RemoteTrackPublication,
+} from 'livekit-client';
 import {
   ConnectionState,
   Room,
   RoomEvent,
   Track,
   VideoQuality,
-} from 'livekit-client';
-import type {
-  RemoteParticipant,
-  RemoteTrack,
-  RemoteTrackPublication,
 } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -117,9 +117,7 @@ export function useStreamPreview() {
 
         // Subscribe to existing screen share if already published
         const participant = room.remoteParticipants.get(participantId);
-        const pub = participant?.getTrackPublication(
-          Track.Source.ScreenShare,
-        );
+        const pub = participant?.getTrackPublication(Track.Source.ScreenShare);
         if (pub) {
           pub.setSubscribed(true);
           if (pub.simulcasted) pub.setVideoQuality(VideoQuality.LOW);

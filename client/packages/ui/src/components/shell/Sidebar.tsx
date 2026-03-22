@@ -53,7 +53,14 @@ import {
   WrenchIcon,
 } from '@phosphor-icons/react';
 import { ParticipantEvent } from 'livekit-client';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
@@ -1328,7 +1335,12 @@ function SidebarChannelItem({
 
       {isVoice && voiceParticipants.length > 0 && (
         <div className="flex flex-col gap-0.5 py-0.5 pl-6">
-          <MaybeStreamPreview enabled={showStreamPreview} channelId={channelId} channelName={channelName} sameChannel={isInSameChannel}>
+          <MaybeStreamPreview
+            enabled={showStreamPreview}
+            channelId={channelId}
+            channelName={channelName}
+            sameChannel={isInSameChannel}
+          >
             {voiceParticipants.map((p) => {
               const isSelf = p.userId === currentUserId;
               const el = (
@@ -1370,11 +1382,15 @@ function MaybeStreamPreview({
   children: ReactNode;
 }) {
   return enabled ? (
-    <StreamPreviewTrackProvider channelId={channelId} channelName={channelName} sameChannel={sameChannel}>
+    <StreamPreviewTrackProvider
+      channelId={channelId}
+      channelName={channelName}
+      sameChannel={sameChannel}
+    >
       {children}
     </StreamPreviewTrackProvider>
   ) : (
-    <>{children}</>
+    children
   );
 }
 

@@ -1,10 +1,11 @@
-import * as HoverCard from '@radix-ui/react-hover-card';
-import { useTracks, VideoTrack } from '@livekit/components-react';
 import type { TrackReference } from '@livekit/components-react';
+import { useTracks, VideoTrack } from '@livekit/components-react';
+import { useVoiceParticipantsStore } from '@meza/core';
+import * as HoverCard from '@radix-ui/react-hover-card';
 import { Track } from 'livekit-client';
 import {
-  type ReactNode,
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -13,12 +14,11 @@ import {
   useState,
 } from 'react';
 import {
-  useStreamPreview,
   type PreviewStatus,
+  useStreamPreview,
 } from '../../hooks/useStreamPreview.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
-import { useVoiceParticipantsStore } from '@meza/core';
 
 const HOVER_OPEN_DELAY_MS = 400;
 const HOVER_SWAP_DELAY_MS = 100;
@@ -70,9 +70,7 @@ function useHoverState() {
     clearTimeout(closeTimeoutRef.current);
     clearTimeout(openTimeoutRef.current);
     const delay =
-      hoveredIdRef.current !== null
-        ? HOVER_SWAP_DELAY_MS
-        : HOVER_OPEN_DELAY_MS;
+      hoveredIdRef.current !== null ? HOVER_SWAP_DELAY_MS : HOVER_OPEN_DELAY_MS;
     openTimeoutRef.current = setTimeout(() => {
       setHoveredId(participantId);
     }, delay);
@@ -144,17 +142,13 @@ function SameChannelProvider({
   const allTracks = useTracks([Track.Source.ScreenShare]);
   const screenShareTracks = useMemo(
     () =>
-      allTracks.filter(
-        (t): t is TrackReference => t.publication !== undefined,
-      ),
+      allTracks.filter((t): t is TrackReference => t.publication !== undefined),
     [allTracks],
   );
 
   const getTrackRef = useCallback(
     (participantId: string) =>
-      screenShareTracks.find(
-        (t) => t.participant.identity === participantId,
-      ),
+      screenShareTracks.find((t) => t.participant.identity === participantId),
     [screenShareTracks],
   );
 
@@ -177,7 +171,15 @@ function SameChannelProvider({
       previewStatus: 'idle' as PreviewStatus,
       previewVideoElement: null,
     }),
-    [hoveredId, channelId, onEnter, onLeave, cancelClose, getTrackRef, onWatchStream],
+    [
+      hoveredId,
+      channelId,
+      onEnter,
+      onLeave,
+      cancelClose,
+      getTrackRef,
+      onWatchStream,
+    ],
   );
 
   return (
@@ -203,20 +205,19 @@ function CrossChannelProvider({
 
   // Single preview connection shared across all triggers in this channel
   const preview = useStreamPreview();
+  const { connect: previewConnect, disconnect: previewDisconnect } = preview;
 
   // Drive connect/disconnect from hoveredId changes
   useEffect(() => {
     if (hoveredId) {
-      preview.connect(channelId, hoveredId);
+      previewConnect(channelId, hoveredId);
     } else {
-      preview.disconnect();
+      previewDisconnect();
     }
     return () => {
-      preview.disconnect();
+      previewDisconnect();
     };
-    // preview.connect/disconnect are stable useCallback refs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoveredId, channelId]);
+  }, [hoveredId, channelId, previewConnect, previewDisconnect]);
 
   const contextValue = useMemo(
     () => ({
@@ -321,10 +322,8 @@ export function StreamPreviewTrigger({
   return (
     <HoverCard.Root open={isOpen && hasContent}>
       <HoverCard.Trigger asChild>
-        <div
-          onMouseEnter={() => onEnter(participantId)}
-          onMouseLeave={onLeave}
-        >
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: hover trigger for stream preview, no keyboard interaction needed */}
+        <div onMouseEnter={() => onEnter(participantId)} onMouseLeave={onLeave}>
           {children}
         </div>
       </HoverCard.Trigger>

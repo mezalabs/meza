@@ -54,28 +54,22 @@ export function ScreenSharePane({
   useEffect(() => {
     // Notify the streamer that we started watching
     room.localParticipant
-      .publishData(
-        encoder.encode(JSON.stringify({ type: 'join' })),
-        {
-          reliable: true,
-          topic: STREAM_VIEWER_TOPIC,
-          destinationIdentities: [participantIdentity],
-        },
-      )
+      .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
+        reliable: true,
+        topic: STREAM_VIEWER_TOPIC,
+        destinationIdentities: [participantIdentity],
+      })
       .catch(() => {}); // best-effort — may fail during teardown
 
     return () => {
       // Only send leave if room is still connected or reconnecting
       if (room.state === 'connected' || room.state === 'reconnecting') {
         room.localParticipant
-          .publishData(
-            encoder.encode(JSON.stringify({ type: 'leave' })),
-            {
-              reliable: true,
-              topic: STREAM_VIEWER_TOPIC,
-              destinationIdentities: [participantIdentity],
-            },
-          )
+          .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
+            reliable: true,
+            topic: STREAM_VIEWER_TOPIC,
+            destinationIdentities: [participantIdentity],
+          })
           .catch(() => {}); // best-effort — may fail during teardown
       }
     };
