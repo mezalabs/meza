@@ -68,6 +68,7 @@ export async function voiceConnect(channelId: string, channelName: string) {
       isMuted: false,
       isDeafened: false,
       isStreamingVideo: false,
+      isEncrypted: false,
     });
   }
 

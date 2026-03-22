@@ -94,6 +94,14 @@ function VoiceEventHandler() {
     return () => setVoiceRoom(null);
   }, [room]);
 
+  // Enable E2EE on the room — setupE2EE() in the Room constructor only
+  // configures the infrastructure (worker, key provider), but the local
+  // participant's encryptionType stays NONE until setE2EEEnabled(true) is
+  // called, which tells the worker to actually encrypt frames.
+  useEffect(() => {
+    room.setE2EEEnabled(true).catch(() => {});
+  }, [room]);
+
   useEffect(() => {
     const onReconnecting = () => {
       useVoiceStore.getState().setReconnecting();
@@ -199,6 +207,7 @@ function VoiceEventHandler() {
           isMuted: !participant.isMicrophoneEnabled,
           isDeafened: false,
           isStreamingVideo: participant.isScreenShareEnabled,
+          isEncrypted: false,
         });
       }
     };
@@ -370,20 +379,42 @@ function VoiceEventHandler() {
       enabled: boolean,
       participant?: Participant,
     ) => {
-      if (!enabled && participant) {
-        useToastStore
+      const channelId = useVoiceStore.getState().channelId;
+      if (!participant || !channelId) return;
+
+      // Check previous status before updating — only warn when a
+      // previously-encrypted participant loses encryption, not during
+      // the initial handshake (where status starts as false).
+      if (!enabled) {
+        const wasEncrypted = useVoiceParticipantsStore
           .getState()
-          .addToast(
-            `${participant.identity} is not using encryption`,
-            'warning',
+          .byChannel[channelId]?.some(
+            (p) => p.userId === participant.identity && p.isEncrypted,
           );
+        if (wasEncrypted) {
+          useToastStore
+            .getState()
+            .addToast(
+              `${participant.identity} is no longer using encryption`,
+              'warning',
+            );
+        }
       }
+
+      // Update the participant's encryption status in the store
+      useVoiceParticipantsStore
+        .getState()
+        .updateParticipant(channelId, participant.identity, {
+          isEncrypted: enabled,
+        });
     };
 
     const onEncryptionError = (error: Error) => {
       e2eeErrorCount++;
-      console.error('[E2EE] Encryption error:', error);
-      if (e2eeErrorCount >= 10) {
+      if (e2eeErrorCount <= 10) {
+        console.error('[E2EE] Encryption error:', error);
+      }
+      if (e2eeErrorCount === 10) {
         useToastStore
           .getState()
           .addToast(
@@ -393,11 +424,46 @@ function VoiceEventHandler() {
       }
     };
 
+    // Sync encryption status from LiveKit participant objects into the store.
+    // Called at mount and on Connected to catch status the event may have
+    // fired before we subscribed (e.g. React Strict Mode double-mount).
+    const syncEncryptionStatus = () => {
+      const channelId = useVoiceStore.getState().channelId;
+      if (!channelId) return;
+      // Local participant
+      if (room.localParticipant.identity) {
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, room.localParticipant.identity, {
+            isEncrypted: room.localParticipant.isEncrypted,
+          });
+      }
+      // Remote participants
+      for (const p of room.remoteParticipants.values()) {
+        if (!p.identity) continue;
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, p.identity, {
+            isEncrypted: p.isEncrypted,
+          });
+      }
+    };
+
+    // E2EE status isn't available immediately on Connected — the worker
+    // needs time to process the first frames.  Poll briefly after connect
+    // so we catch the status even if the event fired before we subscribed.
+    let encryptionPollTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onConnected = () => {
+      encryptionPollTimer = setTimeout(syncEncryptionStatus, 2000);
+    };
+
     room.on(
       RoomEvent.ParticipantEncryptionStatusChanged,
       onEncryptionStatusChanged,
     );
     room.on(RoomEvent.EncryptionError, onEncryptionError);
+    room.on(RoomEvent.Connected, onConnected);
 
     // Seed remote participants from current room state on mount.
     // Local user is already handled optimistically by useVoiceConnection.
@@ -410,8 +476,11 @@ function VoiceEventHandler() {
           isMuted: !p.isMicrophoneEnabled,
           isDeafened: false,
           isStreamingVideo: p.isScreenShareEnabled,
+          isEncrypted: p.isEncrypted,
         });
       }
+      // For already-connected rooms, poll after a delay to let E2EE settle
+      encryptionPollTimer = setTimeout(syncEncryptionStatus, 2000);
     }
 
     return () => {
@@ -433,6 +502,8 @@ function VoiceEventHandler() {
         onEncryptionStatusChanged,
       );
       room.off(RoomEvent.EncryptionError, onEncryptionError);
+      room.off(RoomEvent.Connected, onConnected);
+      clearTimeout(encryptionPollTimer);
     };
   }, [room]);
 
@@ -660,27 +731,21 @@ export function PersistentVoiceConnection({
     [inputDeviceId, noiseSuppression, echoCancellation, autoGainControl],
   );
 
-  // E2EE worker — created once, terminated on unmount
+  // E2EE worker — created once. LiveKit's Room manages the worker lifecycle
+  // through its E2EEManager; we must NOT terminate it manually because React
+  // Strict Mode re-runs effects with the same memoized (now-dead) worker.
   const e2eeWorker = useMemo(() => createE2EEWorker(), []);
-  useEffect(() => () => e2eeWorker.terminate(), [e2eeWorker]);
 
   const roomOptions = useMemo(
     () => ({
       webAudioMix: true,
-      encryption: {
+      e2ee: {
         keyProvider: e2eeKeyProvider,
         worker: e2eeWorker,
       },
     }),
     [e2eeWorker],
   );
-
-  const handleEncryptionError = useCallback((error: Error) => {
-    console.error('[E2EE] LiveKitRoom encryption error:', error);
-    useToastStore
-      .getState()
-      .addToast('Voice encryption error \u2014 try rejoining', 'error');
-  }, []);
 
   return (
     <LiveKitRoom
@@ -690,7 +755,6 @@ export function PersistentVoiceConnection({
       video={false}
       connect={isActive}
       options={roomOptions}
-      onEncryptionError={handleEncryptionError}
       onDisconnected={() => {
         // Don't reset state if we're mid-switch (connecting to a new channel).
         // The old room's disconnect event would otherwise nuke the new connection.

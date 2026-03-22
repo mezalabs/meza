@@ -285,6 +285,12 @@ function ParticipantRow({
         (p) => p.userId === userId && p.isDeafened,
       ) ?? false,
   );
+  const isEncrypted = useVoiceParticipantsStore(
+    (s) =>
+      s.byChannel[channelId]?.some(
+        (p) => p.userId === userId && p.isEncrypted,
+      ) ?? false,
+  );
   const displayName = useDisplayName(userId, serverId);
   const avatarUrl = useUsersStore((s) => s.profiles[userId]?.avatarUrl);
   const perUserVolume = useAudioSettingsStore(
@@ -332,9 +338,11 @@ function ParticipantRow({
         </span>
 
         {/* Encryption indicator */}
-        <span className="text-success" title="End-to-end encrypted">
-          <LockKey size={12} weight="fill" aria-hidden="true" />
-        </span>
+        {isEncrypted && (
+          <span className="text-success" title="End-to-end encrypted">
+            <LockKey size={12} weight="fill" aria-hidden="true" />
+          </span>
+        )}
 
         {/* Screen share indicator */}
         {isScreenSharing && (

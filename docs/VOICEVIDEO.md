@@ -142,11 +142,14 @@ This ensures the same raw key is never used for both text AES-256-GCM encryption
 
 ### Integration
 
+- **Room options**: E2EE config is passed via the `e2ee` key in `RoomOptions` (not `encryption` — the `@livekit/components-react` replacer only handles `"e2ee"` for stable JSON serialization; using `"encryption"` causes an infinite render loop).
+- **Activation**: `room.setE2EEEnabled(true)` must be called explicitly after the room is created. The Room constructor only configures the E2EE infrastructure (worker, key provider); the local participant's `encryptionType` stays `NONE` until this call, which tells the worker to actually encrypt frames.
 - **Key provider**: `ExternalE2EEKeyProvider` from `livekit-client` with `ratchetWindowSize: 0` (ratchet disabled — no coordination protocol).
-- **Worker**: LiveKit's pre-built `livekit-client/e2ee-worker` handles frame encryption/decryption in a dedicated Web Worker.
-- **Key lifecycle**: Key set before connection, cleared on disconnect, reset on logout.
+- **Worker**: LiveKit's pre-built `livekit-client/e2ee-worker` handles frame encryption/decryption in a dedicated Web Worker. Do not manually terminate the worker — LiveKit's Room manages its lifecycle, and React Strict Mode would otherwise kill a memoized worker that's still in use.
+- **Key lifecycle**: Key set on the provider before `setConnected()`, cleared on disconnect, reset on logout.
 - **Browser gate**: `isE2EESupported()` blocks unsupported browsers from joining voice.
-- **Enforcement**: `ParticipantEncryptionStatusChanged` detects unencrypted participants and warns.
+- **Status tracking**: `ParticipantEncryptionStatusChanged` updates per-participant `isEncrypted` in the voice participants store. A delayed sync polls `participant.isEncrypted` after connection to catch events missed during mount. The server-side participant poll preserves the client-side `isEncrypted` value since the server has no knowledge of LiveKit E2EE state.
+- **Enforcement**: Only warns when a previously-encrypted participant loses encryption (not during initial handshake where status starts as `false`).
 
 ### Limitations
 
