@@ -744,3 +744,9 @@ tasks:
         echo ""
         echo "Packaging files updated for v${VERSION}."
         echo "Review changes, then push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"
+
+  hooks:install:
+    desc: Configure git to use .githooks/ for pre-push checks
+    cmds:
+      - git config core.hooksPath .githooks
+      - echo "Git hooks installed — pre-push will now run CI checks before each push."
