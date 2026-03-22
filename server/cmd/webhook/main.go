@@ -436,7 +436,7 @@ func (svc *webhookService) handleIncomingWebhook(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"id":"%s"}`, msgID)
+	json.NewEncoder(w).Encode(map[string]string{"id": msgID})
 }
 
 func (svc *webhookService) checkIncomingRateLimit(webhookID string) bool {

@@ -5,7 +5,6 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -825,6 +824,9 @@ func (s *chatService) UpdateBot(ctx context.Context, req *connect.Request[v1.Upd
 	}
 	if req.Msg.AvatarUrl != nil {
 		avatarURL = strings.TrimSpace(*req.Msg.AvatarUrl)
+		if avatarURL != "" && !strings.HasPrefix(avatarURL, "https://") && !strings.HasPrefix(avatarURL, "http://") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("avatar_url must be an HTTP(S) URL"))
+		}
 	}
 
 	if err := s.botStore.UpdateBotProfile(ctx, req.Msg.BotId, displayName, description, avatarURL); err != nil {
@@ -988,6 +990,3 @@ func (s *chatService) ListIncomingWebhooks(ctx context.Context, req *connect.Req
 	}), nil
 }
 
-// Unused import guards for crypto/sha256 and crypto/subtle.
-var _ = sha256.Sum256
-var _ = subtle.ConstantTimeCompare
