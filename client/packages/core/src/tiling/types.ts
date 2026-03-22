@@ -15,7 +15,7 @@ export type PaneContent =
       participantName?: string;
     }
   | { type: 'settings'; section?: string }
-  | { type: 'profile'; userId: string }
+  | { type: 'profile'; userId: string; editing?: boolean }
   | { type: 'search'; query?: string; channelId?: string }
   | { type: 'serverSettings'; serverId: string }
   | { type: 'channelSettings'; serverId: string; channelId: string }
