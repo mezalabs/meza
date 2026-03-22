@@ -598,8 +598,8 @@ export function ChannelView({
   }, [channelId]);
 
   // Reset scroll-to-bottom intent on channel switch.
-  // Must be useLayoutEffect so it fires BEFORE the scroll useLayoutEffect
-  // (line ~595) which checks wasNearBottomRef to decide whether to scroll.
+  // Must be useLayoutEffect so it fires BEFORE the auto-scroll
+  // useLayoutEffect below which checks wasNearBottomRef.
   // biome-ignore lint/correctness/useExhaustiveDependencies: channelId triggers reset on channel switch
   useLayoutEffect(() => {
     wasNearBottomRef.current = true;
@@ -691,21 +691,23 @@ export function ChannelView({
     <div className="flex flex-1 min-h-0 min-w-0">
       <div className="relative flex flex-1 flex-col min-h-0 min-w-0">
         {/* Floating unread indicator */}
-        {unreadSnapshot && (
-          <button
-            type="button"
-            className="absolute top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-black shadow-md hover:bg-accent-hover transition-colors animate-slide-down"
-            onClick={() => {
-              const { anchor } = unreadSnapshot;
-              setUnreadSnapshot(null);
-              scrollToMessage(anchor);
-            }}
-            aria-label={`Jump to ${unreadSnapshot.count} new messages`}
-          >
-            &uarr; {unreadSnapshot.count > 99 ? '99+' : unreadSnapshot.count}{' '}
-            new message{unreadSnapshot.count !== 1 ? 's' : ''}
-          </button>
-        )}
+        <div aria-live="polite">
+          {unreadSnapshot && (
+            <button
+              type="button"
+              className="absolute top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-black shadow-md hover:bg-accent-hover transition-colors animate-slide-down"
+              onClick={() => {
+                const { anchor } = unreadSnapshot;
+                setUnreadSnapshot(null);
+                scrollToMessage(anchor);
+              }}
+              aria-label={`Jump to ${unreadSnapshot.count} new messages`}
+            >
+              &uarr; {unreadSnapshot.count > 99 ? '99+' : unreadSnapshot.count}{' '}
+              new message{unreadSnapshot.count !== 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
 
         {/* Message list */}
         <div
@@ -799,11 +801,11 @@ export function ChannelView({
             <button
               type="button"
               className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-white shadow-md hover:bg-accent-hover transition-colors"
-              onClick={async () => {
+              onClick={() => {
                 wasNearBottomRef.current = true;
                 setUnreadSnapshot(null);
                 useMessageStore.getState().returnToPresent(channelId);
-                await getMessages(channelId);
+                getMessages(channelId).catch(() => {});
               }}
             >
               Return to Present
