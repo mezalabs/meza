@@ -290,6 +290,24 @@ tasks:
     cmds:
       - pnpm test
 
+  tui:build:
+    desc: Build the Rust TUI client
+    dir: client/packages/tui
+    cmds:
+      - cargo build
+
+  tui:test:
+    desc: Run Rust TUI client tests
+    dir: client/packages/tui
+    cmds:
+      - cargo test
+
+  tui:clippy:
+    desc: Run clippy on the Rust TUI client
+    dir: client/packages/tui
+    cmds:
+      - cargo clippy -- -D warnings
+
   test:e2e:
     desc: Run all E2E workflow journeys (nukes test data first)
     dir: client/e2e
