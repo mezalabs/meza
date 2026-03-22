@@ -478,9 +478,9 @@ tasks:
   dev:desktop:prod:
     desc: Start Electron desktop app against prod (meza.chat)
     dir: client
-    deps: [build:desktop]
     cmds:
-      - DESKTOP_PROD=1 pnpm --filter @meza/desktop dev
+      - pnpm install --frozen-lockfile --silent
+      - MEZA_SERVER_URL=https://meza.chat pnpm --filter @meza/desktop dev
 
   dev:mobile:
     desc: Start HTTPS Vite dev server (Tailscale cert) and sync to Capacitor for live reload
@@ -744,3 +744,9 @@ tasks:
         echo ""
         echo "Packaging files updated for v${VERSION}."
         echo "Review changes, then push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"
+
+  hooks:install:
+    desc: Configure git to use .githooks/ for pre-push checks
+    cmds:
+      - git config core.hooksPath .githooks
+      - echo "Git hooks installed — pre-push will now run CI checks before each push."

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Pre-push hook — mirrors CI checks from .github/workflows/ci.yml
+# Install: git config core.hooksPath .githooks
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+# Colors (disabled if not a terminal)
+if [ -t 1 ]; then
+  RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m' BOLD='\033[1m' RESET='\033[0m'
+else
+  RED='' GREEN='' YELLOW='' BOLD='' RESET=''
+fi
+
+pass() { printf "  ${GREEN}✓${RESET} %s\n" "$1"; }
+fail() { printf "  ${RED}✗${RESET} %s\n" "$1"; }
+
+LOG_DIR=$(mktemp -d)
+trap 'rm -rf "$LOG_DIR"' EXIT
+
+FAILED=0
+
+# ─── Run a single check ─────────────────────────────────────────────────────
+# Usage: run_check <name> <dir> <cmd...>
+# Writes exit code to $LOG_DIR/<name>.exit, output to $LOG_DIR/<name>.log
+run_check() {
+  local name="$1" dir="$2"; shift 2
+  (cd "$dir" && "$@" > "$LOG_DIR/$name.log" 2>&1) \
+    && echo 0 > "$LOG_DIR/$name.exit" \
+    || echo 1 > "$LOG_DIR/$name.exit"
+}
+
+# ─── Launch all checks in parallel ──────────────────────────────────────────
+printf "${BOLD}Running pre-push checks (mirroring CI)...${RESET}\n\n"
+
+# Server checks
+run_check "server-vet"   "$ROOT/server" go vet ./... &
+run_check "server-test"  "$ROOT/server" go test -race -count=1 -timeout=5m ./... &
+run_check "server-build" "$ROOT/server" go build ./... &
+
+if command -v govulncheck >/dev/null 2>&1; then
+  run_check "server-vuln" "$ROOT/server" govulncheck ./... &
+  HAS_GOVULNCHECK=1
+else
+  HAS_GOVULNCHECK=0
+fi
+
+# Client checks
+run_check "client-test"  "$ROOT/client" pnpm test &
+run_check "client-check" "$ROOT/client" pnpm check &
+run_check "client-lint"  "$ROOT/client" pnpm lint &
+
+wait
+
+# ─── Report results ─────────────────────────────────────────────────────────
+report() {
+  local name="$1" label="$2"
+  local exit_code
+  exit_code=$(cat "$LOG_DIR/$name.exit" 2>/dev/null || echo 1)
+  if [ "$exit_code" = "0" ]; then
+    pass "$label"
+  else
+    fail "$label"
+    cat "$LOG_DIR/$name.log"
+    echo ""
+    FAILED=1
+  fi
+}
+
+printf "${BOLD}Server${RESET}\n"
+report "server-vet"   "go vet ./..."
+report "server-test"  "go test -race -count=1 -timeout=5m ./..."
+report "server-build" "go build ./..."
+if [ "$HAS_GOVULNCHECK" = "1" ]; then
+  report "server-vuln" "govulncheck ./..."
+else
+  printf "  ${YELLOW}⚠${RESET} govulncheck not installed (go install golang.org/x/vuln/cmd/govulncheck@latest)\n"
+fi
+
+printf "\n${BOLD}Client${RESET}\n"
+report "client-test"  "pnpm test"
+report "client-check" "pnpm check (tsc --noEmit)"
+report "client-lint"  "pnpm lint (biome check)"
+
+# ─── Summary ────────────────────────────────────────────────────────────────
+echo ""
+if [ $FAILED -ne 0 ]; then
+  printf "${RED}${BOLD}Pre-push checks failed.${RESET} Fix the issues above before pushing.\n"
+  printf "To skip (not recommended): git push --no-verify\n"
+  exit 1
+else
+  printf "${GREEN}${BOLD}All pre-push checks passed.${RESET}\n"
+fi

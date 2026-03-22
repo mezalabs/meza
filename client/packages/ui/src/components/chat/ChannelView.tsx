@@ -4,7 +4,6 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
-  cachedServerIds,
   decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
@@ -18,12 +17,12 @@ import {
   hasChannelKey,
   hasPermission,
   hideKeyboard,
-  isPersonalFromCache,
   isSessionReady,
   listEmojis,
   listMembers,
   listRoles,
   listUserEmojis,
+  MessageType,
   Permissions,
   pinMessage,
   safeParseMessageText,
@@ -82,12 +81,95 @@ import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
-import { SystemMessage } from './SystemMessage.tsx';
+import { GroupedJoinMessage, SystemMessage } from './SystemMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
 type Message = MessageState['byChannel'][string][number];
 
 const EMPTY_MESSAGES: Message[] = [];
+
+/** 30 minutes in seconds — join messages within this window are grouped. */
+const JOIN_GROUP_WINDOW_SECS = 30 * 60;
+
+function parseJoinUserId(raw: Uint8Array): string | null {
+  try {
+    const obj = JSON.parse(new TextDecoder().decode(raw));
+    return typeof obj?.user_id === 'string' ? obj.user_id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Groups consecutive MEMBER_JOIN messages within 30 minutes of each other.
+ * Returns a map from the first message ID in each group to the list of user IDs,
+ * and a set of message IDs that should be hidden (absorbed into a group).
+ */
+function groupJoinMessages(messages: Message[]): {
+  joinGroups: Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >;
+  hiddenIds: Set<string>;
+} {
+  const joinGroups = new Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >();
+  const hiddenIds = new Set<string>();
+
+  let groupStartIdx = -1;
+
+  for (let i = 0; i <= messages.length; i++) {
+    const msg = messages[i];
+    const isJoin = msg?.type === MessageType.MEMBER_JOIN;
+
+    // Check if this join is within 30 min of the previous message in the group
+    let withinWindow = false;
+    if (isJoin && groupStartIdx >= 0) {
+      const prevMsg = messages[i - 1];
+      const prevSecs = prevMsg?.createdAt
+        ? Number(prevMsg.createdAt.seconds)
+        : 0;
+      const curSecs = msg.createdAt ? Number(msg.createdAt.seconds) : 0;
+      withinWindow = Math.abs(curSecs - prevSecs) <= JOIN_GROUP_WINDOW_SECS;
+    }
+
+    if (isJoin && (groupStartIdx < 0 || withinWindow)) {
+      // Start or continue a group
+      if (groupStartIdx < 0) groupStartIdx = i;
+    } else {
+      // End current group (if any)
+      if (groupStartIdx >= 0) {
+        const groupEnd = i; // exclusive
+        const groupSize = groupEnd - groupStartIdx;
+        if (groupSize >= 2) {
+          const firstMsg = messages[groupStartIdx];
+          const userIds: string[] = [];
+          let lastCreatedAt = firstMsg.createdAt;
+          for (let j = groupStartIdx; j < groupEnd; j++) {
+            const uid = parseJoinUserId(messages[j].encryptedContent);
+            if (uid) userIds.push(uid);
+            if (j > groupStartIdx) {
+              hiddenIds.add(messages[j].id);
+            }
+            lastCreatedAt = messages[j].createdAt;
+          }
+          if (userIds.length >= 2) {
+            joinGroups.set(firstMsg.id, { userIds, lastCreatedAt });
+          }
+        }
+        groupStartIdx = -1;
+      }
+      // If current message is a join (but didn't continue), start new group
+      if (isJoin) {
+        groupStartIdx = i;
+      }
+    }
+  }
+
+  return { joinGroups, hiddenIds };
+}
 
 /** Scroll to a message element and apply a brief highlight animation. */
 function highlightAndScroll(
@@ -156,6 +238,10 @@ export function ChannelView({
   const messages = useMessageStore(
     (s) => s.byChannel[channelId] ?? EMPTY_MESSAGES,
   );
+  const { joinGroups, hiddenIds } = useMemo(
+    () => groupJoinMessages(messages),
+    [messages],
+  );
   const isLoading = useMessageStore((s) => !!s.isLoading[channelId]);
   const error = useMessageStore((s) => s.error[channelId]);
   const viewMode = useMessageStore((s) => s.viewMode[channelId] ?? 'live');
@@ -169,6 +255,9 @@ export function ChannelView({
   const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
   const hasEmojis = useEmojiStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
+  );
+  const isServerEmojiCached = useEmojiStore((s) =>
+    serverId ? !!s.cachedServerIds[serverId] : false,
   );
   const hasMembers = useMemberStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
@@ -214,9 +303,10 @@ export function ChannelView({
   }, []);
 
   // Close emoji panel when switching channels
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId is an intentional trigger dependency
   useEffect(() => {
     setMobileEmojiOpen(false);
-  }, []);
+  }, [channelId]);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -402,19 +492,20 @@ export function ChannelView({
   // If data came from cache, still fetch from API (stale-while-revalidate).
   useEffect(() => {
     if (!isAuthenticated || !serverId) return;
-    if (!hasEmojis || cachedServerIds.has(serverId)) {
+    if (!hasEmojis || isServerEmojiCached) {
       listEmojis(serverId).catch(() => {});
     }
-  }, [serverId, isAuthenticated, hasEmojis]);
+  }, [serverId, isAuthenticated, hasEmojis, isServerEmojiCached]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
   const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
+  const isPersonalEmojiCached = useEmojiStore((s) => s.personalFromCache);
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (!hasPersonalEmojis || isPersonalFromCache()) {
+    if (!hasPersonalEmojis || isPersonalEmojiCached) {
       listUserEmojis().catch(() => {});
     }
-  }, [isAuthenticated, hasPersonalEmojis]);
+  }, [isAuthenticated, hasPersonalEmojis, isPersonalEmojiCached]);
 
   // Fetch server members so MessageItem can resolve author display names.
   useEffect(() => {
@@ -609,36 +700,51 @@ export function ChannelView({
           )}
 
           <div className="mt-auto">
-            {messages.map((msg, idx) => (
-              <Fragment key={msg.id}>
-                {newActivityAnchor &&
-                  idx > 0 &&
-                  messages[idx - 1]?.id === newActivityAnchor && (
-                    <div className="my-2 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-accent" />
-                      <span className="text-xs font-semibold text-accent">
-                        New Activity
-                      </span>
-                      <div className="h-px flex-1 bg-accent" />
-                    </div>
+            {messages.map((msg, idx) => {
+              // Skip messages absorbed into a grouped join
+              if (hiddenIds.has(msg.id)) return null;
+
+              const joinGroup = joinGroups.get(msg.id);
+
+              return (
+                <Fragment key={msg.id}>
+                  {newActivityAnchor &&
+                    idx > 0 &&
+                    messages[idx - 1]?.id === newActivityAnchor && (
+                      <div className="my-2 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-accent" />
+                        <span className="text-xs font-semibold text-accent">
+                          New Activity
+                        </span>
+                        <div className="h-px flex-1 bg-accent" />
+                      </div>
+                    )}
+                  {joinGroup ? (
+                    <GroupedJoinMessage
+                      userIds={joinGroup.userIds}
+                      createdAt={joinGroup.lastCreatedAt}
+                      serverId={serverId}
+                    />
+                  ) : (
+                    <MessageItem
+                      msg={msg}
+                      channelId={channelId}
+                      currentUserId={currentUser?.id}
+                      serverId={serverId}
+                      needsEncryption={needsEncryption}
+                      timeTick={timeTick}
+                      isEditing={editingMessageId === msg.id}
+                      onStartEdit={() => requestEdit(msg.id)}
+                      onCancelEdit={cancelEdit}
+                      onEditDirtyChange={setEditDirty}
+                      onReply={() => handleReply(msg)}
+                      onJumpToMessage={scrollToMessage}
+                      canManageMessages={canManageMessages}
+                    />
                   )}
-                <MessageItem
-                  msg={msg}
-                  channelId={channelId}
-                  currentUserId={currentUser?.id}
-                  serverId={serverId}
-                  needsEncryption={needsEncryption}
-                  timeTick={timeTick}
-                  isEditing={editingMessageId === msg.id}
-                  onStartEdit={() => requestEdit(msg.id)}
-                  onCancelEdit={cancelEdit}
-                  onEditDirtyChange={setEditDirty}
-                  onReply={() => handleReply(msg)}
-                  onJumpToMessage={scrollToMessage}
-                  canManageMessages={canManageMessages}
-                />
-              </Fragment>
-            ))}
+                </Fragment>
+              );
+            })}
           </div>
         </div>
 

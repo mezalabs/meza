@@ -32,8 +32,14 @@ public class MainActivity extends BridgeActivity {
         // as padding on the root content view so app content is not obscured.
         View contentView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(contentView, (view, windowInsets) -> {
-            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+            view.setPadding(
+                systemBars.left,
+                systemBars.top,
+                systemBars.right,
+                Math.max(systemBars.bottom, ime.bottom)
+            );
             return WindowInsetsCompat.CONSUMED;
         });
     }

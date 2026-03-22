@@ -49,5 +49,30 @@ When a user is removed from a channel, they lose gateway access and cannot recei
 ## Key derivation layers
 The system uses two independent layers of Argon2id. The **client** derives a master key and auth key from the user's password (Argon2id with `p=4, t=2, m=64MB`, 64-byte output, split via HKDF-SHA256). The auth key is sent to the **server**, which treats it as a password and stores an Argon2id hash of it (`p=4, t=3, m=64MB`, 32-byte output). These are separate layers serving different purposes — the client layer protects the master key, the server layer protects against auth key database leaks.
 
+## Voice and video media
+
+Voice and video are **not end-to-end encrypted**. Audio and video streams are routed through LiveKit, a Selective Forwarding Unit (SFU). The SFU can observe all media but does not store or record it by default. This is a deliberate trade-off: real-time media E2EE (via LiveKit's built-in Insertable Streams) is a planned future addition, but is not currently implemented.
+
+### Participant visibility
+
+All participants in a voice channel are visible to each other by default. The stream preview feature uses hidden participants that can observe screen share tracks without appearing in the channel's participant list. Hidden participants:
+
+- Cannot publish any tracks (enforced at the token level via `CanPublish: false`)
+- Are filtered from `GetVoiceChannelState` API responses (via `GetPermission().GetHidden()`)
+- Are filtered from client-side `ParticipantConnected` events (via identity prefix check)
+- Use a synthetic identity (`preview:{userId}`) distinct from the user's real identity
+- Have 60-second token TTL (auto-disconnect)
+- Are only issued when a screen share is actively published in the target room
+
+A hidden participant can subscribe to any track source in the room. The client restricts subscription to ScreenShare tracks only (`autoSubscribe: false` + manual subscribe), but this is a client-side enforcement. A modified client with a valid preview token could subscribe to audio tracks during the 60-second window. The mitigation is that preview tokens are only issued when a screen share is actively published, and the token cannot be renewed without passing the active-screen-share check again.
+
+### Trust model for media
+
+- The **SFU (LiveKit)** is trusted to route media faithfully. It has access to unencrypted media streams.
+- **Server membership** is required to obtain any voice or preview token. Non-members cannot access voice channels.
+- **Channel permissions** (Connect, Speak, StreamVideo) are enforced at token issuance time. The LiveKit SFU enforces publish restrictions via the token grant.
+- **Subscribe restrictions** are not enforceable at the token level — LiveKit does not support `CanSubscribeSources`. All room participants can subscribe to any published track. This is a known limitation.
+- **Rate limiting** on preview token requests (1 per 3 seconds, burst of 3) prevents abuse of the preview endpoint.
+
 ## Memory hygiene
 JavaScript's garbage collector manages memory; explicit zeroing via `Uint8Array.fill(0)` is best-effort and does not guarantee the runtime won't retain copies. We do not claim cryptographic memory erasure. The master key is stored in `localStorage` to persist across page reloads and app restarts (including Capacitor mobile shells). The threat model assumes the device itself is trusted — an attacker with filesystem access can already extract browser storage, IndexedDB, and profile data.

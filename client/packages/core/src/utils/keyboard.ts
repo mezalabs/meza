@@ -41,55 +41,54 @@ export async function hideKeyboard(): Promise<void> {
   } catch {}
 }
 
-/** Listen for the native keyboard about to show. Returns an unsubscribe function. */
-export function onKeyboardWillShow(
-  cb: (height: number) => void,
+/**
+ * Shared helper: subscribe to a Capacitor Keyboard event.
+ * Handles sync/async addListener results and cancellation.
+ */
+function addKeyboardListener(
+  eventName: string,
+  callback: (info: { keyboardHeight: number }) => void,
 ): (() => void) | undefined {
   const kb = getKeyboard();
   if (!kb) return undefined;
   let handle: PluginListenerHandle | null = null;
+  let cancelled = false;
   try {
-    const result = kb.addListener('keyboardWillShow', (info) => {
-      cb(info.keyboardHeight);
-    });
+    const result = kb.addListener(eventName, callback);
     // addListener may return a handle directly (sync) or a Promise
     if (
       result &&
       typeof (result as Promise<PluginListenerHandle>).then === 'function'
     ) {
       (result as Promise<PluginListenerHandle>).then((h) => {
-        handle = h;
+        if (cancelled) {
+          h.remove();
+        } else {
+          handle = h;
+        }
       });
     } else {
       handle = result as PluginListenerHandle;
     }
   } catch {}
   return () => {
+    cancelled = true;
     handle?.remove();
   };
 }
 
+/** Listen for the native keyboard about to show. Returns an unsubscribe function. */
+export function onKeyboardWillShow(
+  cb: (height: number) => void,
+): (() => void) | undefined {
+  return addKeyboardListener('keyboardWillShow', (info) => {
+    cb(info.keyboardHeight);
+  });
+}
+
 /** Listen for the native keyboard about to hide. Returns an unsubscribe function. */
 export function onKeyboardWillHide(cb: () => void): (() => void) | undefined {
-  const kb = getKeyboard();
-  if (!kb) return undefined;
-  let handle: PluginListenerHandle | null = null;
-  try {
-    const result = kb.addListener('keyboardWillHide', () => {
-      cb();
-    });
-    if (
-      result &&
-      typeof (result as Promise<PluginListenerHandle>).then === 'function'
-    ) {
-      (result as Promise<PluginListenerHandle>).then((h) => {
-        handle = h;
-      });
-    } else {
-      handle = result as PluginListenerHandle;
-    }
-  } catch {}
-  return () => {
-    handle?.remove();
-  };
+  return addKeyboardListener('keyboardWillHide', () => {
+    cb();
+  });
 }

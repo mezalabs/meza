@@ -39,7 +39,6 @@ import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
-const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 // --- E2EE setup ---
@@ -163,34 +162,13 @@ function VoiceEventHandler() {
             publication.setVideoQuality(quality);
           }
         }
-        // Notify the streamer that we started watching
-        room.localParticipant
-          .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
-            reliable: true,
-            topic: STREAM_VIEWER_TOPIC,
-            destinationIdentities: [participant.identity],
-          })
-          .catch(() => {});
       }
     };
 
-    const onTrackUnsubscribed = (
-      track: RemoteTrack,
-      _publication: RemoteTrackPublication,
-      participant: RemoteParticipant,
-    ) => {
-      if (track.source !== Track.Source.ScreenShare) return;
-      // Notify the streamer that we stopped watching
-      room.localParticipant
-        .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
-          reliable: true,
-          topic: STREAM_VIEWER_TOPIC,
-          destinationIdentities: [participant.identity],
-        })
-        .catch(() => {});
-    };
-
     const onParticipantConnected = (participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (participant.identity.startsWith('preview:')) return;
+
       applyParticipantVolume(participant);
       applySoundboardVolume(participant);
       // Play voice-join sound for non-self participants
@@ -213,6 +191,9 @@ function VoiceEventHandler() {
     };
 
     const onParticipantDisconnected = (_participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (_participant.identity.startsWith('preview:')) return;
+
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
       if (soundEnabled && enabledSounds['voice-leave']) {
@@ -360,7 +341,6 @@ function VoiceEventHandler() {
     room.on(RoomEvent.Reconnecting, onReconnecting);
     room.on(RoomEvent.Reconnected, onReconnected);
     room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
-    room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
     room.on(RoomEvent.ParticipantConnected, onParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
     room.on(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
@@ -470,7 +450,7 @@ function VoiceEventHandler() {
     const channelId = useVoiceStore.getState().channelId;
     if (channelId) {
       for (const p of room.remoteParticipants.values()) {
-        if (!p.identity) continue;
+        if (!p.identity || p.identity.startsWith('preview:')) continue;
         useVoiceParticipantsStore.getState().upsertParticipant(channelId, {
           userId: p.identity,
           isMuted: !p.isMicrophoneEnabled,
@@ -487,7 +467,6 @@ function VoiceEventHandler() {
       room.off(RoomEvent.Reconnecting, onReconnecting);
       room.off(RoomEvent.Reconnected, onReconnected);
       room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
-      room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
       room.off(RoomEvent.ParticipantConnected, onParticipantConnected);
       room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
       room.off(RoomEvent.LocalTrackPublished, onLocalTrackPublished);

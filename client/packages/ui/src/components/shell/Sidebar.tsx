@@ -53,7 +53,14 @@ import {
   WrenchIcon,
 } from '@phosphor-icons/react';
 import { ParticipantEvent } from 'livekit-client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
@@ -71,6 +78,10 @@ import { Avatar } from '../shared/Avatar.tsx';
 import { MezaIcon } from '../shared/MezaIcon.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 import { MobileVoiceBar } from '../voice/MobileVoiceBar.tsx';
+import {
+  StreamPreviewTrackProvider,
+  StreamPreviewTrigger,
+} from '../voice/StreamPreviewHoverCard.tsx';
 import { VoiceConnectionBar } from '../voice/VoiceConnectionBar.tsx';
 import { CreateChannelDialog } from './CreateChannelDialog.tsx';
 import { CreateServerDialog } from './CreateServerDialog.tsx';
@@ -110,11 +121,14 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const dmError = useDMStore((s) => s.error);
   const pendingRequestCount = useDMStore((s) => s.messageRequests.length);
   const friendRequestCount = useFriendStore((s) => s.incomingRequests.length);
-  const hasDMUnread = useReadStateStore((s) =>
-    dmChannels.some(
-      (dm) => (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0) > 0,
+  const dmUnreadCount = useReadStateStore((s) =>
+    dmChannels.reduce(
+      (sum, dm) => sum + (s.byChannel[dm.channel?.id ?? '']?.unreadCount ?? 0),
+      0,
     ),
   );
+  const totalDMNotifications =
+    dmUnreadCount + pendingRequestCount + friendRequestCount;
   const sidebarFocusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const sidebarSetPaneContent = useTilingStore((s) => s.setPaneContent);
 
@@ -206,14 +220,21 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     navigateToDefaultChannel,
   ]);
 
-  // Fetch DM channels and message requests when entering DM mode (and on reconnect)
+  // Always fetch DM channels and message requests so the unread badge on
+  // the DM icon works even when the user is viewing a server.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    listDMChannels().catch(() => {});
+    listMessageRequests().catch(() => {});
+    listFriendRequests().catch(() => {});
+  }, [isAuthenticated, reconnectCount]);
+
+  // Fetch friends list when entering DM mode (and on reconnect)
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated || !showDMs) return;
-    listDMChannels().catch(() => {});
-    listMessageRequests().catch(() => {});
     listFriends().catch(() => {});
-    listFriendRequests().catch(() => {});
   }, [showDMs, isAuthenticated, reconnectCount]);
 
   // Fetch channels and channel groups when selected server changes (and on reconnect)
@@ -367,8 +388,10 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
               onClick={selectDMs}
             >
               <MezaIcon className="h-7 w-7 md:h-6 md:w-6" />
-              {hasDMUnread && !showDMs && (
-                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-bg-overlay" />
+              {totalDMNotifications > 0 && !showDMs && (
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] font-bold leading-none text-black ring-2 ring-bg-overlay">
+                  {totalDMNotifications > 9 ? '9+' : totalDMNotifications}
+                </span>
               )}
             </button>
           </div>
@@ -437,6 +460,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
         {/* Channel / DM list */}
         <nav
           className="flex flex-1 min-w-0 flex-col gap-1 md:gap-0.5 overflow-y-auto pl-2 pr-2 md:pl-1.5 md:pr-1.5 py-3"
+          data-sidebar-scroll
           aria-label={showDMs ? 'Direct Messages' : 'Channels'}
         >
           {showDMs ? (
@@ -1224,6 +1248,11 @@ function SidebarChannelItem({
 
   const participants = useVoiceParticipantsStore((s) => s.byChannel[channelId]);
   const voiceParticipants = isVoice && participants ? participants : EMPTY_ARR;
+  const currentVoiceChannelId = useVoiceStore((s) => s.channelId);
+  const isInSameChannel = currentVoiceChannelId === channelId;
+  const isMobile = useMobile();
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const showStreamPreview = !isMobile;
 
   const {
     attributes: dragAttributes,
@@ -1318,19 +1347,62 @@ function SidebarChannelItem({
 
       {isVoice && voiceParticipants.length > 0 && (
         <div className="flex flex-col gap-0.5 py-0.5 pl-6">
-          {voiceParticipants.map((p) => (
-            <SidebarVoiceParticipant
-              key={p.userId}
-              userId={p.userId}
-              isMuted={p.isMuted}
-              isDeafened={p.isDeafened}
-              isStreamingVideo={p.isStreamingVideo}
-              serverId={serverId}
-            />
-          ))}
+          <MaybeStreamPreview
+            enabled={showStreamPreview}
+            channelId={channelId}
+            channelName={channelName}
+            sameChannel={isInSameChannel}
+          >
+            {voiceParticipants.map((p) => {
+              const isSelf = p.userId === currentUserId;
+              const el = (
+                <SidebarVoiceParticipant
+                  userId={p.userId}
+                  isMuted={p.isMuted}
+                  isDeafened={p.isDeafened}
+                  isStreamingVideo={p.isStreamingVideo}
+                  serverId={serverId}
+                />
+              );
+              if (showStreamPreview && p.isStreamingVideo && !isSelf) {
+                return (
+                  <StreamPreviewTrigger key={p.userId} participantId={p.userId}>
+                    {el}
+                  </StreamPreviewTrigger>
+                );
+              }
+              return <div key={p.userId}>{el}</div>;
+            })}
+          </MaybeStreamPreview>
         </div>
       )}
     </div>
+  );
+}
+
+function MaybeStreamPreview({
+  enabled,
+  channelId,
+  channelName,
+  sameChannel,
+  children,
+}: {
+  enabled: boolean;
+  channelId: string;
+  channelName: string;
+  sameChannel: boolean;
+  children: ReactNode;
+}) {
+  return enabled ? (
+    <StreamPreviewTrackProvider
+      channelId={channelId}
+      channelName={channelName}
+      sameChannel={sameChannel}
+    >
+      {children}
+    </StreamPreviewTrackProvider>
+  ) : (
+    children
   );
 }
 
