@@ -5,6 +5,12 @@ use ratatui::Frame;
 
 use crate::action::Action;
 
+pub mod channel_bar;
+pub mod chat_view;
+pub mod input_box;
+pub mod login;
+pub mod status_bar;
+
 /// Trait implemented by each UI component (sidebar, message list, input box, etc.).
 pub trait Component {
     /// Handle a key event, optionally returning an `Action` to dispatch.

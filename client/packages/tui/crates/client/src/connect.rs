@@ -216,7 +216,7 @@ impl ConnectClient {
             signing_public_key: key.to_vec(),
         };
         let _resp: RegisterPublicKeyResponse = self
-            .call("meza.v1.CryptoService", "RegisterPublicKey", &req)
+            .call("meza.v1.KeyService", "RegisterPublicKey", &req)
             .await?;
         Ok(())
     }
