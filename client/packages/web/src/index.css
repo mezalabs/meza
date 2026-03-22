@@ -369,9 +369,11 @@ select:focus {
   font-weight: 600;
 }
 
-/* Pause animated emoji images when user prefers reduced motion */
+/* Pause animated emoji images when user prefers reduced motion.
+   !important is required to override inline animation styles on emoji <img> tags. */
 @media (prefers-reduced-motion: reduce) {
   .emoji-picker-grid img {
+    /* biome-ignore lint/complexity/noImportantStyles: must override inline animation styles */
     animation-play-state: paused !important;
   }
 }
