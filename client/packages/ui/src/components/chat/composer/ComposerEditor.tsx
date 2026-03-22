@@ -1,16 +1,11 @@
-import {
-  ProsemirrorAdapterProvider,
-  useNodeViewFactory,
-} from '@prosemirror-adapter/react';
+import { useNodeViewFactory } from '@prosemirror-adapter/react';
 import { baseKeymap } from 'prosemirror-commands';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { EditorState, Plugin, type Transaction } from 'prosemirror-state';
 import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -217,7 +212,7 @@ export const ComposerEditor = forwardRef<
       placeholderPlugin(placeholder),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [placeholder]);
 
   // Stable send handler ref
   const handleSendRef = useRef<(wireText: string) => void>(() => {});

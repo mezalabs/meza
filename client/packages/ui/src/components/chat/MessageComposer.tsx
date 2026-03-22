@@ -42,6 +42,20 @@ const ComposerEditor = lazy(() =>
   })),
 );
 
+function extractMentions(text: string) {
+  const userMentions = [...text.matchAll(/<@([A-Z0-9]{26})>/g)].map(
+    (m) => m[1],
+  );
+  const roleMentions = [...text.matchAll(/<@&([A-Z0-9]{26})>/g)].map(
+    (m) => m[1],
+  );
+  return {
+    mentionedUserIds: [...new Set(userMentions)],
+    mentionedRoleIds: [...new Set(roleMentions)],
+    mentionEveryone: text.includes('@everyone'),
+  };
+}
+
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 const ACCEPTED_TYPES =
@@ -179,20 +193,6 @@ export function MessageComposer({
     useMessageStore.getState().setReplyingTo(channelId, null);
   }
 
-  function extractMentions(text: string) {
-    const userMentions = [...text.matchAll(/<@([A-Z0-9]{26})>/g)].map(
-      (m) => m[1],
-    );
-    const roleMentions = [...text.matchAll(/<@&([A-Z0-9]{26})>/g)].map(
-      (m) => m[1],
-    );
-    return {
-      mentionedUserIds: [...new Set(userMentions)],
-      mentionedRoleIds: [...new Set(roleMentions)],
-      mentionEveryone: text.includes('@everyone'),
-    };
-  }
-
   const handleSend = useCallback(
     async (overrideText?: string) => {
       let text = overrideText ?? '';
@@ -236,7 +236,6 @@ export function MessageComposer({
             });
             if (transformed !== null) {
               text = transformed;
-
             } else {
               editorRef.current?.clear();
 
@@ -366,6 +365,7 @@ export function MessageComposer({
     gatewaySendTyping(channelId);
   }, [channelId]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cancelReply is a stable local function
   const handleCancel = useCallback(() => {
     if (replyingTo) {
       cancelReply();

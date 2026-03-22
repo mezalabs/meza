@@ -42,16 +42,14 @@ import {
   useUsersStore,
 } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
-
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
-import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import {
   Fragment,
-  type KeyboardEvent,
-  Suspense,
   lazy,
   memo,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -73,18 +71,21 @@ import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
 import { ContentWarningInterstitial } from './ContentWarningInterstitial.tsx';
+import type { ComposerEditorHandle } from './composer/schema.ts';
 import { DeleteMessageDialog } from './DeleteMessageDialog.tsx';
 import { EmojiPicker } from './EmojiPicker.tsx';
 import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
-import type { ComposerEditorHandle } from './composer/schema.ts';
 import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
 
 const ComposerEditor = lazy(() =>
-  import('./composer/ComposerEditor.tsx').then((m) => ({ default: m.ComposerEditor })),
+  import('./composer/ComposerEditor.tsx').then((m) => ({
+    default: m.ComposerEditor,
+  })),
 );
+
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
@@ -1186,7 +1187,7 @@ const MessageItem = memo(function MessageItem({
   // the discard dialog on Escape or when switching to another message.
   useEffect(() => {
     onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? false));
-  }, [isEditing, text, onEditDirtyChange]);
+  }, [isEditing, onEditDirtyChange]);
 
   const handleReactionSelect = useCallback(
     (emoji: string) => {
@@ -1379,7 +1380,10 @@ const MessageItem = memo(function MessageItem({
                           let kv: number | undefined;
                           if (needsEncryption) {
                             try {
-                              const encrypted = await encryptMessage(channelId, plaintext);
+                              const encrypted = await encryptMessage(
+                                channelId,
+                                plaintext,
+                              );
                               content = encrypted.data;
                               kv = encrypted.keyVersion;
                             } catch {
