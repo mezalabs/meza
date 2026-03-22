@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"sync"
+
 	"connectrpc.com/connect"
 	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	"github.com/mezalabs/meza/internal/auth"
@@ -15,6 +17,7 @@ import (
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go/v2"
+	"golang.org/x/time/rate"
 )
 
 // channelTypeVoice is the integer value of CHANNEL_TYPE_VOICE from the proto enum.
@@ -41,6 +44,25 @@ type voiceService struct {
 	lkSecret    string
 	lkHost      string
 	lkPublicURL string // URL sent to clients (may differ from lkHost when tunneling)
+
+	previewLimiters   map[string]*rate.Limiter
+	previewLimitersMu sync.Mutex
+}
+
+// previewLimiter returns a per-user rate limiter for preview token requests.
+// Allows 1 request per 3 seconds with a burst of 3.
+func (s *voiceService) previewLimiter(userID string) *rate.Limiter {
+	s.previewLimitersMu.Lock()
+	defer s.previewLimitersMu.Unlock()
+	if s.previewLimiters == nil {
+		s.previewLimiters = make(map[string]*rate.Limiter)
+	}
+	lim, ok := s.previewLimiters[userID]
+	if !ok {
+		lim = rate.NewLimiter(rate.Every(3*time.Second), 3)
+		s.previewLimiters[userID] = lim
+	}
+	return lim
 }
 
 func roomName(channelID string) string {
@@ -200,6 +222,10 @@ func (s *voiceService) GetVoiceChannelState(ctx context.Context, req *connect.Re
 
 	participants := make([]*v1.VoiceParticipant, 0, len(resp.Participants))
 	for _, p := range resp.Participants {
+		// Skip hidden participants (e.g. stream preview connections).
+		if p.GetPermission().GetHidden() {
+			continue
+		}
 		participants = append(participants, &v1.VoiceParticipant{
 			UserId:           p.Identity,
 			IsMuted:          isParticipantMuted(p),
@@ -210,6 +236,91 @@ func (s *voiceService) GetVoiceChannelState(ctx context.Context, req *connect.Re
 	return connect.NewResponse(&v1.GetVoiceChannelStateResponse{
 		Participants: participants,
 	}), nil
+}
+
+func (s *voiceService) GetStreamPreviewToken(ctx context.Context, req *connect.Request[v1.GetStreamPreviewTokenRequest]) (*connect.Response[v1.GetStreamPreviewTokenResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+
+	if req.Msg.ChannelId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
+	}
+
+	if !s.previewLimiter(userID).Allow() {
+		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("too many preview requests"))
+	}
+
+	channel, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, req.Msg.ChannelId, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
+		}
+		slog.Error("get channel", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if !isMember {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("not a member of this server"))
+	}
+
+	if channel.Type != channelTypeVoice {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel is not a voice channel"))
+	}
+
+	name := roomName(req.Msg.ChannelId)
+
+	// Only issue preview tokens when a screen share is actually active.
+	// This limits the window for potential audio eavesdropping via modified clients.
+	resp, err := s.lkClient.ListParticipants(ctx, &livekit.ListParticipantsRequest{
+		Room: name,
+	})
+	if err != nil {
+		if isNotFound(err) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("no active voice session"))
+		}
+		slog.Error("list participants for preview", "err", err, "room", name)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	hasStream := false
+	for _, p := range resp.Participants {
+		if hasScreenShareTrack(p) {
+			hasStream = true
+			break
+		}
+	}
+	if !hasStream {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("no active screen share"))
+	}
+
+	token, err := s.newPreviewToken(userID, name)
+	if err != nil {
+		slog.Error("generate preview token", "err", err, "user", userID, "room", name)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.GetStreamPreviewTokenResponse{
+		LivekitUrl:   s.lkPublicURL,
+		LivekitToken: token,
+		RoomName:     name,
+	}), nil
+}
+
+// newPreviewToken generates a hidden, subscribe-only LiveKit JWT for stream preview.
+// The token cannot publish any tracks and expires in 60 seconds.
+func (s *voiceService) newPreviewToken(userID, room string) (string, error) {
+	canPublish := false
+	at := lkauth.NewAccessToken(s.lkKey, s.lkSecret)
+	at.SetVideoGrant(&lkauth.VideoGrant{
+		RoomJoin:   true,
+		Room:       room,
+		Hidden:     true,
+		CanPublish: &canPublish,
+	}).
+		SetIdentity("preview:" + userID).
+		SetValidFor(60 * time.Second)
+
+	return at.ToJWT()
 }
 
 // newLiveKitToken generates a signed LiveKit JWT for the given user and room.

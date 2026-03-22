@@ -533,6 +533,110 @@ func (x *GetUserVoiceActivityResponse) GetActivities() []*UserVoiceActivity {
 	return nil
 }
 
+type GetStreamPreviewTokenRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStreamPreviewTokenRequest) Reset() {
+	*x = GetStreamPreviewTokenRequest{}
+	mi := &file_meza_v1_voice_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStreamPreviewTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStreamPreviewTokenRequest) ProtoMessage() {}
+
+func (x *GetStreamPreviewTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_voice_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStreamPreviewTokenRequest.ProtoReflect.Descriptor instead.
+func (*GetStreamPreviewTokenRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_voice_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetStreamPreviewTokenRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type GetStreamPreviewTokenResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LivekitUrl    string                 `protobuf:"bytes,1,opt,name=livekit_url,json=livekitUrl,proto3" json:"livekit_url,omitempty"`
+	LivekitToken  string                 `protobuf:"bytes,2,opt,name=livekit_token,json=livekitToken,proto3" json:"livekit_token,omitempty"`
+	RoomName      string                 `protobuf:"bytes,3,opt,name=room_name,json=roomName,proto3" json:"room_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetStreamPreviewTokenResponse) Reset() {
+	*x = GetStreamPreviewTokenResponse{}
+	mi := &file_meza_v1_voice_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetStreamPreviewTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetStreamPreviewTokenResponse) ProtoMessage() {}
+
+func (x *GetStreamPreviewTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_voice_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetStreamPreviewTokenResponse.ProtoReflect.Descriptor instead.
+func (*GetStreamPreviewTokenResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_voice_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetStreamPreviewTokenResponse) GetLivekitUrl() string {
+	if x != nil {
+		return x.LivekitUrl
+	}
+	return ""
+}
+
+func (x *GetStreamPreviewTokenResponse) GetLivekitToken() string {
+	if x != nil {
+		return x.LivekitToken
+	}
+	return ""
+}
+
+func (x *GetStreamPreviewTokenResponse) GetRoomName() string {
+	if x != nil {
+		return x.RoomName
+	}
+	return ""
+}
+
 var File_meza_v1_voice_proto protoreflect.FileDescriptor
 
 const file_meza_v1_voice_proto_rawDesc = "" +
@@ -575,12 +679,21 @@ const file_meza_v1_voice_proto_rawDesc = "" +
 	"\x1cGetUserVoiceActivityResponse\x12:\n" +
 	"\n" +
 	"activities\x18\x01 \x03(\v2\x1a.meza.v1.UserVoiceActivityR\n" +
-	"activities2\x8d\x03\n" +
+	"activities\"=\n" +
+	"\x1cGetStreamPreviewTokenRequest\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\"\x82\x01\n" +
+	"\x1dGetStreamPreviewTokenResponse\x12\x1f\n" +
+	"\vlivekit_url\x18\x01 \x01(\tR\n" +
+	"livekitUrl\x12#\n" +
+	"\rlivekit_token\x18\x02 \x01(\tR\flivekitToken\x12\x1b\n" +
+	"\troom_name\x18\x03 \x01(\tR\broomName2\xf5\x03\n" +
 	"\fVoiceService\x12W\n" +
 	"\x10JoinVoiceChannel\x12 .meza.v1.JoinVoiceChannelRequest\x1a!.meza.v1.JoinVoiceChannelResponse\x12Z\n" +
 	"\x11LeaveVoiceChannel\x12!.meza.v1.LeaveVoiceChannelRequest\x1a\".meza.v1.LeaveVoiceChannelResponse\x12c\n" +
 	"\x14GetVoiceChannelState\x12$.meza.v1.GetVoiceChannelStateRequest\x1a%.meza.v1.GetVoiceChannelStateResponse\x12c\n" +
-	"\x14GetUserVoiceActivity\x12$.meza.v1.GetUserVoiceActivityRequest\x1a%.meza.v1.GetUserVoiceActivityResponseB\x83\x01\n" +
+	"\x14GetUserVoiceActivity\x12$.meza.v1.GetUserVoiceActivityRequest\x1a%.meza.v1.GetUserVoiceActivityResponse\x12f\n" +
+	"\x15GetStreamPreviewToken\x12%.meza.v1.GetStreamPreviewTokenRequest\x1a&.meza.v1.GetStreamPreviewTokenResponseB\x83\x01\n" +
 	"\vcom.meza.v1B\n" +
 	"VoiceProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
@@ -596,35 +709,39 @@ func file_meza_v1_voice_proto_rawDescGZIP() []byte {
 	return file_meza_v1_voice_proto_rawDescData
 }
 
-var file_meza_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_meza_v1_voice_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_meza_v1_voice_proto_goTypes = []any{
-	(*JoinVoiceChannelRequest)(nil),      // 0: meza.v1.JoinVoiceChannelRequest
-	(*JoinVoiceChannelResponse)(nil),     // 1: meza.v1.JoinVoiceChannelResponse
-	(*LeaveVoiceChannelRequest)(nil),     // 2: meza.v1.LeaveVoiceChannelRequest
-	(*LeaveVoiceChannelResponse)(nil),    // 3: meza.v1.LeaveVoiceChannelResponse
-	(*GetVoiceChannelStateRequest)(nil),  // 4: meza.v1.GetVoiceChannelStateRequest
-	(*GetVoiceChannelStateResponse)(nil), // 5: meza.v1.GetVoiceChannelStateResponse
-	(*VoiceParticipant)(nil),             // 6: meza.v1.VoiceParticipant
-	(*GetUserVoiceActivityRequest)(nil),  // 7: meza.v1.GetUserVoiceActivityRequest
-	(*UserVoiceActivity)(nil),            // 8: meza.v1.UserVoiceActivity
-	(*GetUserVoiceActivityResponse)(nil), // 9: meza.v1.GetUserVoiceActivityResponse
+	(*JoinVoiceChannelRequest)(nil),       // 0: meza.v1.JoinVoiceChannelRequest
+	(*JoinVoiceChannelResponse)(nil),      // 1: meza.v1.JoinVoiceChannelResponse
+	(*LeaveVoiceChannelRequest)(nil),      // 2: meza.v1.LeaveVoiceChannelRequest
+	(*LeaveVoiceChannelResponse)(nil),     // 3: meza.v1.LeaveVoiceChannelResponse
+	(*GetVoiceChannelStateRequest)(nil),   // 4: meza.v1.GetVoiceChannelStateRequest
+	(*GetVoiceChannelStateResponse)(nil),  // 5: meza.v1.GetVoiceChannelStateResponse
+	(*VoiceParticipant)(nil),              // 6: meza.v1.VoiceParticipant
+	(*GetUserVoiceActivityRequest)(nil),   // 7: meza.v1.GetUserVoiceActivityRequest
+	(*UserVoiceActivity)(nil),             // 8: meza.v1.UserVoiceActivity
+	(*GetUserVoiceActivityResponse)(nil),  // 9: meza.v1.GetUserVoiceActivityResponse
+	(*GetStreamPreviewTokenRequest)(nil),  // 10: meza.v1.GetStreamPreviewTokenRequest
+	(*GetStreamPreviewTokenResponse)(nil), // 11: meza.v1.GetStreamPreviewTokenResponse
 }
 var file_meza_v1_voice_proto_depIdxs = []int32{
-	6, // 0: meza.v1.GetVoiceChannelStateResponse.participants:type_name -> meza.v1.VoiceParticipant
-	8, // 1: meza.v1.GetUserVoiceActivityResponse.activities:type_name -> meza.v1.UserVoiceActivity
-	0, // 2: meza.v1.VoiceService.JoinVoiceChannel:input_type -> meza.v1.JoinVoiceChannelRequest
-	2, // 3: meza.v1.VoiceService.LeaveVoiceChannel:input_type -> meza.v1.LeaveVoiceChannelRequest
-	4, // 4: meza.v1.VoiceService.GetVoiceChannelState:input_type -> meza.v1.GetVoiceChannelStateRequest
-	7, // 5: meza.v1.VoiceService.GetUserVoiceActivity:input_type -> meza.v1.GetUserVoiceActivityRequest
-	1, // 6: meza.v1.VoiceService.JoinVoiceChannel:output_type -> meza.v1.JoinVoiceChannelResponse
-	3, // 7: meza.v1.VoiceService.LeaveVoiceChannel:output_type -> meza.v1.LeaveVoiceChannelResponse
-	5, // 8: meza.v1.VoiceService.GetVoiceChannelState:output_type -> meza.v1.GetVoiceChannelStateResponse
-	9, // 9: meza.v1.VoiceService.GetUserVoiceActivity:output_type -> meza.v1.GetUserVoiceActivityResponse
-	6, // [6:10] is the sub-list for method output_type
-	2, // [2:6] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	6,  // 0: meza.v1.GetVoiceChannelStateResponse.participants:type_name -> meza.v1.VoiceParticipant
+	8,  // 1: meza.v1.GetUserVoiceActivityResponse.activities:type_name -> meza.v1.UserVoiceActivity
+	0,  // 2: meza.v1.VoiceService.JoinVoiceChannel:input_type -> meza.v1.JoinVoiceChannelRequest
+	2,  // 3: meza.v1.VoiceService.LeaveVoiceChannel:input_type -> meza.v1.LeaveVoiceChannelRequest
+	4,  // 4: meza.v1.VoiceService.GetVoiceChannelState:input_type -> meza.v1.GetVoiceChannelStateRequest
+	7,  // 5: meza.v1.VoiceService.GetUserVoiceActivity:input_type -> meza.v1.GetUserVoiceActivityRequest
+	10, // 6: meza.v1.VoiceService.GetStreamPreviewToken:input_type -> meza.v1.GetStreamPreviewTokenRequest
+	1,  // 7: meza.v1.VoiceService.JoinVoiceChannel:output_type -> meza.v1.JoinVoiceChannelResponse
+	3,  // 8: meza.v1.VoiceService.LeaveVoiceChannel:output_type -> meza.v1.LeaveVoiceChannelResponse
+	5,  // 9: meza.v1.VoiceService.GetVoiceChannelState:output_type -> meza.v1.GetVoiceChannelStateResponse
+	9,  // 10: meza.v1.VoiceService.GetUserVoiceActivity:output_type -> meza.v1.GetUserVoiceActivityResponse
+	11, // 11: meza.v1.VoiceService.GetStreamPreviewToken:output_type -> meza.v1.GetStreamPreviewTokenResponse
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_voice_proto_init() }
@@ -638,7 +755,7 @@ func file_meza_v1_voice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_voice_proto_rawDesc), len(file_meza_v1_voice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
