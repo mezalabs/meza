@@ -227,3 +227,14 @@ func InternalKeyRotation() string {
 func InternalWebhookReload() string {
 	return "meza.internal.webhook.reload"
 }
+
+// Internal bot token revocation subject — chat service publishes bot user ID,
+// all services with bot token caches subscribe and flush cached entries.
+
+func InternalBotTokenRevoke(botUserID string) string {
+	return fmt.Sprintf("meza.internal.bottoken.revoke.%s", sanitizeID(botUserID))
+}
+
+func InternalBotTokenRevokeWildcard() string {
+	return "meza.internal.bottoken.revoke.>"
+}

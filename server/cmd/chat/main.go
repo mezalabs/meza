@@ -122,6 +122,14 @@ func main() {
 	// Enable bot token authentication alongside JWT.
 	botTokenAuth := auth.NewTokenAuthenticator(botStore, auth.NewVerificationCache())
 
+	// Subscribe to bot token revocation signals for cache invalidation.
+	botRevokeSub, err := botTokenAuth.SubscribeRevocations(nc)
+	if err != nil {
+		slog.Error("subscribe bot token revocations", "err", err)
+		os.Exit(1)
+	}
+	defer botRevokeSub.Drain()
+
 	interceptorOpts := []auth.InterceptorOption{
 		auth.WithUserExistenceCheck(authStore),
 		auth.WithTokenBlocklist(blocklist),

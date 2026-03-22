@@ -113,10 +113,10 @@ func main() {
 		baseOpts = append(baseOpts, auth.WithTokenBlocklist(svc.tokenBlocklist))
 	}
 
-	// Auth service interceptor blocks federated users from identity RPCs
+	// Auth service interceptor blocks federated users and bots from identity RPCs
 	// (password change, key bundle, device management, profile updates).
 	authInterceptorOpts := append([]auth.InterceptorOption{}, baseOpts...)
-	authInterceptorOpts = append(authInterceptorOpts, auth.WithBlockFederated())
+	authInterceptorOpts = append(authInterceptorOpts, auth.WithBlockFederated(), auth.WithBlockBots())
 
 	// Rate limit: 5 req/s burst 10 per IP for auth endpoints
 	authLimiter := ratelimit.New(5, 10)

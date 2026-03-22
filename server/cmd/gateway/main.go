@@ -97,6 +97,14 @@ func main() {
 	botStore := store.NewBotStore(pool)
 	botTokenAuth := auth.NewTokenAuthenticator(botStore, auth.NewVerificationCache())
 
+	// Subscribe to bot token revocation signals for cache invalidation.
+	botRevokeSub, err := botTokenAuth.SubscribeRevocations(nc)
+	if err != nil {
+		slog.Error("subscribe bot token revocations", "err", err)
+		os.Exit(1)
+	}
+	defer botRevokeSub.Drain()
+
 	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins, tokenBlocklist, botTokenAuth)
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.InstanceURL

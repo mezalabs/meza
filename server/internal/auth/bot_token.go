@@ -6,10 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/mezalabs/meza/internal/models"
+	"github.com/mezalabs/meza/internal/subjects"
+	"github.com/nats-io/nats.go"
 )
 
 const (
@@ -89,6 +92,29 @@ func (a *TokenAuthenticator) Authenticate(ctx context.Context, token string) (*C
 	}()
 
 	return claims, nil
+}
+
+// InvalidateUser flushes all cached tokens for a specific bot user.
+func (a *TokenAuthenticator) InvalidateUser(botUserID string) {
+	if a.cache != nil {
+		a.cache.InvalidateByUserID(botUserID)
+	}
+}
+
+// SubscribeRevocations subscribes to NATS bot token revocation signals.
+// Each signal contains a bot user ID in the subject. Returns the subscription
+// (caller should defer sub.Drain()).
+func (a *TokenAuthenticator) SubscribeRevocations(nc *nats.Conn) (*nats.Subscription, error) {
+	return nc.Subscribe(subjects.InternalBotTokenRevokeWildcard(), func(msg *nats.Msg) {
+		// Subject: meza.internal.bottoken.revoke.<botUserID>
+		parts := strings.Split(msg.Subject, ".")
+		if len(parts) < 5 {
+			return
+		}
+		botUserID := parts[4]
+		slog.Debug("invalidating cached bot tokens", "bot", botUserID)
+		a.InvalidateUser(botUserID)
+	})
 }
 
 // GenerateBotToken creates a new random bot token and returns the plaintext

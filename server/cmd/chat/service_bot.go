@@ -171,6 +171,9 @@ func (s *chatService) RegenerateBotToken(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Broadcast cache invalidation to all services with bot token caches.
+	s.nc.Publish(subjects.InternalBotTokenRevoke(req.Msg.BotId), nil)
+
 	// Generate new token.
 	token, tokenHash, err := auth.GenerateBotToken()
 	if err != nil {

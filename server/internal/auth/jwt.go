@@ -369,6 +369,18 @@ func (vc *VerificationCache) Invalidate(tokenString string) {
 	vc.mu.Unlock()
 }
 
+// InvalidateByUserID removes all cached entries for a given user ID.
+// Used when a bot's tokens are revoked to ensure no stale cache hits.
+func (vc *VerificationCache) InvalidateByUserID(userID string) {
+	vc.mu.Lock()
+	for k, entry := range vc.cache {
+		if entry.claims != nil && entry.claims.UserID == userID {
+			delete(vc.cache, k)
+		}
+	}
+	vc.mu.Unlock()
+}
+
 func (vc *VerificationCache) cleanupLoop() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
