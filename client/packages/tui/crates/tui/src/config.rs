@@ -18,7 +18,7 @@ pub struct ServerConfig {
 }
 
 fn default_url() -> String {
-    "https://meza.localhost".to_string()
+    "http://localhost:4080".to_string()
 }
 
 impl Default for ServerConfig {
@@ -79,7 +79,7 @@ pub fn load() -> Result<Config> {
         }
 
         let default_toml = r#"[server]
-url = "https://meza.localhost"
+url = "http://localhost:4080"
 "#;
         fs::write(&path, default_toml)
             .with_context(|| format!("failed to write default config: {}", path.display()))?;
