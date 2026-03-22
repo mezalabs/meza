@@ -30,7 +30,11 @@ pub struct ConnectClient {
 
 impl ConnectClient {
     pub fn new(base_url: String) -> Self {
-        let insecure = {
+        // Allow plain HTTP if the configured URL uses http:// (local dev).
+        // In production, URLs should always be https://.
+        let is_http = base_url.starts_with("http://");
+
+        let accept_invalid_certs = {
             #[cfg(debug_assertions)]
             {
                 std::env::var("MEZA_INSECURE")
@@ -43,22 +47,18 @@ impl ConnectClient {
             }
         };
 
-        if insecure {
-            warn!("TLS certificate validation DISABLED (MEZA_INSECURE=1) -- do not use in production");
+        if is_http {
+            warn!("using plain HTTP (no TLS) — only appropriate for local development");
+        }
+        if accept_invalid_certs {
+            warn!("TLS certificate validation DISABLED (MEZA_INSECURE=1) — do not use in production");
         }
 
-        let http = if insecure {
-            reqwest::Client::builder()
-                .danger_accept_invalid_certs(true)
-                .https_only(false)
-                .build()
-                .expect("failed to build insecure reqwest client")
-        } else {
-            reqwest::Client::builder()
-                .https_only(true)
-                .build()
-                .expect("failed to build reqwest client")
-        };
+        let http = reqwest::Client::builder()
+            .https_only(!is_http)
+            .danger_accept_invalid_certs(accept_invalid_certs)
+            .build()
+            .expect("failed to build reqwest client");
 
         Self {
             http,
