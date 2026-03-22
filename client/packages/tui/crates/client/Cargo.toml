@@ -1,0 +1,31 @@
+[package]
+name = "meza-client"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+prost = "0.13"
+prost-types = "0.13"
+bytes = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"] }
+futures-util = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+curve25519-dalek = "4"
+aes-gcm = "0.10"
+hkdf = "0.12"
+sha2 = "0.10"
+argon2 = "0.5"
+unicode-width = "0.2"
+
+[build-dependencies]
+prost-build = "0.13"
