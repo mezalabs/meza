@@ -1,4 +1,4 @@
-import { getMediaURL, useEmojiStore } from '@meza/core';
+import { getMediaURL } from '@meza/core';
 import { useNodeViewContext } from '@prosemirror-adapter/react';
 import { memo, useCallback, useState } from 'react';
 import type { CustomEmojiAttrs } from '../schema';

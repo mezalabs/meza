@@ -6,7 +6,7 @@ import { baseKeymap } from 'prosemirror-commands';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import { EditorState, type Plugin, type Transaction } from 'prosemirror-state';
+import { EditorState, Plugin, type Transaction } from 'prosemirror-state';
 import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
 import {
   forwardRef,
@@ -48,14 +48,12 @@ const draftMap = new Map<string, string>();
 const MAX_LENGTH = 4000;
 
 function maxLengthPlugin(): Plugin {
-  return new (class {
-    spec = {
-      filterTransaction: (tr: Transaction) => {
-        if (!tr.docChanged) return true;
-        return wireFormatLength(tr.doc) <= MAX_LENGTH;
-      },
-    };
-  })() as unknown as Plugin;
+  return new Plugin({
+    filterTransaction: (tr: Transaction) => {
+      if (!tr.docChanged) return true;
+      return wireFormatLength(tr.doc) <= MAX_LENGTH;
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -71,27 +69,25 @@ function placeholderPlugin(text: string): Plugin {
     );
   };
 
-  return new (class {
-    spec = {
-      props: {
-        decorations(state: EditorState) {
-          if (emptyDoc(state)) {
-            return DecorationSet.create(state.doc, [
-              Decoration.widget(1, () => {
-                const span = document.createElement('span');
-                span.className =
-                  'pointer-events-none text-text-subtle select-none';
-                span.textContent = text;
-                span.style.position = 'absolute';
-                return span;
-              }),
-            ]);
-          }
-          return DecorationSet.empty;
-        },
+  return new Plugin({
+    props: {
+      decorations(state: EditorState) {
+        if (emptyDoc(state)) {
+          return DecorationSet.create(state.doc, [
+            Decoration.widget(1, () => {
+              const span = document.createElement('span');
+              span.className =
+                'pointer-events-none text-text-subtle select-none';
+              span.textContent = text;
+              span.style.position = 'absolute';
+              return span;
+            }),
+          ]);
+        }
+        return DecorationSet.empty;
       },
-    };
-  })() as unknown as Plugin;
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -104,7 +100,6 @@ interface ComposerEditorProps {
   onTyping?: () => void;
   placeholder?: string;
   channelId: string;
-  serverId?: string;
   autoFocus?: boolean;
 }
 
@@ -131,14 +126,12 @@ export const ComposerEditor = forwardRef<
     onTyping,
     placeholder = 'Type a message\u2026',
     channelId,
-    serverId,
     autoFocus,
   },
   ref,
 ) {
   const viewRef = useRef<EditorView | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const generationRef = useRef(0);
   const originalTextRef = useRef(initialText ?? '');
   const sendingRef = useRef(false);
 
@@ -331,7 +324,6 @@ export const ComposerEditor = forwardRef<
 
     return () => {
       // Flush draft on unmount
-      const gen = generationRef.current;
       if (view && !view.isDestroyed) {
         const wireText = serializeDoc(view.state.doc);
         if (wireText.trim()) {
@@ -346,14 +338,6 @@ export const ComposerEditor = forwardRef<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]); // Re-create view on channel switch
 
-  // Increment generation on channel switch to prevent stale draft writes
-  useEffect(() => {
-    generationRef.current++;
-    return () => {
-      generationRef.current++;
-    };
-  }, [channelId]);
-
   // Imperative handle for parent components
   useImperativeHandle(
     ref,
@@ -362,14 +346,6 @@ export const ComposerEditor = forwardRef<
         if (!viewRef.current) return false;
         const currentText = serializeDoc(viewRef.current.state.doc);
         return currentText !== originalTextRef.current;
-      },
-      insertEmoji(text: string) {
-        const view = viewRef.current;
-        if (!view || view.isDestroyed) return;
-        const { from, to } = view.state.selection;
-        const tr = view.state.tr.insertText(text, from, to);
-        view.dispatch(tr.scrollIntoView());
-        view.focus();
       },
       insertText(text: string) {
         const view = viewRef.current;

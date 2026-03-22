@@ -156,23 +156,12 @@ export const composerSchema = new Schema({
 /*  Derived types                                                     */
 /* ------------------------------------------------------------------ */
 
-export type ComposerNodes =
-  | 'doc'
-  | 'paragraph'
-  | 'text'
-  | 'mention'
-  | 'customEmoji'
-  | 'channelLink';
-
-export type ComposerSchema = typeof composerSchema;
-
 /* ------------------------------------------------------------------ */
 /*  Editor handle (imperative ref exposed via React.forwardRef)       */
 /* ------------------------------------------------------------------ */
 
 export interface ComposerEditorHandle {
   isDirty(): boolean;
-  insertEmoji(text: string): void;
   insertText(text: string): void;
   focus(): void;
   clear(): void;

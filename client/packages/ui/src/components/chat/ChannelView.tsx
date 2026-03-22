@@ -1159,7 +1159,6 @@ const MessageItem = memo(function MessageItem({
   }
 
   const isMobile = useMobile();
-  const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1174,12 +1173,10 @@ const MessageItem = memo(function MessageItem({
     useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
   );
 
-  // Initialize edit text when isEditing transitions to true (handles both
-  // direct clicks and discard-dialog switches from ChannelView).
+  // Clear edit error when isEditing transitions to true.
   const prevIsEditingRef = useRef(false);
   useLayoutEffect(() => {
     if (isEditing && !prevIsEditingRef.current) {
-      setEditText(text);
       setEditError('');
     }
     prevIsEditingRef.current = isEditing;
@@ -1213,69 +1210,6 @@ const MessageItem = memo(function MessageItem({
     setEditError('');
     onCancelEdit();
   }
-
-  async function saveEdit() {
-    const trimmed = editText.trim();
-    if (!trimmed || trimmed === text) {
-      cancelEdit();
-      return;
-    }
-    setIsSaving(true);
-    setEditError('');
-    try {
-      // Use V1 JSON format for edited messages (preserves compatibility)
-      const plaintext = buildMessageContent(trimmed);
-      // Encrypt edited content for encrypted channels
-      let content: Uint8Array;
-      let keyVersion: number | undefined;
-      if (needsEncryption) {
-        try {
-          const encrypted = await encryptMessage(channelId, plaintext);
-          content = encrypted.data;
-          keyVersion = encrypted.keyVersion;
-        } catch {
-          setEditError('Encryption failed');
-          setIsSaving(false);
-          return;
-        }
-      } else {
-        content = plaintext;
-      }
-      await editMessage({
-        channelId: msg.channelId,
-        messageId: msg.id,
-        encryptedContent: content,
-        keyVersion,
-      });
-      onCancelEdit();
-    } catch {
-      setEditError('Failed to save edit');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function handleEditKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Escape is handled by the document-level listener in ChannelView
-    // so it can check dirty state and show the discard dialog.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      saveEdit();
-    }
-  }
-
-  useEffect(() => {
-    if (isEditing && editRef.current) {
-      editRef.current.focus();
-      editRef.current.setSelectionRange(
-        editRef.current.value.length,
-        editRef.current.value.length,
-      );
-      // Auto-grow to fit existing content
-      editRef.current.style.height = 'auto';
-      editRef.current.style.height = `${editRef.current.scrollHeight}px`;
-    }
-  }, [isEditing]);
 
   const messageBody = (
     <div

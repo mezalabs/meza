@@ -31,14 +31,9 @@ import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
-import { ChannelAutocomplete } from './ChannelAutocomplete.tsx';
 import type { ComposerEditorHandle } from './composer/schema.ts';
-import { serializeDoc } from './composer/serialize.ts';
-import { EmojiAutocomplete } from './EmojiAutocomplete.tsx';
 import { EmojiPickerButton } from './EmojiPickerButton.tsx';
 import { GifPicker } from './GifPicker.tsx';
-import { MentionAutocomplete } from './MentionAutocomplete.tsx';
-import { SlashCommandAutocomplete } from './SlashCommandAutocomplete.tsx';
 
 // Lazy-load ProseMirror chunk (~50KB gzipped)
 const ComposerEditor = lazy(() =>
@@ -88,15 +83,6 @@ export function MessageComposer({
   const editorRef = useRef<ComposerEditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Autocomplete state driven by ProseMirror plugin via data attributes
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [channelQuery, setChannelQuery] = useState<string | null>(null);
-  const [emojiQuery, setEmojiQuery] = useState<string | null>(null);
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const autocompleteRangeRef = useRef<{ from: number; to: number } | null>(
-    null,
-  );
-
   const resolvedServerId = useChannelStore(
     (s) => serverId || s.channelToServer[channelId],
   );
@@ -122,7 +108,7 @@ export function MessageComposer({
   useEffect(() => {
     if (insertEmojiRef) {
       insertEmojiRef.current = (text: string) => {
-        editorRef.current?.insertEmoji(text);
+        editorRef.current?.insertText(text);
       };
     }
     return () => {
@@ -227,7 +213,7 @@ export function MessageComposer({
             if (commandName === 'gif') {
               setGifPickerQuery(args || '');
               editorRef.current?.clear();
-              setSlashQuery(null);
+
               return;
             }
             if (command.silent) {
@@ -237,7 +223,7 @@ export function MessageComposer({
                 sendMessage: () => {},
               });
               editorRef.current?.clear();
-              setSlashQuery(null);
+
               return;
             }
             let transformed: string | null = null;
@@ -250,10 +236,10 @@ export function MessageComposer({
             });
             if (transformed !== null) {
               text = transformed;
-              setSlashQuery(null);
+
             } else {
               editorRef.current?.clear();
-              setSlashQuery(null);
+
               return;
             }
           }
@@ -605,7 +591,7 @@ export function MessageComposer({
           </div>
 
           <EmojiPickerButton
-            onSelect={(emoji) => editorRef.current?.insertEmoji(emoji)}
+            onSelect={(emoji) => editorRef.current?.insertText(emoji)}
             onClose={() => editorRef.current?.focus()}
             disabled={sending || disabled}
             serverId={serverId}
