@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -19,6 +21,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1 "github.com/mezalabs/meza/gen/meza/v1"
 	"github.com/mezalabs/meza/internal/config"
@@ -35,14 +38,24 @@ const (
 	maxConcurrentDelivery = 500 // bounded goroutine pool for webhook delivery
 )
 
+const (
+	incomingMaxContentLength = 4000
+	incomingRateLimitPerMin  = 30
+)
+
 type webhookService struct {
-	botStore   store.BotStorer
-	nc         *nats.Conn
-	httpClient *http.Client
-	deliverSem chan struct{} // semaphore to bound concurrent HTTP deliveries
+	botStore     store.BotStorer
+	messageStore store.MessageStorer
+	nc           *nats.Conn
+	httpClient   *http.Client
+	deliverSem   chan struct{} // semaphore to bound concurrent HTTP deliveries
 
 	mu             sync.RWMutex
 	serverWebhooks map[string][]*models.BotWebhook
+
+	// Rate limiting for incoming webhooks: map[webhookID] -> sliding window timestamps.
+	incomingRateMu sync.Mutex
+	incomingRates  map[string][]time.Time
 }
 
 func main() {
@@ -69,9 +82,19 @@ func main() {
 
 	botStore := store.NewBotStore(pool)
 
+	// Connect to ScyllaDB for incoming webhook message persistence.
+	scyllaSession, err := database.NewScyllaSession(cfg.ScyllaHosts, "meza")
+	if err != nil {
+		slog.Error("connect scylla", "err", err)
+		os.Exit(1)
+	}
+	defer scyllaSession.Close()
+	messageStore := store.NewMessageStore(scyllaSession)
+
 	svc := &webhookService{
-		botStore:   botStore,
-		nc:         nc,
+		botStore:     botStore,
+		messageStore: messageStore,
+		nc:           nc,
 		deliverSem: make(chan struct{}, maxConcurrentDelivery),
 		httpClient: &http.Client{
 			Timeout: webhookHTTPTimeout,
@@ -84,6 +107,7 @@ func main() {
 			},
 		},
 		serverWebhooks: make(map[string][]*models.BotWebhook),
+		incomingRates:  make(map[string][]time.Time),
 	}
 
 	// Initial load of all webhooks.
@@ -115,12 +139,13 @@ func main() {
 
 	slog.Info("webhook service started", "port", 8087)
 
-	// Health endpoint.
+	// Health endpoint + incoming webhook handler.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+	mux.HandleFunc("POST /webhook/incoming/{id}", svc.handleIncomingWebhook)
 
 	server := &http.Server{
 		Addr:    ":8087",
@@ -298,6 +323,145 @@ func buildWebhookPayload(event *v1.Event, serverID, channelID string) *webhookPa
 		ChannelID: channelID,
 		Data:      event.Payload,
 	}
+}
+
+// Incoming webhook handler: POST /webhook/incoming/{id}
+func (svc *webhookService) handleIncomingWebhook(w http.ResponseWriter, r *http.Request) {
+	webhookID := r.PathValue("id")
+	if webhookID == "" {
+		http.Error(w, `{"error":"missing webhook id"}`, http.StatusNotFound)
+		return
+	}
+
+	// Look up the incoming webhook.
+	wh, err := svc.botStore.GetIncomingWebhook(r.Context(), webhookID)
+	if err != nil {
+		http.Error(w, `{"error":"webhook not found"}`, http.StatusNotFound)
+		return
+	}
+
+	// Validate secret via X-Webhook-Secret header.
+	secretHex := r.Header.Get("X-Webhook-Secret")
+	if secretHex == "" {
+		http.Error(w, `{"error":"missing X-Webhook-Secret header"}`, http.StatusUnauthorized)
+		return
+	}
+	secretBytes, err := hex.DecodeString(secretHex)
+	if err != nil {
+		http.Error(w, `{"error":"invalid secret format"}`, http.StatusUnauthorized)
+		return
+	}
+	secretHash := sha256.Sum256(secretBytes)
+	if subtle.ConstantTimeCompare(secretHash[:], wh.SecretHash) != 1 {
+		http.Error(w, `{"error":"invalid secret"}`, http.StatusUnauthorized)
+		return
+	}
+
+	// Rate limit: sliding window, 30/min.
+	if !svc.checkIncomingRateLimit(webhookID) {
+		w.Header().Set("Retry-After", "60")
+		http.Error(w, `{"error":"rate limit exceeded (30/min)"}`, http.StatusTooManyRequests)
+		return
+	}
+
+	// Parse body.
+	body, err := io.ReadAll(io.LimitReader(r.Body, 1<<16)) // 64KB max read
+	if err != nil {
+		http.Error(w, `{"error":"failed to read body"}`, http.StatusBadRequest)
+		return
+	}
+
+	var payload struct {
+		Content string `json:"content"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, `{"error":"invalid JSON body"}`, http.StatusBadRequest)
+		return
+	}
+	if payload.Content == "" {
+		http.Error(w, `{"error":"content is required"}`, http.StatusBadRequest)
+		return
+	}
+	if len(payload.Content) > incomingMaxContentLength {
+		http.Error(w, fmt.Sprintf(`{"error":"content exceeds %d characters"}`, incomingMaxContentLength), http.StatusBadRequest)
+		return
+	}
+
+	// Create and persist a plaintext message (KeyVersion=0).
+	msgID := models.NewID()
+	now := time.Now()
+
+	dbMsg := &models.Message{
+		ChannelID:        wh.ChannelID,
+		MessageID:        msgID,
+		AuthorID:         wh.BotUserID,
+		EncryptedContent: []byte(payload.Content), // plaintext for KeyVersion=0
+		CreatedAt:        now,
+		KeyVersion:       0,
+		Type:             0, // MESSAGE_TYPE_DEFAULT
+	}
+	if err := svc.messageStore.InsertMessage(r.Context(), dbMsg); err != nil {
+		slog.Error("persist incoming webhook message", "err", err, "webhook", webhookID)
+		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Build proto message for event.
+	protoMsg := &v1.Message{
+		Id:               msgID,
+		ChannelId:        wh.ChannelID,
+		AuthorId:         wh.BotUserID,
+		EncryptedContent: []byte(payload.Content),
+		CreatedAt:        timestamppb.New(now),
+		Type:             v1.MessageType_MESSAGE_TYPE_DEFAULT,
+		KeyVersion:       0,
+	}
+
+	// Publish to NATS for real-time delivery.
+	eventData, err := proto.Marshal(&v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_MESSAGE_CREATE,
+		Payload: &v1.Event_MessageCreate{
+			MessageCreate: protoMsg,
+		},
+	})
+	if err != nil {
+		slog.Error("marshal incoming webhook message", "err", err)
+		// Message was persisted, just log the event publishing failure.
+	} else {
+		if err := svc.nc.Publish(subjects.DeliverChannel(wh.ChannelID), eventData); err != nil {
+			slog.Warn("publish incoming webhook event", "err", err, "webhook", webhookID, "channel", wh.ChannelID)
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"id":"%s"}`, msgID)
+}
+
+func (svc *webhookService) checkIncomingRateLimit(webhookID string) bool {
+	svc.incomingRateMu.Lock()
+	defer svc.incomingRateMu.Unlock()
+
+	now := time.Now()
+	cutoff := now.Add(-time.Minute)
+
+	// Remove old timestamps.
+	timestamps := svc.incomingRates[webhookID]
+	valid := timestamps[:0]
+	for _, t := range timestamps {
+		if t.After(cutoff) {
+			valid = append(valid, t)
+		}
+	}
+
+	if len(valid) >= incomingRateLimitPerMin {
+		svc.incomingRates[webhookID] = valid
+		return false
+	}
+
+	svc.incomingRates[webhookID] = append(valid, now)
+	return true
 }
 
 func extractServerID(event *v1.Event) string {

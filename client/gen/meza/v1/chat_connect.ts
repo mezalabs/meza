@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcceptFriendRequestRequest, AcceptFriendRequestResponse, AcceptMessageRequestReq, AcceptMessageRequestRes, AckMessageRequest, AckMessageResponse, AcknowledgeRulesRequest, AcknowledgeRulesResponse, AddBotToServerRequest, AddBotToServerResponse, AddChannelMemberRequest, AddChannelMemberResponse, AddReactionRequest, AddReactionResponse, BanMemberRequest, BanMemberResponse, BlockUserRequest, BlockUserResponse, BulkDeleteMessagesRequest, BulkDeleteMessagesResponse, CancelFriendRequestRequest, CancelFriendRequestResponse, CompleteOnboardingRequest, CompleteOnboardingResponse, CreateBotRequest, CreateBotResponse, CreateChannelGroupRequest, CreateChannelGroupResponse, CreateChannelRequest, CreateChannelResponse, CreateEmojiRequest, CreateEmojiResponse, CreateGroupDMChannelRequest, CreateGroupDMChannelResponse, CreateInviteRequest, CreateInviteResponse, CreateOrGetDMChannelRequest, CreateOrGetDMChannelResponse, CreateRoleRequest, CreateRoleResponse, CreateServerFromTemplateRequest, CreateServerFromTemplateResponse, CreateServerRequest, CreateServerResponse, CreateSoundRequest, CreateSoundResponse, CreateWebhookRequest, CreateWebhookResponse, DeclineFriendRequestRequest, DeclineFriendRequestResponse, DeclineMessageRequestReq, DeclineMessageRequestRes, DeleteBotRequest, DeleteBotResponse, DeleteChannelGroupRequest, DeleteChannelGroupResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteEmojiRequest, DeleteEmojiResponse, DeleteMessageRequest, DeleteMessageResponse, DeletePermissionOverrideRequest, DeletePermissionOverrideResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteServerRequest, DeleteServerResponse, DeleteSoundRequest, DeleteSoundResponse, DeleteWebhookRequest, DeleteWebhookResponse, EditMessageRequest, EditMessageResponse, Event, GetBotRequest, GetBotResponse, GetChannelRequest, GetChannelResponse, GetEffectivePermissionsRequest, GetEffectivePermissionsResponse, GetMessagesByIDsRequest, GetMessagesByIDsResponse, GetMessagesRequest, GetMessagesResponse, GetMutualFriendsRequest, GetMutualFriendsResponse, GetMutualServersRequest, GetMutualServersResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetReactionsRequest, GetReactionsResponse, GetRepliesRequest, GetRepliesResponse, GetServerRequest, GetServerResponse, GetSystemMessageConfigRequest, GetSystemMessageConfigResponse, JoinServerRequest, JoinServerResponse, KickMemberRequest, KickMemberResponse, LeaveServerRequest, LeaveServerResponse, ListAuditLogRequest, ListAuditLogResponse, ListBansRequest, ListBansResponse, ListBlocksRequest, ListBlocksResponse, ListBotsRequest, ListBotsResponse, ListChannelGroupsRequest, ListChannelGroupsResponse, ListChannelMembersRequest, ListChannelMembersResponse, ListChannelsRequest, ListChannelsResponse, ListDMChannelsRequest, ListDMChannelsResponse, ListEmojisRequest, ListEmojisResponse, ListFriendRequestsRequest, ListFriendRequestsResponse, ListFriendsRequest, ListFriendsResponse, ListInvitesRequest, ListInvitesResponse, ListMembersRequest, ListMembersResponse, ListMessageRequestsRequest, ListMessageRequestsResponse, ListPermissionOverridesRequest, ListPermissionOverridesResponse, ListRolesRequest, ListRolesResponse, ListServerSoundsRequest, ListServerSoundsResponse, ListServersRequest, ListServersResponse, ListUserEmojisRequest, ListUserEmojisResponse, ListUserSoundsRequest, ListUserSoundsResponse, ListWebhooksRequest, ListWebhooksResponse, PinMessageRequest, PinMessageResponse, RegenerateBotTokenRequest, RegenerateBotTokenResponse, RemoveBotFromServerRequest, RemoveBotFromServerResponse, RemoveChannelMemberRequest, RemoveChannelMemberResponse, RemoveFriendRequest, RemoveFriendResponse, RemoveReactionRequest, RemoveReactionResponse, RemoveTimeoutRequest, RemoveTimeoutResponse, ReorderRolesRequest, ReorderRolesResponse, ResolveInviteRequest, ResolveInviteResponse, ReverseDeclineRequest, ReverseDeclineResponse, RevokeInviteRequest, RevokeInviteResponse, SearchMessagesRequest, SearchMessagesResponse, SendFriendRequestRequest, SendFriendRequestResponse, SendMessageRequest, SendMessageResponse, SetMemberRolesRequest, SetMemberRolesResponse, SetPermissionOverrideRequest, SetPermissionOverrideResponse, StreamEventsRequest, TimeoutMemberRequest, TimeoutMemberResponse, UnbanMemberRequest, UnbanMemberResponse, UnblockUserRequest, UnblockUserResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateChannelGroupRequest, UpdateChannelGroupResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateEmojiRequest, UpdateEmojiResponse, UpdateMemberRequest, UpdateMemberResponse, UpdateRoleRequest, UpdateRoleResponse, UpdateServerRequest, UpdateServerResponse, UpdateSoundRequest, UpdateSoundResponse, UpdateSystemMessageConfigRequest, UpdateSystemMessageConfigResponse } from "./chat_pb.js";
+import { AcceptBotInviteRequest, AcceptBotInviteResponse, AcceptFriendRequestRequest, AcceptFriendRequestResponse, AcceptMessageRequestReq, AcceptMessageRequestRes, AckMessageRequest, AckMessageResponse, AcknowledgeRulesRequest, AcknowledgeRulesResponse, AddBotToServerRequest, AddBotToServerResponse, AddChannelMemberRequest, AddChannelMemberResponse, AddReactionRequest, AddReactionResponse, BanMemberRequest, BanMemberResponse, BlockUserRequest, BlockUserResponse, BulkDeleteMessagesRequest, BulkDeleteMessagesResponse, CancelFriendRequestRequest, CancelFriendRequestResponse, CompleteOnboardingRequest, CompleteOnboardingResponse, CreateBotInviteRequest, CreateBotInviteResponse, CreateBotRequest, CreateBotResponse, CreateChannelGroupRequest, CreateChannelGroupResponse, CreateChannelRequest, CreateChannelResponse, CreateEmojiRequest, CreateEmojiResponse, CreateGroupDMChannelRequest, CreateGroupDMChannelResponse, CreateIncomingWebhookRequest, CreateIncomingWebhookResponse, CreateInviteRequest, CreateInviteResponse, CreateOrGetDMChannelRequest, CreateOrGetDMChannelResponse, CreateRoleRequest, CreateRoleResponse, CreateServerFromTemplateRequest, CreateServerFromTemplateResponse, CreateServerRequest, CreateServerResponse, CreateSoundRequest, CreateSoundResponse, CreateWebhookRequest, CreateWebhookResponse, DeclineFriendRequestRequest, DeclineFriendRequestResponse, DeclineMessageRequestReq, DeclineMessageRequestRes, DeleteBotInviteRequest, DeleteBotInviteResponse, DeleteBotRequest, DeleteBotResponse, DeleteChannelGroupRequest, DeleteChannelGroupResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteEmojiRequest, DeleteEmojiResponse, DeleteIncomingWebhookRequest, DeleteIncomingWebhookResponse, DeleteMessageRequest, DeleteMessageResponse, DeletePermissionOverrideRequest, DeletePermissionOverrideResponse, DeleteRoleRequest, DeleteRoleResponse, DeleteServerRequest, DeleteServerResponse, DeleteSoundRequest, DeleteSoundResponse, DeleteWebhookRequest, DeleteWebhookResponse, EditMessageRequest, EditMessageResponse, Event, GetBotRequest, GetBotResponse, GetChannelRequest, GetChannelResponse, GetEffectivePermissionsRequest, GetEffectivePermissionsResponse, GetMessagesByIDsRequest, GetMessagesByIDsResponse, GetMessagesRequest, GetMessagesResponse, GetMutualFriendsRequest, GetMutualFriendsResponse, GetMutualServersRequest, GetMutualServersResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetReactionsRequest, GetReactionsResponse, GetRepliesRequest, GetRepliesResponse, GetServerRequest, GetServerResponse, GetSystemMessageConfigRequest, GetSystemMessageConfigResponse, JoinServerRequest, JoinServerResponse, KickMemberRequest, KickMemberResponse, LeaveServerRequest, LeaveServerResponse, ListAuditLogRequest, ListAuditLogResponse, ListBansRequest, ListBansResponse, ListBlocksRequest, ListBlocksResponse, ListBotInvitesRequest, ListBotInvitesResponse, ListBotsRequest, ListBotsResponse, ListChannelGroupsRequest, ListChannelGroupsResponse, ListChannelMembersRequest, ListChannelMembersResponse, ListChannelsRequest, ListChannelsResponse, ListDMChannelsRequest, ListDMChannelsResponse, ListEmojisRequest, ListEmojisResponse, ListFriendRequestsRequest, ListFriendRequestsResponse, ListFriendsRequest, ListFriendsResponse, ListIncomingWebhooksRequest, ListIncomingWebhooksResponse, ListInvitesRequest, ListInvitesResponse, ListMembersRequest, ListMembersResponse, ListMessageRequestsRequest, ListMessageRequestsResponse, ListPermissionOverridesRequest, ListPermissionOverridesResponse, ListRolesRequest, ListRolesResponse, ListServerSoundsRequest, ListServerSoundsResponse, ListServersRequest, ListServersResponse, ListUserEmojisRequest, ListUserEmojisResponse, ListUserSoundsRequest, ListUserSoundsResponse, ListWebhooksRequest, ListWebhooksResponse, PinMessageRequest, PinMessageResponse, RegenerateBotTokenRequest, RegenerateBotTokenResponse, RemoveBotFromServerRequest, RemoveBotFromServerResponse, RemoveChannelMemberRequest, RemoveChannelMemberResponse, RemoveFriendRequest, RemoveFriendResponse, RemoveReactionRequest, RemoveReactionResponse, RemoveTimeoutRequest, RemoveTimeoutResponse, ReorderRolesRequest, ReorderRolesResponse, ResolveBotInviteRequest, ResolveBotInviteResponse, ResolveInviteRequest, ResolveInviteResponse, ReverseDeclineRequest, ReverseDeclineResponse, RevokeInviteRequest, RevokeInviteResponse, SearchMessagesRequest, SearchMessagesResponse, SendFriendRequestRequest, SendFriendRequestResponse, SendMessageRequest, SendMessageResponse, SetMemberRolesRequest, SetMemberRolesResponse, SetPermissionOverrideRequest, SetPermissionOverrideResponse, StreamEventsRequest, TimeoutMemberRequest, TimeoutMemberResponse, UnbanMemberRequest, UnbanMemberResponse, UnblockUserRequest, UnblockUserResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateBotRequest, UpdateBotResponse, UpdateChannelGroupRequest, UpdateChannelGroupResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateEmojiRequest, UpdateEmojiResponse, UpdateMemberRequest, UpdateMemberResponse, UpdateRoleRequest, UpdateRoleResponse, UpdateServerRequest, UpdateServerResponse, UpdateSoundRequest, UpdateSoundResponse, UpdateSystemMessageConfigRequest, UpdateSystemMessageConfigResponse } from "./chat_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -906,7 +906,65 @@ export const ChatService = {
       kind: MethodKind.Unary,
     },
     /**
-     * Webhook management
+     * Bot invites
+     *
+     * @generated from rpc meza.v1.ChatService.CreateBotInvite
+     */
+    createBotInvite: {
+      name: "CreateBotInvite",
+      I: CreateBotInviteRequest,
+      O: CreateBotInviteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.ResolveBotInvite
+     */
+    resolveBotInvite: {
+      name: "ResolveBotInvite",
+      I: ResolveBotInviteRequest,
+      O: ResolveBotInviteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.AcceptBotInvite
+     */
+    acceptBotInvite: {
+      name: "AcceptBotInvite",
+      I: AcceptBotInviteRequest,
+      O: AcceptBotInviteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.ListBotInvites
+     */
+    listBotInvites: {
+      name: "ListBotInvites",
+      I: ListBotInvitesRequest,
+      O: ListBotInvitesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.DeleteBotInvite
+     */
+    deleteBotInvite: {
+      name: "DeleteBotInvite",
+      I: DeleteBotInviteRequest,
+      O: DeleteBotInviteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Bot profile
+     *
+     * @generated from rpc meza.v1.ChatService.UpdateBot
+     */
+    updateBot: {
+      name: "UpdateBot",
+      I: UpdateBotRequest,
+      O: UpdateBotResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Webhook management (outgoing)
      *
      * @generated from rpc meza.v1.ChatService.CreateWebhook
      */
@@ -932,6 +990,35 @@ export const ChatService = {
       name: "ListWebhooks",
       I: ListWebhooksRequest,
       O: ListWebhooksResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Incoming webhooks
+     *
+     * @generated from rpc meza.v1.ChatService.CreateIncomingWebhook
+     */
+    createIncomingWebhook: {
+      name: "CreateIncomingWebhook",
+      I: CreateIncomingWebhookRequest,
+      O: CreateIncomingWebhookResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.DeleteIncomingWebhook
+     */
+    deleteIncomingWebhook: {
+      name: "DeleteIncomingWebhook",
+      I: DeleteIncomingWebhookRequest,
+      O: DeleteIncomingWebhookResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.ChatService.ListIncomingWebhooks
+     */
+    listIncomingWebhooks: {
+      name: "ListIncomingWebhooks",
+      I: ListIncomingWebhooksRequest,
+      O: ListIncomingWebhooksResponse,
       kind: MethodKind.Unary,
     },
   }

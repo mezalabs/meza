@@ -97,7 +97,7 @@ func (s *BotStore) ListBotsByOwner(ctx context.Context, ownerID string) ([]*mode
 
 	rows, err := s.pool.Query(ctx,
 		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''),
-		        is_bot, COALESCE(bot_owner_id,''), created_at
+		        is_bot, COALESCE(bot_owner_id,''), created_at, COALESCE(bot_description,'')
 		 FROM users WHERE bot_owner_id = $1 AND is_bot = true
 		 ORDER BY created_at DESC`, ownerID,
 	)
@@ -110,7 +110,7 @@ func (s *BotStore) ListBotsByOwner(ctx context.Context, ownerID string) ([]*mode
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL,
-			&u.IsBot, &u.BotOwnerID, &u.CreatedAt); err != nil {
+			&u.IsBot, &u.BotOwnerID, &u.CreatedAt, &u.BotDescription); err != nil {
 			return nil, fmt.Errorf("scan bot: %w", err)
 		}
 		bots = append(bots, &u)
@@ -139,10 +139,10 @@ func (s *BotStore) GetBotUser(ctx context.Context, botID string) (*models.User, 
 	var u models.User
 	err := s.pool.QueryRow(ctx,
 		`SELECT id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''),
-		        is_bot, COALESCE(bot_owner_id,''), created_at, signing_public_key
+		        is_bot, COALESCE(bot_owner_id,''), created_at, signing_public_key, COALESCE(bot_description,'')
 		 FROM users WHERE id = $1 AND is_bot = true`, botID,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL,
-		&u.IsBot, &u.BotOwnerID, &u.CreatedAt, &u.SigningPublicKey)
+		&u.IsBot, &u.BotOwnerID, &u.CreatedAt, &u.SigningPublicKey, &u.BotDescription)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -276,4 +276,197 @@ func (s *BotStore) GetWebhook(ctx context.Context, webhookID string) (*models.Bo
 		return nil, fmt.Errorf("get webhook: %w", err)
 	}
 	return &w, nil
+}
+
+// Bot profile update
+
+func (s *BotStore) UpdateBotProfile(ctx context.Context, botID, displayName, description, avatarURL string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx,
+		`UPDATE users SET display_name = $2, bot_description = $3, avatar_url = $4
+		 WHERE id = $1 AND is_bot = true`,
+		botID, displayName, description, avatarURL,
+	)
+	if err != nil {
+		return fmt.Errorf("update bot profile: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// Bot invite store methods
+
+func (s *BotStore) CreateBotInvite(ctx context.Context, invite *models.BotInvite) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO bot_invites (code, bot_id, requested_permissions, creator_id, created_at, expires_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		invite.Code, invite.BotID, invite.RequestedPermissions, invite.CreatorID, invite.CreatedAt, invite.ExpiresAt,
+	)
+	if err != nil {
+		return fmt.Errorf("insert bot invite: %w", err)
+	}
+	return nil
+}
+
+func (s *BotStore) GetBotInvite(ctx context.Context, code string) (*models.BotInvite, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var inv models.BotInvite
+	err := s.pool.QueryRow(ctx,
+		`SELECT code, bot_id, requested_permissions, creator_id, created_at, expires_at
+		 FROM bot_invites WHERE code = $1`, code,
+	).Scan(&inv.Code, &inv.BotID, &inv.RequestedPermissions, &inv.CreatorID, &inv.CreatedAt, &inv.ExpiresAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get bot invite: %w", err)
+	}
+	return &inv, nil
+}
+
+func (s *BotStore) ListBotInvites(ctx context.Context, botID string) ([]*models.BotInvite, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT code, bot_id, requested_permissions, creator_id, created_at, expires_at
+		 FROM bot_invites WHERE bot_id = $1 AND expires_at > now()
+		 ORDER BY created_at DESC`, botID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list bot invites: %w", err)
+	}
+	defer rows.Close()
+
+	var invites []*models.BotInvite
+	for rows.Next() {
+		var inv models.BotInvite
+		if err := rows.Scan(&inv.Code, &inv.BotID, &inv.RequestedPermissions, &inv.CreatorID, &inv.CreatedAt, &inv.ExpiresAt); err != nil {
+			return nil, fmt.Errorf("scan bot invite: %w", err)
+		}
+		invites = append(invites, &inv)
+	}
+	return invites, rows.Err()
+}
+
+func (s *BotStore) DeleteBotInvite(ctx context.Context, code string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx, `DELETE FROM bot_invites WHERE code = $1`, code)
+	if err != nil {
+		return fmt.Errorf("delete bot invite: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s *BotStore) CountBotInvites(ctx context.Context, botID string) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var count int
+	err := s.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM bot_invites WHERE bot_id = $1 AND expires_at > now()`, botID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count bot invites: %w", err)
+	}
+	return count, nil
+}
+
+func (s *BotStore) CleanupExpiredInvites(ctx context.Context) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx, `DELETE FROM bot_invites WHERE expires_at <= now()`)
+	if err != nil {
+		return 0, fmt.Errorf("cleanup expired invites: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+// Incoming webhook store methods
+
+func (s *BotStore) CreateIncomingWebhook(ctx context.Context, wh *models.IncomingWebhook) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO incoming_webhooks (id, bot_user_id, server_id, channel_id, secret_hash, creator_id, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		wh.ID, wh.BotUserID, wh.ServerID, wh.ChannelID, wh.SecretHash, wh.CreatorID, wh.CreatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("insert incoming webhook: %w", err)
+	}
+	return nil
+}
+
+func (s *BotStore) GetIncomingWebhook(ctx context.Context, id string) (*models.IncomingWebhook, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	var wh models.IncomingWebhook
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, bot_user_id, server_id, channel_id, secret_hash, creator_id, created_at
+		 FROM incoming_webhooks WHERE id = $1`, id,
+	).Scan(&wh.ID, &wh.BotUserID, &wh.ServerID, &wh.ChannelID, &wh.SecretHash, &wh.CreatorID, &wh.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get incoming webhook: %w", err)
+	}
+	return &wh, nil
+}
+
+func (s *BotStore) ListIncomingWebhooksByServer(ctx context.Context, serverID string) ([]*models.IncomingWebhook, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, bot_user_id, server_id, channel_id, secret_hash, creator_id, created_at
+		 FROM incoming_webhooks WHERE server_id = $1
+		 ORDER BY created_at DESC`, serverID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list incoming webhooks: %w", err)
+	}
+	defer rows.Close()
+
+	var webhooks []*models.IncomingWebhook
+	for rows.Next() {
+		var wh models.IncomingWebhook
+		if err := rows.Scan(&wh.ID, &wh.BotUserID, &wh.ServerID, &wh.ChannelID, &wh.SecretHash, &wh.CreatorID, &wh.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan incoming webhook: %w", err)
+		}
+		webhooks = append(webhooks, &wh)
+	}
+	return webhooks, rows.Err()
+}
+
+func (s *BotStore) DeleteIncomingWebhook(ctx context.Context, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tag, err := s.pool.Exec(ctx, `DELETE FROM incoming_webhooks WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("delete incoming webhook: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }

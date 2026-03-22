@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -34,8 +37,22 @@ func botToProto(u *models.User) *v1.Bot {
 		AvatarUrl:   u.AvatarURL,
 		OwnerId:     u.BotOwnerID,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
+		Description: u.BotDescription,
 	}
 }
+
+func botInviteToProto(inv *models.BotInvite) *v1.BotInvite {
+	return &v1.BotInvite{
+		Code:                 inv.Code,
+		BotId:                inv.BotID,
+		RequestedPermissions: inv.RequestedPermissions,
+		CreatorId:            inv.CreatorID,
+		CreatedAt:            timestamppb.New(inv.CreatedAt),
+		ExpiresAt:            timestamppb.New(inv.ExpiresAt),
+	}
+}
+
+const maxInvitesPerBot = 10
 
 func (s *chatService) CreateBot(ctx context.Context, req *connect.Request[v1.CreateBotRequest]) (*connect.Response[v1.CreateBotResponse], error) {
 	userID, ok := auth.UserIDFromContext(ctx)
@@ -570,3 +587,407 @@ func (s *chatService) ListWebhooks(ctx context.Context, req *connect.Request[v1.
 		Webhooks: protoWebhooks,
 	}), nil
 }
+
+// Bot invite RPCs
+
+func generateInviteCode() (string, error) {
+	b := make([]byte, 16) // 128 bits
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func (s *chatService) CreateBotInvite(ctx context.Context, req *connect.Request[v1.CreateBotInviteRequest]) (*connect.Response[v1.CreateBotInviteResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.BotId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("bot_id is required"))
+	}
+
+	// Verify ownership.
+	bot, err := s.botStore.GetBotUser(ctx, req.Msg.BotId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
+	}
+	if bot.BotOwnerID != userID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you do not own this bot"))
+	}
+
+	// Check invite limit.
+	count, err := s.botStore.CountBotInvites(ctx, req.Msg.BotId)
+	if err != nil {
+		slog.Error("counting bot invites", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if count >= maxInvitesPerBot {
+		return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("maximum %d active invites per bot", maxInvitesPerBot))
+	}
+
+	code, err := generateInviteCode()
+	if err != nil {
+		slog.Error("generating invite code", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	now := time.Now()
+	invite := &models.BotInvite{
+		Code:                 code,
+		BotID:                req.Msg.BotId,
+		RequestedPermissions: req.Msg.RequestedPermissions,
+		CreatorID:            userID,
+		CreatedAt:            now,
+		ExpiresAt:            now.Add(7 * 24 * time.Hour),
+	}
+
+	if err := s.botStore.CreateBotInvite(ctx, invite); err != nil {
+		slog.Error("creating bot invite", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.CreateBotInviteResponse{
+		Invite: botInviteToProto(invite),
+	}), nil
+}
+
+func (s *chatService) ResolveBotInvite(ctx context.Context, req *connect.Request[v1.ResolveBotInviteRequest]) (*connect.Response[v1.ResolveBotInviteResponse], error) {
+	// Public RPC — no auth required.
+	if req.Msg.Code == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code is required"))
+	}
+
+	invite, err := s.botStore.GetBotInvite(ctx, req.Msg.Code)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found"))
+	}
+	if time.Now().After(invite.ExpiresAt) {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite has expired"))
+	}
+
+	bot, err := s.botStore.GetBotUser(ctx, invite.BotID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
+	}
+
+	// Get owner username for display.
+	owner, err := s.authStore.GetUserByID(ctx, invite.CreatorID)
+	ownerUsername := ""
+	if err == nil {
+		ownerUsername = owner.Username
+	}
+
+	return connect.NewResponse(&v1.ResolveBotInviteResponse{
+		Invite:        botInviteToProto(invite),
+		Bot:           botToProto(bot),
+		OwnerUsername: ownerUsername,
+	}), nil
+}
+
+func (s *chatService) AcceptBotInvite(ctx context.Context, req *connect.Request[v1.AcceptBotInviteRequest]) (*connect.Response[v1.AcceptBotInviteResponse], error) {
+	_, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.Code == "" || req.Msg.ServerId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code and server_id are required"))
+	}
+
+	// Resolve the invite.
+	invite, err := s.botStore.GetBotInvite(ctx, req.Msg.Code)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found"))
+	}
+	if time.Now().After(invite.ExpiresAt) {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite has expired"))
+	}
+
+	// Delegate to AddBotToServer — context already carries the caller's auth.
+	addReq := connect.NewRequest(&v1.AddBotToServerRequest{
+		BotId:    invite.BotID,
+		ServerId: req.Msg.ServerId,
+	})
+
+	addResp, err := s.AddBotToServer(ctx, addReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&v1.AcceptBotInviteResponse{
+		Member: addResp.Msg.Member,
+	}), nil
+}
+
+func (s *chatService) ListBotInvites(ctx context.Context, req *connect.Request[v1.ListBotInvitesRequest]) (*connect.Response[v1.ListBotInvitesResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.BotId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("bot_id is required"))
+	}
+
+	// Verify ownership.
+	bot, err := s.botStore.GetBotUser(ctx, req.Msg.BotId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
+	}
+	if bot.BotOwnerID != userID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you do not own this bot"))
+	}
+
+	invites, err := s.botStore.ListBotInvites(ctx, req.Msg.BotId)
+	if err != nil {
+		slog.Error("listing bot invites", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	var protoInvites []*v1.BotInvite
+	for _, inv := range invites {
+		protoInvites = append(protoInvites, botInviteToProto(inv))
+	}
+
+	return connect.NewResponse(&v1.ListBotInvitesResponse{
+		Invites: protoInvites,
+	}), nil
+}
+
+func (s *chatService) DeleteBotInvite(ctx context.Context, req *connect.Request[v1.DeleteBotInviteRequest]) (*connect.Response[v1.DeleteBotInviteResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.Code == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code is required"))
+	}
+
+	// Verify ownership via the invite's bot.
+	invite, err := s.botStore.GetBotInvite(ctx, req.Msg.Code)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("invite not found"))
+	}
+	bot, err := s.botStore.GetBotUser(ctx, invite.BotID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
+	}
+	if bot.BotOwnerID != userID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you do not own this bot"))
+	}
+
+	if err := s.botStore.DeleteBotInvite(ctx, req.Msg.Code); err != nil {
+		slog.Error("deleting bot invite", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.DeleteBotInviteResponse{}), nil
+}
+
+// UpdateBot RPC
+
+func (s *chatService) UpdateBot(ctx context.Context, req *connect.Request[v1.UpdateBotRequest]) (*connect.Response[v1.UpdateBotResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.BotId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("bot_id is required"))
+	}
+
+	// Verify ownership.
+	bot, err := s.botStore.GetBotUser(ctx, req.Msg.BotId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("bot not found"))
+	}
+	if bot.BotOwnerID != userID {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("you do not own this bot"))
+	}
+
+	// Apply partial updates: use existing values as defaults.
+	displayName := bot.DisplayName
+	description := bot.BotDescription
+	avatarURL := bot.AvatarURL
+
+	if req.Msg.DisplayName != nil {
+		displayName = strings.TrimSpace(*req.Msg.DisplayName)
+		if displayName == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("display_name cannot be empty"))
+		}
+		if len(displayName) > 100 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("display_name must be 100 characters or fewer"))
+		}
+	}
+	if req.Msg.Description != nil {
+		description = strings.TrimSpace(*req.Msg.Description)
+		if len(description) > 500 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("description must be 500 characters or fewer"))
+		}
+	}
+	if req.Msg.AvatarUrl != nil {
+		avatarURL = strings.TrimSpace(*req.Msg.AvatarUrl)
+	}
+
+	if err := s.botStore.UpdateBotProfile(ctx, req.Msg.BotId, displayName, description, avatarURL); err != nil {
+		slog.Error("updating bot profile", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Return updated bot.
+	bot.DisplayName = displayName
+	bot.BotDescription = description
+	bot.AvatarURL = avatarURL
+
+	return connect.NewResponse(&v1.UpdateBotResponse{
+		Bot: botToProto(bot),
+	}), nil
+}
+
+// Incoming webhook RPCs
+
+func (s *chatService) CreateIncomingWebhook(ctx context.Context, req *connect.Request[v1.CreateIncomingWebhookRequest]) (*connect.Response[v1.CreateIncomingWebhookResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.BotId == "" || req.Msg.ServerId == "" || req.Msg.ChannelId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("bot_id, server_id, and channel_id are required"))
+	}
+
+	// Require ManageWebhooks permission.
+	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
+		return nil, err
+	}
+	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageWebhooks)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify bot is a member of the server.
+	isMember, err := s.chatStore.IsMember(ctx, req.Msg.BotId, req.Msg.ServerId)
+	if err != nil {
+		slog.Error("checking bot membership", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if !isMember {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("bot must be a member of the server"))
+	}
+
+	// Generate secret.
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		slog.Error("generating incoming webhook secret", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	secretHash := sha256.Sum256(secret)
+
+	wh := &models.IncomingWebhook{
+		ID:         models.NewID(),
+		BotUserID:  req.Msg.BotId,
+		ServerID:   req.Msg.ServerId,
+		ChannelID:  req.Msg.ChannelId,
+		SecretHash: secretHash[:],
+		CreatorID:  userID,
+		CreatedAt:  time.Now(),
+	}
+
+	if err := s.botStore.CreateIncomingWebhook(ctx, wh); err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("incoming webhook already exists for this bot and channel"))
+		}
+		slog.Error("creating incoming webhook", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.CreateIncomingWebhookResponse{
+		Webhook: &v1.IncomingWebhookWithSecret{
+			Webhook: &v1.IncomingWebhook{
+				Id:        wh.ID,
+				BotUserId: wh.BotUserID,
+				ServerId:  wh.ServerID,
+				ChannelId: wh.ChannelID,
+				CreatorId: wh.CreatorID,
+				CreatedAt: timestamppb.New(wh.CreatedAt),
+			},
+			Secret: fmt.Sprintf("%x", secret), // hex-encoded, shown once
+		},
+	}), nil
+}
+
+func (s *chatService) DeleteIncomingWebhook(ctx context.Context, req *connect.Request[v1.DeleteIncomingWebhookRequest]) (*connect.Response[v1.DeleteIncomingWebhookResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.WebhookId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("webhook_id is required"))
+	}
+
+	wh, err := s.botStore.GetIncomingWebhook(ctx, req.Msg.WebhookId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("incoming webhook not found"))
+	}
+
+	// Allow deletion by: server admin (ManageWebhooks) OR bot owner.
+	bot, err := s.botStore.GetBotUser(ctx, wh.BotUserID)
+	if err != nil || bot.BotOwnerID != userID {
+		if err := s.requireMembership(ctx, userID, wh.ServerID); err != nil {
+			return nil, err
+		}
+		_, _, _, err := s.requirePermission(ctx, userID, wh.ServerID, permissions.ManageWebhooks)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := s.botStore.DeleteIncomingWebhook(ctx, req.Msg.WebhookId); err != nil {
+		slog.Error("deleting incoming webhook", "err", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	return connect.NewResponse(&v1.DeleteIncomingWebhookResponse{}), nil
+}
+
+func (s *chatService) ListIncomingWebhooks(ctx context.Context, req *connect.Request[v1.ListIncomingWebhooksRequest]) (*connect.Response[v1.ListIncomingWebhooksResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.ServerId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("server_id is required"))
+	}
+
+	// Require ManageWebhooks permission.
+	if err := s.requireMembership(ctx, userID, req.Msg.ServerId); err != nil {
+		return nil, err
+	}
+	_, _, _, err := s.requirePermission(ctx, userID, req.Msg.ServerId, permissions.ManageWebhooks)
+	if err != nil {
+		return nil, err
+	}
+
+	webhooks, err := s.botStore.ListIncomingWebhooksByServer(ctx, req.Msg.ServerId)
+	if err != nil {
+		slog.Error("listing incoming webhooks", "err", err, "server", req.Msg.ServerId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	var protoWebhooks []*v1.IncomingWebhook
+	for _, wh := range webhooks {
+		protoWebhooks = append(protoWebhooks, &v1.IncomingWebhook{
+			Id:        wh.ID,
+			BotUserId: wh.BotUserID,
+			ServerId:  wh.ServerID,
+			ChannelId: wh.ChannelID,
+			CreatorId: wh.CreatorID,
+			CreatedAt: timestamppb.New(wh.CreatedAt),
+		})
+	}
+
+	return connect.NewResponse(&v1.ListIncomingWebhooksResponse{
+		Webhooks: protoWebhooks,
+	}), nil
+}
+
+// Unused import guards for crypto/sha256 and crypto/subtle.
+var _ = sha256.Sum256
+var _ = subtle.ConstantTimeCompare

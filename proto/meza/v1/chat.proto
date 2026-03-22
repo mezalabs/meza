@@ -108,10 +108,25 @@ service ChatService {
   rpc AddBotToServer(AddBotToServerRequest) returns (AddBotToServerResponse);
   rpc RemoveBotFromServer(RemoveBotFromServerRequest) returns (RemoveBotFromServerResponse);
 
-  // Webhook management
+  // Bot invites
+  rpc CreateBotInvite(CreateBotInviteRequest) returns (CreateBotInviteResponse);
+  rpc ResolveBotInvite(ResolveBotInviteRequest) returns (ResolveBotInviteResponse);
+  rpc AcceptBotInvite(AcceptBotInviteRequest) returns (AcceptBotInviteResponse);
+  rpc ListBotInvites(ListBotInvitesRequest) returns (ListBotInvitesResponse);
+  rpc DeleteBotInvite(DeleteBotInviteRequest) returns (DeleteBotInviteResponse);
+
+  // Bot profile
+  rpc UpdateBot(UpdateBotRequest) returns (UpdateBotResponse);
+
+  // Webhook management (outgoing)
   rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
   rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
   rpc ListWebhooks(ListWebhooksRequest) returns (ListWebhooksResponse);
+
+  // Incoming webhooks
+  rpc CreateIncomingWebhook(CreateIncomingWebhookRequest) returns (CreateIncomingWebhookResponse);
+  rpc DeleteIncomingWebhook(DeleteIncomingWebhookRequest) returns (DeleteIncomingWebhookResponse);
+  rpc ListIncomingWebhooks(ListIncomingWebhooksRequest) returns (ListIncomingWebhooksResponse);
 }
 
 // Messages
@@ -1392,4 +1407,87 @@ message ListWebhooksRequest {
 
 message ListWebhooksResponse {
   repeated Webhook webhooks = 1;
+}
+
+// Bot Invite Messages
+
+message CreateBotInviteRequest {
+  string bot_id = 1;
+  int64 requested_permissions = 2;
+}
+
+message CreateBotInviteResponse {
+  BotInvite invite = 1;
+}
+
+message ResolveBotInviteRequest {
+  string code = 1;
+}
+
+message ResolveBotInviteResponse {
+  BotInvite invite = 1;
+  Bot bot = 2;              // bot profile for preview
+  string owner_username = 3; // bot owner's username for display
+}
+
+message AcceptBotInviteRequest {
+  string code = 1;
+  string server_id = 2;
+}
+
+message AcceptBotInviteResponse {
+  Member member = 1;
+}
+
+message ListBotInvitesRequest {
+  string bot_id = 1;
+}
+
+message ListBotInvitesResponse {
+  repeated BotInvite invites = 1;
+}
+
+message DeleteBotInviteRequest {
+  string code = 1;
+}
+
+message DeleteBotInviteResponse {}
+
+// UpdateBot Messages
+
+message UpdateBotRequest {
+  string bot_id = 1;
+  optional string display_name = 2;
+  optional string description = 3;
+  optional string avatar_url = 4;
+}
+
+message UpdateBotResponse {
+  Bot bot = 1;
+}
+
+// Incoming Webhook Messages
+
+message CreateIncomingWebhookRequest {
+  string bot_id = 1;
+  string server_id = 2;
+  string channel_id = 3;
+}
+
+message CreateIncomingWebhookResponse {
+  IncomingWebhookWithSecret webhook = 1;
+}
+
+message DeleteIncomingWebhookRequest {
+  string webhook_id = 1;
+}
+
+message DeleteIncomingWebhookResponse {}
+
+message ListIncomingWebhooksRequest {
+  string server_id = 1;
+}
+
+message ListIncomingWebhooksResponse {
+  repeated IncomingWebhook webhooks = 1;
 }

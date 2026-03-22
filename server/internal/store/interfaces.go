@@ -403,6 +403,20 @@ type BotStorer interface {
 	ListWebhooksByServer(ctx context.Context, serverID string) ([]*models.BotWebhook, error)
 	ListAllWebhooks(ctx context.Context) ([]*models.BotWebhook, error)
 	GetWebhook(ctx context.Context, webhookID string) (*models.BotWebhook, error)
+	// Bot profile
+	UpdateBotProfile(ctx context.Context, botID, displayName, description, avatarURL string) error
+	// Bot invites
+	CreateBotInvite(ctx context.Context, invite *models.BotInvite) error
+	GetBotInvite(ctx context.Context, code string) (*models.BotInvite, error)
+	ListBotInvites(ctx context.Context, botID string) ([]*models.BotInvite, error)
+	DeleteBotInvite(ctx context.Context, code string) error
+	CountBotInvites(ctx context.Context, botID string) (int, error)
+	CleanupExpiredInvites(ctx context.Context) (int64, error)
+	// Incoming webhooks
+	CreateIncomingWebhook(ctx context.Context, wh *models.IncomingWebhook) error
+	GetIncomingWebhook(ctx context.Context, id string) (*models.IncomingWebhook, error)
+	ListIncomingWebhooksByServer(ctx context.Context, serverID string) ([]*models.IncomingWebhook, error)
+	DeleteIncomingWebhook(ctx context.Context, id string) error
 }
 
 // MediaStorer provides access to attachment data in Postgres.

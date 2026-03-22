@@ -2511,6 +2511,7 @@ type Bot struct {
 	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,5,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Description   string                 `protobuf:"bytes,7,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2585,6 +2586,13 @@ func (x *Bot) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+func (x *Bot) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
 }
 
 type BotWithToken struct {
@@ -2729,6 +2737,226 @@ func (x *Webhook) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+type BotInvite struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Code                 string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	BotId                string                 `protobuf:"bytes,2,opt,name=bot_id,json=botId,proto3" json:"bot_id,omitempty"`
+	RequestedPermissions int64                  `protobuf:"varint,3,opt,name=requested_permissions,json=requestedPermissions,proto3" json:"requested_permissions,omitempty"`
+	CreatorId            string                 `protobuf:"bytes,4,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	CreatedAt            *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	ExpiresAt            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *BotInvite) Reset() {
+	*x = BotInvite{}
+	mi := &file_meza_v1_models_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BotInvite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BotInvite) ProtoMessage() {}
+
+func (x *BotInvite) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BotInvite.ProtoReflect.Descriptor instead.
+func (*BotInvite) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *BotInvite) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *BotInvite) GetBotId() string {
+	if x != nil {
+		return x.BotId
+	}
+	return ""
+}
+
+func (x *BotInvite) GetRequestedPermissions() int64 {
+	if x != nil {
+		return x.RequestedPermissions
+	}
+	return 0
+}
+
+func (x *BotInvite) GetCreatorId() string {
+	if x != nil {
+		return x.CreatorId
+	}
+	return ""
+}
+
+func (x *BotInvite) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *BotInvite) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
+type IncomingWebhook struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	BotUserId     string                 `protobuf:"bytes,2,opt,name=bot_user_id,json=botUserId,proto3" json:"bot_user_id,omitempty"`
+	ServerId      string                 `protobuf:"bytes,3,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	ChannelId     string                 `protobuf:"bytes,4,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	CreatorId     string                 `protobuf:"bytes,5,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncomingWebhook) Reset() {
+	*x = IncomingWebhook{}
+	mi := &file_meza_v1_models_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncomingWebhook) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncomingWebhook) ProtoMessage() {}
+
+func (x *IncomingWebhook) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncomingWebhook.ProtoReflect.Descriptor instead.
+func (*IncomingWebhook) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *IncomingWebhook) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *IncomingWebhook) GetBotUserId() string {
+	if x != nil {
+		return x.BotUserId
+	}
+	return ""
+}
+
+func (x *IncomingWebhook) GetServerId() string {
+	if x != nil {
+		return x.ServerId
+	}
+	return ""
+}
+
+func (x *IncomingWebhook) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *IncomingWebhook) GetCreatorId() string {
+	if x != nil {
+		return x.CreatorId
+	}
+	return ""
+}
+
+func (x *IncomingWebhook) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+type IncomingWebhookWithSecret struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Webhook       *IncomingWebhook       `protobuf:"bytes,1,opt,name=webhook,proto3" json:"webhook,omitempty"`
+	Secret        string                 `protobuf:"bytes,2,opt,name=secret,proto3" json:"secret,omitempty"` // plaintext secret, shown once at creation
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IncomingWebhookWithSecret) Reset() {
+	*x = IncomingWebhookWithSecret{}
+	mi := &file_meza_v1_models_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IncomingWebhookWithSecret) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IncomingWebhookWithSecret) ProtoMessage() {}
+
+func (x *IncomingWebhookWithSecret) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_models_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IncomingWebhookWithSecret.ProtoReflect.Descriptor instead.
+func (*IncomingWebhookWithSecret) Descriptor() ([]byte, []int) {
+	return file_meza_v1_models_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *IncomingWebhookWithSecret) GetWebhook() *IncomingWebhook {
+	if x != nil {
+		return x.Webhook
+	}
+	return nil
+}
+
+func (x *IncomingWebhookWithSecret) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
 }
 
 var File_meza_v1_models_proto protoreflect.FileDescriptor
@@ -3012,7 +3240,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x13theme_color_primary\x18\b \x01(\tR\x11themeColorPrimary\x122\n" +
 	"\x15theme_color_secondary\x18\t \x01(\tR\x13themeColorSecondary\x12\x15\n" +
 	"\x06is_bot\x18\n" +
-	" \x01(\bR\x05isBot\"\xc9\x01\n" +
+	" \x01(\bR\x05isBot\"\xeb\x01\n" +
 	"\x03Bot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -3021,7 +3249,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x19\n" +
 	"\bowner_id\x18\x05 \x01(\tR\aownerId\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"e\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12 \n" +
+	"\vdescription\x18\a \x01(\tR\vdescription\"e\n" +
 	"\fBotWithToken\x12\x1e\n" +
 	"\x03bot\x18\x01 \x01(\v2\f.meza.v1.BotR\x03bot\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12\x1f\n" +
@@ -3034,7 +3263,30 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x03url\x18\x04 \x01(\tR\x03url\x12\x16\n" +
 	"\x06secret\x18\x05 \x01(\tR\x06secret\x129\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt*\x8a\x01\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\x80\x02\n" +
+	"\tBotInvite\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x15\n" +
+	"\x06bot_id\x18\x02 \x01(\tR\x05botId\x123\n" +
+	"\x15requested_permissions\x18\x03 \x01(\x03R\x14requestedPermissions\x12\x1d\n" +
+	"\n" +
+	"creator_id\x18\x04 \x01(\tR\tcreatorId\x129\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"\xd7\x01\n" +
+	"\x0fIncomingWebhook\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1e\n" +
+	"\vbot_user_id\x18\x02 \x01(\tR\tbotUserId\x12\x1b\n" +
+	"\tserver_id\x18\x03 \x01(\tR\bserverId\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x04 \x01(\tR\tchannelId\x12\x1d\n" +
+	"\n" +
+	"creator_id\x18\x05 \x01(\tR\tcreatorId\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"g\n" +
+	"\x19IncomingWebhookWithSecret\x122\n" +
+	"\awebhook\x18\x01 \x01(\v2\x18.meza.v1.IncomingWebhookR\awebhook\x12\x16\n" +
+	"\x06secret\x18\x02 \x01(\tR\x06secret*\x8a\x01\n" +
 	"\vChannelType\x12\x1c\n" +
 	"\x18CHANNEL_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
@@ -3063,7 +3315,7 @@ func file_meza_v1_models_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_models_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_meza_v1_models_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
 var file_meza_v1_models_proto_goTypes = []any{
 	(ChannelType)(0),                  // 0: meza.v1.ChannelType
 	(MessageType)(0),                  // 1: meza.v1.MessageType
@@ -3094,44 +3346,51 @@ var file_meza_v1_models_proto_goTypes = []any{
 	(*Bot)(nil),                       // 26: meza.v1.Bot
 	(*BotWithToken)(nil),              // 27: meza.v1.BotWithToken
 	(*Webhook)(nil),                   // 28: meza.v1.Webhook
-	(*timestamppb.Timestamp)(nil),     // 29: google.protobuf.Timestamp
+	(*BotInvite)(nil),                 // 29: meza.v1.BotInvite
+	(*IncomingWebhook)(nil),           // 30: meza.v1.IncomingWebhook
+	(*IncomingWebhookWithSecret)(nil), // 31: meza.v1.IncomingWebhookWithSecret
+	(*timestamppb.Timestamp)(nil),     // 32: google.protobuf.Timestamp
 }
 var file_meza_v1_models_proto_depIdxs = []int32{
-	29, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
+	32, // 0: meza.v1.User.created_at:type_name -> google.protobuf.Timestamp
 	23, // 1: meza.v1.User.audio_preferences:type_name -> meza.v1.AudioPreferences
 	3,  // 2: meza.v1.User.connections:type_name -> meza.v1.UserConnection
-	29, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
+	32, // 3: meza.v1.Server.created_at:type_name -> google.protobuf.Timestamp
 	0,  // 4: meza.v1.Channel.type:type_name -> meza.v1.ChannelType
-	29, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
-	29, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
+	32, // 5: meza.v1.Channel.created_at:type_name -> google.protobuf.Timestamp
+	32, // 6: meza.v1.ChannelGroup.created_at:type_name -> google.protobuf.Timestamp
 	5,  // 7: meza.v1.DMChannel.channel:type_name -> meza.v1.Channel
 	2,  // 8: meza.v1.DMChannel.participants:type_name -> meza.v1.User
 	11, // 9: meza.v1.Message.attachments:type_name -> meza.v1.Attachment
-	29, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
-	29, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
+	32, // 10: meza.v1.Message.created_at:type_name -> google.protobuf.Timestamp
+	32, // 11: meza.v1.Message.edited_at:type_name -> google.protobuf.Timestamp
 	10, // 12: meza.v1.Message.embeds:type_name -> meza.v1.LinkEmbed
 	1,  // 13: meza.v1.Message.type:type_name -> meza.v1.MessageType
-	29, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
-	29, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
-	29, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
-	29, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
-	29, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
-	29, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
-	29, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
+	32, // 14: meza.v1.Member.joined_at:type_name -> google.protobuf.Timestamp
+	32, // 15: meza.v1.Member.timed_out_until:type_name -> google.protobuf.Timestamp
+	32, // 16: meza.v1.Member.onboarding_completed_at:type_name -> google.protobuf.Timestamp
+	32, // 17: meza.v1.Member.rules_acknowledged_at:type_name -> google.protobuf.Timestamp
+	32, // 18: meza.v1.Ban.created_at:type_name -> google.protobuf.Timestamp
+	32, // 19: meza.v1.Invite.expires_at:type_name -> google.protobuf.Timestamp
+	32, // 20: meza.v1.Invite.created_at:type_name -> google.protobuf.Timestamp
 	9,  // 21: meza.v1.PinnedMessage.message:type_name -> meza.v1.Message
-	29, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
-	29, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
-	29, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
-	29, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
-	29, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
-	29, // 27: meza.v1.Bot.created_at:type_name -> google.protobuf.Timestamp
+	32, // 22: meza.v1.PinnedMessage.pinned_at:type_name -> google.protobuf.Timestamp
+	32, // 23: meza.v1.CustomEmoji.created_at:type_name -> google.protobuf.Timestamp
+	32, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
+	32, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
+	32, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
+	32, // 27: meza.v1.Bot.created_at:type_name -> google.protobuf.Timestamp
 	26, // 28: meza.v1.BotWithToken.bot:type_name -> meza.v1.Bot
-	29, // 29: meza.v1.Webhook.created_at:type_name -> google.protobuf.Timestamp
-	30, // [30:30] is the sub-list for method output_type
-	30, // [30:30] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	32, // 29: meza.v1.Webhook.created_at:type_name -> google.protobuf.Timestamp
+	32, // 30: meza.v1.BotInvite.created_at:type_name -> google.protobuf.Timestamp
+	32, // 31: meza.v1.BotInvite.expires_at:type_name -> google.protobuf.Timestamp
+	32, // 32: meza.v1.IncomingWebhook.created_at:type_name -> google.protobuf.Timestamp
+	30, // 33: meza.v1.IncomingWebhookWithSecret.webhook:type_name -> meza.v1.IncomingWebhook
+	34, // [34:34] is the sub-list for method output_type
+	34, // [34:34] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_models_proto_init() }
@@ -3150,7 +3409,7 @@ func file_meza_v1_models_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_models_proto_rawDesc), len(file_meza_v1_models_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   27,
+			NumMessages:   30,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

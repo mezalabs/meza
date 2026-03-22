@@ -293,6 +293,23 @@ const (
 	// ChatServiceRemoveBotFromServerProcedure is the fully-qualified name of the ChatService's
 	// RemoveBotFromServer RPC.
 	ChatServiceRemoveBotFromServerProcedure = "/meza.v1.ChatService/RemoveBotFromServer"
+	// ChatServiceCreateBotInviteProcedure is the fully-qualified name of the ChatService's
+	// CreateBotInvite RPC.
+	ChatServiceCreateBotInviteProcedure = "/meza.v1.ChatService/CreateBotInvite"
+	// ChatServiceResolveBotInviteProcedure is the fully-qualified name of the ChatService's
+	// ResolveBotInvite RPC.
+	ChatServiceResolveBotInviteProcedure = "/meza.v1.ChatService/ResolveBotInvite"
+	// ChatServiceAcceptBotInviteProcedure is the fully-qualified name of the ChatService's
+	// AcceptBotInvite RPC.
+	ChatServiceAcceptBotInviteProcedure = "/meza.v1.ChatService/AcceptBotInvite"
+	// ChatServiceListBotInvitesProcedure is the fully-qualified name of the ChatService's
+	// ListBotInvites RPC.
+	ChatServiceListBotInvitesProcedure = "/meza.v1.ChatService/ListBotInvites"
+	// ChatServiceDeleteBotInviteProcedure is the fully-qualified name of the ChatService's
+	// DeleteBotInvite RPC.
+	ChatServiceDeleteBotInviteProcedure = "/meza.v1.ChatService/DeleteBotInvite"
+	// ChatServiceUpdateBotProcedure is the fully-qualified name of the ChatService's UpdateBot RPC.
+	ChatServiceUpdateBotProcedure = "/meza.v1.ChatService/UpdateBot"
 	// ChatServiceCreateWebhookProcedure is the fully-qualified name of the ChatService's CreateWebhook
 	// RPC.
 	ChatServiceCreateWebhookProcedure = "/meza.v1.ChatService/CreateWebhook"
@@ -302,6 +319,15 @@ const (
 	// ChatServiceListWebhooksProcedure is the fully-qualified name of the ChatService's ListWebhooks
 	// RPC.
 	ChatServiceListWebhooksProcedure = "/meza.v1.ChatService/ListWebhooks"
+	// ChatServiceCreateIncomingWebhookProcedure is the fully-qualified name of the ChatService's
+	// CreateIncomingWebhook RPC.
+	ChatServiceCreateIncomingWebhookProcedure = "/meza.v1.ChatService/CreateIncomingWebhook"
+	// ChatServiceDeleteIncomingWebhookProcedure is the fully-qualified name of the ChatService's
+	// DeleteIncomingWebhook RPC.
+	ChatServiceDeleteIncomingWebhookProcedure = "/meza.v1.ChatService/DeleteIncomingWebhook"
+	// ChatServiceListIncomingWebhooksProcedure is the fully-qualified name of the ChatService's
+	// ListIncomingWebhooks RPC.
+	ChatServiceListIncomingWebhooksProcedure = "/meza.v1.ChatService/ListIncomingWebhooks"
 )
 
 // ChatServiceClient is a client for the meza.v1.ChatService service.
@@ -406,10 +432,22 @@ type ChatServiceClient interface {
 	GetBot(context.Context, *connect.Request[v1.GetBotRequest]) (*connect.Response[v1.GetBotResponse], error)
 	AddBotToServer(context.Context, *connect.Request[v1.AddBotToServerRequest]) (*connect.Response[v1.AddBotToServerResponse], error)
 	RemoveBotFromServer(context.Context, *connect.Request[v1.RemoveBotFromServerRequest]) (*connect.Response[v1.RemoveBotFromServerResponse], error)
-	// Webhook management
+	// Bot invites
+	CreateBotInvite(context.Context, *connect.Request[v1.CreateBotInviteRequest]) (*connect.Response[v1.CreateBotInviteResponse], error)
+	ResolveBotInvite(context.Context, *connect.Request[v1.ResolveBotInviteRequest]) (*connect.Response[v1.ResolveBotInviteResponse], error)
+	AcceptBotInvite(context.Context, *connect.Request[v1.AcceptBotInviteRequest]) (*connect.Response[v1.AcceptBotInviteResponse], error)
+	ListBotInvites(context.Context, *connect.Request[v1.ListBotInvitesRequest]) (*connect.Response[v1.ListBotInvitesResponse], error)
+	DeleteBotInvite(context.Context, *connect.Request[v1.DeleteBotInviteRequest]) (*connect.Response[v1.DeleteBotInviteResponse], error)
+	// Bot profile
+	UpdateBot(context.Context, *connect.Request[v1.UpdateBotRequest]) (*connect.Response[v1.UpdateBotResponse], error)
+	// Webhook management (outgoing)
 	CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error)
 	DeleteWebhook(context.Context, *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error)
 	ListWebhooks(context.Context, *connect.Request[v1.ListWebhooksRequest]) (*connect.Response[v1.ListWebhooksResponse], error)
+	// Incoming webhooks
+	CreateIncomingWebhook(context.Context, *connect.Request[v1.CreateIncomingWebhookRequest]) (*connect.Response[v1.CreateIncomingWebhookResponse], error)
+	DeleteIncomingWebhook(context.Context, *connect.Request[v1.DeleteIncomingWebhookRequest]) (*connect.Response[v1.DeleteIncomingWebhookResponse], error)
+	ListIncomingWebhooks(context.Context, *connect.Request[v1.ListIncomingWebhooksRequest]) (*connect.Response[v1.ListIncomingWebhooksResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the meza.v1.ChatService service. By default, it uses
@@ -1017,6 +1055,42 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("RemoveBotFromServer")),
 			connect.WithClientOptions(opts...),
 		),
+		createBotInvite: connect.NewClient[v1.CreateBotInviteRequest, v1.CreateBotInviteResponse](
+			httpClient,
+			baseURL+ChatServiceCreateBotInviteProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CreateBotInvite")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveBotInvite: connect.NewClient[v1.ResolveBotInviteRequest, v1.ResolveBotInviteResponse](
+			httpClient,
+			baseURL+ChatServiceResolveBotInviteProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ResolveBotInvite")),
+			connect.WithClientOptions(opts...),
+		),
+		acceptBotInvite: connect.NewClient[v1.AcceptBotInviteRequest, v1.AcceptBotInviteResponse](
+			httpClient,
+			baseURL+ChatServiceAcceptBotInviteProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("AcceptBotInvite")),
+			connect.WithClientOptions(opts...),
+		),
+		listBotInvites: connect.NewClient[v1.ListBotInvitesRequest, v1.ListBotInvitesResponse](
+			httpClient,
+			baseURL+ChatServiceListBotInvitesProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListBotInvites")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteBotInvite: connect.NewClient[v1.DeleteBotInviteRequest, v1.DeleteBotInviteResponse](
+			httpClient,
+			baseURL+ChatServiceDeleteBotInviteProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("DeleteBotInvite")),
+			connect.WithClientOptions(opts...),
+		),
+		updateBot: connect.NewClient[v1.UpdateBotRequest, v1.UpdateBotResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateBotProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateBot")),
+			connect.WithClientOptions(opts...),
+		),
 		createWebhook: connect.NewClient[v1.CreateWebhookRequest, v1.CreateWebhookResponse](
 			httpClient,
 			baseURL+ChatServiceCreateWebhookProcedure,
@@ -1033,6 +1107,24 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+ChatServiceListWebhooksProcedure,
 			connect.WithSchema(chatServiceMethods.ByName("ListWebhooks")),
+			connect.WithClientOptions(opts...),
+		),
+		createIncomingWebhook: connect.NewClient[v1.CreateIncomingWebhookRequest, v1.CreateIncomingWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceCreateIncomingWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CreateIncomingWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteIncomingWebhook: connect.NewClient[v1.DeleteIncomingWebhookRequest, v1.DeleteIncomingWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceDeleteIncomingWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("DeleteIncomingWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		listIncomingWebhooks: connect.NewClient[v1.ListIncomingWebhooksRequest, v1.ListIncomingWebhooksResponse](
+			httpClient,
+			baseURL+ChatServiceListIncomingWebhooksProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListIncomingWebhooks")),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -1139,9 +1231,18 @@ type chatServiceClient struct {
 	getBot                    *connect.Client[v1.GetBotRequest, v1.GetBotResponse]
 	addBotToServer            *connect.Client[v1.AddBotToServerRequest, v1.AddBotToServerResponse]
 	removeBotFromServer       *connect.Client[v1.RemoveBotFromServerRequest, v1.RemoveBotFromServerResponse]
+	createBotInvite           *connect.Client[v1.CreateBotInviteRequest, v1.CreateBotInviteResponse]
+	resolveBotInvite          *connect.Client[v1.ResolveBotInviteRequest, v1.ResolveBotInviteResponse]
+	acceptBotInvite           *connect.Client[v1.AcceptBotInviteRequest, v1.AcceptBotInviteResponse]
+	listBotInvites            *connect.Client[v1.ListBotInvitesRequest, v1.ListBotInvitesResponse]
+	deleteBotInvite           *connect.Client[v1.DeleteBotInviteRequest, v1.DeleteBotInviteResponse]
+	updateBot                 *connect.Client[v1.UpdateBotRequest, v1.UpdateBotResponse]
 	createWebhook             *connect.Client[v1.CreateWebhookRequest, v1.CreateWebhookResponse]
 	deleteWebhook             *connect.Client[v1.DeleteWebhookRequest, v1.DeleteWebhookResponse]
 	listWebhooks              *connect.Client[v1.ListWebhooksRequest, v1.ListWebhooksResponse]
+	createIncomingWebhook     *connect.Client[v1.CreateIncomingWebhookRequest, v1.CreateIncomingWebhookResponse]
+	deleteIncomingWebhook     *connect.Client[v1.DeleteIncomingWebhookRequest, v1.DeleteIncomingWebhookResponse]
+	listIncomingWebhooks      *connect.Client[v1.ListIncomingWebhooksRequest, v1.ListIncomingWebhooksResponse]
 }
 
 // SendMessage calls meza.v1.ChatService.SendMessage.
@@ -1639,6 +1740,36 @@ func (c *chatServiceClient) RemoveBotFromServer(ctx context.Context, req *connec
 	return c.removeBotFromServer.CallUnary(ctx, req)
 }
 
+// CreateBotInvite calls meza.v1.ChatService.CreateBotInvite.
+func (c *chatServiceClient) CreateBotInvite(ctx context.Context, req *connect.Request[v1.CreateBotInviteRequest]) (*connect.Response[v1.CreateBotInviteResponse], error) {
+	return c.createBotInvite.CallUnary(ctx, req)
+}
+
+// ResolveBotInvite calls meza.v1.ChatService.ResolveBotInvite.
+func (c *chatServiceClient) ResolveBotInvite(ctx context.Context, req *connect.Request[v1.ResolveBotInviteRequest]) (*connect.Response[v1.ResolveBotInviteResponse], error) {
+	return c.resolveBotInvite.CallUnary(ctx, req)
+}
+
+// AcceptBotInvite calls meza.v1.ChatService.AcceptBotInvite.
+func (c *chatServiceClient) AcceptBotInvite(ctx context.Context, req *connect.Request[v1.AcceptBotInviteRequest]) (*connect.Response[v1.AcceptBotInviteResponse], error) {
+	return c.acceptBotInvite.CallUnary(ctx, req)
+}
+
+// ListBotInvites calls meza.v1.ChatService.ListBotInvites.
+func (c *chatServiceClient) ListBotInvites(ctx context.Context, req *connect.Request[v1.ListBotInvitesRequest]) (*connect.Response[v1.ListBotInvitesResponse], error) {
+	return c.listBotInvites.CallUnary(ctx, req)
+}
+
+// DeleteBotInvite calls meza.v1.ChatService.DeleteBotInvite.
+func (c *chatServiceClient) DeleteBotInvite(ctx context.Context, req *connect.Request[v1.DeleteBotInviteRequest]) (*connect.Response[v1.DeleteBotInviteResponse], error) {
+	return c.deleteBotInvite.CallUnary(ctx, req)
+}
+
+// UpdateBot calls meza.v1.ChatService.UpdateBot.
+func (c *chatServiceClient) UpdateBot(ctx context.Context, req *connect.Request[v1.UpdateBotRequest]) (*connect.Response[v1.UpdateBotResponse], error) {
+	return c.updateBot.CallUnary(ctx, req)
+}
+
 // CreateWebhook calls meza.v1.ChatService.CreateWebhook.
 func (c *chatServiceClient) CreateWebhook(ctx context.Context, req *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error) {
 	return c.createWebhook.CallUnary(ctx, req)
@@ -1652,6 +1783,21 @@ func (c *chatServiceClient) DeleteWebhook(ctx context.Context, req *connect.Requ
 // ListWebhooks calls meza.v1.ChatService.ListWebhooks.
 func (c *chatServiceClient) ListWebhooks(ctx context.Context, req *connect.Request[v1.ListWebhooksRequest]) (*connect.Response[v1.ListWebhooksResponse], error) {
 	return c.listWebhooks.CallUnary(ctx, req)
+}
+
+// CreateIncomingWebhook calls meza.v1.ChatService.CreateIncomingWebhook.
+func (c *chatServiceClient) CreateIncomingWebhook(ctx context.Context, req *connect.Request[v1.CreateIncomingWebhookRequest]) (*connect.Response[v1.CreateIncomingWebhookResponse], error) {
+	return c.createIncomingWebhook.CallUnary(ctx, req)
+}
+
+// DeleteIncomingWebhook calls meza.v1.ChatService.DeleteIncomingWebhook.
+func (c *chatServiceClient) DeleteIncomingWebhook(ctx context.Context, req *connect.Request[v1.DeleteIncomingWebhookRequest]) (*connect.Response[v1.DeleteIncomingWebhookResponse], error) {
+	return c.deleteIncomingWebhook.CallUnary(ctx, req)
+}
+
+// ListIncomingWebhooks calls meza.v1.ChatService.ListIncomingWebhooks.
+func (c *chatServiceClient) ListIncomingWebhooks(ctx context.Context, req *connect.Request[v1.ListIncomingWebhooksRequest]) (*connect.Response[v1.ListIncomingWebhooksResponse], error) {
+	return c.listIncomingWebhooks.CallUnary(ctx, req)
 }
 
 // ChatServiceHandler is an implementation of the meza.v1.ChatService service.
@@ -1756,10 +1902,22 @@ type ChatServiceHandler interface {
 	GetBot(context.Context, *connect.Request[v1.GetBotRequest]) (*connect.Response[v1.GetBotResponse], error)
 	AddBotToServer(context.Context, *connect.Request[v1.AddBotToServerRequest]) (*connect.Response[v1.AddBotToServerResponse], error)
 	RemoveBotFromServer(context.Context, *connect.Request[v1.RemoveBotFromServerRequest]) (*connect.Response[v1.RemoveBotFromServerResponse], error)
-	// Webhook management
+	// Bot invites
+	CreateBotInvite(context.Context, *connect.Request[v1.CreateBotInviteRequest]) (*connect.Response[v1.CreateBotInviteResponse], error)
+	ResolveBotInvite(context.Context, *connect.Request[v1.ResolveBotInviteRequest]) (*connect.Response[v1.ResolveBotInviteResponse], error)
+	AcceptBotInvite(context.Context, *connect.Request[v1.AcceptBotInviteRequest]) (*connect.Response[v1.AcceptBotInviteResponse], error)
+	ListBotInvites(context.Context, *connect.Request[v1.ListBotInvitesRequest]) (*connect.Response[v1.ListBotInvitesResponse], error)
+	DeleteBotInvite(context.Context, *connect.Request[v1.DeleteBotInviteRequest]) (*connect.Response[v1.DeleteBotInviteResponse], error)
+	// Bot profile
+	UpdateBot(context.Context, *connect.Request[v1.UpdateBotRequest]) (*connect.Response[v1.UpdateBotResponse], error)
+	// Webhook management (outgoing)
 	CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error)
 	DeleteWebhook(context.Context, *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error)
 	ListWebhooks(context.Context, *connect.Request[v1.ListWebhooksRequest]) (*connect.Response[v1.ListWebhooksResponse], error)
+	// Incoming webhooks
+	CreateIncomingWebhook(context.Context, *connect.Request[v1.CreateIncomingWebhookRequest]) (*connect.Response[v1.CreateIncomingWebhookResponse], error)
+	DeleteIncomingWebhook(context.Context, *connect.Request[v1.DeleteIncomingWebhookRequest]) (*connect.Response[v1.DeleteIncomingWebhookResponse], error)
+	ListIncomingWebhooks(context.Context, *connect.Request[v1.ListIncomingWebhooksRequest]) (*connect.Response[v1.ListIncomingWebhooksResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -2363,6 +2521,42 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("RemoveBotFromServer")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceCreateBotInviteHandler := connect.NewUnaryHandler(
+		ChatServiceCreateBotInviteProcedure,
+		svc.CreateBotInvite,
+		connect.WithSchema(chatServiceMethods.ByName("CreateBotInvite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceResolveBotInviteHandler := connect.NewUnaryHandler(
+		ChatServiceResolveBotInviteProcedure,
+		svc.ResolveBotInvite,
+		connect.WithSchema(chatServiceMethods.ByName("ResolveBotInvite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceAcceptBotInviteHandler := connect.NewUnaryHandler(
+		ChatServiceAcceptBotInviteProcedure,
+		svc.AcceptBotInvite,
+		connect.WithSchema(chatServiceMethods.ByName("AcceptBotInvite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListBotInvitesHandler := connect.NewUnaryHandler(
+		ChatServiceListBotInvitesProcedure,
+		svc.ListBotInvites,
+		connect.WithSchema(chatServiceMethods.ByName("ListBotInvites")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceDeleteBotInviteHandler := connect.NewUnaryHandler(
+		ChatServiceDeleteBotInviteProcedure,
+		svc.DeleteBotInvite,
+		connect.WithSchema(chatServiceMethods.ByName("DeleteBotInvite")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateBotHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateBotProcedure,
+		svc.UpdateBot,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateBot")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceCreateWebhookHandler := connect.NewUnaryHandler(
 		ChatServiceCreateWebhookProcedure,
 		svc.CreateWebhook,
@@ -2379,6 +2573,24 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		ChatServiceListWebhooksProcedure,
 		svc.ListWebhooks,
 		connect.WithSchema(chatServiceMethods.ByName("ListWebhooks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceCreateIncomingWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceCreateIncomingWebhookProcedure,
+		svc.CreateIncomingWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("CreateIncomingWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceDeleteIncomingWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceDeleteIncomingWebhookProcedure,
+		svc.DeleteIncomingWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("DeleteIncomingWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListIncomingWebhooksHandler := connect.NewUnaryHandler(
+		ChatServiceListIncomingWebhooksProcedure,
+		svc.ListIncomingWebhooks,
+		connect.WithSchema(chatServiceMethods.ByName("ListIncomingWebhooks")),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/meza.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2581,12 +2793,30 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceAddBotToServerHandler.ServeHTTP(w, r)
 		case ChatServiceRemoveBotFromServerProcedure:
 			chatServiceRemoveBotFromServerHandler.ServeHTTP(w, r)
+		case ChatServiceCreateBotInviteProcedure:
+			chatServiceCreateBotInviteHandler.ServeHTTP(w, r)
+		case ChatServiceResolveBotInviteProcedure:
+			chatServiceResolveBotInviteHandler.ServeHTTP(w, r)
+		case ChatServiceAcceptBotInviteProcedure:
+			chatServiceAcceptBotInviteHandler.ServeHTTP(w, r)
+		case ChatServiceListBotInvitesProcedure:
+			chatServiceListBotInvitesHandler.ServeHTTP(w, r)
+		case ChatServiceDeleteBotInviteProcedure:
+			chatServiceDeleteBotInviteHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateBotProcedure:
+			chatServiceUpdateBotHandler.ServeHTTP(w, r)
 		case ChatServiceCreateWebhookProcedure:
 			chatServiceCreateWebhookHandler.ServeHTTP(w, r)
 		case ChatServiceDeleteWebhookProcedure:
 			chatServiceDeleteWebhookHandler.ServeHTTP(w, r)
 		case ChatServiceListWebhooksProcedure:
 			chatServiceListWebhooksHandler.ServeHTTP(w, r)
+		case ChatServiceCreateIncomingWebhookProcedure:
+			chatServiceCreateIncomingWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceDeleteIncomingWebhookProcedure:
+			chatServiceDeleteIncomingWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceListIncomingWebhooksProcedure:
+			chatServiceListIncomingWebhooksHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2992,6 +3222,30 @@ func (UnimplementedChatServiceHandler) RemoveBotFromServer(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.RemoveBotFromServer is not implemented"))
 }
 
+func (UnimplementedChatServiceHandler) CreateBotInvite(context.Context, *connect.Request[v1.CreateBotInviteRequest]) (*connect.Response[v1.CreateBotInviteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.CreateBotInvite is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ResolveBotInvite(context.Context, *connect.Request[v1.ResolveBotInviteRequest]) (*connect.Response[v1.ResolveBotInviteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ResolveBotInvite is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) AcceptBotInvite(context.Context, *connect.Request[v1.AcceptBotInviteRequest]) (*connect.Response[v1.AcceptBotInviteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.AcceptBotInvite is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListBotInvites(context.Context, *connect.Request[v1.ListBotInvitesRequest]) (*connect.Response[v1.ListBotInvitesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListBotInvites is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) DeleteBotInvite(context.Context, *connect.Request[v1.DeleteBotInviteRequest]) (*connect.Response[v1.DeleteBotInviteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.DeleteBotInvite is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateBot(context.Context, *connect.Request[v1.UpdateBotRequest]) (*connect.Response[v1.UpdateBotResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.UpdateBot is not implemented"))
+}
+
 func (UnimplementedChatServiceHandler) CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.CreateWebhook is not implemented"))
 }
@@ -3002,4 +3256,16 @@ func (UnimplementedChatServiceHandler) DeleteWebhook(context.Context, *connect.R
 
 func (UnimplementedChatServiceHandler) ListWebhooks(context.Context, *connect.Request[v1.ListWebhooksRequest]) (*connect.Response[v1.ListWebhooksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListWebhooks is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) CreateIncomingWebhook(context.Context, *connect.Request[v1.CreateIncomingWebhookRequest]) (*connect.Response[v1.CreateIncomingWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.CreateIncomingWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) DeleteIncomingWebhook(context.Context, *connect.Request[v1.DeleteIncomingWebhookRequest]) (*connect.Response[v1.DeleteIncomingWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.DeleteIncomingWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListIncomingWebhooks(context.Context, *connect.Request[v1.ListIncomingWebhooksRequest]) (*connect.Response[v1.ListIncomingWebhooksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListIncomingWebhooks is not implemented"))
 }

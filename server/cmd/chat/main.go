@@ -145,8 +145,11 @@ func main() {
 	interceptorOpts = append(interceptorOpts, auth.WithVerificationCache(auth.NewVerificationCache()))
 	slog.Info("Ed25519 token verification enabled for chat service")
 
-	// ResolveInvite is public so unauthenticated users can preview invite links.
-	interceptorOpts = append(interceptorOpts, auth.WithPublicProcedures(mezav1connect.ChatServiceResolveInviteProcedure))
+	// ResolveInvite and ResolveBotInvite are public so unauthenticated users can preview invite links.
+	interceptorOpts = append(interceptorOpts, auth.WithPublicProcedures(
+		mezav1connect.ChatServiceResolveInviteProcedure,
+		mezav1connect.ChatServiceResolveBotInviteProcedure,
+	))
 	interceptor := connect.WithInterceptors(auth.NewConnectInterceptor(ed25519PubKey, interceptorOpts...))
 
 	// Rate limit: 50 req/s burst 50 per IP for chat endpoints.

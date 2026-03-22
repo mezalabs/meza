@@ -315,6 +315,7 @@ message Bot {
   string avatar_url = 4;
   string owner_id = 5;
   google.protobuf.Timestamp created_at = 6;
+  string description = 7;
 }
 
 message BotWithToken {
@@ -330,6 +331,29 @@ message Webhook {
   string url = 4;
   string secret = 5;         // HMAC secret, shown once at creation
   google.protobuf.Timestamp created_at = 6;
+}
+
+message BotInvite {
+  string code = 1;
+  string bot_id = 2;
+  int64 requested_permissions = 3;
+  string creator_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message IncomingWebhook {
+  string id = 1;
+  string bot_user_id = 2;
+  string server_id = 3;
+  string channel_id = 4;
+  string creator_id = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message IncomingWebhookWithSecret {
+  IncomingWebhook webhook = 1;
+  string secret = 2;  // plaintext secret, shown once at creation
 }
 
 // E2EE — Signing keys and channel key envelopes are managed via KeyService RPCs.
