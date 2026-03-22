@@ -24,14 +24,14 @@ describe('voiceParticipants store', () => {
       const list = [participant('u1'), participant('u2')];
       useVoiceParticipantsStore.getState().setParticipants('ch1', list);
 
-      expect(useVoiceParticipantsStore.getState().byChannel['ch1']).toHaveLength(2);
+      expect(useVoiceParticipantsStore.getState().byChannel.ch1).toHaveLength(2);
     });
 
     it('overwrites previous participants', () => {
       useVoiceParticipantsStore.getState().setParticipants('ch1', [participant('u1')]);
       useVoiceParticipantsStore.getState().setParticipants('ch1', [participant('u2')]);
 
-      const list = useVoiceParticipantsStore.getState().byChannel['ch1'];
+      const list = useVoiceParticipantsStore.getState().byChannel.ch1;
       expect(list).toHaveLength(1);
       expect(list![0].userId).toBe('u2');
     });
@@ -41,7 +41,7 @@ describe('voiceParticipants store', () => {
     it('adds a participant to an empty channel', () => {
       useVoiceParticipantsStore.getState().upsertParticipant('ch1', participant('u1'));
 
-      const list = useVoiceParticipantsStore.getState().byChannel['ch1'];
+      const list = useVoiceParticipantsStore.getState().byChannel.ch1;
       expect(list).toHaveLength(1);
       expect(list![0].userId).toBe('u1');
     });
@@ -52,7 +52,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .upsertParticipant('ch1', participant('u1', { isMuted: true }));
 
-      const list = useVoiceParticipantsStore.getState().byChannel['ch1'];
+      const list = useVoiceParticipantsStore.getState().byChannel.ch1;
       expect(list).toHaveLength(1);
       expect(list![0].isMuted).toBe(true);
     });
@@ -61,7 +61,7 @@ describe('voiceParticipants store', () => {
       useVoiceParticipantsStore.getState().upsertParticipant('ch1', participant('u1'));
       useVoiceParticipantsStore.getState().upsertParticipant('ch1', participant('u2'));
 
-      expect(useVoiceParticipantsStore.getState().byChannel['ch1']).toHaveLength(2);
+      expect(useVoiceParticipantsStore.getState().byChannel.ch1).toHaveLength(2);
     });
   });
 
@@ -72,7 +72,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .updateParticipant('ch1', 'u1', { isEncrypted: true });
 
-      const p = useVoiceParticipantsStore.getState().byChannel['ch1']![0];
+      const p = useVoiceParticipantsStore.getState().byChannel.ch1![0];
       expect(p.isEncrypted).toBe(true);
       // Other fields unchanged
       expect(p.isMuted).toBe(false);
@@ -84,7 +84,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .updateParticipant('ch1', 'unknown', { isEncrypted: true });
 
-      const p = useVoiceParticipantsStore.getState().byChannel['ch1']![0];
+      const p = useVoiceParticipantsStore.getState().byChannel.ch1![0];
       expect(p.isEncrypted).toBe(false);
     });
 
@@ -93,7 +93,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .updateParticipant('nonexistent', 'u1', { isEncrypted: true });
 
-      expect(useVoiceParticipantsStore.getState().byChannel['nonexistent']).toBeUndefined();
+      expect(useVoiceParticipantsStore.getState().byChannel.nonexistent).toBeUndefined();
     });
   });
 
@@ -103,7 +103,7 @@ describe('voiceParticipants store', () => {
       useVoiceParticipantsStore.getState().upsertParticipant('ch1', participant('u2'));
       useVoiceParticipantsStore.getState().removeParticipant('ch1', 'u1');
 
-      const list = useVoiceParticipantsStore.getState().byChannel['ch1'];
+      const list = useVoiceParticipantsStore.getState().byChannel.ch1;
       expect(list).toHaveLength(1);
       expect(list![0].userId).toBe('u2');
     });
@@ -112,7 +112,7 @@ describe('voiceParticipants store', () => {
       useVoiceParticipantsStore.getState().upsertParticipant('ch1', participant('u1'));
       useVoiceParticipantsStore.getState().removeParticipant('ch1', 'unknown');
 
-      expect(useVoiceParticipantsStore.getState().byChannel['ch1']).toHaveLength(1);
+      expect(useVoiceParticipantsStore.getState().byChannel.ch1).toHaveLength(1);
     });
   });
 
@@ -127,7 +127,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .setParticipants('ch1', [participant('u1', { isEncrypted: false })]);
 
-      const p = useVoiceParticipantsStore.getState().byChannel['ch1']![0];
+      const p = useVoiceParticipantsStore.getState().byChannel.ch1![0];
       expect(p.isEncrypted).toBe(false);
     });
 
@@ -140,7 +140,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .updateParticipant('ch1', 'u1', { isEncrypted: true });
 
-      const p = useVoiceParticipantsStore.getState().byChannel['ch1']![0];
+      const p = useVoiceParticipantsStore.getState().byChannel.ch1![0];
       expect(p.isEncrypted).toBe(true);
       expect(p.isMuted).toBe(true);
       expect(p.isDeafened).toBe(true);
@@ -154,7 +154,7 @@ describe('voiceParticipants store', () => {
         .getState()
         .upsertParticipant('ch1', participant('u1', { isEncrypted: false }));
 
-      const p = useVoiceParticipantsStore.getState().byChannel['ch1']![0];
+      const p = useVoiceParticipantsStore.getState().byChannel.ch1![0];
       expect(p.isEncrypted).toBe(false);
     });
   });
@@ -165,8 +165,8 @@ describe('voiceParticipants store', () => {
       useVoiceParticipantsStore.getState().upsertParticipant('ch2', participant('u2'));
       useVoiceParticipantsStore.getState().clearChannel('ch1');
 
-      expect(useVoiceParticipantsStore.getState().byChannel['ch1']).toBeUndefined();
-      expect(useVoiceParticipantsStore.getState().byChannel['ch2']).toHaveLength(1);
+      expect(useVoiceParticipantsStore.getState().byChannel.ch1).toBeUndefined();
+      expect(useVoiceParticipantsStore.getState().byChannel.ch2).toHaveLength(1);
     });
 
     it('clearAll removes all channels', () => {
