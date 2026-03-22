@@ -1,6 +1,6 @@
 # Maintainer: Meza Chat <hello@meza.chat>
 pkgname=meza-desktop-bin
-pkgver=0.0.9
+pkgver=0.0.11
 pkgrel=1
 pkgdesc='Meza desktop client - real-time encrypted chat'
 arch=('x86_64')
