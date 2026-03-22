@@ -15,7 +15,7 @@ const CACHE_VERSION = 1;
 const DEBOUNCE_MS = 1000;
 
 /** Stripped-down emoji for storage — omits protobuf Timestamp fields. */
-interface StoredEmoji {
+export interface StoredEmoji {
   id: string;
   serverId: string;
   name: string;

@@ -1,5 +1,5 @@
 import {
-  type CustomEmoji,
+  type StoredEmoji,
   getAllUnicodeEmojis,
   getEmojiGroups,
   getFrequentEmojis,
@@ -13,7 +13,7 @@ import {
   useEmojiStore,
   useServerStore,
 } from '@meza/core';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { EmojiPickerGrid } from './EmojiPickerGrid.tsx';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
@@ -59,6 +59,7 @@ export const EmojiPicker = memo(function EmojiPicker({
   onSearchFocusChange,
 }: EmojiPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [previewEmoji, setPreviewEmoji] = useState<PreviewEmoji | null>(null);
   const [skinTone, setSkinTone] = useState(getSavedSkinTone);
   const [dataLoaded, setDataLoaded] = useState(() => getEmojiGroups() !== null);
@@ -84,6 +85,12 @@ export const EmojiPicker = memo(function EmojiPicker({
     };
   }, [dataLoaded]);
 
+  // Debounce search query so searchEmojis doesn't run on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Fetch custom emojis
   const serverEmojis = useEmojiStore((s) =>
     serverId ? s.byServer[serverId] : undefined,
@@ -107,9 +114,12 @@ export const EmojiPicker = memo(function EmojiPicker({
   const servers = useServerStore((s) => s.servers);
 
   // Load emojis for other servers the user is in
+  const fetchedRef = useRef(new Set<string>());
+
   useEffect(() => {
     for (const sid of Object.keys(servers)) {
-      if (sid !== serverId && !emojisByServer[sid]) {
+      if (sid !== serverId && !emojisByServer[sid] && !fetchedRef.current.has(sid)) {
+        fetchedRef.current.add(sid);
         listEmojis(sid).catch(() => {});
       }
     }
@@ -120,7 +130,7 @@ export const EmojiPicker = memo(function EmojiPicker({
     const groups: {
       serverId: string;
       serverName: string;
-      emojis: CustomEmoji[];
+      emojis: StoredEmoji[];
     }[] = [];
     for (const [sid, emojis] of Object.entries(emojisByServer)) {
       if (sid === serverId || emojis.length === 0) continue;
@@ -142,9 +152,9 @@ export const EmojiPicker = memo(function EmojiPicker({
   const [frequentEmojis] = useState(() => getFrequentEmojis());
 
   // Search — include all custom emojis from all sources
-  const allCustom: CustomEmoji[] = useMemo(() => {
+  const allCustom: StoredEmoji[] = useMemo(() => {
     const seenIds = new Set<string>();
-    const result: CustomEmoji[] = [];
+    const result: StoredEmoji[] = [];
     for (const e of personalEmojis ?? []) {
       if (!seenIds.has(e.id)) {
         seenIds.add(e.id);
@@ -171,14 +181,14 @@ export const EmojiPicker = memo(function EmojiPicker({
   }, [personalEmojis, serverEmojis, otherServerEmojiGroups]);
 
   const searchResults: SearchResult[] | null = useMemo(() => {
-    if (!searchQuery) return null;
+    if (!debouncedQuery) return null;
     return searchEmojis(
-      searchQuery,
+      debouncedQuery,
       allCustom,
       getAllUnicodeEmojis(),
       getShortcodes(),
     );
-  }, [searchQuery, allCustom]);
+  }, [debouncedQuery, allCustom]);
 
   // Handlers
   const handleSelect = useCallback(
@@ -208,6 +218,10 @@ export const EmojiPicker = memo(function EmojiPicker({
 
   const handleFocusSearch = useCallback(() => {
     setSearchFocused(true);
+  }, []);
+
+  const handleGridFocus = useCallback(() => {
+    setSearchFocused(false);
   }, []);
 
   // Loading/error states
@@ -280,7 +294,7 @@ export const EmojiPicker = memo(function EmojiPicker({
         onHover={setPreviewEmoji}
         searchFocused={searchFocused}
         onFocusSearch={handleFocusSearch}
-        onGridFocus={() => setSearchFocused(false)}
+        onGridFocus={handleGridFocus}
       />
 
       {/* Preview bar (desktop only) */}

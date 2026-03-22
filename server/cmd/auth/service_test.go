@@ -130,52 +130,52 @@ func (m *mockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) ([]*m
 	return users, nil
 }
 
-func (m *mockAuthStore) UpdateUser(_ context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, _ *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection, friendRequestPrivacy, profilePrivacy *string) (*models.User, error) {
+func (m *mockAuthStore) UpdateUser(_ context.Context, params store.UpdateUserParams) (*models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	u, ok := m.users[userID]
+	u, ok := m.users[params.UserID]
 	if !ok {
 		return nil, fmt.Errorf("user not found")
 	}
-	if displayName != nil {
-		u.DisplayName = *displayName
+	if params.DisplayName != nil {
+		u.DisplayName = *params.DisplayName
 	}
-	if avatarURL != nil {
-		u.AvatarURL = *avatarURL
+	if params.AvatarURL != nil {
+		u.AvatarURL = *params.AvatarURL
 	}
-	if emojiScale != nil {
-		u.EmojiScale = *emojiScale
+	if params.EmojiScale != nil {
+		u.EmojiScale = *params.EmojiScale
 	}
-	if bio != nil {
-		u.Bio = *bio
+	if params.Bio != nil {
+		u.Bio = *params.Bio
 	}
-	if pronouns != nil {
-		u.Pronouns = *pronouns
+	if params.Pronouns != nil {
+		u.Pronouns = *params.Pronouns
 	}
-	if bannerURL != nil {
-		u.BannerURL = *bannerURL
+	if params.BannerURL != nil {
+		u.BannerURL = *params.BannerURL
 	}
-	if themeColorPrimary != nil {
-		u.ThemeColorPrimary = *themeColorPrimary
+	if params.ThemeColorPrimary != nil {
+		u.ThemeColorPrimary = *params.ThemeColorPrimary
 	}
-	if themeColorSecondary != nil {
-		u.ThemeColorSecondary = *themeColorSecondary
+	if params.ThemeColorSecondary != nil {
+		u.ThemeColorSecondary = *params.ThemeColorSecondary
 	}
-	if audioPreferences != nil {
-		u.AudioPreferences = *audioPreferences
+	if params.AudioPreferences != nil {
+		u.AudioPreferences = *params.AudioPreferences
 	}
-	if dmPrivacy != nil {
-		u.DMPrivacy = *dmPrivacy
+	if params.DMPrivacy != nil {
+		u.DMPrivacy = *params.DMPrivacy
 	}
-	if connections != nil {
-		u.Connections = connections
+	if params.Connections != nil {
+		u.Connections = params.Connections
 	}
-	if friendRequestPrivacy != nil {
-		u.FriendRequestPrivacy = *friendRequestPrivacy
+	if params.FriendRequestPrivacy != nil {
+		u.FriendRequestPrivacy = *params.FriendRequestPrivacy
 	}
-	if profilePrivacy != nil {
-		u.ProfilePrivacy = *profilePrivacy
+	if params.ProfilePrivacy != nil {
+		u.ProfilePrivacy = *params.ProfilePrivacy
 	}
 	return u, nil
 }

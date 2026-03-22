@@ -26,6 +26,7 @@ export interface NavigationActions {
   closeMobileOverlay: () => void;
   openMobileVoice: () => void;
   closeMobileVoice: () => void;
+  reset: () => void;
 }
 
 export const useNavigationStore = create<NavigationState & NavigationActions>()(
@@ -82,6 +83,16 @@ export const useNavigationStore = create<NavigationState & NavigationActions>()(
 
     closeMobileVoice: () => {
       set((state) => {
+        state.mobileVoiceFullscreen = false;
+      });
+    },
+
+    reset: () => {
+      set((state) => {
+        state.selectedServerId = null;
+        state.showDMs = false;
+        state.mobileActiveChannel = null;
+        state.mobileOverlay = null;
         state.mobileVoiceFullscreen = false;
       });
     },

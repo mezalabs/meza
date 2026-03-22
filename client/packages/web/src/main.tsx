@@ -6,6 +6,7 @@ import {
   bootstrapSession,
   gatewayConnect,
   gatewayDisconnect,
+  initEmojiCachePersistence,
   isCapacitor,
   isElectron,
   isSessionReady,
@@ -16,7 +17,14 @@ import {
   useAuthStore,
   useInviteStore,
 } from '@meza/core';
-import { InviteLanding, Shell, TitleBar, WebLandingPage } from '@meza/ui';
+import {
+  InviteLanding,
+  Shell,
+  TitleBar,
+  useNavigationStore,
+  useTilingStore,
+  WebLandingPage,
+} from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
@@ -82,8 +90,14 @@ useAuthStore.subscribe((state, prevState) => {
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();
+    useNavigationStore.getState().reset();
+    useTilingStore.getState().resetLayout();
   }
 });
+
+// Persist custom emoji data to localStorage so it survives page refreshes.
+// Also subscribes to auth changes to clear the cache on logout.
+initEmojiCachePersistence();
 
 // Cross-tab logout: when another tab tears down its session (logout),
 // clear auth locally so this tab also logs out.

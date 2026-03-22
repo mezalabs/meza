@@ -3,14 +3,6 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { loadEmojiCache } from '../lib/emojiCache.ts';
 
-/**
- * Tracks which server IDs were populated from cache (not yet refreshed
- * from the API). UI components use this to know they should still
- * fire an API call even though the store has data.
- */
-export const cachedServerIds = new Set<string>();
-let personalFromCache = false;
-
 function loadFromCache(): Partial<EmojiState> {
   try {
     // Read userId directly from localStorage to avoid circular import
@@ -23,39 +15,29 @@ function loadFromCache(): Partial<EmojiState> {
     const cached = loadEmojiCache(userId);
     if (!cached) return {};
     // Track which data came from cache so UI components know to refresh
+    const cachedServerIds: Record<string, true> = {};
     for (const sid of Object.keys(cached.byServer)) {
-      cachedServerIds.add(sid);
+      cachedServerIds[sid] = true;
     }
-    if (cached.personal) personalFromCache = true;
-    // StoredEmoji objects are structurally compatible with CustomEmoji
     return {
       byServer: cached.byServer as unknown as Record<string, CustomEmoji[]>,
       personal: cached.personal as unknown as CustomEmoji[] | null,
+      cachedServerIds,
+      personalFromCache: cached.personal ? true : false,
     };
   } catch {
     return {};
   }
 }
 
-/** Returns true if the personal emojis came from cache and haven't been refreshed. */
-export function isPersonalFromCache(): boolean {
-  return personalFromCache;
-}
-
-/** Mark a server as refreshed (API data received). */
-export function markServerRefreshed(serverId: string): void {
-  cachedServerIds.delete(serverId);
-}
-
-/** Mark personal emojis as refreshed. */
-export function markPersonalRefreshed(): void {
-  personalFromCache = false;
-}
-
 export interface EmojiState {
   byServer: Record<string, CustomEmoji[]>;
   personal: CustomEmoji[] | null;
   error: string | null;
+  /** Server IDs whose emoji data came from cache and hasn't been refreshed from API yet. */
+  cachedServerIds: Record<string, true>;
+  /** Whether personal emojis came from cache and haven't been refreshed yet. */
+  personalFromCache: boolean;
 }
 
 export interface EmojiActions {
@@ -66,6 +48,10 @@ export interface EmojiActions {
   removeEmoji: (serverId: string, emojiId: string) => void;
   removeServerEmojis: (serverId: string) => void;
   setError: (error: string | null) => void;
+  /** Mark a server's emoji data as refreshed from the API (no longer stale cache). */
+  markServerRefreshed: (serverId: string) => void;
+  /** Mark personal emoji data as refreshed from the API (no longer stale cache). */
+  markPersonalRefreshed: () => void;
   reset: () => void;
 }
 
@@ -74,6 +60,8 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
     byServer: {},
     personal: null,
     error: null,
+    cachedServerIds: {},
+    personalFromCache: false,
     ...loadFromCache(),
 
     setEmojis: (serverId, emojis) => {
@@ -157,19 +145,26 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
       });
     },
 
+    markServerRefreshed: (serverId) => {
+      set((state) => {
+        delete state.cachedServerIds[serverId];
+      });
+    },
+
+    markPersonalRefreshed: () => {
+      set((state) => {
+        state.personalFromCache = false;
+      });
+    },
+
     reset: () => {
       set((state) => {
         state.byServer = {};
         state.personal = null;
         state.error = null;
+        state.cachedServerIds = {};
+        state.personalFromCache = false;
       });
     },
   })),
 );
-
-// Defer persistence setup to next tick so all store modules finish
-// evaluating first. Static import keeps Vite's module graph clean;
-// setTimeout(0) defers the actual subscription setup.
-import { initEmojiCachePersistence } from '../lib/emojiCache.ts';
-
-setTimeout(initEmojiCachePersistence, 0);

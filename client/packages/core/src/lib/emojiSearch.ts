@@ -1,8 +1,8 @@
 /**
  * Unified emoji search across custom and Unicode emojis.
  */
-import type { CustomEmoji } from '@meza/gen/meza/v1/models_pb.ts';
 import type { ShortcodeMap, UnicodeEmoji } from './emojiData.ts';
+import type { StoredEmoji } from './emojiCache.ts';
 
 export interface CustomSearchResult {
   type: 'custom';
@@ -29,7 +29,7 @@ const MAX_RESULTS = 50;
 
 export function searchEmojis(
   query: string,
-  customEmojis: CustomEmoji[],
+  customEmojis: StoredEmoji[],
   unicodeEmojis: UnicodeEmoji[] | null,
   shortcodes: ShortcodeMap | null,
 ): SearchResult[] {

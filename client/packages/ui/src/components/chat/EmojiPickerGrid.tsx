@@ -1,6 +1,6 @@
 import {
   applySkinTone,
-  type CustomEmoji,
+  type StoredEmoji,
   type EmojiGroup,
   type FrequentEmojiEntry,
   getMediaURL,
@@ -37,7 +37,7 @@ type GridRow = SectionHeader | EmojiRow;
 
 interface CustomGridItem {
   type: 'custom';
-  emoji: CustomEmoji;
+  emoji: StoredEmoji;
 }
 
 interface UnicodeGridItem {
@@ -52,12 +52,12 @@ type GridItem = CustomGridItem | UnicodeGridItem;
 interface OtherServerEmojiGroup {
   serverId: string;
   serverName: string;
-  emojis: CustomEmoji[];
+  emojis: StoredEmoji[];
 }
 
 interface EmojiPickerGridProps {
-  personalEmojis: CustomEmoji[];
-  serverEmojis: CustomEmoji[];
+  personalEmojis: StoredEmoji[];
+  serverEmojis: StoredEmoji[];
   otherServerEmojiGroups: OtherServerEmojiGroup[];
   frequentEmojis: FrequentEmojiEntry[];
   emojiGroups: EmojiGroup[] | null;
@@ -73,7 +73,7 @@ interface EmojiPickerGridProps {
 
 // ----- Helpers -----
 
-function customToRef(e: CustomEmoji): string {
+function customToRef(e: StoredEmoji): string {
   return e.animated ? `<a:${e.name}:${e.id}>` : `<:${e.name}:${e.id}>`;
 }
 
@@ -88,7 +88,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 function addCustomSection(
   rows: GridRow[],
   label: string,
-  emojis: CustomEmoji[],
+  emojis: StoredEmoji[],
   cols: number,
 ) {
   if (emojis.length === 0) return;
@@ -103,12 +103,12 @@ function addCustomSection(
 }
 
 function buildRows(
-  personalEmojis: CustomEmoji[],
-  serverEmojis: CustomEmoji[],
+  personalEmojis: StoredEmoji[],
+  serverEmojis: StoredEmoji[],
   otherServerEmojiGroups: OtherServerEmojiGroup[],
   frequentEntries: FrequentEmojiEntry[],
   emojiGroups: EmojiGroup[] | null,
-  allCustom: CustomEmoji[],
+  allCustom: StoredEmoji[],
   unicodeMap: Map<string, UnicodeEmoji> | null,
   cols: number,
 ): GridRow[] {
@@ -178,7 +178,7 @@ function buildSearchRows(results: SearchResult[], cols: number): GridRow[] {
           animated: r.animated,
           serverId: r.serverId,
           userId: r.userId,
-        } as CustomEmoji,
+        } as StoredEmoji,
       };
     }
     return {
@@ -304,7 +304,7 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   // Reset focus when search changes
   useEffect(() => {
     setFocusedIndex(-1);
-  }, []);
+  }, [searchResults]);
 
   // Keyboard navigation — use refs to avoid re-registering listener on every state change
   const focusedIndexRef = useRef(focusedIndex);
@@ -468,6 +468,14 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     [onHover, serverNames],
   );
 
+  const handleButtonClick = useCallback(
+    (index: number) => {
+      setFocusedIndex(index);
+      onGridFocus();
+    },
+    [onGridFocus],
+  );
+
   if (rows.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-sm text-text-muted">
@@ -542,10 +550,8 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
                         focused={isFocused}
                         onSelect={handleItemSelect}
                         onHover={handleItemHover}
-                        onClick={() => {
-                          setFocusedIndex(globalIdx);
-                          onGridFocus();
-                        }}
+                        globalIdx={globalIdx}
+                        onFocusChange={handleButtonClick}
                       />
                     );
                   })}
@@ -567,14 +573,16 @@ const EmojiButton = memo(function EmojiButton({
   focused,
   onSelect,
   onHover,
-  onClick,
+  globalIdx,
+  onFocusChange,
 }: {
   item: GridItem;
   skinTone: number;
   focused: boolean;
   onSelect: (item: GridItem) => void;
   onHover: (item: GridItem) => void;
-  onClick: () => void;
+  globalIdx: number;
+  onFocusChange: (index: number) => void;
 }) {
   const label =
     item.type === 'custom' ? `:${item.emoji.name}:` : item.emoji.label;
@@ -599,7 +607,7 @@ const EmojiButton = memo(function EmojiButton({
       }`}
       style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
       onClick={() => {
-        onClick();
+        onFocusChange(globalIdx);
         onSelect(item);
       }}
       onMouseEnter={() => onHover(item)}

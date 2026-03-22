@@ -526,7 +526,23 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
-	user, err := s.store.UpdateUser(ctx, userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefs, dmPrivacy, connections, friendRequestPrivacy, profilePrivacy)
+	user, err := s.store.UpdateUser(ctx, store.UpdateUserParams{
+		UserID:               userID,
+		DisplayName:          displayName,
+		AvatarURL:            avatarURL,
+		EmojiScale:           emojiScale,
+		Bio:                  bio,
+		Pronouns:             pronouns,
+		BannerURL:            bannerURL,
+		ThemeColorPrimary:    themeColorPrimary,
+		ThemeColorSecondary:  themeColorSecondary,
+		SimpleMode:           simpleMode,
+		AudioPreferences:     audioPrefs,
+		DMPrivacy:            dmPrivacy,
+		Connections:          connections,
+		FriendRequestPrivacy: friendRequestPrivacy,
+		ProfilePrivacy:       profilePrivacy,
+	})
 	if err != nil {
 		slog.Error("updating profile", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))

@@ -16,12 +16,31 @@ var ErrNotFound = errors.New("not found")
 // ErrAlreadyExists is a sentinel error returned when a unique constraint is violated.
 var ErrAlreadyExists = errors.New("already exists")
 
+// UpdateUserParams holds parameters for updating a user's profile.
+type UpdateUserParams struct {
+	UserID               string
+	DisplayName          *string
+	AvatarURL            *string
+	EmojiScale           *float32
+	Bio                  *string
+	Pronouns             *string
+	BannerURL            *string
+	ThemeColorPrimary    *string
+	ThemeColorSecondary  *string
+	SimpleMode           *bool
+	AudioPreferences     *models.AudioPreferences
+	DMPrivacy            *string
+	Connections          []models.UserConnection
+	FriendRequestPrivacy *string
+	ProfilePrivacy       *string
+}
+
 // AuthStorer provides access to user authentication data in Postgres.
 type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	GetUsersByIDs(ctx context.Context, userIDs []string) ([]*models.User, error)
-	UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection, friendRequestPrivacy, profilePrivacy *string) (*models.User, error)
+	UpdateUser(ctx context.Context, params UpdateUserParams) (*models.User, error)
 	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, *models.AuthData, error)
