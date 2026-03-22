@@ -35,7 +35,16 @@
     "remark-gfm": "^4.0.1",
     "strip-markdown": "^6.0.0",
     "unist-util-visit": "^5.1.0",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.11",
+    "prosemirror-model": "^1.24.1",
+    "prosemirror-state": "^1.4.3",
+    "prosemirror-view": "^1.41.5",
+    "prosemirror-keymap": "^1.2.2",
+    "prosemirror-commands": "^1.6.2",
+    "prosemirror-history": "^1.4.1",
+    "prosemirror-inputrules": "^1.4.0",
+    "prosemirror-autocomplete": "^0.4.3",
+    "@prosemirror-adapter/react": "^0.5.1"
   },
   "peerDependencies": {
     "react": "^19.0.0",

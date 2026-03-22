@@ -45,9 +45,12 @@ import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
 
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import {
   Fragment,
   type KeyboardEvent,
+  Suspense,
+  lazy,
   memo,
   useCallback,
   useEffect,
@@ -76,7 +79,12 @@ import { LinkPreviewCard } from './LinkPreviewCard.tsx';
 import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
+import type { ComposerEditorHandle } from './composer/schema.ts';
 import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
+
+const ComposerEditor = lazy(() =>
+  import('./composer/ComposerEditor.tsx').then((m) => ({ default: m.ComposerEditor })),
+);
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
@@ -1161,6 +1169,7 @@ const MessageItem = memo(function MessageItem({
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const editEditorRef = useRef<ComposerEditorHandle>(null);
 
   const longPressHandlers = useLongPress(
     useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
@@ -1180,7 +1189,7 @@ const MessageItem = memo(function MessageItem({
   // Report dirty state to ChannelView so it can decide whether to show
   // the discard dialog on Escape or when switching to another message.
   useEffect(() => {
-    onEditDirtyChange(isEditing && editText !== text);
+    onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? editText !== text));
   }, [isEditing, editText, text, onEditDirtyChange]);
 
   const handleReactionSelect = useCallback(
@@ -1415,21 +1424,61 @@ const MessageItem = memo(function MessageItem({
 
           {isEditing ? (
             <div className="mt-1">
-              <textarea
-                ref={editRef}
-                value={editText}
-                onChange={(e) => {
-                  setEditText(e.target.value);
-                  // Auto-grow textarea
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                }}
-                onKeyDown={handleEditKeyDown}
-                disabled={isSaving}
-                rows={1}
+              <div
+                className="w-full overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus-within:border-accent"
                 style={{ maxHeight: isMobile ? '80px' : '150px' }}
-                className="w-full resize-none overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
-              />
+              >
+                <Suspense fallback={<div className="h-6 animate-pulse" />}>
+                  <ProsemirrorAdapterProvider>
+                    <ComposerEditor
+                      ref={editEditorRef}
+                      initialText={text}
+                      onSend={async (wireText) => {
+                        const trimmed = wireText.trim();
+                        if (!trimmed || trimmed === text) {
+                          cancelEdit();
+                          return;
+                        }
+                        setIsSaving(true);
+                        setEditError('');
+                        try {
+                          const plaintext = buildMessageContent(trimmed);
+                          let content: Uint8Array;
+                          let kv: number | undefined;
+                          if (needsEncryption) {
+                            try {
+                              const encrypted = await encryptMessage(channelId, plaintext);
+                              content = encrypted.data;
+                              kv = encrypted.keyVersion;
+                            } catch {
+                              setEditError('Encryption failed');
+                              setIsSaving(false);
+                              return;
+                            }
+                          } else {
+                            content = plaintext;
+                          }
+                          await editMessage({
+                            channelId: msg.channelId,
+                            messageId: msg.id,
+                            encryptedContent: content,
+                            keyVersion: kv,
+                          });
+                          onCancelEdit();
+                        } catch {
+                          setEditError('Failed to save edit');
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      onCancel={cancelEdit}
+                      channelId={channelId}
+                      serverId={serverId}
+                      autoFocus
+                    />
+                  </ProsemirrorAdapterProvider>
+                </Suspense>
+              </div>
               {editError && (
                 <p className="text-xs text-error mt-1">{editError}</p>
               )}
@@ -1441,14 +1490,6 @@ const MessageItem = memo(function MessageItem({
                   className="text-xs text-text-muted hover:text-text"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  disabled={isSaving}
-                  className="text-xs text-accent hover:text-accent-hover font-medium"
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
                 <span className="text-xs text-text-subtle">
                   escape to cancel &middot; enter to save
