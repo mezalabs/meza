@@ -136,7 +136,27 @@ impl App {
             }
 
             Action::Login { .. } => {
-                // Will be wired up when auth is implemented.
+                // Handled async in main.rs — this just marks the UI as loading.
+                self.ui.needs_redraw = true;
+            }
+
+            Action::LoginSuccess {
+                user_id,
+                access_token,
+                refresh_token,
+            } => {
+                self.auth.user_id = Some(user_id);
+                self.auth.access_token = Some(access_token);
+                self.auth.refresh_token = Some(refresh_token);
+                self.auth.is_authenticated = true;
+                self.ui.needs_redraw = true;
+                tracing::info!("login successful, user_id={}", self.auth.user_id.as_deref().unwrap_or("?"));
+            }
+
+            Action::LoginFailed(msg) => {
+                self.auth.is_authenticated = false;
+                tracing::warn!("login failed: {msg}");
+                self.ui.needs_redraw = true;
             }
 
             Action::Tick => {

@@ -4,6 +4,7 @@ use ratatui::{
     layout::{Constraint, Layout},
     Frame,
 };
+use tokio::sync::mpsc;
 
 mod action;
 mod app;
@@ -57,22 +58,72 @@ async fn main() -> Result<()> {
 
     // ── Config ─────────────────────────────────────────────────
     let config = config::load()?;
+    let server_url = config.server.url.clone();
 
     // ── Terminal ───────────────────────────────────────────────
     terminal::install_panic_handler();
     let mut tui = terminal::enter()?;
 
-    // ── App + Components + Event loop ─────────────────────────
+    // ── App + Components + Async action channel ────────────────
     let mut app = App::new();
-    let mut ui = UiComponents::new(&config.server.url);
+    let mut ui = UiComponents::new(&server_url);
     let mut events = EventHandler::new();
+
+    // Channel for async tasks (login, gateway events) to send actions back.
+    let (async_tx, mut async_rx) = mpsc::channel::<Action>(64);
 
     // Initial draw.
     tui.draw(|f| draw(f, &app, &ui))?;
 
-    while !app.should_quit {
-        let ev = events.next().await?;
-        let action = map_event(ev, &app, &mut ui);
+    loop {
+        if app.should_quit {
+            break;
+        }
+
+        // Select between terminal events and async action results.
+        let action = tokio::select! {
+            ev = events.next() => {
+                match ev {
+                    Ok(ev) => map_event(ev, &app, &mut ui),
+                    Err(_) => Action::Quit,
+                }
+            }
+            Some(action) = async_rx.recv() => action,
+        };
+
+        // Handle Login action specially — spawn async task.
+        if let Action::Login { ref email, ref password } = action {
+            let tx = async_tx.clone();
+            let url = server_url.clone();
+            let email = email.clone();
+            let password = password.clone();
+
+            tracing::info!("login: starting for {email}");
+            ui.login_view.loading = true;
+            ui.login_view.error_msg = None;
+            tui.draw(|f| draw(f, &app, &ui))?;
+
+            tokio::spawn(async move {
+                let result = do_login(&url, &email, &password).await;
+                match result {
+                    Ok(action) => { let _ = tx.send(action).await; }
+                    Err(e) => { let _ = tx.send(Action::LoginFailed(e)).await; }
+                }
+            });
+            continue;
+        }
+
+        // Handle LoginFailed — update login view error.
+        if let Action::LoginFailed(ref msg) = action {
+            ui.login_view.loading = false;
+            ui.login_view.error_msg = Some(msg.clone());
+        }
+
+        // Handle LoginSuccess — clear login view.
+        if let Action::LoginSuccess { .. } = action {
+            ui.login_view.loading = false;
+        }
+
         app.update(action);
 
         if app.ui.needs_redraw {
@@ -88,6 +139,59 @@ async fn main() -> Result<()> {
     tracing::info!("meza-tui exited cleanly");
 
     Ok(())
+}
+
+/// Perform the full login sequence asynchronously.
+async fn do_login(server_url: &str, email: &str, password: &str) -> Result<Action, String> {
+    use meza_client::connect::ConnectClient;
+    use meza_client::crypto::kdf;
+
+    let client = ConnectClient::new(server_url.to_string());
+
+    // 1. Get salt
+    tracing::info!("login: fetching salt for {email}");
+    let salt = client
+        .get_salt(email)
+        .await
+        .map_err(|e| format!("Failed to get salt: {e}"))?;
+
+    tracing::info!("login: salt received ({} bytes), deriving keys...", salt.len());
+
+    // 2. Derive keys (CPU-intensive — run on blocking thread)
+    let password_bytes = password.as_bytes().to_vec();
+    let salt_clone = salt.clone();
+    let (master_key, auth_key) = tokio::task::spawn_blocking(move || {
+        kdf::derive_keys(&password_bytes, &salt_clone)
+    })
+    .await
+    .map_err(|e| format!("Key derivation task failed: {e}"))?
+    .map_err(|e| format!("Key derivation failed: {e}"))?;
+
+    tracing::info!("login: keys derived, calling Login RPC");
+
+    // 3. Login
+    let resp = client
+        .login(email, auth_key.as_ref())
+        .await
+        .map_err(|e| format!("Login failed: {e}"))?;
+
+    let user_id = resp
+        .user
+        .as_ref()
+        .map(|u| u.id.clone())
+        .unwrap_or_default();
+
+    tracing::info!("login: success, user_id={user_id}");
+
+    // 4. Register public key if we have a key bundle to decrypt
+    // (For now, just complete the login — full E2EE bootstrap comes next)
+    let _ = master_key; // Will be used for identity decryption
+
+    Ok(Action::LoginSuccess {
+        user_id,
+        access_token: resp.access_token,
+        refresh_token: resp.refresh_token,
+    })
 }
 
 /// Map a raw terminal event into an `Action`.
@@ -129,7 +233,7 @@ fn map_event(event: Event, app: &App, ui: &mut UiComponents) -> Action {
                         Action::ScrollHalfDown
                     }
                     KeyCode::Char('g') => {
-                        ui.scroll_offset = usize::MAX; // will be clamped during draw
+                        ui.scroll_offset = usize::MAX;
                         Action::ScrollTop
                     }
                     KeyCode::Char('G') => {
@@ -159,10 +263,6 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiComponents) {
     }
 
     // Authenticated layout:
-    // Top: ChannelBar (1 line)
-    // Middle: ChatView (fills space)
-    // Bottom-1: InputBox (3 lines)
-    // Bottom-2: StatusBar (1 line)
     let chunks = Layout::vertical([
         Constraint::Length(1),  // channel bar
         Constraint::Fill(1),   // chat view
@@ -171,7 +271,6 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiComponents) {
     ])
     .split(area);
 
-    // Channel bar
     components::channel_bar::ChannelBar::draw(
         frame,
         chunks[0],
@@ -180,8 +279,6 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiComponents) {
         &app.channels.unread,
     );
 
-    // Chat view
-    // Clamp scroll_offset to valid range.
     let max_scroll = app.messages.active_buffer.len();
     let scroll = ui.scroll_offset.min(max_scroll);
     components::chat_view::ChatView::draw(
@@ -191,10 +288,8 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiComponents) {
         scroll,
     );
 
-    // Input box
     ui.input_box.draw(frame, chunks[2]);
 
-    // Status bar
     let server_name = app
         .servers
         .active_server_idx
@@ -215,7 +310,7 @@ fn draw(frame: &mut Frame, app: &App, ui: &UiComponents) {
         server_name,
         channel_name,
         app.gateway.connected,
-        true, // E2EE indicator always shown for now
+        true,
         total_unread,
     );
 }

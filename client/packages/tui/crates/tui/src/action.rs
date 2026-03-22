@@ -17,6 +17,14 @@ pub enum Action {
         email: String,
         password: String,
     },
+    /// Login succeeded — transition to authenticated state.
+    LoginSuccess {
+        user_id: String,
+        access_token: String,
+        refresh_token: String,
+    },
+    /// Login failed — show error to user.
+    LoginFailed(String),
     Tick,
     Render,
     Resize(u16, u16),
