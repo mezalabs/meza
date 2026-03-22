@@ -10,6 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
 import { roleColorHex } from '../../utils/color.ts';
+import { BotBadge } from '../common/BotBadge.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 import { UserProfileTrigger } from '../shared/UserProfileTrigger.tsx';
@@ -27,7 +28,7 @@ interface RoleGroup {
   roleName: string;
   roleColor: number;
   rolePosition: number;
-  members: { userId: string; displayName: string; avatarUrl?: string }[];
+  members: { userId: string; displayName: string; avatarUrl?: string; isBot?: boolean }[];
 }
 
 export function MemberList({ serverId }: MemberListProps) {
@@ -83,22 +84,40 @@ export function MemberList({ serverId }: MemberListProps) {
         displayName:
           member.nickname || resolveDisplayName(member.userId, serverId),
         avatarUrl: profiles[member.userId]?.avatarUrl,
+        isBot: profiles[member.userId]?.isBot,
       });
     }
 
     // Sort groups by role position descending, "Members" (no role) last
-    return Array.from(groupMap.values()).sort(
+    const sorted = Array.from(groupMap.values()).sort(
       (a, b) => b.rolePosition - a.rolePosition,
     );
+
+    // Separate bot members into their own group
+    const botMembers: RoleGroup['members'] = [];
+    for (const group of sorted) {
+      const bots = group.members.filter((m) => m.isBot);
+      if (bots.length > 0) {
+        botMembers.push(...bots);
+        group.members = group.members.filter((m) => !m.isBot);
+      }
+    }
+
+    // Remove groups that became empty after extracting bots
+    const filtered = sorted.filter((g) => g.members.length > 0);
+
+    return { roleGroups: filtered, botMembers };
   }, [members, roles, serverId, profiles]);
 
   if (members.length === 0) {
     return <div className="p-3 text-xs text-text-subtle">No members</div>;
   }
 
+  const { roleGroups, botMembers } = groups;
+
   return (
     <div className="flex flex-col gap-3 overflow-y-auto p-3">
-      {groups.map((group) => (
+      {roleGroups.map((group) => (
         <div key={group.roleId ?? '__none'}>
           <div className="mb-1 flex items-center gap-1.5">
             {group.roleColor !== 0 && (
@@ -120,10 +139,30 @@ export function MemberList({ serverId }: MemberListProps) {
               userId={m.userId}
               displayName={m.displayName}
               avatarUrl={m.avatarUrl}
+              isBot={m.isBot}
             />
           ))}
         </div>
       ))}
+      {botMembers.length > 0 && (
+        <div>
+          <div className="mb-1 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-text-subtle">
+              Bots &mdash; {botMembers.length}
+            </h3>
+          </div>
+          {botMembers.map((m) => (
+            <MemberRow
+              key={m.userId}
+              serverId={serverId}
+              userId={m.userId}
+              displayName={m.displayName}
+              avatarUrl={m.avatarUrl}
+              isBot
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -133,11 +172,13 @@ function MemberRow({
   userId,
   displayName,
   avatarUrl,
+  isBot,
 }: {
   serverId: string;
   userId: string;
   displayName: string;
   avatarUrl?: string;
+  isBot?: boolean;
 }) {
   const displayColor = useDisplayColor(userId, serverId);
   return (
@@ -162,6 +203,7 @@ function MemberRow({
           >
             {displayName}
           </span>
+          {isBot && <BotBadge />}
         </div>
       </UserProfileTrigger>
     </MemberContextMenu>

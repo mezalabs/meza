@@ -30,6 +30,7 @@ import { voiceConnect } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { openProfilePane, useTilingStore } from '../../stores/tiling.ts';
 import { roleColorHex } from '../../utils/color.ts';
+import { BotBadge } from '../common/BotBadge.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
 
@@ -214,6 +215,7 @@ function ProfileCardContent({
             >
               {profile.displayName || profile.username}
             </span>
+            {profile.isBot && <BotBadge />}
             {profile.pronouns && (
               <span className="text-sm text-text-muted flex-shrink-0">
                 {profile.pronouns}

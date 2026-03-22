@@ -1657,3 +1657,93 @@ export async function updateSystemMessageConfig(
   });
   return resp.config;
 }
+
+// --- Bot Management API ---
+
+export async function removeBotFromServer(botId: string, serverId: string) {
+  try {
+    await chatClient.removeBotFromServer({ botId, serverId });
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+export async function acceptBotInvite(code: string, serverId: string) {
+  try {
+    const resp = await chatClient.acceptBotInvite({ code, serverId });
+    if (resp.member) {
+      useMemberStore.getState().addMember(resp.member);
+    }
+    return resp.member;
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+// --- Outgoing Webhook API ---
+
+export async function listWebhooks(serverId: string) {
+  try {
+    const resp = await chatClient.listWebhooks({ serverId });
+    return resp.webhooks;
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+export async function createWebhook(
+  botId: string,
+  serverId: string,
+  url: string,
+) {
+  try {
+    const resp = await chatClient.createWebhook({ botId, serverId, url });
+    return resp.webhook;
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+export async function deleteWebhook(webhookId: string) {
+  try {
+    await chatClient.deleteWebhook({ webhookId });
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+// --- Incoming Webhook API ---
+
+export async function listIncomingWebhooks(serverId: string) {
+  try {
+    const resp = await chatClient.listIncomingWebhooks({ serverId });
+    return resp.webhooks;
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+export async function createIncomingWebhook(
+  botId: string,
+  serverId: string,
+  channelId: string,
+) {
+  try {
+    const resp = await chatClient.createIncomingWebhook({
+      botId,
+      serverId,
+      channelId,
+    });
+    return resp.webhook;
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
+export async function deleteIncomingWebhook(webhookId: string) {
+  try {
+    await chatClient.deleteIncomingWebhook({ webhookId });
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}

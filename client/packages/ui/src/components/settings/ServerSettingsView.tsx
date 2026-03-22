@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { BansSection } from './BansSection.tsx';
 import { DefaultPrivacySection } from './DefaultPrivacySection.tsx';
+import { ServerBotsSection } from './ServerBotsSection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
 import { OnboardingSection } from './OnboardingSection.tsx';
 import { OverviewSection } from './OverviewSection.tsx';
@@ -16,6 +17,7 @@ const SERVER_SETTINGS_SECTIONS = [
   { id: 'privacy', label: 'Channel Privacy' },
   { id: 'emojis', label: 'Emojis' },
   { id: 'soundboard', label: 'Soundboard' },
+  { id: 'bots', label: 'Bots' },
   { id: 'bans', label: 'Bans' },
   { id: 'onboarding', label: 'Onboarding' },
   { id: 'system-messages', label: 'System Messages' },
@@ -134,6 +136,8 @@ function renderServerSettingsContent(
       return <EmojisSection serverId={serverId} />;
     case 'soundboard':
       return <SoundsSection serverId={serverId} />;
+    case 'bots':
+      return <ServerBotsSection serverId={serverId} />;
     case 'bans':
       return <BansSection serverId={serverId} />;
     case 'onboarding':

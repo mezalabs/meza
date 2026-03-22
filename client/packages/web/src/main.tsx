@@ -14,9 +14,10 @@ import {
   subscribeToPush,
   teardownSession,
   useAuthStore,
+  useBotInviteStore,
   useInviteStore,
 } from '@meza/core';
-import { InviteLanding, Shell, TitleBar, WebLandingPage } from '@meza/ui';
+import { BotInviteLanding, InviteLanding, Shell, TitleBar, WebLandingPage } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
@@ -46,6 +47,17 @@ if (inviteMatch) {
   if (fragment) {
     useInviteStore.getState().setInviteSecret(fragment);
   }
+  history.replaceState(null, '', '/');
+}
+
+// Parse /bot-invite/{code} from the current URL and store it before React renders.
+const botInviteMatch = window.location.pathname.match(
+  /^\/bot-invite\/([a-z0-9]{8})$/i,
+);
+if (botInviteMatch) {
+  useBotInviteStore
+    .getState()
+    .setPendingCode(botInviteMatch[1]?.toLowerCase() ?? '');
   history.replaceState(null, '', '/');
 }
 
@@ -125,6 +137,7 @@ navigator.serviceWorker?.addEventListener('message', (event) => {
 function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasPendingInvite = useInviteStore((s) => !!s.pendingCode);
+  const hasPendingBotInvite = useBotInviteStore((s) => !!s.pendingCode);
 
   // Wait for the E2EE session to be ready before rendering Shell.
   // This prevents a brief flash of the chat UI that immediately vanishes
@@ -157,7 +170,8 @@ function App() {
   }, [sessionReady, isAuthenticated]);
 
   let content: React.ReactNode;
-  if (isAuthenticated && sessionReady) content = <Shell />;
+  if (hasPendingBotInvite) content = <BotInviteLanding />;
+  else if (isAuthenticated && sessionReady) content = <Shell />;
   else if (hasPendingInvite) content = <InviteLanding />;
   else if (!isAuthenticated) content = <WebLandingPage />;
   else {

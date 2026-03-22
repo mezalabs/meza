@@ -57,6 +57,7 @@ export interface StoredUser {
   dmPrivacy: string;
   connections: StoredUserConnection[];
   createdAt: string;
+  isBot?: boolean;
 }
 
 export interface AuthState {

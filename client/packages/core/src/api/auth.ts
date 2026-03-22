@@ -38,6 +38,7 @@ export function publicUserToStored(user: {
   bannerUrl: string;
   themeColorPrimary: string;
   themeColorSecondary: string;
+  isBot?: boolean;
 }): StoredUser {
   return {
     id: user.id,
@@ -54,6 +55,7 @@ export function publicUserToStored(user: {
     dmPrivacy: '',
     connections: [],
     createdAt: '',
+    isBot: user.isBot,
   };
 }
 
@@ -79,6 +81,7 @@ export function toStoredUser(user: User): StoredUser {
     createdAt: user.createdAt
       ? new Date(Number(user.createdAt.seconds) * 1000).toISOString()
       : '',
+    isBot: user.isBot,
   };
 }
 

@@ -9,6 +9,7 @@ const PUBLIC_METHODS = new Set([
   'meza.v1.AuthService/GetSalt',
   'meza.v1.AuthService/RefreshToken',
   'meza.v1.ChatService/ResolveInvite',
+  'meza.v1.ChatService/ResolveBotInvite',
 ]);
 
 let refreshPromise: Promise<boolean> | null = null;

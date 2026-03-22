@@ -5,6 +5,7 @@ import { useAppVersion } from '../../hooks/useAppVersion.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { AccountSection } from './AccountSection.tsx';
 import { AppearanceSection } from './AppearanceSection.tsx';
+import { BotsSection } from './BotsSection.tsx';
 import { DevicesSection } from './DevicesSection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
 import { KeybindsSection } from './KeybindsSection.tsx';
@@ -27,6 +28,7 @@ const SETTINGS_SECTIONS = [
   { id: 'streaming', label: 'Streaming' },
   { id: 'emojis', label: 'My Emojis' },
   { id: 'soundboard', label: 'Soundboard' },
+  { id: 'bots', label: 'My Bots' },
 ] as const;
 
 type SectionId = (typeof SETTINGS_SECTIONS)[number]['id'];
@@ -204,6 +206,8 @@ function renderSettingsContent(section: SectionId | null) {
       return <EmojisSection />;
     case 'soundboard':
       return <SoundsSection />;
+    case 'bots':
+      return <BotsSection />;
     default:
       return null;
   }

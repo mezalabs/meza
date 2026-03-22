@@ -8,10 +8,15 @@ export type {
 export { UploadPurpose } from '@meza/gen/meza/v1/media_pb.ts';
 export type {
   Attachment,
+  Bot,
+  BotInvite,
+  BotWithToken,
   Channel,
   ChannelGroup,
   CustomEmoji,
   DMChannel,
+  IncomingWebhook,
+  IncomingWebhookWithSecret,
   Invite,
   LinkEmbed,
   PermissionOverride,
@@ -19,6 +24,7 @@ export type {
   Server,
   ServerSystemMessageConfig,
   User,
+  Webhook,
 } from '@meza/gen/meza/v1/models_pb.ts';
 // Re-export protobuf enums used by UI
 export { ChannelType, MessageType } from '@meza/gen/meza/v1/models_pb.ts';
@@ -41,6 +47,23 @@ export {
   toStoredUser,
   updateProfile,
 } from './api/auth.ts';
+// API — bots
+export {
+  acceptBotInvite,
+  createBot,
+  createBotInvite,
+  createIncomingWebhook,
+  deleteBot,
+  deleteBotInvite,
+  deleteIncomingWebhook,
+  getBot,
+  listBotInvites,
+  listBots,
+  listIncomingWebhooks,
+  regenerateBotToken,
+  resolveBotInvite,
+  updateBot as updateBotProfile,
+} from './api/bots.ts';
 // API — chat
 export {
   acceptFriendRequest,
@@ -63,6 +86,7 @@ export {
   createServer,
   createServerFromTemplate,
   createSound,
+  createWebhook,
   declineFriendRequest,
   declineMessageRequest,
   deleteChannel,
@@ -72,6 +96,7 @@ export {
   deletePermissionOverride,
   deleteRole,
   deleteSound,
+  deleteWebhook,
   editMessage,
   getEffectivePermissions,
   getMessages,
@@ -100,7 +125,9 @@ export {
   listServers,
   listUserEmojis,
   listUserSounds,
+  listWebhooks,
   pinMessage,
+  removeBotFromServer,
   removeChannelMember,
   removeFriend,
   removeReaction,
@@ -322,6 +349,8 @@ export type {
 export { PLATFORM_LABELS, useAuthStore } from './store/auth.ts';
 export type { BlockActions, BlockState } from './store/blocks.ts';
 export { useBlockStore } from './store/blocks.ts';
+export type { BotActions, BotState } from './store/bots.ts';
+export { useBotStore } from './store/bots.ts';
 export type {
   ChannelGroupActions,
   ChannelGroupState,
@@ -345,6 +374,8 @@ export type {
   GatewayStatus,
 } from './store/gateway.ts';
 export { useGatewayStore } from './store/gateway.ts';
+export type { BotInviteState } from './store/bot-invite.ts';
+export { useBotInviteStore } from './store/bot-invite.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
 export type {

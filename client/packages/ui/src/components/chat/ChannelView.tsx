@@ -65,6 +65,7 @@ import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { useContentWarningStore } from '../../stores/contentWarnings.ts';
 import { openProfilePane } from '../../stores/tiling.ts';
+import { BotBadge } from '../common/BotBadge.tsx';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
@@ -1004,6 +1005,7 @@ const MessageItem = memo(function MessageItem({
   const authorAvatar = useAuthorAvatar(msg.authorId);
   const authorLabel = memberName;
   const authorColor = useDisplayColor(msg.authorId, serverId);
+  const authorIsBot = useUsersStore((s) => !!s.profiles[msg.authorId]?.isBot);
   const time = msg.createdAt
     ? new Date(Number(msg.createdAt.seconds) * 1000)
     : null;
@@ -1290,6 +1292,7 @@ const MessageItem = memo(function MessageItem({
                 {authorLabel}
               </button>
             </ProfilePopoverCard>
+            {authorIsBot && <BotBadge />}
             {time && (
               <span className="text-xs text-text-subtle" title={toISO(time)}>
                 {formatRelativeTime(time)}
