@@ -25,7 +25,6 @@ aes-gcm = "0.10"
 hkdf = "0.12"
 sha2 = "0.10"
 argon2 = "0.5"
-unicode-width = "0.2"
 
 [build-dependencies]
 prost-build = "0.13"

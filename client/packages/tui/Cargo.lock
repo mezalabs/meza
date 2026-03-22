@@ -1271,7 +1271,6 @@ dependencies = [
  "tokio-tungstenite",
  "tokio-util",
  "tracing",
- "unicode-width",
  "x25519-dalek",
  "zeroize",
 ]
