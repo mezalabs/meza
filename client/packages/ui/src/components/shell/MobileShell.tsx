@@ -1,5 +1,5 @@
 import type { PaneContent } from '@meza/core';
-import { useChannelStore, useVoiceStore } from '@meza/core';
+import { hideKeyboard, useChannelStore, useVoiceStore } from '@meza/core';
 import {
   ArrowLeftIcon,
   IconContext,
@@ -58,6 +58,12 @@ export function MobileShell() {
 
   // Sync browser history for Android back button
   useMobileHistory();
+
+  // Dismiss any keyboard lingering from previous views (e.g. login form).
+  // Android WebView doesn't always close the keyboard when inputs unmount.
+  useEffect(() => {
+    hideKeyboard();
+  }, []);
 
   // Auto-close voice fullscreen when user disconnects
   const voiceStatus = useVoiceStore((s) => s.status);
