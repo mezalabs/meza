@@ -201,7 +201,7 @@ export function BotsSection() {
               className="group relative overflow-hidden rounded-xl border border-border/30 bg-bg-surface/30 transition-all duration-150 hover:border-border/60 hover:bg-bg-surface/60"
             >
               {/* Left accent edge */}
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent/30 transition-colors group-hover:bg-accent/60" />
+              <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-accent/40 transition-colors group-hover:bg-accent/70" />
 
               <div className="flex items-start gap-4 p-4 pl-5">
                 {/* Avatar */}
