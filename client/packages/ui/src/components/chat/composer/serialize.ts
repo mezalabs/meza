@@ -88,9 +88,9 @@ export function deserializeText(text: string, schema: Schema): ProseMirrorNode {
     let lastIndex = 0;
 
     TOKEN_RE.lastIndex = 0;
-    let match: RegExpExecArray | null;
+    let match: RegExpExecArray | null = TOKEN_RE.exec(line);
 
-    while ((match = TOKEN_RE.exec(line)) !== null) {
+    while (match !== null) {
       const [
         fullMatch,
         codeSpan, // group 1: backtick code span
@@ -110,6 +110,7 @@ export function deserializeText(text: string, schema: Schema): ProseMirrorNode {
         }
         children.push(schema.text(codeSpan));
         lastIndex = match.index + fullMatch.length;
+        match = TOKEN_RE.exec(line);
         continue;
       }
 
@@ -151,6 +152,7 @@ export function deserializeText(text: string, schema: Schema): ProseMirrorNode {
       }
 
       lastIndex = match.index + fullMatch.length;
+      match = TOKEN_RE.exec(line);
     }
 
     // Remaining text after last match
@@ -178,7 +180,7 @@ export function wireFormatLength(doc: ProseMirrorNode): number {
 
   doc.descendants((node) => {
     if (node.isText) {
-      length += node.text!.length;
+      length += (node.text ?? '').length;
       return false;
     }
 

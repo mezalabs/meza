@@ -1206,7 +1206,6 @@ const MessageItem = memo(function MessageItem({
   );
 
   function cancelEdit() {
-    setEditText('');
     setEditError('');
     onCancelEdit();
   }
@@ -1406,7 +1405,6 @@ const MessageItem = memo(function MessageItem({
                       }}
                       onCancel={cancelEdit}
                       channelId={channelId}
-                      serverId={serverId}
                       autoFocus
                     />
                   </ProsemirrorAdapterProvider>

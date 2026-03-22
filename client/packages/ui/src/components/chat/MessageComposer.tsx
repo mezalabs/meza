@@ -579,7 +579,6 @@ export function MessageComposer({
                 <ComposerEditor
                   ref={editorRef}
                   channelId={channelId}
-                  serverId={serverId}
                   onSend={handleEditorSend}
                   onCancel={handleCancel}
                   onTyping={handleTyping}

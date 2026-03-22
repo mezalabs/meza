@@ -253,6 +253,7 @@ export const ComposerEditor = forwardRef<
   };
 
   // Create the EditorView on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — only recreate view on channelId change; plugins/nodeViews/initialText are stable
   useEffect(() => {
     if (!containerRef.current) return;
 
