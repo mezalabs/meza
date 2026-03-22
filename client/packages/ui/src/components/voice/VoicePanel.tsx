@@ -22,6 +22,7 @@ import {
 import {
   EarIcon,
   EarSlashIcon,
+  LockKey,
   MicrophoneIcon,
   MicrophoneSlashIcon,
   MonitorArrowUpIcon,
@@ -94,13 +95,16 @@ export function VoicePanel({ channelId }: VoicePanelProps) {
       <div className="flex shrink-0 flex-col items-center justify-center gap-4 p-4">
         {(isConnectedHere || isConnecting) && (
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
               isConnectedHere
                 ? 'bg-success/20 text-success'
                 : 'bg-warning/20 text-warning'
             }`}
           >
-            {isConnectedHere ? 'Connected' : 'Connecting...'}
+            {isConnectedHere && (
+              <LockKey size={12} weight="fill" aria-hidden="true" />
+            )}
+            {isConnectedHere ? 'Encrypted' : 'Connecting...'}
           </span>
         )}
         {error && (
@@ -281,6 +285,12 @@ function ParticipantRow({
         (p) => p.userId === userId && p.isDeafened,
       ) ?? false,
   );
+  const isEncrypted = useVoiceParticipantsStore(
+    (s) =>
+      s.byChannel[channelId]?.some(
+        (p) => p.userId === userId && p.isEncrypted,
+      ) ?? false,
+  );
   const displayName = useDisplayName(userId, serverId);
   const avatarUrl = useUsersStore((s) => s.profiles[userId]?.avatarUrl);
   const perUserVolume = useAudioSettingsStore(
@@ -326,6 +336,13 @@ function ParticipantRow({
           {displayName}
           {isLocal && <span className="ml-1 text-text-subtle">(you)</span>}
         </span>
+
+        {/* Encryption indicator */}
+        {isEncrypted && (
+          <span className="text-success" title="End-to-end encrypted">
+            <LockKey size={12} weight="fill" aria-hidden="true" />
+          </span>
+        )}
 
         {/* Screen share indicator */}
         {isScreenSharing && (

@@ -19,6 +19,7 @@ import {
 } from '@meza/core';
 import {
   InviteLanding,
+  resetE2EEKeyProvider,
   Shell,
   TitleBar,
   useNavigationStore,
@@ -90,6 +91,7 @@ useAuthStore.subscribe((state, prevState) => {
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();
+    resetE2EEKeyProvider();
     useNavigationStore.getState().reset();
     useTilingStore.getState().resetLayout();
   }

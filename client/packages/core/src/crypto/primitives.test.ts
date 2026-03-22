@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildContextAAD, buildKeyWrapAAD, PURPOSE_MESSAGE } from './aad.ts';
 import {
   decryptPayload,
+  deriveVoiceKey,
   deserializeIdentity,
   edToX25519Public,
   edToX25519Secret,
@@ -531,5 +532,40 @@ describe('minimum ciphertext length', () => {
     // Should roundtrip
     const decrypted = await decryptPayload(key, encrypted, aad);
     expect(decrypted.byteLength).toBe(0);
+  });
+});
+
+describe('deriveVoiceKey', () => {
+  it('produces a 32-byte key different from the input channel key', async () => {
+    const channelKey = generateChannelKey();
+    const voiceKey = await deriveVoiceKey(channelKey, TEST_CHANNEL_ID);
+    expect(voiceKey).toBeInstanceOf(Uint8Array);
+    expect(voiceKey.length).toBe(32);
+    expect(voiceKey).not.toEqual(channelKey);
+  });
+
+  it('produces different keys for different channel IDs', async () => {
+    const channelKey = generateChannelKey();
+    const channelA = '01HZXK5M8E3J6Q9P2RVTYWN4AB';
+    const channelB = '01HZXK5M8E3J6Q9P2RVTYWN4AC';
+
+    const keyA = await deriveVoiceKey(channelKey, channelA);
+    const keyB = await deriveVoiceKey(channelKey, channelB);
+    expect(keyA).not.toEqual(keyB);
+  });
+
+  it('is deterministic for the same inputs', async () => {
+    const channelKey = generateChannelKey();
+    const key1 = await deriveVoiceKey(channelKey, TEST_CHANNEL_ID);
+    const key2 = await deriveVoiceKey(channelKey, TEST_CHANNEL_ID);
+    expect(key1).toEqual(key2);
+  });
+
+  it('produces different keys for different channel keys', async () => {
+    const keyA = generateChannelKey();
+    const keyB = generateChannelKey();
+    const voiceA = await deriveVoiceKey(keyA, TEST_CHANNEL_ID);
+    const voiceB = await deriveVoiceKey(keyB, TEST_CHANNEL_ID);
+    expect(voiceA).not.toEqual(voiceB);
   });
 });

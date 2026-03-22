@@ -197,6 +197,7 @@ export {
   deriveKeys,
   deriveRecoveryKey,
   deriveRecoveryVerifier,
+  deriveVoiceKey,
   deserializeIdentity,
   distributeKeyToMember,
   type EncryptedMessage,

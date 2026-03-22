@@ -77,6 +77,7 @@ export {
 export {
   clearAesKeyCache,
   decryptPayload,
+  deriveVoiceKey,
   deserializeIdentity,
   edToX25519Public,
   edToX25519Secret,
