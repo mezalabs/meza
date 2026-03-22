@@ -23,7 +23,7 @@ function loadFromCache(): Partial<EmojiState> {
       byServer: cached.byServer as unknown as Record<string, CustomEmoji[]>,
       personal: cached.personal as unknown as CustomEmoji[] | null,
       cachedServerIds,
-      personalFromCache: cached.personal ? true : false,
+      personalFromCache: !!cached.personal,
     };
   } catch {
     return {};

@@ -1,10 +1,10 @@
 import {
   applySkinTone,
-  type StoredEmoji,
   type EmojiGroup,
   type FrequentEmojiEntry,
   getMediaURL,
   type SearchResult,
+  type StoredEmoji,
   type UnicodeEmoji,
 } from '@meza/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -302,6 +302,7 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   });
 
   // Reset focus when search changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: searchResults is an intentional trigger dependency
   useEffect(() => {
     setFocusedIndex(-1);
   }, [searchResults]);

@@ -1,5 +1,4 @@
 import {
-  type StoredEmoji,
   getAllUnicodeEmojis,
   getEmojiGroups,
   getFrequentEmojis,
@@ -9,6 +8,7 @@ import {
   loadEmojiData,
   recordUsage,
   type SearchResult,
+  type StoredEmoji,
   searchEmojis,
   useEmojiStore,
   useServerStore,
@@ -118,7 +118,11 @@ export const EmojiPicker = memo(function EmojiPicker({
 
   useEffect(() => {
     for (const sid of Object.keys(servers)) {
-      if (sid !== serverId && !emojisByServer[sid] && !fetchedRef.current.has(sid)) {
+      if (
+        sid !== serverId &&
+        !emojisByServer[sid] &&
+        !fetchedRef.current.has(sid)
+      ) {
         fetchedRef.current.add(sid);
         listEmojis(sid).catch(() => {});
       }

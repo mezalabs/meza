@@ -1,8 +1,9 @@
 /**
  * Unified emoji search across custom and Unicode emojis.
  */
-import type { ShortcodeMap, UnicodeEmoji } from './emojiData.ts';
+
 import type { StoredEmoji } from './emojiCache.ts';
+import type { ShortcodeMap, UnicodeEmoji } from './emojiData.ts';
 
 export interface CustomSearchResult {
   type: 'custom';

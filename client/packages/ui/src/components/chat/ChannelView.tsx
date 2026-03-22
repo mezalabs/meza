@@ -303,6 +303,7 @@ export function ChannelView({
   }, []);
 
   // Close emoji panel when switching channels
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId is an intentional trigger dependency
   useEffect(() => {
     setMobileEmojiOpen(false);
   }, [channelId]);
