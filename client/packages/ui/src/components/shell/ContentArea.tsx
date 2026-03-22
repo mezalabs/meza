@@ -205,7 +205,9 @@ function renderPaneContent(
     case 'dm':
       return <ChannelView channelId={content.conversationId} />;
     case 'profile':
-      return <ProfileView userId={content.userId} />;
+      return (
+        <ProfileView userId={content.userId} initialEditing={content.editing} />
+      );
     case 'serverOnboarding':
       return <ServerOnboardingView serverId={content.serverId} />;
     case 'getStarted':
