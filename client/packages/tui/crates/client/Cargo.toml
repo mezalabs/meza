@@ -18,7 +18,7 @@ thiserror = "2"
 tracing = "0.1"
 rand = "0.8"
 zeroize = { version = "1", features = ["derive"] }
-ed25519-dalek = { version = "2", features = ["rand_core"] }
+ed25519-dalek = { version = "2", features = ["rand_core", "zeroize"] }
 x25519-dalek = { version = "2", features = ["static_secrets"] }
 curve25519-dalek = "4"
 aes-gcm = "0.10"

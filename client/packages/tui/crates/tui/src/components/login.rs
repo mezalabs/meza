@@ -79,7 +79,7 @@ impl LoginView {
                     }
 
                     let email = self.email.trim().to_string();
-                    let password = self.password.clone();
+                    let password = std::mem::take(&mut self.password);
 
                     if email.is_empty() || password.is_empty() {
                         self.error_msg = Some("Email and password are required".to_string());

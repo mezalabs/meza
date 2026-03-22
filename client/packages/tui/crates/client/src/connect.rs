@@ -30,13 +30,27 @@ pub struct ConnectClient {
 
 impl ConnectClient {
     pub fn new(base_url: String) -> Self {
-        let insecure = std::env::var("MEZA_INSECURE")
-            .map(|v| v == "1")
-            .unwrap_or(false);
+        let insecure = {
+            #[cfg(debug_assertions)]
+            {
+                std::env::var("MEZA_INSECURE")
+                    .map(|v| v == "1")
+                    .unwrap_or(false)
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                false
+            }
+        };
+
+        if insecure {
+            warn!("TLS certificate validation DISABLED (MEZA_INSECURE=1) -- do not use in production");
+        }
 
         let http = if insecure {
             reqwest::Client::builder()
                 .danger_accept_invalid_certs(true)
+                .https_only(false)
                 .build()
                 .expect("failed to build insecure reqwest client")
         } else {

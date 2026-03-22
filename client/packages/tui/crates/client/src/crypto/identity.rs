@@ -118,9 +118,11 @@ pub fn decrypt_identity(encrypted: &[u8], master_key: &[u8; 32]) -> Result<Signi
     let cipher = Aes256Gcm::new_from_slice(master_key)
         .map_err(|e| format!("AES-256-GCM key error: {e}"))?;
 
-    let plaintext = cipher
-        .decrypt(nonce, ciphertext)
-        .map_err(|e| format!("Identity decryption failed: {e}"))?;
+    let plaintext = Zeroizing::new(
+        cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| format!("Identity decryption failed: {e}"))?,
+    );
 
     if plaintext.len() != 64 {
         return Err(format!(
@@ -129,9 +131,8 @@ pub fn decrypt_identity(encrypted: &[u8], master_key: &[u8; 32]) -> Result<Signi
         ));
     }
 
-    let secret_bytes: [u8; 32] = plaintext[..32]
-        .try_into()
-        .map_err(|_| "Failed to extract secret key bytes".to_string())?;
+    let mut secret_bytes = Zeroizing::new([0u8; 32]);
+    secret_bytes.copy_from_slice(&plaintext[..32]);
 
     let signing_key = SigningKey::from_bytes(&secret_bytes);
 
