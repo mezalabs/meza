@@ -50,10 +50,9 @@ export const e2eeKeyProvider = new ExternalE2EEKeyProvider({
 });
 
 function createE2EEWorker() {
-  return new Worker(
-    new URL('livekit-client/e2ee-worker', import.meta.url),
-    { type: 'module' },
-  );
+  return new Worker(new URL('livekit-client/e2ee-worker', import.meta.url), {
+    type: 'module',
+  });
 }
 
 /** Clear E2EE key material. Call from session teardown alongside clearChannelKeyCache(). */

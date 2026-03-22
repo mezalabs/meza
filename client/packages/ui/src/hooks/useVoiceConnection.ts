@@ -92,7 +92,9 @@ export async function voiceConnect(channelId: string, channelName: string) {
 
     // Set key on provider BEFORE LiveKitRoom connects.
     // Defensive copy — never share the backing ArrayBuffer with the channel key cache.
-    await e2eeKeyProvider.setKey(new Uint8Array(voiceKey).buffer as ArrayBuffer);
+    await e2eeKeyProvider.setKey(
+      new Uint8Array(voiceKey).buffer as ArrayBuffer,
+    );
 
     useVoiceStore
       .getState()
