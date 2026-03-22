@@ -617,11 +617,7 @@ export function MessageComposer({
           {isMobile && (
             <button
               type="button"
-              onClick={() => {
-                // Trigger send from the editor
-                editorRef.current?.focus();
-                // The editor's Enter keymap handles sending
-              }}
+              onClick={() => editorRef.current?.send()}
               disabled={sending || disabled}
               className="flex-shrink-0 self-start mt-5 mr-5 text-accent disabled:text-text-subtle transition-colors"
               aria-label="Send message"

@@ -141,6 +141,12 @@ export const ComposerEditor = forwardRef<
   const generationRef = useRef(0);
   const originalTextRef = useRef(initialText ?? '');
   const sendingRef = useRef(false);
+
+  // Stable refs for callbacks to avoid stale closures in EditorView
+  const onTypingRef = useRef(onTyping);
+  onTypingRef.current = onTyping;
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
   const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
     trigger: null,
     query: '',
@@ -203,7 +209,7 @@ export const ComposerEditor = forwardRef<
           return true;
         },
         Escape: () => {
-          onCancel?.();
+          onCancelRef.current?.();
           return true;
         },
       }),
@@ -278,9 +284,9 @@ export const ComposerEditor = forwardRef<
         if (
           tr.docChanged &&
           !tr.getMeta('history$') &&
-          !tr.getMeta('addToHistory') === false
+          tr.getMeta('addToHistory') !== false
         ) {
-          onTyping?.();
+          onTypingRef.current?.();
         }
       },
       handlePaste(view, event) {
@@ -389,6 +395,14 @@ export const ComposerEditor = forwardRef<
           emptyDoc.content,
         );
         view.dispatch(tr);
+      },
+      send() {
+        const view = viewRef.current;
+        if (!view || view.isDestroyed || sendingRef.current) return;
+        const wireText = serializeDoc(view.state.doc);
+        if (wireText.trim()) {
+          handleSendRef.current(wireText);
+        }
       },
     }),
     [],

@@ -1168,7 +1168,6 @@ const MessageItem = memo(function MessageItem({
     useState<DOMRect | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
-  const editRef = useRef<HTMLTextAreaElement>(null);
   const editEditorRef = useRef<ComposerEditorHandle>(null);
 
   const longPressHandlers = useLongPress(
@@ -1189,8 +1188,8 @@ const MessageItem = memo(function MessageItem({
   // Report dirty state to ChannelView so it can decide whether to show
   // the discard dialog on Escape or when switching to another message.
   useEffect(() => {
-    onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? editText !== text));
-  }, [isEditing, editText, text, onEditDirtyChange]);
+    onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? false));
+  }, [isEditing, text, onEditDirtyChange]);
 
   const handleReactionSelect = useCallback(
     (emoji: string) => {

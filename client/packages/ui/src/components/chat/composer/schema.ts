@@ -176,4 +176,6 @@ export interface ComposerEditorHandle {
   insertText(text: string): void;
   focus(): void;
   clear(): void;
+  /** Serialize the doc and invoke the onSend callback (for mobile send button). */
+  send(): void;
 }
