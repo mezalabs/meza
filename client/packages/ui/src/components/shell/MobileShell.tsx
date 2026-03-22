@@ -373,7 +373,9 @@ function renderMobileContent(
         />
       );
     case 'profile':
-      return <ProfileView userId={content.userId} initialEditing={content.editing} />;
+      return (
+        <ProfileView userId={content.userId} initialEditing={content.editing} />
+      );
     case 'serverOnboarding':
       return <ServerOnboardingView serverId={content.serverId} />;
     case 'getStarted':
