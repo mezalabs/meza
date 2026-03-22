@@ -27,6 +27,9 @@ pub enum MezaError {
     #[error("websocket: {0}")]
     WebSocket(String),
 
+    #[error("decode: {0}")]
+    Decode(#[from] prost::DecodeError),
+
     #[error("protocol: {0}")]
     Protocol(String),
 
