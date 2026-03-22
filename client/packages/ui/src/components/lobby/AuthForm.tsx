@@ -192,6 +192,10 @@ function RegisterForm({
     e.preventDefault();
     if (!validate() || busy) return;
 
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setSubmitting(true);
     let masterKey: Uint8Array | undefined;
     let authKey: Uint8Array | undefined;
@@ -362,6 +366,12 @@ function LoginForm({
     e.preventDefault();
     if (!validate() || busy) return;
 
+    // Dismiss the keyboard before async work begins — prevents it from
+    // lingering after the auth form unmounts on successful login.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setSubmitting(true);
     let masterKey: Uint8Array | undefined;
     let authKey: Uint8Array | undefined;
@@ -500,6 +510,10 @@ function RecoverAccountForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate() || submitting) return;
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     setSubmitting(true);
     setFormError(null);
