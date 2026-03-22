@@ -16,6 +16,9 @@ import {
   useStreamPreview,
   type PreviewStatus,
 } from '../../hooks/useStreamPreview.ts';
+import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
+import { useTilingStore } from '../../stores/tiling.ts';
+import { useVoiceParticipantsStore } from '@meza/core';
 
 const HOVER_OPEN_DELAY_MS = 400;
 const HOVER_SWAP_DELAY_MS = 100;
@@ -33,6 +36,7 @@ interface StreamPreviewContextValue {
   onLeave: () => void;
   cancelClose: () => void;
   getTrackRef: (participantId: string) => TrackReference | undefined;
+  onWatchStream: (participantId: string) => void;
   // Cross-channel preview state (only meaningful when sameChannel is false)
   previewStatus: PreviewStatus;
   previewVideoElement: HTMLVideoElement | null;
@@ -90,15 +94,52 @@ function useHoverState() {
 
 // ── Same-channel provider ────────────────────────────────────────────
 
+function useWatchStream(channelId: string, channelName: string) {
+  const { connect: voiceConnect } = useVoiceConnection();
+
+  return useCallback(
+    async (participantId: string) => {
+      // Join the voice channel (auto-leaves previous if connected elsewhere)
+      await voiceConnect(channelId, channelName);
+
+      // Look up display name from participants store
+      const participants =
+        useVoiceParticipantsStore.getState().byChannel[channelId];
+      const participant = participants?.find((p) => p.userId === participantId);
+
+      // Open the screen share pane
+      const { splitFocused, setPaneContent, focusedPaneId } =
+        useTilingStore.getState();
+      const content = {
+        type: 'screenShare' as const,
+        channelId,
+        participantIdentity: participantId,
+        participantName: participant?.userId,
+      };
+
+      try {
+        splitFocused('horizontal', content);
+      } catch {
+        // At max panes — replace focused pane instead
+        setPaneContent(focusedPaneId, content);
+      }
+    },
+    [channelId, channelName, voiceConnect],
+  );
+}
+
 function SameChannelProvider({
   channelId,
+  channelName,
   children,
 }: {
   channelId: string;
+  channelName: string;
   children: ReactNode;
 }) {
   const { hoveredId, setHoveredId, onEnter, onLeave, cancelClose } =
     useHoverState();
+  const onWatchStream = useWatchStream(channelId, channelName);
 
   const allTracks = useTracks([Track.Source.ScreenShare]);
   const screenShareTracks = useMemo(
@@ -132,10 +173,11 @@ function SameChannelProvider({
       onLeave,
       cancelClose,
       getTrackRef,
+      onWatchStream,
       previewStatus: 'idle' as PreviewStatus,
       previewVideoElement: null,
     }),
-    [hoveredId, channelId, onEnter, onLeave, cancelClose, getTrackRef],
+    [hoveredId, channelId, onEnter, onLeave, cancelClose, getTrackRef, onWatchStream],
   );
 
   return (
@@ -149,12 +191,15 @@ function SameChannelProvider({
 
 function CrossChannelProvider({
   channelId,
+  channelName,
   children,
 }: {
   channelId: string;
+  channelName: string;
   children: ReactNode;
 }) {
   const { hoveredId, onEnter, onLeave, cancelClose } = useHoverState();
+  const onWatchStream = useWatchStream(channelId, channelName);
 
   // Single preview connection shared across all triggers in this channel
   const preview = useStreamPreview();
@@ -182,6 +227,7 @@ function CrossChannelProvider({
       onLeave,
       cancelClose,
       getTrackRef: NOOP_GET_TRACK,
+      onWatchStream,
       previewStatus: preview.status,
       previewVideoElement: preview.videoElement,
     }),
@@ -191,6 +237,7 @@ function CrossChannelProvider({
       onEnter,
       onLeave,
       cancelClose,
+      onWatchStream,
       preview.status,
       preview.videoElement,
     ],
@@ -207,22 +254,24 @@ function CrossChannelProvider({
 
 export function StreamPreviewTrackProvider({
   channelId,
+  channelName,
   sameChannel,
   children,
 }: {
   channelId: string;
+  channelName: string;
   sameChannel: boolean;
   children: ReactNode;
 }) {
   if (sameChannel) {
     return (
-      <SameChannelProvider channelId={channelId}>
+      <SameChannelProvider channelId={channelId} channelName={channelName}>
         {children}
       </SameChannelProvider>
     );
   }
   return (
-    <CrossChannelProvider channelId={channelId}>
+    <CrossChannelProvider channelId={channelId} channelName={channelName}>
       {children}
     </CrossChannelProvider>
   );
@@ -251,6 +300,7 @@ export function StreamPreviewTrigger({
     onLeave,
     cancelClose,
     getTrackRef,
+    onWatchStream,
     previewStatus,
     previewVideoElement,
   } = ctx;
@@ -287,17 +337,44 @@ export function StreamPreviewTrigger({
           onPointerEnter={cancelClose}
           onPointerLeave={onLeave}
         >
-          {sameChannel && displayTrackRef ? (
-            <SameChannelPreview trackRef={displayTrackRef} />
-          ) : !sameChannel && isOpen ? (
-            <CrossChannelPreview
-              videoElement={previewVideoElement}
-              status={previewStatus}
-            />
-          ) : null}
+          <WatchStreamWrapper onWatch={() => onWatchStream(participantId)}>
+            {sameChannel && displayTrackRef ? (
+              <SameChannelPreview trackRef={displayTrackRef} />
+            ) : !sameChannel && isOpen ? (
+              <CrossChannelPreview
+                videoElement={previewVideoElement}
+                status={previewStatus}
+              />
+            ) : null}
+          </WatchStreamWrapper>
         </HoverCard.Content>
       </HoverCard.Portal>
     </HoverCard.Root>
+  );
+}
+
+// ── Watch Stream overlay ─────────────────────────────────────────────
+
+function WatchStreamWrapper({
+  onWatch,
+  children,
+}: {
+  onWatch: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onWatch}
+      className="group relative cursor-pointer"
+    >
+      {children}
+      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-150 group-hover:bg-black/50">
+        <span className="text-sm font-medium text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+          Watch Stream
+        </span>
+      </div>
+    </button>
   );
 }
 

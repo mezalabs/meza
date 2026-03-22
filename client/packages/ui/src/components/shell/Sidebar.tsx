@@ -1328,7 +1328,7 @@ function SidebarChannelItem({
 
       {isVoice && voiceParticipants.length > 0 && (
         <div className="flex flex-col gap-0.5 py-0.5 pl-6">
-          <MaybeStreamPreview enabled={showStreamPreview} channelId={channelId} sameChannel={isInSameChannel}>
+          <MaybeStreamPreview enabled={showStreamPreview} channelId={channelId} channelName={channelName} sameChannel={isInSameChannel}>
             {voiceParticipants.map((p) => {
               const isSelf = p.userId === currentUserId;
               const el = (
@@ -1359,16 +1359,18 @@ function SidebarChannelItem({
 function MaybeStreamPreview({
   enabled,
   channelId,
+  channelName,
   sameChannel,
   children,
 }: {
   enabled: boolean;
   channelId: string;
+  channelName: string;
   sameChannel: boolean;
   children: ReactNode;
 }) {
   return enabled ? (
-    <StreamPreviewTrackProvider channelId={channelId} sameChannel={sameChannel}>
+    <StreamPreviewTrackProvider channelId={channelId} channelName={channelName} sameChannel={sameChannel}>
       {children}
     </StreamPreviewTrackProvider>
   ) : (
