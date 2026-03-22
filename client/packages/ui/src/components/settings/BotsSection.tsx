@@ -1,13 +1,13 @@
 import { useBotStore } from '@meza/core';
 import type { Bot } from '@meza/core';
 import {
-  DotsThreeIcon,
-  PencilSimpleIcon,
   ArrowsClockwiseIcon,
+  CodeIcon,
   LinkSimpleIcon,
-  TrashIcon,
+  PencilSimpleIcon,
   PlusIcon,
   RobotIcon,
+  TrashIcon,
 } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -15,6 +15,8 @@ import { BotInviteDialog } from './BotInviteDialog.tsx';
 import { BotTokenModal } from './BotTokenModal.tsx';
 import { CreateBotDialog } from './CreateBotDialog.tsx';
 import { EditBotDialog } from './EditBotDialog.tsx';
+
+const MAX_BOTS = 25;
 
 export function BotsSection() {
   const bots = useBotStore((s) => s.bots);
@@ -32,7 +34,6 @@ export function BotsSection() {
     privateKey?: Uint8Array;
     botName: string;
   } | null>(null);
-  const [menuBotId, setMenuBotId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -42,7 +43,6 @@ export function BotsSection() {
 
   const handleRegenerate = async (bot: Bot) => {
     setActionLoading(bot.id);
-    setMenuBotId(null);
     try {
       const result = await regenerateToken(bot.id);
       if (result) {
@@ -61,7 +61,6 @@ export function BotsSection() {
   const handleDelete = async (botId: string) => {
     setActionLoading(botId);
     setConfirmDelete(null);
-    setMenuBotId(null);
     try {
       await deleteBot(botId);
     } catch {
@@ -80,191 +79,229 @@ export function BotsSection() {
   };
 
   return (
-    <div className="max-w-md space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-text-subtle">
-          My Bots
-        </h2>
+    <div className="max-w-2xl space-y-6">
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-text">My Bots</h2>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Create and manage bots that connect to your servers via the API.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
+          disabled={bots.length >= MAX_BOTS}
+          className="flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-medium text-black shadow-sm transition-all hover:bg-accent-hover hover:shadow-md active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none"
         >
-          <PlusIcon size={14} aria-hidden="true" />
+          <PlusIcon size={15} weight="bold" aria-hidden="true" />
           Create Bot
         </button>
       </div>
 
-      {error && (
-        <p className="text-xs text-error">{error}</p>
+      {/* Usage indicator */}
+      {bots.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-surface">
+            <div
+              className="h-full rounded-full bg-accent/60 transition-all duration-500"
+              style={{ width: `${(bots.length / MAX_BOTS) * 100}%` }}
+            />
+          </div>
+          <span className="flex-shrink-0 text-xs tabular-nums text-text-subtle">
+            {bots.length}/{MAX_BOTS}
+          </span>
+        </div>
       )}
 
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-error/20 bg-error/5 px-3 py-2.5">
+          <div className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-error" />
+          <p className="text-xs text-error">{error}</p>
+        </div>
+      )}
+
+      {/* Loading skeletons */}
       {loading && bots.length === 0 && (
         <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="h-8 w-8 rounded-full bg-bg-surface" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3.5 w-24 rounded bg-bg-surface" />
-                <div className="h-3 w-40 rounded bg-bg-surface" />
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="animate-pulse rounded-xl border border-border/30 bg-bg-surface/30 p-4"
+            >
+              <div className="flex items-start gap-4">
+                <div className="h-10 w-10 rounded-full bg-bg-elevated/60" />
+                <div className="flex-1 space-y-2.5">
+                  <div className="h-4 w-32 rounded-md bg-bg-elevated/60" />
+                  <div className="h-3 w-20 rounded bg-bg-elevated/40" />
+                  <div className="h-3 w-48 rounded bg-bg-elevated/30" />
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3].map((j) => (
+                    <div
+                      key={j}
+                      className="h-7 w-7 rounded-md bg-bg-elevated/40"
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
+      {/* Empty state */}
       {!loading && bots.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-border/40 bg-bg-surface/50 py-10">
-          <RobotIcon
-            size={40}
-            className="text-text-muted"
-            aria-hidden="true"
+        <div className="relative overflow-hidden rounded-xl border border-border/30 bg-bg-surface/30">
+          {/* Subtle grid pattern background */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.03]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(106,255,176,1) 1px, transparent 1px), linear-gradient(90deg, rgba(106,255,176,1) 1px, transparent 1px)',
+              backgroundSize: '24px 24px',
+            }}
           />
-          <div className="text-center">
-            <p className="text-sm font-medium text-text">No bots yet</p>
-            <p className="mt-1 text-xs text-text-muted">
-              Create a bot to automate tasks and integrate with external
-              services.
-            </p>
+          <div className="relative flex flex-col items-center gap-4 px-6 py-14">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-accent/20 bg-accent/5">
+              <RobotIcon
+                size={28}
+                className="text-accent/70"
+                aria-hidden="true"
+              />
+            </div>
+            <div className="max-w-xs text-center">
+              <p className="text-sm font-medium text-text">
+                Build your first bot
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-text-muted">
+                Bots can send messages, respond to events, and integrate with
+                external services like CI/CD pipelines, monitoring tools, and
+                no-code platforms.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="mt-1 flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black shadow-sm transition-all hover:bg-accent-hover hover:shadow-md active:scale-[0.98]"
+            >
+              <PlusIcon size={15} weight="bold" aria-hidden="true" />
+              Create Bot
+            </button>
           </div>
         </div>
       )}
 
+      {/* Bot cards */}
       {bots.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {bots.map((bot) => (
             <div
               key={bot.id}
-              className="relative flex items-center gap-3 rounded-lg border border-border/40 bg-bg-surface/50 p-3 transition-colors hover:bg-bg-surface"
+              className="group relative overflow-hidden rounded-xl border border-border/30 bg-bg-surface/30 transition-all duration-150 hover:border-border/60 hover:bg-bg-surface/60"
             >
-              <Avatar
-                avatarUrl={bot.avatarUrl}
-                displayName={bot.displayName || bot.username}
-                size="lg"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium text-text">
-                    {bot.displayName || bot.username}
-                  </span>
-                  <RobotIcon
-                    size={12}
-                    className="flex-shrink-0 text-text-muted"
-                    aria-hidden="true"
+              {/* Left accent edge */}
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-accent/30 transition-colors group-hover:bg-accent/60" />
+
+              <div className="flex items-start gap-4 p-4 pl-5">
+                {/* Avatar */}
+                <div className="relative flex-shrink-0 pt-0.5">
+                  <Avatar
+                    avatarUrl={bot.avatarUrl}
+                    displayName={bot.displayName || bot.username}
+                    size="lg"
                   />
+                  <div className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-bg-base bg-accent-subtle">
+                    <CodeIcon
+                      size={8}
+                      weight="bold"
+                      className="text-accent"
+                      aria-hidden="true"
+                    />
+                  </div>
                 </div>
-                <span className="block truncate text-xs text-text-muted">
-                  @{bot.username}
-                </span>
-                {bot.description && (
-                  <span className="mt-0.5 block truncate text-xs text-text-muted">
-                    {bot.description}
+
+                {/* Info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-semibold text-text">
+                      {bot.displayName || bot.username}
+                    </span>
+                    <span className="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
+                      BOT
+                    </span>
+                  </div>
+                  <span className="mt-0.5 block truncate font-mono text-xs text-text-muted">
+                    @{bot.username}
                   </span>
-                )}
-                <span className="mt-0.5 block text-[10px] text-text-subtle">
-                  Created {formatDate(bot.createdAt)}
-                </span>
-              </div>
-
-              {actionLoading === bot.id ? (
-                <div className="flex-shrink-0 h-7 w-7 flex items-center justify-center">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-text-muted border-t-transparent" />
+                  {bot.description && (
+                    <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-text-muted">
+                      {bot.description}
+                    </p>
+                  )}
+                  <span className="mt-2 inline-block text-[11px] text-text-subtle">
+                    Created {formatDate(bot.createdAt)}
+                  </span>
                 </div>
-              ) : (
-                <div className="relative flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMenuBotId(menuBotId === bot.id ? null : bot.id)
-                    }
-                    className="rounded-md p-1.5 text-text-muted hover:bg-bg-elevated hover:text-text transition-colors"
-                    aria-label={`Actions for ${bot.displayName || bot.username}`}
-                  >
-                    <DotsThreeIcon size={16} weight="bold" aria-hidden="true" />
-                  </button>
 
-                  {menuBotId === bot.id && (
+                {/* Actions — visible on hover or when loading */}
+                <div className="flex flex-shrink-0 items-center gap-1 pt-0.5">
+                  {actionLoading === bot.id ? (
+                    <div className="flex h-8 w-8 items-center justify-center">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-text-muted border-t-transparent" />
+                    </div>
+                  ) : (
                     <>
-                      {/* Backdrop to close menu */}
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setMenuBotId(null)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Escape') setMenuBotId(null);
-                        }}
-                        role="presentation"
+                      <ActionButton
+                        icon={PencilSimpleIcon}
+                        label="Edit"
+                        onClick={() => setEditBot(bot)}
                       />
-                      <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-md border border-border bg-bg-elevated py-1 shadow-lg">
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:bg-bg-surface hover:text-text transition-colors"
-                          onClick={() => {
-                            setEditBot(bot);
-                            setMenuBotId(null);
-                          }}
-                        >
-                          <PencilSimpleIcon size={14} aria-hidden="true" />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:bg-bg-surface hover:text-text transition-colors"
-                          onClick={() => handleRegenerate(bot)}
-                        >
-                          <ArrowsClockwiseIcon size={14} aria-hidden="true" />
-                          Regenerate Token
-                        </button>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-text-muted hover:bg-bg-surface hover:text-text transition-colors"
-                          onClick={() => {
-                            setInviteBot(bot);
-                            setMenuBotId(null);
-                          }}
-                        >
-                          <LinkSimpleIcon size={14} aria-hidden="true" />
-                          Generate Invite
-                        </button>
-                        <div className="my-1 border-t border-border" />
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-danger hover:bg-bg-surface transition-colors"
-                          onClick={() => {
-                            setConfirmDelete(bot.id);
-                            setMenuBotId(null);
-                          }}
-                        >
-                          <TrashIcon size={14} aria-hidden="true" />
-                          Delete
-                        </button>
-                      </div>
+                      <ActionButton
+                        icon={ArrowsClockwiseIcon}
+                        label="Regenerate token"
+                        onClick={() => handleRegenerate(bot)}
+                      />
+                      <ActionButton
+                        icon={LinkSimpleIcon}
+                        label="Invite link"
+                        onClick={() => setInviteBot(bot)}
+                      />
+                      <ActionButton
+                        icon={TrashIcon}
+                        label="Delete"
+                        variant="danger"
+                        onClick={() => setConfirmDelete(bot.id)}
+                      />
                     </>
                   )}
                 </div>
-              )}
+              </div>
 
-              {/* Delete confirmation inline */}
+              {/* Delete confirmation overlay */}
               {confirmDelete === bot.id && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-bg-surface/95 backdrop-blur-sm">
+                <div className="absolute inset-0 z-30 flex items-center justify-center rounded-xl bg-bg-base/90 backdrop-blur-sm">
                   <div className="text-center">
-                    <p className="text-sm text-text">Delete this bot?</p>
-                    <p className="mt-1 text-xs text-text-muted">
-                      This action cannot be undone.
+                    <p className="text-sm font-medium text-text">
+                      Delete {bot.displayName || bot.username}?
                     </p>
-                    <div className="mt-2 flex justify-center gap-2">
+                    <p className="mt-1 text-xs text-text-muted">
+                      This will remove the bot and revoke all tokens.
+                    </p>
+                    <div className="mt-3 flex justify-center gap-2">
                       <button
                         type="button"
-                        className="rounded-md bg-bg-elevated px-3 py-1 text-xs text-text-muted hover:text-text transition-colors"
+                        className="rounded-lg border border-border px-3.5 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-border-hover hover:text-text"
                         onClick={() => setConfirmDelete(null)}
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
-                        className="rounded-md bg-danger px-3 py-1 text-xs text-white hover:bg-danger/80 transition-colors"
+                        className="rounded-lg bg-error px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-error/80"
                         onClick={() => handleDelete(bot.id)}
                       >
-                        Delete
+                        Delete Bot
                       </button>
                     </div>
                   </div>
@@ -275,6 +312,7 @@ export function BotsSection() {
         </div>
       )}
 
+      {/* Dialogs */}
       <CreateBotDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -316,5 +354,35 @@ export function BotsSection() {
         />
       )}
     </div>
+  );
+}
+
+/* ── Inline action button ── */
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  variant = 'default',
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  onClick: () => void;
+  variant?: 'default' | 'danger';
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+        variant === 'danger'
+          ? 'text-text-subtle opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error'
+          : 'text-text-subtle opacity-0 group-hover:opacity-100 hover:bg-bg-elevated hover:text-text'
+      }`}
+    >
+      <Icon size={15} aria-hidden="true" />
+    </button>
   );
 }
