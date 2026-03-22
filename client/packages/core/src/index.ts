@@ -259,6 +259,7 @@ export {
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
 export * from './keybinds/index.ts';
+export type { StoredEmoji } from './lib/emojiCache.ts';
 export {
   clearEmojiCache,
   initEmojiCachePersistence,
@@ -332,11 +333,7 @@ export { useChannelStore } from './store/channels.ts';
 export type { DMActions, DMState } from './store/dms.ts';
 export { useDMStore } from './store/dms.ts';
 export type { EmojiActions, EmojiState } from './store/emojis.ts';
-export {
-  cachedServerIds,
-  isPersonalFromCache,
-  useEmojiStore,
-} from './store/emojis.ts';
+export { useEmojiStore } from './store/emojis.ts';
 export type { FriendActions, FriendState } from './store/friends.ts';
 export { useFriendStore } from './store/friends.ts';
 export type {

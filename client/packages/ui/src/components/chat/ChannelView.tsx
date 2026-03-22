@@ -4,7 +4,6 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
-  cachedServerIds,
   decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
@@ -18,7 +17,6 @@ import {
   hasChannelKey,
   hasPermission,
   hideKeyboard,
-  isPersonalFromCache,
   isSessionReady,
   listEmojis,
   listMembers,
@@ -258,6 +256,9 @@ export function ChannelView({
   const hasEmojis = useEmojiStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
   );
+  const isServerEmojiCached = useEmojiStore((s) =>
+    serverId ? !!s.cachedServerIds[serverId] : false,
+  );
   const hasMembers = useMemberStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
   );
@@ -302,9 +303,10 @@ export function ChannelView({
   }, []);
 
   // Close emoji panel when switching channels
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId is an intentional trigger dependency
   useEffect(() => {
     setMobileEmojiOpen(false);
-  }, []);
+  }, [channelId]);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -490,19 +492,20 @@ export function ChannelView({
   // If data came from cache, still fetch from API (stale-while-revalidate).
   useEffect(() => {
     if (!isAuthenticated || !serverId) return;
-    if (!hasEmojis || cachedServerIds.has(serverId)) {
+    if (!hasEmojis || isServerEmojiCached) {
       listEmojis(serverId).catch(() => {});
     }
-  }, [serverId, isAuthenticated, hasEmojis]);
+  }, [serverId, isAuthenticated, hasEmojis, isServerEmojiCached]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
   const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
+  const isPersonalEmojiCached = useEmojiStore((s) => s.personalFromCache);
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (!hasPersonalEmojis || isPersonalFromCache()) {
+    if (!hasPersonalEmojis || isPersonalEmojiCached) {
       listUserEmojis().catch(() => {});
     }
-  }, [isAuthenticated, hasPersonalEmojis]);
+  }, [isAuthenticated, hasPersonalEmojis, isPersonalEmojiCached]);
 
   // Fetch server members so MessageItem can resolve author display names.
   useEffect(() => {

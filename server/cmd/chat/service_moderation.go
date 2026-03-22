@@ -56,17 +56,22 @@ func (s *chatService) ListMembers(ctx context.Context, req *connect.Request[v1.L
 		} else {
 			protoUsers = make([]*v1.PublicUser, len(users))
 			for i, u := range users {
-				protoUsers[i] = &v1.PublicUser{
-					Id:                  u.ID,
-					Username:            u.Username,
-					DisplayName:         u.DisplayName,
-					AvatarUrl:           u.AvatarURL,
-					Bio:                 u.Bio,
-					Pronouns:            u.Pronouns,
-					BannerUrl:           u.BannerURL,
-					ThemeColorPrimary:   u.ThemeColorPrimary,
-					ThemeColorSecondary: u.ThemeColorSecondary,
+				pu := &v1.PublicUser{
+					Id:          u.ID,
+					Username:    u.Username,
+					DisplayName: u.DisplayName,
+					AvatarUrl:   u.AvatarURL,
 				}
+				// Apply profile privacy: only include extended profile
+				// fields when the caller is allowed to see them.
+				if s.canSeeFullProfile(ctx, userID, u) {
+					pu.Bio = u.Bio
+					pu.Pronouns = u.Pronouns
+					pu.BannerUrl = u.BannerURL
+					pu.ThemeColorPrimary = u.ThemeColorPrimary
+					pu.ThemeColorSecondary = u.ThemeColorSecondary
+				}
+				protoUsers[i] = pu
 			}
 		}
 	}
@@ -75,6 +80,31 @@ func (s *chatService) ListMembers(ctx context.Context, req *connect.Request[v1.L
 		Members: protoMembers,
 		Users:   protoUsers,
 	}), nil
+}
+
+// canSeeFullProfile returns true if callerID is allowed to see the target
+// user's extended profile fields (bio, pronouns, banner, theme colors) based
+// on the target's ProfilePrivacy setting. It errs on the side of hiding data:
+// if a friendship lookup fails the profile is redacted.
+func (s *chatService) canSeeFullProfile(ctx context.Context, callerID string, target *models.User) bool {
+	if callerID == target.ID {
+		return true
+	}
+	switch target.ProfilePrivacy {
+	case "nobody":
+		return false
+	case "friends":
+		ok, err := s.friendStore.AreFriends(ctx, callerID, target.ID)
+		if err != nil {
+			slog.Error("checking friendship for profile privacy", "err", err)
+			return false
+		}
+		return ok
+	default:
+		// "server_co_members", "everyone", "" — callers in ListMembers
+		// already share a server, so the check is satisfied.
+		return true
+	}
 }
 
 func (s *chatService) UpdateMember(ctx context.Context, req *connect.Request[v1.UpdateMemberRequest]) (*connect.Response[v1.UpdateMemberResponse], error) {

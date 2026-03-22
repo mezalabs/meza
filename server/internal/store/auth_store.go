@@ -120,28 +120,28 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 	return &u, nil
 }
 
-func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, avatarURL *string, emojiScale *float32, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary *string, simpleMode *bool, audioPreferences *models.AudioPreferences, dmPrivacy *string, connections []models.UserConnection, friendRequestPrivacy, profilePrivacy *string) (*models.User, error) {
+func (s *AuthStore) UpdateUser(ctx context.Context, params UpdateUserParams) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	var audioPrefsJSON *string
-	if audioPreferences != nil {
-		b, err := json.Marshal(audioPreferences)
+	if params.AudioPreferences != nil {
+		b, err := json.Marshal(params.AudioPreferences)
 		if err != nil {
 			return nil, fmt.Errorf("marshal audio preferences: %w", err)
 		}
-		s := string(b)
-		audioPrefsJSON = &s
+		str := string(b)
+		audioPrefsJSON = &str
 	}
 
 	var connectionsJSON *string
-	if connections != nil {
-		b, err := json.Marshal(connections)
+	if params.Connections != nil {
+		b, err := json.Marshal(params.Connections)
 		if err != nil {
 			return nil, fmt.Errorf("marshal connections: %w", err)
 		}
-		s := string(b)
-		connectionsJSON = &s
+		str := string(b)
+		connectionsJSON = &str
 	}
 
 	var u models.User
@@ -168,7 +168,7 @@ func (s *AuthStore) UpdateUser(ctx context.Context, userID string, displayName, 
 		 RETURNING id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		           COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		           audio_preferences, dm_privacy, connections, friend_request_privacy, profile_privacy`,
-		userID, displayName, avatarURL, emojiScale, bio, pronouns, bannerURL, themeColorPrimary, themeColorSecondary, simpleMode, audioPrefsJSON, dmPrivacy, connectionsJSON, friendRequestPrivacy, profilePrivacy,
+		params.UserID, params.DisplayName, params.AvatarURL, params.EmojiScale, params.Bio, params.Pronouns, params.BannerURL, params.ThemeColorPrimary, params.ThemeColorSecondary, params.SimpleMode, audioPrefsJSON, params.DMPrivacy, connectionsJSON, params.FriendRequestPrivacy, params.ProfilePrivacy,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 		&returnedAudioPrefsJSON, &u.DMPrivacy, &returnedConnectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy)

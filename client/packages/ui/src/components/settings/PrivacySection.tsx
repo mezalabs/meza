@@ -81,6 +81,58 @@ const PROFILE_PRIVACY_OPTIONS = [
   },
 ] as const;
 
+function PrivacyRadioGroup({
+  label,
+  name,
+  options,
+  currentValue,
+  saving,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  options: ReadonlyArray<{ value: string; label: string; description: string }>;
+  currentValue: string;
+  saving: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <span className="block text-sm font-medium text-text">{label}</span>
+      <div className="space-y-2">
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
+              currentValue === option.value
+                ? 'border-accent bg-accent-subtle'
+                : 'border-border hover:border-border-hover'
+            }`}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={currentValue === option.value}
+              disabled={saving}
+              onChange={() => onChange(option.value)}
+              className="mt-0.5 accent-accent"
+            />
+            <div>
+              <div className="text-sm font-medium text-text">
+                {option.label}
+              </div>
+              <div className="text-xs text-text-muted">
+                {option.description}
+              </div>
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function PrivacySection() {
   const user = useAuthStore((s) => s.user);
   const blockedUsers = useBlockStore((s) => s.blockedUsers);
@@ -101,46 +153,12 @@ export function PrivacySection() {
   const currentFriendRequestPrivacy = user.friendRequestPrivacy || 'everyone';
   const currentProfilePrivacy = user.profilePrivacy || 'everyone';
 
-  async function handlePrivacyChange(value: string) {
+  async function handlePrivacyUpdate(field: string, value: string) {
     if (saving) return;
     setSaving(true);
     setFeedback(null);
     try {
-      await updateProfile({ dmPrivacy: value });
-      setFeedback({ type: 'success', message: 'Privacy setting updated.' });
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err instanceof Error ? err.message : 'Failed to save.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleFriendRequestPrivacyChange(value: string) {
-    if (saving) return;
-    setSaving(true);
-    setFeedback(null);
-    try {
-      await updateProfile({ friendRequestPrivacy: value });
-      setFeedback({ type: 'success', message: 'Privacy setting updated.' });
-    } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err instanceof Error ? err.message : 'Failed to save.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleProfilePrivacyChange(value: string) {
-    if (saving) return;
-    setSaving(true);
-    setFeedback(null);
-    try {
-      await updateProfile({ profilePrivacy: value });
+      await updateProfile({ [field]: value });
       setFeedback({ type: 'success', message: 'Privacy setting updated.' });
     } catch (err) {
       setFeedback({
@@ -169,116 +187,32 @@ export function PrivacySection() {
         Privacy
       </h2>
 
-      {/* DM Privacy */}
-      <div className="space-y-3">
-        <span className="block text-sm font-medium text-text">
-          Who can send you direct messages?
-        </span>
-        <div className="space-y-2">
-          {DM_PRIVACY_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
-                currentPrivacy === option.value
-                  ? 'border-accent bg-accent-subtle'
-                  : 'border-border hover:border-border-hover'
-              }`}
-            >
-              <input
-                type="radio"
-                name="dm-privacy"
-                value={option.value}
-                checked={currentPrivacy === option.value}
-                disabled={saving}
-                onChange={() => handlePrivacyChange(option.value)}
-                className="mt-0.5 accent-accent"
-              />
-              <div>
-                <div className="text-sm font-medium text-text">
-                  {option.label}
-                </div>
-                <div className="text-xs text-text-muted">
-                  {option.description}
-                </div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
+      <PrivacyRadioGroup
+        label="Who can send you direct messages?"
+        name="dm-privacy"
+        options={DM_PRIVACY_OPTIONS}
+        currentValue={currentPrivacy}
+        saving={saving}
+        onChange={(value) => handlePrivacyUpdate('dmPrivacy', value)}
+      />
 
-      {/* Friend Request Privacy */}
-      <div className="space-y-3">
-        <span className="block text-sm font-medium text-text">
-          Who can send you friend requests?
-        </span>
-        <div className="space-y-2">
-          {FRIEND_REQUEST_PRIVACY_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
-                currentFriendRequestPrivacy === option.value
-                  ? 'border-accent bg-accent-subtle'
-                  : 'border-border hover:border-border-hover'
-              }`}
-            >
-              <input
-                type="radio"
-                name="friend-request-privacy"
-                value={option.value}
-                checked={currentFriendRequestPrivacy === option.value}
-                disabled={saving}
-                onChange={() => handleFriendRequestPrivacyChange(option.value)}
-                className="mt-0.5 accent-accent"
-              />
-              <div>
-                <div className="text-sm font-medium text-text">
-                  {option.label}
-                </div>
-                <div className="text-xs text-text-muted">
-                  {option.description}
-                </div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
+      <PrivacyRadioGroup
+        label="Who can send you friend requests?"
+        name="friend-request-privacy"
+        options={FRIEND_REQUEST_PRIVACY_OPTIONS}
+        currentValue={currentFriendRequestPrivacy}
+        saving={saving}
+        onChange={(value) => handlePrivacyUpdate('friendRequestPrivacy', value)}
+      />
 
-      {/* Profile Privacy */}
-      <div className="space-y-3">
-        <span className="block text-sm font-medium text-text">
-          Who can see your full profile?
-        </span>
-        <div className="space-y-2">
-          {PROFILE_PRIVACY_OPTIONS.map((option) => (
-            <label
-              key={option.value}
-              className={`flex items-start gap-3 rounded-md border px-3 py-2.5 cursor-pointer transition-colors ${
-                currentProfilePrivacy === option.value
-                  ? 'border-accent bg-accent-subtle'
-                  : 'border-border hover:border-border-hover'
-              }`}
-            >
-              <input
-                type="radio"
-                name="profile-privacy"
-                value={option.value}
-                checked={currentProfilePrivacy === option.value}
-                disabled={saving}
-                onChange={() => handleProfilePrivacyChange(option.value)}
-                className="mt-0.5 accent-accent"
-              />
-              <div>
-                <div className="text-sm font-medium text-text">
-                  {option.label}
-                </div>
-                <div className="text-xs text-text-muted">
-                  {option.description}
-                </div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
+      <PrivacyRadioGroup
+        label="Who can see your full profile?"
+        name="profile-privacy"
+        options={PROFILE_PRIVACY_OPTIONS}
+        currentValue={currentProfilePrivacy}
+        saving={saving}
+        onChange={(value) => handlePrivacyUpdate('profilePrivacy', value)}
+      />
 
       {feedback && (
         <output
