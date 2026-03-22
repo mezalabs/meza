@@ -61,7 +61,11 @@ function addKeyboardListener(
       typeof (result as Promise<PluginListenerHandle>).then === 'function'
     ) {
       (result as Promise<PluginListenerHandle>).then((h) => {
-        if (cancelled) { h.remove(); } else { handle = h; }
+        if (cancelled) {
+          h.remove();
+        } else {
+          handle = h;
+        }
       });
     } else {
       handle = result as PluginListenerHandle;
