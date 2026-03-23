@@ -1,101 +1,116 @@
-import { getMediaURL, useEmojiStore } from '@meza/core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  getAllUnicodeEmojis,
+  getMediaURL,
+  getShortcodes,
+  loadEmojiData,
+  type SearchResult,
+  type StoredEmoji,
+  searchEmojis,
+  useEmojiStore,
+} from '@meza/core';
+import { useEffect, useMemo, useRef } from 'react';
 
 interface EmojiAutocompleteProps {
   query: string;
   serverId?: string;
+  /** Controlled highlight index (driven by prosemirror-autocomplete arrow keys). */
+  selectedIndex: number;
   onSelect: (insertText: string) => void;
-  onClose: () => void;
   position: { bottom: number; left: number };
+  /** Optional ref to expose wire-format refs for Enter-key selection. */
+  itemsRef?: React.MutableRefObject<string[]>;
 }
 
-const MAX_RESULTS = 8;
+const MAX_RESULTS = 10;
 
 export function EmojiAutocomplete({
   query,
   serverId,
+  selectedIndex,
   onSelect,
-  onClose,
   position,
+  itemsRef,
 }: EmojiAutocompleteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const serverEmojis = useEmojiStore((s) =>
     serverId ? s.byServer[serverId] : undefined,
   );
   const personalEmojis = useEmojiStore((s) => s.personal) ?? [];
+  const allEmojisByServer = useEmojiStore((s) => s.byServer);
 
-  const items = useMemo(() => {
-    if (!query) return [];
-    const lowerQuery = query.toLowerCase();
-    const results: {
-      id: string;
-      name: string;
-      imageUrl: string;
-      animated: boolean;
-    }[] = [];
+  // Ensure Unicode emoji data is loaded
+  useEffect(() => {
+    if (!getAllUnicodeEmojis()) {
+      loadEmojiData().catch(() => {});
+    }
+  }, []);
 
-    // Search personal emojis first
+  // Combine all custom emojis (personal + server + other servers)
+  const allCustom: StoredEmoji[] = useMemo(() => {
+    const seen = new Set<string>();
+    const result: StoredEmoji[] = [];
     for (const e of personalEmojis) {
-      if (results.length >= MAX_RESULTS) break;
-      if (e.name.includes(lowerQuery)) {
-        results.push(e);
+      if (!seen.has(e.id)) {
+        seen.add(e.id);
+        result.push(e);
       }
     }
-
-    // Then server emojis (avoid duplicates by id)
     if (serverEmojis) {
-      const seen = new Set(results.map((r) => r.id));
       for (const e of serverEmojis) {
-        if (results.length >= MAX_RESULTS) break;
-        if (!seen.has(e.id) && e.name.includes(lowerQuery)) {
-          results.push(e);
+        if (!seen.has(e.id)) {
+          seen.add(e.id);
+          result.push(e);
         }
       }
     }
+    for (const [sid, emojis] of Object.entries(allEmojisByServer)) {
+      if (sid === serverId) continue;
+      for (const e of emojis) {
+        if (!seen.has(e.id)) {
+          seen.add(e.id);
+          result.push(e);
+        }
+      }
+    }
+    return result;
+  }, [personalEmojis, serverEmojis, allEmojisByServer, serverId]);
 
-    return results;
-  }, [query, personalEmojis, serverEmojis]);
+  const items: SearchResult[] = useMemo(() => {
+    if (!query) return [];
+    return searchEmojis(
+      query,
+      allCustom,
+      getAllUnicodeEmojis(),
+      getShortcodes(),
+    ).slice(0, MAX_RESULTS);
+  }, [query, allCustom]);
 
-  // Reset selection when query changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on query change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  // Build wire-format strings for Enter-key selection
+  const wireFormats = useMemo(() => {
+    return items.map((item) => {
+      if (item.type === 'custom') {
+        return item.animated
+          ? `<a:${item.name}:${item.id}>`
+          : `<:${item.name}:${item.id}>`;
+      }
+      // Unicode emoji — insert the emoji character directly
+      return item.emoji;
+    });
+  }, [items]);
+
+  // Expose wire-format refs to parent for Enter-key selection
+  if (itemsRef) {
+    itemsRef.current = wireFormats;
+  }
+
+  const clampedIndex = Math.min(selectedIndex, Math.max(0, items.length - 1));
 
   // Scroll selected item into view.
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement;
+    const el = listRef.current?.children[clampedIndex] as HTMLElement;
     el?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
-
-  // Keyboard navigation (capture phase, same pattern as MentionAutocomplete).
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, items.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        if (items.length > 0) {
-          e.preventDefault();
-          const emoji = items[selectedIndex];
-          const ref = emoji.animated
-            ? `<a:${emoji.name}:${emoji.id}>`
-            : `<:${emoji.name}:${emoji.id}>`;
-          onSelect(ref);
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect, onClose]);
+  }, [clampedIndex]);
 
   if (items.length === 0) return null;
 
@@ -105,33 +120,39 @@ export function EmojiAutocomplete({
       style={{ bottom: position.bottom, left: position.left }}
       ref={listRef}
     >
-      {items.map((emoji, i) => {
-        const attachmentId = emoji.imageUrl.replace('/media/', '');
-        const ref = emoji.animated
-          ? `<a:${emoji.name}:${emoji.id}>`
-          : `<:${emoji.name}:${emoji.id}>`;
+      {items.map((item, i) => {
+        const wire = wireFormats[i];
+        const key =
+          item.type === 'custom' ? `c-${item.id}` : `u-${item.hexcode}`;
         return (
           <button
-            key={emoji.id}
+            key={key}
             type="button"
             className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
-              i === selectedIndex
+              i === clampedIndex
                 ? 'bg-accent/15 text-accent'
                 : 'text-text hover:bg-bg-surface'
             }`}
             onMouseDown={(e) => {
               e.preventDefault();
-              onSelect(ref);
+              onSelect(wire);
             }}
-            onMouseEnter={() => setSelectedIndex(i)}
           >
-            <img
-              src={getMediaURL(attachmentId)}
-              alt={`:${emoji.name}:`}
-              className="h-6 w-6 object-contain"
-              loading="lazy"
-            />
-            <span className="truncate">:{emoji.name}:</span>
+            {item.type === 'custom' ? (
+              <img
+                src={getMediaURL(item.imageUrl.replace('/media/', ''))}
+                alt={`:${item.name}:`}
+                className="h-6 w-6 object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <span className="h-6 w-6 flex items-center justify-center text-lg">
+                {item.emoji}
+              </span>
+            )}
+            <span className="truncate">
+              {item.type === 'custom' ? `:${item.name}:` : item.label}
+            </span>
           </button>
         );
       })}

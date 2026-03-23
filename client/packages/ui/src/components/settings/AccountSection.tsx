@@ -46,7 +46,7 @@ export function AccountSection() {
       <button
         type="button"
         className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
-        onClick={() => openProfilePane(user.id)}
+        onClick={() => openProfilePane(user.id, true)}
       >
         Edit Profile
       </button>

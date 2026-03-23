@@ -16,18 +16,50 @@ import {
   PaperPlaneRightIcon,
   XIcon,
 } from '@phosphor-icons/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { flushSync } from 'react-dom';
 import { getCommand } from '../../commands/index.ts';
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
+import { ChannelAutocomplete } from './ChannelAutocomplete.tsx';
+import type { AutocompleteState } from './composer/ComposerEditor.tsx';
+import type { ComposerEditorHandle } from './composer/schema.ts';
 import { EmojiAutocomplete } from './EmojiAutocomplete.tsx';
 import { EmojiPickerButton } from './EmojiPickerButton.tsx';
 import { GifPicker } from './GifPicker.tsx';
 import { MentionAutocomplete } from './MentionAutocomplete.tsx';
 import { SlashCommandAutocomplete } from './SlashCommandAutocomplete.tsx';
+
+// Lazy-load ProseMirror chunk (~50KB gzipped)
+const ComposerEditor = lazy(() =>
+  import('./composer/ComposerEditor.tsx').then((m) => ({
+    default: m.ComposerEditor,
+  })),
+);
+
+function extractMentions(text: string) {
+  const userMentions = [...text.matchAll(/<@([A-Z0-9]{26})>/g)].map(
+    (m) => m[1],
+  );
+  const roleMentions = [...text.matchAll(/<@&([A-Z0-9]{26})>/g)].map(
+    (m) => m[1],
+  );
+  return {
+    mentionedUserIds: [...new Set(userMentions)],
+    mentionedRoleIds: [...new Set(roleMentions)],
+    mentionEveryone: text.includes('@everyone'),
+  };
+}
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
@@ -51,6 +83,8 @@ interface MessageComposerProps {
   mobileEmojiOpen?: boolean;
   /** Mobile-only: toggle the emoji panel. */
   onMobileEmojiToggle?: () => void;
+  /** Mobile-only: close emoji panel while keeping a spacer for keyboard transition. */
+  onMobileEmojiClose?: () => void;
   /** Ref that ChannelView uses to call insertEmoji from the mobile panel. */
   insertEmojiRef?: React.MutableRefObject<((text: string) => void) | null>;
 }
@@ -61,27 +95,27 @@ export function MessageComposer({
   disabled,
   mobileEmojiOpen,
   onMobileEmojiToggle,
+  onMobileEmojiClose,
   insertEmojiRef,
 }: MessageComposerProps) {
-  const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
-  const [mentionTriggerPos, setMentionTriggerPos] = useState(0);
-  const [slashQuery, setSlashQuery] = useState<string | null>(null);
-  const [emojiQuery, setEmojiQuery] = useState<string | null>(null);
-  const [emojiTriggerPos, setEmojiTriggerPos] = useState(0);
   const [gifPickerQuery, setGifPickerQuery] = useState<string | null>(null);
+  const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
+    trigger: null,
+    query: '',
+    range: null,
+  });
+  const [acSelectedIndex, setAcSelectedIndex] = useState(0);
   const sendingRef = useRef(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<ComposerEditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cursorPositionRef = useRef<number>(0);
-  // Use channelToServer to determine if this is a server channel regardless of
-  // whether the serverId prop has been resolved yet (avoids race on page reload).
+  // Ref to hold the "select current item" function — set by each autocomplete component's parent logic
+  const acSelectCurrentRef = useRef<(() => void) | null>(null);
+
   const resolvedServerId = useChannelStore(
     (s) => serverId || s.channelToServer[channelId],
   );
-  const _isDM = !resolvedServerId;
   const channel = useChannelStore((s) =>
     resolvedServerId
       ? s.byServer[resolvedServerId]?.find((c) => c.id === channelId)
@@ -89,7 +123,6 @@ export function MessageComposer({
   );
   const channelName = channel?.name;
   const isMobile = useMobile();
-  const needsEncryption = true; // Universal E2EE: all channels encrypted
   const {
     encrypt,
     ready: encryptionReady,
@@ -98,78 +131,25 @@ export function MessageComposer({
     unavailableReason,
   } = useChannelEncryption(channelId);
 
-  // Focus textarea on mount and channel switch (skip on mobile to avoid keyboard popup).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId triggers re-focus on channel switch
-  useEffect(() => {
-    if (!isMobile) textareaRef.current?.focus();
-  }, [channelId, isMobile]);
-
   const replyingTo = useMessageStore((s) => s.replyingTo[channelId] ?? null);
   const replyAuthorName = useDisplayName(replyingTo?.authorId ?? '', serverId);
 
-  // Keep cursor position fresh on every selection change and blur
-  function handleSelect() {
-    cursorPositionRef.current = textareaRef.current?.selectionStart ?? 0;
-  }
-
-  // Track mobile emoji state via ref so insertEmoji doesn't need to re-create
-  const mobileEmojiOpenRef = useRef(mobileEmojiOpen);
-  mobileEmojiOpenRef.current = mobileEmojiOpen;
-
-  // Stable ref -- uses functional setDraft updater so no draft dependency
-  const insertEmoji = useCallback((native: string) => {
-    const pos = cursorPositionRef.current;
-    const newPos = pos + native.length;
-
-    flushSync(() => {
-      setDraft((prev) => prev.slice(0, pos) + native + prev.slice(pos));
-    });
-
-    // DOM is committed after flushSync -- safe to touch textarea
-    cursorPositionRef.current = newPos;
-    textareaRef.current?.setSelectionRange(newPos, newPos);
-    // Don't focus textarea when mobile emoji panel is open (avoids keyboard popup)
-    if (!mobileEmojiOpenRef.current) {
-      textareaRef.current?.focus();
-    }
-  }, []);
-
   // Expose insertEmoji to ChannelView for the mobile emoji panel
   useEffect(() => {
-    if (insertEmojiRef) insertEmojiRef.current = insertEmoji;
+    if (insertEmojiRef) {
+      insertEmojiRef.current = (text: string) => {
+        // Don't focus editor — prevents iOS keyboard from popping up over emoji panel
+        editorRef.current?.insertText(text, { focus: false });
+      };
+    }
     return () => {
       if (insertEmojiRef) insertEmojiRef.current = null;
     };
-  }, [insertEmoji, insertEmojiRef]);
+  }, [insertEmojiRef]);
 
-  const focusTextarea = useCallback(() => {
-    textareaRef.current?.focus();
-  }, []);
-
-  // Re-grab focus when clicking non-interactive areas (e.g. message list).
-  // Disabled on mobile — users need to be able to dismiss the keyboard by tapping away.
-  const handleBlur = useCallback(() => {
-    if (isMobile) return;
-    requestAnimationFrame(() => {
-      const active = document.activeElement;
-      const isInteractive =
-        active instanceof HTMLInputElement ||
-        active instanceof HTMLTextAreaElement ||
-        active instanceof HTMLButtonElement ||
-        active instanceof HTMLSelectElement ||
-        active?.closest(
-          '[role="dialog"], [role="menu"], [data-radix-popper-content-wrapper]',
-        );
-      if (!isInteractive) {
-        textareaRef.current?.focus();
-      }
-    });
-  }, [isMobile]);
-
-  // Revoke any outstanding object URLs when the component unmounts to prevent memory leaks.
+  // Revoke outstanding object URLs on unmount
   const pendingFilesRef = useRef(pendingFiles);
   pendingFilesRef.current = pendingFiles;
-
   useEffect(() => {
     return () => {
       for (const pf of pendingFilesRef.current) {
@@ -181,7 +161,6 @@ export function MessageComposer({
   function addFiles(files: FileList) {
     const currentCount = pendingFiles.length;
     const toAdd: PendingFile[] = [];
-
     for (
       let i = 0;
       i < files.length && currentCount + toAdd.length < MAX_FILES;
@@ -201,7 +180,6 @@ export function MessageComposer({
         isSpoiler: false,
       });
     }
-
     if (toAdd.length > 0) {
       setPendingFiles((prev) => [...prev, ...toAdd]);
     }
@@ -225,7 +203,6 @@ export function MessageComposer({
     if (e.target.files && e.target.files.length > 0) {
       addFiles(e.target.files);
     }
-    // Reset so the same file can be re-selected
     e.target.value = '';
   }
 
@@ -233,326 +210,207 @@ export function MessageComposer({
     useMessageStore.getState().setReplyingTo(channelId, null);
   }
 
-  function extractMentions(text: string) {
-    const userMentions = [...text.matchAll(/<@([A-Z0-9]{26})>/g)].map(
-      (m) => m[1],
-    );
-    const roleMentions = [...text.matchAll(/<@&([A-Z0-9]{26})>/g)].map(
-      (m) => m[1],
-    );
-    return {
-      mentionedUserIds: [...new Set(userMentions)],
-      mentionedRoleIds: [...new Set(roleMentions)],
-      mentionEveryone: text.includes('@everyone'),
-    };
-  }
+  const handleSend = useCallback(
+    async (overrideText?: string) => {
+      let text = overrideText ?? '';
 
-  function detectMentionTrigger(text: string, cursorPos: number) {
-    // Look backward from cursor for an unmatched @.
-    const before = text.slice(0, cursorPos);
-    const atIndex = before.lastIndexOf('@');
-    if (atIndex === -1) {
-      setMentionQuery(null);
-      return;
-    }
-    // The @ must be at the start or preceded by whitespace.
-    if (atIndex > 0 && !/\s/.test(before[atIndex - 1])) {
-      setMentionQuery(null);
-      return;
-    }
-    const query = before.slice(atIndex + 1);
-    // Close if the query contains whitespace (except for @everyone which has no space).
-    if (query.includes(' ') && !query.startsWith('everyone')) {
-      setMentionQuery(null);
-      return;
-    }
-    setMentionQuery(query);
-    setMentionTriggerPos(atIndex);
-  }
+      // If no override, get text from the editor
+      if (!overrideText) {
+        return;
+      }
 
-  function detectSlashTrigger(text: string, cursorPos: number) {
-    if (!text.startsWith('/')) {
-      setSlashQuery(null);
-      return;
-    }
-    // Close popup once the user has typed past the command name (space present).
-    const spaceIndex = text.indexOf(' ');
-    if (spaceIndex !== -1 && cursorPos > spaceIndex) {
-      setSlashQuery(null);
-      return;
-    }
-    setSlashQuery(text.slice(1, cursorPos));
-  }
+      // Intercept slash commands
+      if (text.startsWith('/')) {
+        const match = text.match(/^\/(\S+)\s*(.*)/);
+        if (match) {
+          const [, commandName, args] = match;
+          const command = getCommand(commandName);
+          if (command) {
+            if (commandName === 'gif') {
+              setGifPickerQuery(args || '');
+              editorRef.current?.clear();
 
-  function detectEmojiTrigger(text: string, cursorPos: number) {
-    const before = text.slice(0, cursorPos);
-    // Find the last unmatched `:` — skip if preceded by `<` (existing emoji ref).
-    const colonIndex = before.lastIndexOf(':');
-    if (colonIndex === -1) {
-      setEmojiQuery(null);
-      return;
-    }
-    // Don't trigger inside an existing emoji ref like `<:name:ID>`
-    if (colonIndex > 0 && before[colonIndex - 1] === '<') {
-      setEmojiQuery(null);
-      return;
-    }
-    // Also skip if there's an `<a` or `<` right before (animated emoji refs)
-    const ltIndex = before.lastIndexOf('<', colonIndex);
-    if (ltIndex !== -1 && before.indexOf('>', ltIndex) === -1) {
-      // We're inside an unclosed `<...` tag — likely an emoji/mention ref
-      setEmojiQuery(null);
-      return;
-    }
-    const query = before.slice(colonIndex + 1);
-    // Need at least 1 char, no spaces, and only valid emoji-name chars
-    // (letters, digits, _, -, +). This avoids false triggers on URLs
-    // like https://… where the colon is part of the scheme.
-    if (query.length === 0 || !/^[a-zA-Z0-9_+-]+$/.test(query)) {
-      setEmojiQuery(null);
-      return;
-    }
-    setEmojiQuery(query);
-    setEmojiTriggerPos(colonIndex);
-  }
+              return;
+            }
+            if (command.silent) {
+              command.execute(args, {
+                channelId,
+                serverId,
+                sendMessage: () => {},
+              });
+              editorRef.current?.clear();
 
-  async function handleSend(overrideText?: string) {
-    let text = (overrideText ?? draft).trim();
-
-    // Intercept slash commands before the normal send flow.
-    if (text.startsWith('/')) {
-      const match = text.match(/^\/(\S+)\s*(.*)/);
-      if (match) {
-        const [, commandName, args] = match;
-        const command = getCommand(commandName);
-        if (command) {
-          if (commandName === 'gif') {
-            setGifPickerQuery(args || '');
-            setDraft('');
-            setSlashQuery(null);
-            return;
-          }
-          if (command.silent) {
+              return;
+            }
+            let transformed: string | null = null;
             command.execute(args, {
               channelId,
               serverId,
-              sendMessage: () => {},
+              sendMessage: (msg) => {
+                transformed = msg;
+              },
             });
-            setDraft('');
-            setSlashQuery(null);
-            return;
-          }
-          // Non-silent: capture the transformed text and fall through
-          // to the normal send flow (which handles encryption).
-          let transformed: string | null = null;
-          command.execute(args, {
-            channelId,
-            serverId,
-            sendMessage: (msg) => {
-              transformed = msg;
-            },
-          });
-          if (transformed !== null) {
-            text = transformed;
-            setSlashQuery(null);
-          } else {
-            setDraft('');
-            setSlashQuery(null);
-            return;
+            if (transformed !== null) {
+              text = transformed;
+            } else {
+              editorRef.current?.clear();
+
+              return;
+            }
           }
         }
       }
-      // No command matched — fall through and send as a regular message.
-    }
 
-    const hasFiles = pendingFiles.length > 0;
-    if ((!text && !hasFiles) || sendingRef.current) return;
-    sendingRef.current = true;
-    setSending(true);
+      text = text.trim();
+      const hasFiles = pendingFiles.length > 0;
+      if ((!text && !hasFiles) || sendingRef.current) return;
+      sendingRef.current = true;
+      setSending(true);
 
-    try {
-      // Upload files sequentially (memory: 2x file size per concurrent encrypted upload)
-      const encryptedResults: EncryptedUploadResult[] = [];
-      const uploadedFiles: UploadedFile[] = [];
-      let hasErrors = false;
+      try {
+        // Upload files
+        const encryptedResults: EncryptedUploadResult[] = [];
+        const uploadedFiles: UploadedFile[] = [];
+        let hasErrors = false;
 
-      for (const pf of pendingFiles) {
-        try {
-          const result = await uploadEncryptedFile(
-            pf.file,
-            channelId,
-            (percent) => {
-              setPendingFiles((prev) =>
-                prev.map((f) =>
-                  f.id === pf.id ? { ...f, progress: percent } : f,
-                ),
-              );
-            },
-            pf.isSpoiler,
-          );
-          encryptedResults.push(result);
-          uploadedFiles.push({
-            attachmentId: result.attachmentId,
-            filename: result.filename,
-            contentType: result.contentType,
-            sizeBytes: result.sizeBytes,
-            url: '',
-            hasThumbnail: result.microThumbnail.length > 0,
-            width: result.width,
-            height: result.height,
-            microThumbnail: result.microThumbnail,
-          });
-        } catch {
-          hasErrors = true;
-          setPendingFiles((prev) =>
-            prev.map((f) =>
-              f.id === pf.id
-                ? { ...f, error: 'Upload failed', progress: 0 }
-                : f,
-            ),
-          );
-          break;
+        for (const pf of pendingFiles) {
+          try {
+            const result = await uploadEncryptedFile(
+              pf.file,
+              channelId,
+              (percent) => {
+                setPendingFiles((prev) =>
+                  prev.map((f) =>
+                    f.id === pf.id ? { ...f, progress: percent } : f,
+                  ),
+                );
+              },
+              pf.isSpoiler,
+            );
+            encryptedResults.push(result);
+            uploadedFiles.push({
+              attachmentId: result.attachmentId,
+              filename: result.filename,
+              contentType: result.contentType,
+              sizeBytes: result.sizeBytes,
+              url: '',
+              hasThumbnail: result.microThumbnail.length > 0,
+              width: result.width,
+              height: result.height,
+              microThumbnail: result.microThumbnail,
+            });
+          } catch {
+            hasErrors = true;
+            setPendingFiles((prev) =>
+              prev.map((f) =>
+                f.id === pf.id
+                  ? { ...f, error: 'Upload failed', progress: 0 }
+                  : f,
+              ),
+            );
+            break;
+          }
         }
-      }
 
-      if (hasErrors && uploadedFiles.length === 0) return;
+        if (hasErrors && uploadedFiles.length === 0) return;
 
-      // Build V1 JSON content with attachment metadata
-      const attachmentMeta =
-        encryptedResults.length > 0
-          ? new Map(
-              encryptedResults.map((r) => [
-                r.attachmentId,
-                {
-                  microThumb: r.microThumbnail,
-                  filename: r.filename,
-                  contentType: r.contentType,
-                },
-              ]),
-            )
-          : undefined;
+        const attachmentMeta =
+          encryptedResults.length > 0
+            ? new Map(
+                encryptedResults.map((r) => [
+                  r.attachmentId,
+                  {
+                    microThumb: r.microThumbnail,
+                    filename: r.filename,
+                    contentType: r.contentType,
+                  },
+                ]),
+              )
+            : undefined;
 
-      const plaintext = buildMessageContent(text, attachmentMeta);
-      // Universal E2EE: always encrypt, never send plaintext
-      const encrypted = await encrypt(plaintext);
-      if (!encrypted) {
-        // Encryption not ready or failed — block sending
-        return;
-      }
-      const encryptedContent = encrypted.data;
-      const keyVersion = encrypted.keyVersion;
-      const { mentionedUserIds, mentionedRoleIds, mentionEveryone } =
-        extractMentions(text);
-      await sendMessage({
-        channelId,
-        encryptedContent,
-        keyVersion,
-        nonce: '',
-        plaintext,
-        uploadedFiles: uploadedFiles.length > 0 ? uploadedFiles : undefined,
-        replyToId: replyingTo?.id,
-        mentionedUserIds:
-          mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
-        mentionedRoleIds:
-          mentionedRoleIds.length > 0 ? mentionedRoleIds : undefined,
-        mentionEveryone: mentionEveryone || undefined,
-      });
+        const plaintext = buildMessageContent(text, attachmentMeta);
+        const encrypted = await encrypt(plaintext);
+        if (!encrypted) return;
+        const encryptedContent = encrypted.data;
+        const keyVersion = encrypted.keyVersion;
+        const { mentionedUserIds, mentionedRoleIds, mentionEveryone } =
+          extractMentions(text);
+        await sendMessage({
+          channelId,
+          encryptedContent,
+          keyVersion,
+          nonce: '',
+          plaintext,
+          uploadedFiles: uploadedFiles.length > 0 ? uploadedFiles : undefined,
+          replyToId: replyingTo?.id,
+          mentionedUserIds:
+            mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+          mentionedRoleIds:
+            mentionedRoleIds.length > 0 ? mentionedRoleIds : undefined,
+          mentionEveryone: mentionEveryone || undefined,
+        });
 
-      // Clean up previews
-      for (const pf of pendingFiles) {
-        if (pf.preview) URL.revokeObjectURL(pf.preview);
-      }
+        for (const pf of pendingFiles) {
+          if (pf.preview) URL.revokeObjectURL(pf.preview);
+        }
 
-      setDraft('');
-      setPendingFiles([]);
-      // Reset textarea height after clearing
-      if (textareaRef.current) textareaRef.current.style.height = 'auto';
-      // Clear reply state after successful send
-      if (replyingTo) {
-        useMessageStore.getState().setReplyingTo(channelId, null);
+        setPendingFiles([]);
+        if (replyingTo) {
+          useMessageStore.getState().setReplyingTo(channelId, null);
+        }
+      } catch {
+        // Error set in store
+      } finally {
+        sendingRef.current = false;
+        flushSync(() => setSending(false));
+        editorRef.current?.focus();
       }
-    } catch {
-      // Error set in store
-    } finally {
-      sendingRef.current = false;
-      flushSync(() => setSending(false));
-      textareaRef.current?.focus();
-    }
-  }
+    },
+    [channelId, serverId, encrypt, pendingFiles, replyingTo],
+  );
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // If a capture-phase handler (e.g. MentionAutocomplete) already handled
-    // this event, don't process it again — prevents race conditions where
-    // the useEffect-based document listener and this handler both fire.
-    if (e.nativeEvent.defaultPrevented) return;
+  // Handler for ComposerEditor onSend callback
+  const handleEditorSend = useCallback(
+    (wireText: string) => {
+      handleSend(wireText);
+    },
+    [handleSend],
+  );
 
-    // Let MentionAutocomplete handle keys when open.
-    if (mentionQuery !== null) {
-      if (['ArrowUp', 'ArrowDown', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
-        return; // Handled by the document-level listener in MentionAutocomplete.
-      }
-    }
-    // Let SlashCommandAutocomplete handle keys when open.
-    if (slashQuery !== null) {
-      if (['ArrowUp', 'ArrowDown', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
-        return; // Handled by the document-level listener in SlashCommandAutocomplete.
-      }
-    }
-    // Let EmojiAutocomplete handle keys when open.
-    if (emojiQuery !== null) {
-      if (['ArrowUp', 'ArrowDown', 'Tab', 'Enter', 'Escape'].includes(e.key)) {
-        return; // Handled by the document-level listener in EmojiAutocomplete.
-      }
-    }
-    if (e.key === 'Escape' && replyingTo) {
-      e.preventDefault();
+  const handleTyping = useCallback(() => {
+    gatewaySendTyping(channelId);
+  }, [channelId]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: cancelReply is a stable local function
+  const handleCancel = useCallback(() => {
+    if (replyingTo) {
       cancelReply();
-      return;
     }
-    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
-      e.preventDefault();
-      handleSend();
-    }
-  }
+  }, [replyingTo]);
 
-  function handleMentionSelect(item: {
-    type: 'user' | 'role' | 'everyone';
-    insertText: string;
-  }) {
-    // Replace @query with the mention syntax.
-    const before = draft.slice(0, mentionTriggerPos);
-    const after = draft.slice(cursorPositionRef.current);
-    const newDraft = `${before}${item.insertText} ${after}`;
-    setDraft(newDraft);
-    setMentionQuery(null);
+  const closeAutocomplete = useCallback(() => {
+    setAutocomplete({ trigger: null, query: '', range: null });
+    setAcSelectedIndex(0);
+    editorRef.current?.focus();
+  }, []);
 
-    // Set cursor position after the inserted text.
-    const newPos = mentionTriggerPos + item.insertText.length + 1;
-    cursorPositionRef.current = newPos;
-    requestAnimationFrame(() => {
-      textareaRef.current?.setSelectionRange(newPos, newPos);
-      textareaRef.current?.focus();
-    });
-  }
+  const handleAutocompleteChange = useCallback((state: AutocompleteState) => {
+    setAutocomplete(state);
+    // Reset selection when query changes (new trigger or filter update)
+    setAcSelectedIndex(0);
+  }, []);
 
-  function handleEmojiAutocompleteSelect(insertText: string) {
-    // Replace :query with the emoji ref.
-    const before = draft.slice(0, emojiTriggerPos);
-    const after = draft.slice(cursorPositionRef.current);
-    const newDraft = `${before}${insertText} ${after}`;
-    setDraft(newDraft);
-    setEmojiQuery(null);
+  const handleAutocompleteArrow = useCallback((direction: 'up' | 'down') => {
+    setAcSelectedIndex((i) =>
+      direction === 'down' ? i + 1 : Math.max(0, i - 1),
+    );
+  }, []);
 
-    const newPos = emojiTriggerPos + insertText.length + 1;
-    cursorPositionRef.current = newPos;
-    requestAnimationFrame(() => {
-      textareaRef.current?.setSelectionRange(newPos, newPos);
-      textareaRef.current?.focus();
-    });
-  }
+  const handleAutocompleteSelect = useCallback(() => {
+    acSelectCurrentRef.current?.();
+  }, []);
 
-  // Truncate reply preview text (strip markdown for clean display).
-  // Use safeParseMessageText to handle V1 JSON format and avoid showing raw JSON.
+  // Truncate reply preview text
   const replyPreviewText = replyingTo
     ? stripMarkdown(safeParseMessageText(replyingTo.encryptedContent)).slice(
         0,
@@ -560,9 +418,20 @@ export function MessageComposer({
       )
     : '';
 
+  const needsEncryption = true;
   const encryptionPending = needsEncryption && !encryptionReady;
   const encryptionUnavailable =
     needsEncryption && encryptionReady && !isEncrypted;
+
+  const placeholderText = encryptionPending
+    ? 'Setting up encryption\u2026'
+    : encryptionUnavailable
+      ? 'Encryption unavailable'
+      : replyingTo
+        ? 'Type a reply\u2026'
+        : channelName
+          ? `Message #${channelName}`
+          : 'Type a message\u2026';
 
   return (
     <div className="flex-shrink-0 px-2 pt-1 pb-2">
@@ -585,6 +454,7 @@ export function MessageComposer({
           )}
         </div>
       )}
+
       {/* Reply preview bar */}
       {replyingTo && (
         <div className="flex items-center gap-2 mb-2 rounded-md bg-bg-surface px-3 py-1.5 text-xs border-l-2 border-accent">
@@ -637,9 +507,7 @@ export function MessageComposer({
                 </div>
               )}
 
-              {/* Split action zones with dim backdrop */}
               <div className="preview-overlay absolute inset-0 z-10 flex opacity-0 transition-opacity duration-150">
-                {/* Content Warning zone (left half) */}
                 <button
                   type="button"
                   onClick={() => toggleSpoiler(pf.id)}
@@ -652,7 +520,6 @@ export function MessageComposer({
                     <EyeSlashIcon weight="bold" size={28} aria-hidden="true" />
                   )}
                 </button>
-                {/* Remove zone (right half) */}
                 <button
                   type="button"
                   onClick={() => removeFile(pf.id)}
@@ -663,7 +530,6 @@ export function MessageComposer({
                 </button>
               </div>
 
-              {/* Persistent spoiler indicator when not hovering */}
               {pf.isSpoiler && (
                 <div className="spoiler-badge absolute inset-0 z-[5] flex items-center justify-center bg-black/70 pointer-events-none transition-opacity duration-150">
                   <EyeSlashIcon
@@ -675,7 +541,6 @@ export function MessageComposer({
                 </div>
               )}
 
-              {/* Progress bar */}
               {sending && !pf.error && pf.progress < 100 && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-border">
                   <div
@@ -685,7 +550,6 @@ export function MessageComposer({
                 </div>
               )}
 
-              {/* Error indicator */}
               {pf.error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-error/20">
                   <span className="text-[10px] text-error font-medium">
@@ -699,48 +563,6 @@ export function MessageComposer({
       )}
 
       <div className="relative">
-        {/* Mention autocomplete popup */}
-        {mentionQuery !== null && (
-          <MentionAutocomplete
-            query={mentionQuery}
-            serverId={serverId}
-            onSelect={handleMentionSelect}
-            onClose={() => setMentionQuery(null)}
-            position={{ bottom: 48, left: 0 }}
-          />
-        )}
-
-        {/* Emoji autocomplete popup */}
-        {emojiQuery !== null && (
-          <EmojiAutocomplete
-            query={emojiQuery}
-            serverId={serverId}
-            onSelect={handleEmojiAutocompleteSelect}
-            onClose={() => setEmojiQuery(null)}
-            position={{ bottom: 48, left: 0 }}
-          />
-        )}
-
-        {/* Slash command autocomplete popup */}
-        {slashQuery !== null && !disabled && (
-          <SlashCommandAutocomplete
-            query={slashQuery}
-            onSelect={(cmd) => {
-              if (cmd.args?.length) {
-                setDraft(`/${cmd.name} `);
-                setSlashQuery(null);
-                textareaRef.current?.focus();
-              } else {
-                // Let handleSend process the command so the message
-                // goes through the normal send flow (encryption, etc.).
-                setSlashQuery(null);
-                handleSend(`/${cmd.name}`);
-              }
-            }}
-            onClose={() => setSlashQuery(null)}
-          />
-        )}
-
         {/* GIF picker */}
         {gifPickerQuery !== null && (
           <GifPicker
@@ -750,6 +572,49 @@ export function MessageComposer({
               handleSend(gifUrl);
             }}
             onClose={() => setGifPickerQuery(null)}
+          />
+        )}
+
+        {/* Autocomplete popups — keyboard nav handled by prosemirror-autocomplete */}
+        {autocomplete.trigger === 'mention' && (
+          <MentionPopup
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
+          />
+        )}
+        {autocomplete.trigger === 'channel' && (
+          <ChannelPopup
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
+          />
+        )}
+        {autocomplete.trigger === 'emoji' && (
+          <EmojiPopup
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
+          />
+        )}
+        {autocomplete.trigger === 'slash' && (
+          <SlashCommandAutocomplete
+            query={autocomplete.query}
+            onSelect={(cmd) => {
+              editorRef.current?.clear();
+              editorRef.current?.insertText(`/${cmd.name} `);
+              closeAutocomplete();
+            }}
+            onClose={closeAutocomplete}
           />
         )}
 
@@ -779,50 +644,54 @@ export function MessageComposer({
             <PaperclipIcon weight="regular" size={22} aria-hidden="true" />
           </button>
 
-          <textarea
-            ref={textareaRef}
-            className="flex-1 resize-none rounded-none border-none bg-transparent text-text focus:outline-none overflow-y-auto"
+          {/* ProseMirror composer editor */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: click closes emoji panel, editor inside handles keyboard */}
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: editor inside handles keyboard */}
+          <div
+            className="flex-1 overflow-y-auto"
             style={{ maxHeight: isMobile ? '80px' : '150px' }}
-            placeholder={
-              encryptionPending
-                ? 'Setting up encryption…'
-                : encryptionUnavailable
-                  ? 'Encryption unavailable'
-                  : replyingTo
-                    ? 'Type a reply…'
-                    : channelName
-                      ? `Message #${channelName}`
-                      : 'Type a message…'
-            }
-            rows={1}
-            maxLength={4000}
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              gatewaySendTyping(channelId);
-              detectMentionTrigger(
-                e.target.value,
-                e.target.selectionStart ?? 0,
-              );
-              detectSlashTrigger(e.target.value, e.target.selectionStart ?? 0);
-              detectEmojiTrigger(e.target.value, e.target.selectionStart ?? 0);
-              // Auto-grow textarea
-              e.target.style.height = 'auto';
-              e.target.style.height = `${e.target.scrollHeight}px`;
-            }}
-            onSelect={handleSelect}
-            onKeyDown={handleKeyDown}
-            onFocus={() => {
-              // Close mobile emoji panel when user taps to type
-              if (mobileEmojiOpen && onMobileEmojiToggle) onMobileEmojiToggle();
-            }}
-            onBlur={handleBlur}
-            disabled={sending || disabled}
-          />
+            onClick={mobileEmojiOpen ? onMobileEmojiClose : undefined}
+          >
+            <Suspense
+              fallback={
+                <div className="px-3 py-4 text-text-subtle">
+                  {placeholderText}
+                </div>
+              }
+            >
+              <ProsemirrorAdapterProvider>
+                <ComposerEditor
+                  ref={editorRef}
+                  channelId={channelId}
+                  onSend={handleEditorSend}
+                  onCancel={handleCancel}
+                  onTyping={handleTyping}
+                  placeholder={placeholderText}
+                  autoFocus={!isMobile}
+                  onAutocompleteChange={handleAutocompleteChange}
+                  onAutocompleteArrow={handleAutocompleteArrow}
+                  onAutocompleteSelect={handleAutocompleteSelect}
+                />
+              </ProsemirrorAdapterProvider>
+            </Suspense>
+          </div>
 
           <EmojiPickerButton
-            onSelect={insertEmoji}
-            onClose={focusTextarea}
+            onSelect={(emoji) => {
+              // Custom emojis come as <:name:id> or <a:name:id> — insert as node
+              const match = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
+              if (match) {
+                editorRef.current?.insertCustomEmoji(
+                  match[3],
+                  match[2],
+                  match[1] === 'a',
+                );
+              } else {
+                // Unicode emoji — insert as text
+                editorRef.current?.insertText(emoji);
+              }
+            }}
+            onClose={() => editorRef.current?.focus()}
             disabled={sending || disabled}
             serverId={serverId}
             mobileEmojiOpen={mobileEmojiOpen}
@@ -833,12 +702,11 @@ export function MessageComposer({
           {isMobile && (
             <button
               type="button"
-              onClick={() => handleSend()}
-              disabled={
-                sending ||
-                disabled ||
-                (!draft.trim() && pendingFiles.length === 0)
-              }
+              // Prevent the button from stealing focus so the keyboard
+              // doesn't briefly dismiss and reopen after sending.
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => editorRef.current?.send()}
+              disabled={sending || disabled}
               className="flex-shrink-0 self-start mt-5 mr-5 text-accent disabled:text-text-subtle transition-colors"
               aria-label="Send message"
             >
@@ -848,5 +716,145 @@ export function MessageComposer({
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Autocomplete popup wrappers — wire acSelectCurrentRef so that
+// prosemirror-autocomplete's Enter handler can trigger selection.
+// ---------------------------------------------------------------------------
+
+interface PopupWrapperProps {
+  query: string;
+  serverId?: string;
+  selectedIndex: number;
+  editorRef: React.RefObject<ComposerEditorHandle | null>;
+  closeAutocomplete: () => void;
+  acSelectCurrentRef: React.MutableRefObject<(() => void) | null>;
+}
+
+function MentionPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<import('./MentionAutocomplete.tsx').MentionItem[]>(
+    [],
+  );
+
+  const handleSelect = useCallback(
+    (item: import('./MentionAutocomplete.tsx').MentionItem) => {
+      if (item.type === 'everyone') {
+        editorRef.current?.insertMention('', 'everyone');
+      } else {
+        editorRef.current?.insertMention(item.id, item.type as 'user' | 'role');
+      }
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  // Keep acSelectCurrentRef pointing to a function that selects the current item
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <MentionAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
+  );
+}
+
+function ChannelPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<import('./ChannelAutocomplete.tsx').ChannelItem[]>(
+    [],
+  );
+
+  const handleSelect = useCallback(
+    (item: import('./ChannelAutocomplete.tsx').ChannelItem) => {
+      editorRef.current?.insertChannelLink(item.id);
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <ChannelAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
+  );
+}
+
+function EmojiPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<string[]>([]);
+
+  const handleSelect = useCallback(
+    (insertText: string) => {
+      const match = insertText.match(/^<(a?):([^:]+):([^>]+)>$/);
+      if (match) {
+        editorRef.current?.insertCustomEmoji(
+          match[3],
+          match[2],
+          match[1] === 'a',
+        );
+      } else {
+        editorRef.current?.insertText(insertText);
+      }
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <EmojiAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
   );
 }
