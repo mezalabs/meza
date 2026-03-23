@@ -1,4 +1,5 @@
 import { useNodeViewFactory } from '@prosemirror-adapter/react';
+import { closeAutocomplete as closeAcPlugin } from 'prosemirror-autocomplete';
 import { baseKeymap } from 'prosemirror-commands';
 import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
@@ -212,8 +213,6 @@ export const ComposerEditor = forwardRef<
       keymap({
         Enter: (_state, _dispatch, view) => {
           if (!view || sendingRef.current) return true;
-          // If autocomplete is open, let it handle Enter
-          // (autocomplete plugins are first and already consumed it if active)
           const wireText = serializeDoc(view.state.doc);
           if (wireText.trim() || false /* hasFiles checked by parent */) {
             handleSendRef.current(wireText);
@@ -330,7 +329,8 @@ export const ComposerEditor = forwardRef<
             return true;
           case 'Escape': {
             event.preventDefault();
-            // Close autocomplete and re-focus (don't propagate to onCancel)
+            const v = _view;
+            if (v) closeAcPlugin(v); // Deactivate plugin decoration
             autocompleteRangeRef.current = null;
             const closedState: AutocompleteState = {
               trigger: null,
@@ -425,6 +425,7 @@ export const ComposerEditor = forwardRef<
         const node = composerSchema.nodes.mention.create({ id, type });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        closeAcPlugin(view); // Tell the plugin to deactivate its decoration
         autocompleteRangeRef.current = null;
         view.focus();
       },
@@ -439,6 +440,7 @@ export const ComposerEditor = forwardRef<
         });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        closeAcPlugin(view);
         autocompleteRangeRef.current = null;
         view.focus();
       },
@@ -449,6 +451,7 @@ export const ComposerEditor = forwardRef<
         const node = composerSchema.nodes.channelLink.create({ id });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        closeAcPlugin(view);
         autocompleteRangeRef.current = null;
         view.focus();
       },

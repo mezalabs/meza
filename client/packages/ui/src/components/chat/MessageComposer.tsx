@@ -212,7 +212,6 @@ export function MessageComposer({
 
       // If no override, get text from the editor
       if (!overrideText) {
-        // For now we get wire text passed from ComposerEditor's onSend
         return;
       }
 
