@@ -1,4 +1,8 @@
-import { ArrowsClockwiseIcon, InfoIcon, WarningIcon } from '@phosphor-icons/react';
+import {
+  ArrowsClockwiseIcon,
+  InfoIcon,
+  WarningIcon,
+} from '@phosphor-icons/react';
 
 interface SyncStatusBannerProps {
   channelId: string;
@@ -24,7 +28,11 @@ export function SyncStatusBanner({
   if (permissionsSynced) {
     return (
       <div className="mb-4 flex items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2">
-        <InfoIcon size={18} className="shrink-0 text-accent" aria-hidden="true" />
+        <InfoIcon
+          size={18}
+          className="shrink-0 text-accent"
+          aria-hidden="true"
+        />
         <span className="text-sm text-text">
           Permissions synced with <strong>{displayName}</strong>
         </span>
