@@ -76,6 +76,7 @@ service ChatService {
   rpc SetPermissionOverride(SetPermissionOverrideRequest) returns (SetPermissionOverrideResponse);
   rpc DeletePermissionOverride(DeletePermissionOverrideRequest) returns (DeletePermissionOverrideResponse);
   rpc ListPermissionOverrides(ListPermissionOverridesRequest) returns (ListPermissionOverridesResponse);
+  rpc SyncChannelPermissions(SyncChannelPermissionsRequest) returns (SyncChannelPermissionsResponse);
   rpc GetEffectivePermissions(GetEffectivePermissionsRequest) returns (GetEffectivePermissionsResponse);
   rpc AcceptMessageRequest(AcceptMessageRequestReq) returns (AcceptMessageRequestRes);
   rpc DeclineMessageRequest(DeclineMessageRequestReq) returns (DeclineMessageRequestRes);
@@ -992,6 +993,14 @@ message ListPermissionOverridesRequest {
 
 message ListPermissionOverridesResponse {
   repeated PermissionOverride permission_overrides = 1;
+}
+
+message SyncChannelPermissionsRequest {
+  string channel_id = 1;
+}
+
+message SyncChannelPermissionsResponse {
+  Channel channel = 1;
 }
 
 // Effective Permissions

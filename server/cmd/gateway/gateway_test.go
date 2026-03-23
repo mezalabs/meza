@@ -192,6 +192,15 @@ func (m *mockChatStoreGW) GetSystemMessageConfig(_ context.Context, _ string) (*
 func (m *mockChatStoreGW) UpsertSystemMessageConfig(_ context.Context, _ string, _ store.UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
 	return nil, fmt.Errorf("not implemented")
 }
+func (m *mockChatStoreGW) SetPermissionsSynced(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+func (m *mockChatStoreGW) SyncChannelToCategory(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStoreGW) DeleteChannelGroupWithSnapshot(_ context.Context, _ string) error {
+	return nil
+}
 
 // mockReadStateStoreGW implements store.ReadStateStorer for gateway tests.
 type mockReadStateStoreGW struct{}

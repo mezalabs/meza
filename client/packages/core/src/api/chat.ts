@@ -27,6 +27,7 @@ import { useFriendStore } from '../store/friends.ts';
 import { useInviteStore } from '../store/invite.ts';
 import { useMemberStore } from '../store/members.ts';
 import { useMessageStore } from '../store/messages.ts';
+import { usePermissionOverrideStore } from '../store/permission-overrides.ts';
 import { Permissions } from '../store/permissions.ts';
 import { usePinStore } from '../store/pins.ts';
 import { useReactionStore } from '../store/reactions.ts';
@@ -1656,4 +1657,21 @@ export async function updateSystemMessageConfig(
     ...config,
   });
   return resp.config;
+}
+
+export async function syncChannelPermissions(channelId: string) {
+  const channelStore = useChannelStore.getState();
+  channelStore.setError(null);
+  try {
+    const res = await chatClient.syncChannelPermissions({ channelId });
+    if (res.channel) {
+      channelStore.updateChannel(res.channel);
+    }
+    // Clear all overrides for this channel since they are now inherited from the category
+    usePermissionOverrideStore.getState().setOverrides(channelId, []);
+    return res.channel;
+  } catch (err) {
+    channelStore.setError(mapChatError(err));
+    throw err;
+  }
 }

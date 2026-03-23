@@ -21,6 +21,7 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
@@ -106,7 +107,8 @@ export function MobileShell() {
         if (
           state.overlayContent.type === 'profile' ||
           state.overlayContent.type === 'channelSettings' ||
-          state.overlayContent.type === 'serverSettings'
+          state.overlayContent.type === 'serverSettings' ||
+          state.overlayContent.type === 'categoryPermissions'
         ) {
           openMobileChannel(state.overlayContent);
           useTilingStore.getState().closeOverlay();
@@ -372,6 +374,13 @@ function renderMobileContent(
           channelId={content.channelId}
         />
       );
+    case 'categoryPermissions':
+      return (
+        <CategoryPermissionsView
+          serverId={content.serverId}
+          channelGroupId={content.channelGroupId}
+        />
+      );
     case 'profile':
       return (
         <ProfileView userId={content.userId} initialEditing={content.editing} />
@@ -430,6 +439,8 @@ function useContentLabel(content: PaneContent): string {
       return 'Server Settings';
     case 'channelSettings':
       return 'Channel Settings';
+    case 'categoryPermissions':
+      return 'Category Permissions';
     case 'profile':
       return 'Profile';
     case 'search':

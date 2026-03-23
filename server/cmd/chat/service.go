@@ -2077,6 +2077,38 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
+	// Handle permissions when channel_group_id changes.
+	if channelGroupID != nil && *channelGroupID != ch.ChannelGroupID {
+		oldGroup := ch.ChannelGroupID
+		newGroup := *channelGroupID
+
+		if oldGroup != "" && newGroup == "" {
+			// Moving OUT of category: if synced, snapshot category overrides.
+			if ch.PermissionsSynced {
+				// Snapshot creates new override rows — require ManageRoles.
+				if _, _, _, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageRoles); permErr != nil {
+					return nil, permErr
+				}
+				if err := s.permissionOverrideStore.CopyCategoryOverridesToChannel(ctx, oldGroup, req.Msg.ChannelId); err != nil {
+					slog.Error("copying category overrides on group removal", "err", err, "channel", req.Msg.ChannelId)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				if err := s.chatStore.SetPermissionsSynced(ctx, req.Msg.ChannelId, false); err != nil {
+					slog.Error("unsyncing channel on group removal", "err", err, "channel", req.Msg.ChannelId)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				updated.PermissionsSynced = false
+			}
+		} else if newGroup != "" {
+			// Moving IN to a (new) category: mark as unsynced.
+			if err := s.chatStore.SetPermissionsSynced(ctx, req.Msg.ChannelId, false); err != nil {
+				slog.Error("unsyncing channel on group change", "err", err, "channel", req.Msg.ChannelId)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			updated.PermissionsSynced = false
+		}
+	}
+
 	// Sync relevant fields to companion text channel if this is a voice channel.
 	if updated.VoiceTextChannelID != "" && (name != nil || topic != nil || channelGroupID != nil) {
 		if err := s.chatStore.UpdateCompanionChannel(ctx, updated.VoiceTextChannelID, name, topic, channelGroupID); err != nil {
@@ -3119,6 +3151,7 @@ func channelToProto(c *models.Channel) *v1.Channel {
 	if c.VoiceTextChannelID != "" {
 		ch.VoiceTextChannelId = &c.VoiceTextChannelID
 	}
+	ch.PermissionsSynced = c.PermissionsSynced
 	return ch
 }
 

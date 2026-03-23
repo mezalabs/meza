@@ -326,6 +326,20 @@ export function openChannelSettingsPane(serverId: string, channelId: string) {
 }
 
 /**
+ * Open category permission settings as an overlay on top of all panes.
+ */
+export function openCategoryPermissionsPane(
+  serverId: string,
+  channelGroupId: string,
+) {
+  useTilingStore.getState().setOverlay({
+    type: 'categoryPermissions',
+    serverId,
+    channelGroupId,
+  });
+}
+
+/**
  * Close all panes showing a specific channel (channel view, channel settings, voice).
  * Used when a channel is deleted to clean up stale panes.
  */

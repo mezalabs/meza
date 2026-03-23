@@ -162,8 +162,12 @@ func (s *chatService) DeleteChannelGroup(ctx context.Context, req *connect.Reque
 	if _, _, _, err := s.requirePermission(ctx, userID, group.ServerID, permissions.ManageChannels); err != nil {
 		return nil, err
 	}
+	// Snapshot materializes override rows — require ManageRoles too.
+	if _, _, _, err := s.requirePermission(ctx, userID, group.ServerID, permissions.ManageRoles); err != nil {
+		return nil, err
+	}
 
-	if err := s.channelGroupStore.DeleteChannelGroup(ctx, req.Msg.ChannelGroupId); err != nil {
+	if err := s.chatStore.DeleteChannelGroupWithSnapshot(ctx, req.Msg.ChannelGroupId); err != nil {
 		slog.Error("deleting channel group", "err", err, "user", userID, "group", req.Msg.ChannelGroupId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
@@ -185,6 +189,10 @@ func (s *chatService) DeleteChannelGroup(ctx context.Context, req *connect.Reque
 	} else {
 		s.nc.Publish(subjects.ServerChannelGroup(group.ServerID), eventData)
 	}
+
+	// Snapshot materialized new override rows — invalidate permission cache and notify clients.
+	s.permCache.InvalidateServer(ctx, group.ServerID)
+	s.publishPermissionsUpdated(ctx, group.ServerID, "")
 
 	return connect.NewResponse(&v1.DeleteChannelGroupResponse{}), nil
 }

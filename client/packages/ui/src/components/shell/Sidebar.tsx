@@ -16,6 +16,7 @@ import {
   listMembers,
   listMessageRequests,
   listServers,
+  Permissions,
   soundManager,
   useAuthStore,
   useChannelGroupStore,
@@ -27,6 +28,7 @@ import {
   useMemberStore,
   useNotificationSettingsStore,
   useReadStateStore,
+  useRoleStore,
   useServerStore,
   useUsersStore,
   useVoiceParticipantsStore,
@@ -40,6 +42,7 @@ import {
   EarSlashIcon,
   GearIcon,
   HashIcon,
+  LinkBreakIcon,
   LockSimpleIcon,
   MagnifyingGlassIcon,
   MicrophoneIcon,
@@ -68,6 +71,7 @@ import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticip
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import {
+  openCategoryPermissionsPane,
   openChannelSettingsPane,
   openProfilePane,
   openSearchPane,
@@ -353,6 +357,34 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       (m) => m.userId === currentUserId,
     );
   });
+  // Show sync divergence indicators for users who can manage permissions.
+  // Server owners always see them; for others, check ManageRoles permission.
+  const serverRoles = useRoleStore((s) =>
+    selectedServerId ? s.byServer[selectedServerId] : undefined,
+  );
+  const showSyncIndicators = useMemo(() => {
+    if (!selectedServerId || !currentUserId) return false;
+    if (selectedServer?.ownerId === currentUserId) return true;
+    const member = currentMember;
+    if (!member) return false;
+    const roles = serverRoles ?? [];
+    for (const role of roles) {
+      if (
+        member.roleIds.includes(role.id) &&
+        (role.permissions & Permissions.MANAGE_ROLES) !== 0n
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [
+    selectedServerId,
+    currentUserId,
+    selectedServer?.ownerId,
+    currentMember,
+    serverRoles,
+  ]);
+
   // Block until we have member data confirming rules were acknowledged.
   // When currentMember is undefined (not loaded yet), stay blocked to
   // prevent a flash of channel content before the member record arrives.
@@ -740,6 +772,16 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                         setCreateChannelGroupId(group.id);
                         setCreateChannelOpen(true);
                       }}
+                      onEditPermissions={
+                        showSyncIndicators && selectedServerId
+                          ? () =>
+                              openCategoryPermissionsPane(
+                                selectedServerId,
+                                group.id,
+                              )
+                          : undefined
+                      }
+                      showSyncIndicators={showSyncIndicators}
                     />
                   ))}
 
@@ -1135,6 +1177,8 @@ function SidebarChannelGroup({
   channels,
   serverId,
   onCreateChannel,
+  onEditPermissions,
+  showSyncIndicators,
 }: {
   groupId: string;
   groupName: string;
@@ -1147,6 +1191,8 @@ function SidebarChannelGroup({
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
+  onEditPermissions?: () => void;
+  showSyncIndicators?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1169,6 +1215,17 @@ function SidebarChannelGroup({
             {groupName}
           </span>
         </button>
+        {onEditPermissions && (
+          <button
+            type="button"
+            onClick={onEditPermissions}
+            className="flex h-7 w-7 items-center justify-center rounded text-text-subtle opacity-0 transition-all hover:bg-bg-surface hover:text-text group-hover:opacity-100"
+            aria-label={`Edit permissions for ${groupName}`}
+            title="Edit permissions"
+          >
+            <GearIcon size={14} aria-hidden="true" />
+          </button>
+        )}
         {onCreateChannel && (
           <button
             type="button"
@@ -1193,6 +1250,7 @@ function SidebarChannelGroup({
               serverId={serverId}
               channelGroupId={groupId}
               voiceTextChannelId={channel.voiceTextChannelId}
+              showSyncIndicator={showSyncIndicators}
             />
           ))}
         </div>
@@ -1207,8 +1265,9 @@ function SidebarChannelItem({
   channelType,
   isPrivate,
   serverId,
-  channelGroupId: _channelGroupId,
+  channelGroupId,
   voiceTextChannelId,
+  showSyncIndicator,
 }: {
   channelId: string;
   channelName: string;
@@ -1217,6 +1276,7 @@ function SidebarChannelItem({
   serverId?: string;
   channelGroupId?: string;
   voiceTextChannelId?: string;
+  showSyncIndicator?: boolean;
 }) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
@@ -1245,6 +1305,15 @@ function SidebarChannelItem({
 
   const channelDataType = isVoice ? 'voice' : isPrivate ? 'private' : 'text';
   const hasUnread = unreadCount > 0;
+
+  // Check if this channel has diverged permissions from its category
+  const permissionsSynced = useChannelStore((s) => {
+    if (!serverId) return true;
+    const ch = s.byServer[serverId]?.find((c) => c.id === channelId);
+    return ch?.permissionsSynced ?? true;
+  });
+  const showDiverged =
+    showSyncIndicator && !!channelGroupId && !permissionsSynced;
 
   const participants = useVoiceParticipantsStore((s) => s.byChannel[channelId]);
   const voiceParticipants = isVoice && participants ? participants : EMPTY_ARR;
@@ -1324,6 +1393,14 @@ function SidebarChannelItem({
           >
             {channelName}
           </span>
+          {showDiverged && (
+            <span
+              className="shrink-0 text-text-subtle"
+              title="Permissions diverged from category"
+            >
+              <LinkBreakIcon size={12} weight="bold" aria-hidden="true" />
+            </span>
+          )}
           {hasUnread && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold text-black">
               {unreadCount >= 1000 ? '999+' : unreadCount}

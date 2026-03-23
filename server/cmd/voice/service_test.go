@@ -222,6 +222,15 @@ func (m *mockChatStore) GetSystemMessageConfig(_ context.Context, _ string) (*mo
 func (m *mockChatStore) UpsertSystemMessageConfig(_ context.Context, _ string, _ store.UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
 	return nil, nil
 }
+func (m *mockChatStore) SetPermissionsSynced(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+func (m *mockChatStore) SyncChannelToCategory(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockChatStore) DeleteChannelGroupWithSnapshot(_ context.Context, _ string) error {
+	return nil
+}
 
 // ---------- mock RoleStorer ----------
 

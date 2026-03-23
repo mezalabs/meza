@@ -19,6 +19,7 @@ export type PaneContent =
   | { type: 'search'; query?: string; channelId?: string }
   | { type: 'serverSettings'; serverId: string }
   | { type: 'channelSettings'; serverId: string; channelId: string }
+  | { type: 'categoryPermissions'; serverId: string; channelGroupId: string }
   | { type: 'serverOnboarding'; serverId: string }
   | { type: 'getStarted' }
   | { type: 'createServer' }

@@ -18,6 +18,7 @@ type Channel struct {
 	DMInitiatorID      string // user who initiated the DM request (DM channels only)
 	ContentWarning     string // free-text content warning (empty = none)
 	VoiceTextChannelID string // companion text channel ID (voice channels only)
+	PermissionsSynced  bool   // true when channel inherits category overrides
 	CreatedAt          time.Time
 }
 

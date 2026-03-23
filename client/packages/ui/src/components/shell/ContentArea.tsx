@@ -8,6 +8,7 @@ import {
   Permissions,
   paneCount,
   useAuthStore,
+  useChannelGroupStore,
   useChannelStore,
   useDMStore,
   useMemberStore,
@@ -44,6 +45,7 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
@@ -67,6 +69,10 @@ function paneMeta(
   servers: Record<string, { name: string; iconUrl?: string }>,
   dmChannels: DMChannel[],
   currentUserId: string | undefined,
+  channelGroupsByServer?: Record<
+    string,
+    readonly { id: string; name: string }[]
+  >,
 ): PaneMeta {
   switch (content.type) {
     case 'channel':
@@ -138,6 +144,16 @@ function paneMeta(
         serverId: content.serverId,
       };
     }
+    case 'categoryPermissions': {
+      const cgs = channelGroupsByServer?.[content.serverId];
+      const cg = cgs?.find((g) => g.id === content.channelGroupId);
+      return {
+        label: cg ? `${cg.name} — Settings` : 'Category Settings',
+        serverName: servers[content.serverId]?.name,
+        serverIconUrl: servers[content.serverId]?.iconUrl,
+        serverId: content.serverId,
+      };
+    }
     case 'serverOnboarding':
       return {
         label: 'Welcome',
@@ -189,6 +205,15 @@ function renderPaneContent(
           <ChannelSettingsView
             serverId={content.serverId}
             channelId={content.channelId}
+          />
+        </div>
+      );
+    case 'categoryPermissions':
+      return (
+        <div className="flex min-h-0 min-w-0 flex-1">
+          <CategoryPermissionsView
+            serverId={content.serverId}
+            channelGroupId={content.channelGroupId}
           />
         </div>
       );
@@ -256,6 +281,7 @@ function paneIcon(
     case 'settings':
     case 'serverSettings':
     case 'channelSettings':
+    case 'categoryPermissions':
       return <GearIcon {...sm} aria-hidden="true" />;
     case 'profile':
       return <UserIcon {...sm} aria-hidden="true" />;
@@ -298,6 +324,7 @@ export function ContentArea({
   const closePane = useTilingStore((s) => s.closePane);
   const paneCountInTree = useTilingStore((s) => paneCount(s.root));
   const channelsByServer = useChannelStore((s) => s.byServer);
+  const channelGroupsByServer = useChannelGroupStore((s) => s.byServer);
   const servers = useServerStore((s) => s.servers);
   const dmChannels = useDMStore((s) => s.dmChannels);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -381,6 +408,7 @@ export function ContentArea({
         servers,
         dmChannels,
         currentUserId,
+        channelGroupsByServer,
       );
       const isChannel = content.type === 'channel';
       const canManageThisChannel =
@@ -464,6 +492,7 @@ export function ContentArea({
       overPaneId,
       activeDropZone,
       dragDisabled,
+      channelGroupsByServer,
     ],
   );
 
@@ -536,6 +565,7 @@ function OverlayPane({
 }) {
   const dmChannels = useDMStore((s) => s.dmChannels);
   const channelsByServer = useChannelStore((s) => s.byServer);
+  const channelGroupsByServer = useChannelGroupStore((s) => s.byServer);
   const servers = useServerStore((s) => s.servers);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const meta = paneMeta(
@@ -544,6 +574,7 @@ function OverlayPane({
     servers,
     dmChannels,
     currentUserId,
+    channelGroupsByServer,
   );
   const children = renderPaneContent(content, { paneId: '__overlay__' });
 

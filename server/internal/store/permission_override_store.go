@@ -114,6 +114,30 @@ func (s *PermissionOverrideStore) DeleteOverrideByUser(ctx context.Context, targ
 	return nil
 }
 
+func (s *PermissionOverrideStore) DeleteAllChannelOverrides(ctx context.Context, channelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx, `DELETE FROM permission_overrides WHERE channel_id = $1`, channelID)
+	return err
+}
+
+func (s *PermissionOverrideStore) CopyCategoryOverridesToChannel(ctx context.Context, channelGroupID, channelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO permission_overrides (id, channel_id, role_id, user_id, allow, deny)
+		 SELECT gen_random_uuid(), $2, po.role_id, po.user_id, po.allow, po.deny
+		 FROM permission_overrides po
+		 WHERE po.channel_group_id = $1
+		 ON CONFLICT DO NOTHING`,
+		channelGroupID, channelID,
+	)
+	if err != nil {
+		return fmt.Errorf("copy category overrides to channel: %w", err)
+	}
+	return nil
+}
+
 func (s *PermissionOverrideStore) ListOverridesByTarget(ctx context.Context, targetID string) ([]*models.PermissionOverride, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -264,35 +288,3 @@ func (s *PermissionOverrideStore) GetAllOverridesForChannels(ctx context.Context
 	return result, nil
 }
 
-// GetEffectiveOverrides returns the combined allow/deny for a set of role IDs
-// against a channel (checking both channel-level and group-level overrides).
-func (s *PermissionOverrideStore) GetEffectiveOverrides(ctx context.Context, channelID string, roleIDs []string) (groupAllow, groupDeny, channelAllow, channelDeny int64, err error) {
-	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
-	defer cancel()
-
-	if len(roleIDs) == 0 {
-		return 0, 0, 0, 0, nil
-	}
-
-	// Single query using a subquery to look up the channel's group, then OR'd
-	// allow/deny split by group-level vs channel-level overrides.
-	row := s.pool.QueryRow(ctx,
-		`SELECT
-		   COALESCE(bit_or(CASE WHEN po.channel_group_id IS NOT NULL THEN po.allow END), 0),
-		   COALESCE(bit_or(CASE WHEN po.channel_group_id IS NOT NULL THEN po.deny END), 0),
-		   COALESCE(bit_or(CASE WHEN po.channel_id IS NOT NULL THEN po.allow END), 0),
-		   COALESCE(bit_or(CASE WHEN po.channel_id IS NOT NULL THEN po.deny END), 0)
-		 FROM permission_overrides po
-		 WHERE po.role_id = ANY($2)
-		   AND (
-		     po.channel_id = $1
-		     OR po.channel_group_id = (SELECT channel_group_id FROM channels WHERE id = $1)
-		   )`,
-		channelID, roleIDs,
-	)
-	err = row.Scan(&groupAllow, &groupDeny, &channelAllow, &channelDeny)
-	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("get effective overrides: %w", err)
-	}
-	return groupAllow, groupDeny, channelAllow, channelDeny, nil
-}
