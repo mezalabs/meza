@@ -118,7 +118,8 @@ export function MentionAutocomplete({
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
-  // Keyboard navigation (handled via event propagation from parent textarea).
+  // Keyboard navigation: arrow keys only for highlighting.
+  // Enter/Tab/Escape are handled by prosemirror-autocomplete plugin.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'ArrowDown') {
@@ -128,18 +129,16 @@ export function MentionAutocomplete({
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === 'Enter' || e.key === 'Tab') {
+        // Let ProseMirror handle this — select the current item
         if (items.length > 0) {
           e.preventDefault();
           onSelect(items[selectedIndex]);
         }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
       }
     }
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect, onClose]);
+  }, [items, selectedIndex, onSelect]);
 
   if (items.length === 0) return null;
 

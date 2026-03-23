@@ -382,6 +382,11 @@ export function MessageComposer({
     }
   }, [replyingTo]);
 
+  const closeAutocomplete = useCallback(() => {
+    setAutocomplete({ trigger: null, query: '', range: null });
+    editorRef.current?.focus();
+  }, []);
+
   // Truncate reply preview text
   const replyPreviewText = replyingTo
     ? stripMarkdown(safeParseMessageText(replyingTo.encryptedContent)).slice(
@@ -561,8 +566,9 @@ export function MessageComposer({
                   item.type as 'user' | 'role',
                 );
               }
+              closeAutocomplete();
             }}
-            onClose={() => editorRef.current?.focus()}
+            onClose={closeAutocomplete}
             position={{ bottom: 48, left: 0 }}
           />
         )}
@@ -572,8 +578,9 @@ export function MessageComposer({
             serverId={resolvedServerId}
             onSelect={(item) => {
               editorRef.current?.insertChannelLink(item.id);
+              closeAutocomplete();
             }}
-            onClose={() => editorRef.current?.focus()}
+            onClose={closeAutocomplete}
             position={{ bottom: 48, left: 0 }}
           />
         )}
@@ -582,8 +589,6 @@ export function MessageComposer({
             query={autocomplete.query}
             serverId={resolvedServerId}
             onSelect={(insertText) => {
-              // EmojiAutocomplete returns wire format like <:name:id>
-              // Parse it to extract name and id for the node
               const match = insertText.match(/^<(a?):([^:]+):([^>]+)>$/);
               if (match) {
                 editorRef.current?.insertCustomEmoji(
@@ -594,8 +599,9 @@ export function MessageComposer({
               } else {
                 editorRef.current?.insertText(insertText);
               }
+              closeAutocomplete();
             }}
-            onClose={() => editorRef.current?.focus()}
+            onClose={closeAutocomplete}
             position={{ bottom: 48, left: 0 }}
           />
         )}

@@ -70,7 +70,8 @@ export function EmojiAutocomplete({
     el?.scrollIntoView({ block: 'nearest' });
   }, [selectedIndex]);
 
-  // Keyboard navigation (capture phase, same pattern as MentionAutocomplete).
+  // Keyboard navigation: arrow keys for highlighting, Enter/Tab for selection.
+  // Escape is handled by prosemirror-autocomplete plugin.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'ArrowDown') {
@@ -88,14 +89,11 @@ export function EmojiAutocomplete({
             : `<:${emoji.name}:${emoji.id}>`;
           onSelect(ref);
         }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
       }
     }
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect, onClose]);
+  }, [items, selectedIndex, onSelect]);
 
   if (items.length === 0) return null;
 
