@@ -35,6 +35,14 @@ export function LandingPage({
                 View downloads
               </a>
             )}
+            <a
+              href="https://meza.chat/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-text-muted transition-colors hover:text-text"
+            >
+              Privacy Policy
+            </a>
             <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
           </div>
         </div>
