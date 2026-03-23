@@ -307,6 +307,13 @@ export type Channel = Message$1<"meza.v1.Channel"> & {
    * @generated from field: optional string voice_text_channel_id = 15;
    */
   voiceTextChannelId?: string;
+
+  /**
+   * true when channel inherits category overrides
+   *
+   * @generated from field: bool permissions_synced = 16;
+   */
+  permissionsSynced: boolean;
 };
 
 /**

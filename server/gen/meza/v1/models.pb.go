@@ -511,6 +511,7 @@ type Channel struct {
 	DmInitiatorId      *string                `protobuf:"bytes,13,opt,name=dm_initiator_id,json=dmInitiatorId,proto3,oneof" json:"dm_initiator_id,omitempty"`                  // user who initiated the DM request
 	ContentWarning     *string                `protobuf:"bytes,14,opt,name=content_warning,json=contentWarning,proto3,oneof" json:"content_warning,omitempty"`                 // Free-text content warning (max 256 codepoints, plain text). Set to empty string to clear. Omit to leave unchanged.
 	VoiceTextChannelId *string                `protobuf:"bytes,15,opt,name=voice_text_channel_id,json=voiceTextChannelId,proto3,oneof" json:"voice_text_channel_id,omitempty"` // companion text channel ID (VOICE channels only)
+	PermissionsSynced  bool                   `protobuf:"varint,16,opt,name=permissions_synced,json=permissionsSynced,proto3" json:"permissions_synced,omitempty"`             // true when channel inherits category overrides
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -648,6 +649,13 @@ func (x *Channel) GetVoiceTextChannelId() string {
 		return *x.VoiceTextChannelId
 	}
 	return ""
+}
+
+func (x *Channel) GetPermissionsSynced() bool {
+	if x != nil {
+		return x.PermissionsSynced
+	}
+	return false
 }
 
 type ChannelGroup struct {
@@ -2543,7 +2551,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12onboarding_enabled\x18\b \x01(\bR\x11onboardingEnabled\x12%\n" +
 	"\x0erules_required\x18\t \x01(\bR\rrulesRequired\x126\n" +
 	"\x17default_channel_privacy\x18\n" +
-	" \x01(\bR\x15defaultChannelPrivacy\"\xaf\x05\n" +
+	" \x01(\bR\x15defaultChannelPrivacy\"\xde\x05\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +
@@ -2563,7 +2571,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\tdm_status\x18\f \x01(\tH\x02R\bdmStatus\x88\x01\x01\x12+\n" +
 	"\x0fdm_initiator_id\x18\r \x01(\tH\x03R\rdmInitiatorId\x88\x01\x01\x12,\n" +
 	"\x0fcontent_warning\x18\x0e \x01(\tH\x04R\x0econtentWarning\x88\x01\x01\x126\n" +
-	"\x15voice_text_channel_id\x18\x0f \x01(\tH\x05R\x12voiceTextChannelId\x88\x01\x01B\x14\n" +
+	"\x15voice_text_channel_id\x18\x0f \x01(\tH\x05R\x12voiceTextChannelId\x88\x01\x01\x12-\n" +
+	"\x12permissions_synced\x18\x10 \x01(\bR\x11permissionsSyncedB\x14\n" +
 	"\x12_slow_mode_secondsB\x13\n" +
 	"\x11_channel_group_idB\f\n" +
 	"\n" +

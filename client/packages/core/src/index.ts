@@ -115,6 +115,7 @@ export {
   sendMessage,
   setMemberRoles,
   setPermissionOverride,
+  syncChannelPermissions,
   timeoutMember,
   type UploadedFile,
   unbanMember,

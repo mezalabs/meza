@@ -163,7 +163,7 @@ func (s *chatService) DeleteChannelGroup(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 
-	if err := s.channelGroupStore.DeleteChannelGroup(ctx, req.Msg.ChannelGroupId); err != nil {
+	if err := s.chatStore.DeleteChannelGroupWithSnapshot(ctx, req.Msg.ChannelGroupId); err != nil {
 		slog.Error("deleting channel group", "err", err, "user", userID, "group", req.Msg.ChannelGroupId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}

@@ -121,6 +121,8 @@ type ChatStorer interface {
 	GetDefaultChannels(ctx context.Context, serverID string) ([]*models.Channel, error)
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
 	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
+	SetPermissionsSynced(ctx context.Context, channelID string, synced bool) error
+	DeleteChannelGroupWithSnapshot(ctx context.Context, channelGroupID string) error
 	// System message configuration.
 	GetSystemMessageConfig(ctx context.Context, serverID string) (*models.ServerSystemMessageConfig, error)
 	UpsertSystemMessageConfig(ctx context.Context, serverID string, opts UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error)
@@ -348,6 +350,8 @@ type PermissionOverrideStorer interface {
 	DeleteOverrideByUser(ctx context.Context, targetID, userID string) error
 	ListOverridesByTarget(ctx context.Context, targetID string) ([]*models.PermissionOverride, error)
 	GetEffectiveOverrides(ctx context.Context, channelID string, roleIDs []string) (groupAllow, groupDeny, channelAllow, channelDeny int64, err error)
+	DeleteAllChannelOverrides(ctx context.Context, channelID string) error
+	CopyCategoryOverridesToChannel(ctx context.Context, channelGroupID, channelID string) error
 	// GetAllOverridesForChannel returns all overrides for a channel (split by group/channel,
 	// role/user) needed by the centralized permission resolver.
 	GetAllOverridesForChannel(ctx context.Context, channelID string, roleIDs []string, userID string) (*ChannelOverrides, error)

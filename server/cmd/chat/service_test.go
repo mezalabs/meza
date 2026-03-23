@@ -463,6 +463,12 @@ func (m *mockChatStore) GetSystemMessageConfig(_ context.Context, _ string) (*mo
 func (m *mockChatStore) UpsertSystemMessageConfig(_ context.Context, _ string, _ store.UpsertSystemMessageConfigOpts) (*models.ServerSystemMessageConfig, error) {
 	return nil, nil
 }
+func (m *mockChatStore) SetPermissionsSynced(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+func (m *mockChatStore) DeleteChannelGroupWithSnapshot(_ context.Context, _ string) error {
+	return nil
+}
 
 // mockMessageStore implements models.MessageStorer for testing.
 type mockMessageStore struct {
@@ -1018,6 +1024,12 @@ func (m *mockPermissionOverrideStore) GetAllOverridesForChannels(_ context.Conte
 	return map[string]*store.ChannelOverrides{}, nil
 }
 func (m *mockPermissionOverrideStore) DeleteOverrideByUser(_ context.Context, _, _ string) error {
+	return nil
+}
+func (m *mockPermissionOverrideStore) DeleteAllChannelOverrides(_ context.Context, _ string) error {
+	return nil
+}
+func (m *mockPermissionOverrideStore) CopyCategoryOverridesToChannel(_ context.Context, _, _ string) error {
 	return nil
 }
 

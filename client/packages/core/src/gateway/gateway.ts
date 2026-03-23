@@ -628,7 +628,21 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         event.payload.case === 'channelUpdate' &&
         event.payload.value
       ) {
-        useChannelStore.getState().updateChannel(event.payload.value);
+        const updatedChannel = event.payload.value;
+        // When permissionsSynced flips to true, eagerly clear local overrides
+        // for this channel to prevent flickering from trickle-in delete events.
+        if (updatedChannel.permissionsSynced) {
+          const channelStore = useChannelStore.getState();
+          const existing = channelStore.byServer[updatedChannel.serverId]?.find(
+            (c) => c.id === updatedChannel.id,
+          );
+          if (existing && !existing.permissionsSynced) {
+            usePermissionOverrideStore
+              .getState()
+              .setOverrides(updatedChannel.id, []);
+          }
+        }
+        useChannelStore.getState().updateChannel(updatedChannel);
       } else if (
         event.payload.case === 'channelDelete' &&
         event.payload.value

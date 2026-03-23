@@ -148,12 +148,12 @@ func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, ch
 
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
-		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
-		 SELECT $1, $2, $3, $4, COALESCE(MAX(position), -1) + 1, $5, $6, $7
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, permissions_synced, created_at)
+		 SELECT $1, $2, $3, $4, COALESCE(MAX(position), -1) + 1, $5, $6, $6 IS NOT NULL, $7
 		 FROM channels WHERE server_id = $8
-		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at`,
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
 		channelID, serverID, name, channelType, isPrivate, groupID, now, serverID,
-	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Position, &ch.IsPrivate, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt)
+	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Position, &ch.IsPrivate, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -171,8 +171,8 @@ func (s *ChatStore) GetChannel(ctx context.Context, channelID string) (*models.C
 
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at FROM channels WHERE id = $1`, channelID,
-	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt)
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at FROM channels WHERE id = $1`, channelID,
+	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("channel %w", ErrNotFound)
@@ -188,7 +188,7 @@ func (s *ChatStore) ListChannels(ctx context.Context, serverID, userID string) (
 
 	// Return all server channels — the service layer filters by ViewChannel permission.
 	rows, err := s.pool.Query(ctx,
-		`SELECT c.id, COALESCE(c.server_id, ''), c.name, c.type, c.topic, c.position, c.is_private, c.slow_mode_seconds, c.is_default, COALESCE(c.channel_group_id, ''), c.dm_status, COALESCE(c.dm_initiator_id, ''), c.content_warning, COALESCE(c.voice_text_channel_id, ''), c.created_at
+		`SELECT c.id, COALESCE(c.server_id, ''), c.name, c.type, c.topic, c.position, c.is_private, c.slow_mode_seconds, c.is_default, COALESCE(c.channel_group_id, ''), c.dm_status, COALESCE(c.dm_initiator_id, ''), c.content_warning, COALESCE(c.voice_text_channel_id, ''), c.permissions_synced, c.created_at
 		 FROM channels c
 		 WHERE c.server_id = $1
 		 ORDER BY c.position`, serverID,
@@ -201,7 +201,7 @@ func (s *ChatStore) ListChannels(ctx context.Context, serverID, userID string) (
 	var channels []*models.Channel
 	for rows.Next() {
 		var ch models.Channel
-		if err := rows.Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt); err != nil {
+		if err := rows.Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan channel: %w", err)
 		}
 		channels = append(channels, &ch)
@@ -269,7 +269,7 @@ func (s *ChatStore) UpdateChannel(ctx context.Context, channelID string, name, t
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at",
+		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -277,7 +277,7 @@ func (s *ChatStore) UpdateChannel(ctx context.Context, channelID string, name, t
 
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx, query, args...).Scan(
-		&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt,
+		&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -355,7 +355,7 @@ func (s *ChatStore) UpdateChannelPrivacy(ctx context.Context, channelID string, 
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at",
+		"UPDATE channels SET %s WHERE id = $%d RETURNING id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -363,7 +363,7 @@ func (s *ChatStore) UpdateChannelPrivacy(ctx context.Context, channelID string, 
 
 	var ch models.Channel
 	err = tx.QueryRow(ctx, query, args...).Scan(
-		&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt,
+		&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -443,12 +443,12 @@ func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverI
 	// channel is valid (PostgreSQL checks FK constraints at statement time).
 	var textCh models.Channel
 	err = tx.QueryRow(ctx,
-		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, created_at)
-		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $6
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, permissions_synced, created_at)
+		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $5 IS NOT NULL, $6
 		 FROM channels WHERE server_id = $7
-		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
 		textID, serverID, name, isPrivate, groupID, now, serverID,
-	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.CreatedAt)
+	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.PermissionsSynced, &textCh.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -460,11 +460,11 @@ func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverI
 	// Create the voice channel with FK reference to the companion.
 	var voiceCh models.Channel
 	err = tx.QueryRow(ctx,
-		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, created_at)
-		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $8)
-		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), created_at`,
+		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, permissions_synced, created_at)
+		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $6 IS NOT NULL, $8)
+		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
 		voiceID, serverID, name, textCh.Position, isPrivate, groupID, textID, now,
-	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.CreatedAt)
+	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.PermissionsSynced, &voiceCh.CreatedAt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert voice channel: %w", err)
 	}
@@ -558,6 +558,60 @@ func (s *ChatStore) UpdateCompanionChannel(ctx context.Context, companionID stri
 	return nil
 }
 
+func (s *ChatStore) SetPermissionsSynced(ctx context.Context, channelID string, synced bool) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx, `UPDATE channels SET permissions_synced = $1, updated_at = now() WHERE id = $2`, synced, channelID)
+	return err
+}
+
+// DeleteChannelGroupWithSnapshot atomically copies category overrides to all
+// channels in the group, marks them as unsynced, and deletes the group.
+func (s *ChatStore) DeleteChannelGroupWithSnapshot(ctx context.Context, channelGroupID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Copy category overrides to all channels in the group.
+	_, err = tx.Exec(ctx,
+		`INSERT INTO permission_overrides (id, channel_id, role_id, user_id, allow, deny)
+		 SELECT gen_random_uuid(), c.id, po.role_id, po.user_id, po.allow, po.deny
+		 FROM permission_overrides po
+		 JOIN channels c ON c.channel_group_id = $1
+		 WHERE po.channel_group_id = $1
+		 ON CONFLICT DO NOTHING`,
+		channelGroupID,
+	)
+	if err != nil {
+		return fmt.Errorf("copy category overrides: %w", err)
+	}
+
+	// Mark all channels in the group as unsynced.
+	_, err = tx.Exec(ctx,
+		`UPDATE channels SET permissions_synced = false WHERE channel_group_id = $1`,
+		channelGroupID,
+	)
+	if err != nil {
+		return fmt.Errorf("unsync channels: %w", err)
+	}
+
+	// Delete the channel group.
+	result, err := tx.Exec(ctx, `DELETE FROM channel_groups WHERE id = $1`, channelGroupID)
+	if err != nil {
+		return fmt.Errorf("delete channel group: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("channel group %w", ErrNotFound)
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (s *ChatStore) AddMember(ctx context.Context, userID, serverID string) error {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -624,7 +678,7 @@ func (s *ChatStore) GetChannelAndCheckMembership(ctx context.Context, channelID,
 	var ch models.Channel
 	var isMember bool
 	err := s.pool.QueryRow(ctx,
-		`SELECT c.id, COALESCE(c.server_id, ''), c.name, c.type, c.topic, c.position, c.is_private, c.slow_mode_seconds, c.is_default, COALESCE(c.channel_group_id, ''), c.dm_status, COALESCE(c.dm_initiator_id, ''), c.content_warning, c.created_at,
+		`SELECT c.id, COALESCE(c.server_id, ''), c.name, c.type, c.topic, c.position, c.is_private, c.slow_mode_seconds, c.is_default, COALESCE(c.channel_group_id, ''), c.dm_status, COALESCE(c.dm_initiator_id, ''), c.content_warning, COALESCE(c.voice_text_channel_id, ''), c.permissions_synced, c.created_at,
 		        CASE
 		          WHEN c.type IN (3, 4) THEN EXISTS(SELECT 1 FROM channel_members cm WHERE cm.channel_id = c.id AND cm.user_id = $2)
 		          ELSE EXISTS(SELECT 1 FROM members m WHERE m.user_id = $2 AND m.server_id = c.server_id)
@@ -632,7 +686,7 @@ func (s *ChatStore) GetChannelAndCheckMembership(ctx context.Context, channelID,
 		 FROM channels c
 		 WHERE c.id = $1`,
 		channelID, userID,
-	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.CreatedAt, &isMember)
+	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt, &isMember)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, false, fmt.Errorf("channel not found")
@@ -1554,7 +1608,7 @@ func (s *ChatStore) GetDefaultChannels(ctx context.Context, serverID string) ([]
 	defer cancel()
 
 	rows, err := s.pool.Query(ctx,
-		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), created_at
+		`SELECT id, COALESCE(server_id, ''), name, type, topic, position, is_private, slow_mode_seconds, is_default, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at
 		 FROM channels WHERE server_id = $1 AND is_default = true AND is_private = false
 		 ORDER BY position`, serverID,
 	)
@@ -1566,7 +1620,7 @@ func (s *ChatStore) GetDefaultChannels(ctx context.Context, serverID string) ([]
 	var channels []*models.Channel
 	for rows.Next() {
 		var ch models.Channel
-		if err := rows.Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.CreatedAt); err != nil {
+		if err := rows.Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Topic, &ch.Position, &ch.IsPrivate, &ch.SlowModeSeconds, &ch.IsDefault, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan default channel: %w", err)
 		}
 		channels = append(channels, &ch)

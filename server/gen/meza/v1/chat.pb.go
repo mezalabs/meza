@@ -9057,6 +9057,94 @@ func (x *ListPermissionOverridesResponse) GetPermissionOverrides() []*Permission
 	return nil
 }
 
+type SyncChannelPermissionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncChannelPermissionsRequest) Reset() {
+	*x = SyncChannelPermissionsRequest{}
+	mi := &file_meza_v1_chat_proto_msgTypes[159]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncChannelPermissionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncChannelPermissionsRequest) ProtoMessage() {}
+
+func (x *SyncChannelPermissionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_chat_proto_msgTypes[159]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncChannelPermissionsRequest.ProtoReflect.Descriptor instead.
+func (*SyncChannelPermissionsRequest) Descriptor() ([]byte, []int) {
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{159}
+}
+
+func (x *SyncChannelPermissionsRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+type SyncChannelPermissionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Channel       *Channel               `protobuf:"bytes,1,opt,name=channel,proto3" json:"channel,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SyncChannelPermissionsResponse) Reset() {
+	*x = SyncChannelPermissionsResponse{}
+	mi := &file_meza_v1_chat_proto_msgTypes[160]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SyncChannelPermissionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SyncChannelPermissionsResponse) ProtoMessage() {}
+
+func (x *SyncChannelPermissionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_meza_v1_chat_proto_msgTypes[160]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SyncChannelPermissionsResponse.ProtoReflect.Descriptor instead.
+func (*SyncChannelPermissionsResponse) Descriptor() ([]byte, []int) {
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{160}
+}
+
+func (x *SyncChannelPermissionsResponse) GetChannel() *Channel {
+	if x != nil {
+		return x.Channel
+	}
+	return nil
+}
+
 type GetEffectivePermissionsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ServerId       string                 `protobuf:"bytes,1,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
@@ -9069,7 +9157,7 @@ type GetEffectivePermissionsRequest struct {
 
 func (x *GetEffectivePermissionsRequest) Reset() {
 	*x = GetEffectivePermissionsRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[159]
+	mi := &file_meza_v1_chat_proto_msgTypes[161]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9081,7 +9169,7 @@ func (x *GetEffectivePermissionsRequest) String() string {
 func (*GetEffectivePermissionsRequest) ProtoMessage() {}
 
 func (x *GetEffectivePermissionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[159]
+	mi := &file_meza_v1_chat_proto_msgTypes[161]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9094,7 +9182,7 @@ func (x *GetEffectivePermissionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEffectivePermissionsRequest.ProtoReflect.Descriptor instead.
 func (*GetEffectivePermissionsRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{159}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{161}
 }
 
 func (x *GetEffectivePermissionsRequest) GetServerId() string {
@@ -9135,7 +9223,7 @@ type GetEffectivePermissionsResponse struct {
 
 func (x *GetEffectivePermissionsResponse) Reset() {
 	*x = GetEffectivePermissionsResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[160]
+	mi := &file_meza_v1_chat_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9147,7 +9235,7 @@ func (x *GetEffectivePermissionsResponse) String() string {
 func (*GetEffectivePermissionsResponse) ProtoMessage() {}
 
 func (x *GetEffectivePermissionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[160]
+	mi := &file_meza_v1_chat_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9160,7 +9248,7 @@ func (x *GetEffectivePermissionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetEffectivePermissionsResponse.ProtoReflect.Descriptor instead.
 func (*GetEffectivePermissionsResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{160}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{162}
 }
 
 func (x *GetEffectivePermissionsResponse) GetPermissions() int64 {
@@ -9189,7 +9277,7 @@ type PermissionSource struct {
 
 func (x *PermissionSource) Reset() {
 	*x = PermissionSource{}
-	mi := &file_meza_v1_chat_proto_msgTypes[161]
+	mi := &file_meza_v1_chat_proto_msgTypes[163]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9201,7 +9289,7 @@ func (x *PermissionSource) String() string {
 func (*PermissionSource) ProtoMessage() {}
 
 func (x *PermissionSource) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[161]
+	mi := &file_meza_v1_chat_proto_msgTypes[163]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9214,7 +9302,7 @@ func (x *PermissionSource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PermissionSource.ProtoReflect.Descriptor instead.
 func (*PermissionSource) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{161}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{163}
 }
 
 func (x *PermissionSource) GetPermission() int64 {
@@ -9255,7 +9343,7 @@ type PermissionOverrideUpdateEvent struct {
 
 func (x *PermissionOverrideUpdateEvent) Reset() {
 	*x = PermissionOverrideUpdateEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[162]
+	mi := &file_meza_v1_chat_proto_msgTypes[164]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9267,7 +9355,7 @@ func (x *PermissionOverrideUpdateEvent) String() string {
 func (*PermissionOverrideUpdateEvent) ProtoMessage() {}
 
 func (x *PermissionOverrideUpdateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[162]
+	mi := &file_meza_v1_chat_proto_msgTypes[164]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9280,7 +9368,7 @@ func (x *PermissionOverrideUpdateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PermissionOverrideUpdateEvent.ProtoReflect.Descriptor instead.
 func (*PermissionOverrideUpdateEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{162}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{164}
 }
 
 func (x *PermissionOverrideUpdateEvent) GetOverride() *PermissionOverride {
@@ -9308,7 +9396,7 @@ type PermissionOverrideDeleteEvent struct {
 
 func (x *PermissionOverrideDeleteEvent) Reset() {
 	*x = PermissionOverrideDeleteEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[163]
+	mi := &file_meza_v1_chat_proto_msgTypes[165]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9320,7 +9408,7 @@ func (x *PermissionOverrideDeleteEvent) String() string {
 func (*PermissionOverrideDeleteEvent) ProtoMessage() {}
 
 func (x *PermissionOverrideDeleteEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[163]
+	mi := &file_meza_v1_chat_proto_msgTypes[165]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9333,7 +9421,7 @@ func (x *PermissionOverrideDeleteEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PermissionOverrideDeleteEvent.ProtoReflect.Descriptor instead.
 func (*PermissionOverrideDeleteEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{163}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{165}
 }
 
 func (x *PermissionOverrideDeleteEvent) GetOverrideId() string {
@@ -9367,7 +9455,7 @@ type PermissionsUpdatedEvent struct {
 
 func (x *PermissionsUpdatedEvent) Reset() {
 	*x = PermissionsUpdatedEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[164]
+	mi := &file_meza_v1_chat_proto_msgTypes[166]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9379,7 +9467,7 @@ func (x *PermissionsUpdatedEvent) String() string {
 func (*PermissionsUpdatedEvent) ProtoMessage() {}
 
 func (x *PermissionsUpdatedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[164]
+	mi := &file_meza_v1_chat_proto_msgTypes[166]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9392,7 +9480,7 @@ func (x *PermissionsUpdatedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PermissionsUpdatedEvent.ProtoReflect.Descriptor instead.
 func (*PermissionsUpdatedEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{164}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{166}
 }
 
 func (x *PermissionsUpdatedEvent) GetServerId() string {
@@ -9422,7 +9510,7 @@ type ChannelSpec struct {
 
 func (x *ChannelSpec) Reset() {
 	*x = ChannelSpec{}
-	mi := &file_meza_v1_chat_proto_msgTypes[165]
+	mi := &file_meza_v1_chat_proto_msgTypes[167]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9434,7 +9522,7 @@ func (x *ChannelSpec) String() string {
 func (*ChannelSpec) ProtoMessage() {}
 
 func (x *ChannelSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[165]
+	mi := &file_meza_v1_chat_proto_msgTypes[167]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9447,7 +9535,7 @@ func (x *ChannelSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelSpec.ProtoReflect.Descriptor instead.
 func (*ChannelSpec) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{165}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{167}
 }
 
 func (x *ChannelSpec) GetName() string {
@@ -9497,7 +9585,7 @@ type RoleSpec struct {
 
 func (x *RoleSpec) Reset() {
 	*x = RoleSpec{}
-	mi := &file_meza_v1_chat_proto_msgTypes[166]
+	mi := &file_meza_v1_chat_proto_msgTypes[168]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9509,7 +9597,7 @@ func (x *RoleSpec) String() string {
 func (*RoleSpec) ProtoMessage() {}
 
 func (x *RoleSpec) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[166]
+	mi := &file_meza_v1_chat_proto_msgTypes[168]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9522,7 +9610,7 @@ func (x *RoleSpec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleSpec.ProtoReflect.Descriptor instead.
 func (*RoleSpec) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{166}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{168}
 }
 
 func (x *RoleSpec) GetName() string {
@@ -9569,7 +9657,7 @@ type CreateServerFromTemplateRequest struct {
 
 func (x *CreateServerFromTemplateRequest) Reset() {
 	*x = CreateServerFromTemplateRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[167]
+	mi := &file_meza_v1_chat_proto_msgTypes[169]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9581,7 +9669,7 @@ func (x *CreateServerFromTemplateRequest) String() string {
 func (*CreateServerFromTemplateRequest) ProtoMessage() {}
 
 func (x *CreateServerFromTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[167]
+	mi := &file_meza_v1_chat_proto_msgTypes[169]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9594,7 +9682,7 @@ func (x *CreateServerFromTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServerFromTemplateRequest.ProtoReflect.Descriptor instead.
 func (*CreateServerFromTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{167}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{169}
 }
 
 func (x *CreateServerFromTemplateRequest) GetName() string {
@@ -9665,7 +9753,7 @@ type CreateServerFromTemplateResponse struct {
 
 func (x *CreateServerFromTemplateResponse) Reset() {
 	*x = CreateServerFromTemplateResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[168]
+	mi := &file_meza_v1_chat_proto_msgTypes[170]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9677,7 +9765,7 @@ func (x *CreateServerFromTemplateResponse) String() string {
 func (*CreateServerFromTemplateResponse) ProtoMessage() {}
 
 func (x *CreateServerFromTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[168]
+	mi := &file_meza_v1_chat_proto_msgTypes[170]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9690,7 +9778,7 @@ func (x *CreateServerFromTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateServerFromTemplateResponse.ProtoReflect.Descriptor instead.
 func (*CreateServerFromTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{168}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{170}
 }
 
 func (x *CreateServerFromTemplateResponse) GetServer() *Server {
@@ -9732,7 +9820,7 @@ type FederationRemovedEvent struct {
 
 func (x *FederationRemovedEvent) Reset() {
 	*x = FederationRemovedEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[169]
+	mi := &file_meza_v1_chat_proto_msgTypes[171]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9744,7 +9832,7 @@ func (x *FederationRemovedEvent) String() string {
 func (*FederationRemovedEvent) ProtoMessage() {}
 
 func (x *FederationRemovedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[169]
+	mi := &file_meza_v1_chat_proto_msgTypes[171]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9757,7 +9845,7 @@ func (x *FederationRemovedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FederationRemovedEvent.ProtoReflect.Descriptor instead.
 func (*FederationRemovedEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{169}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{171}
 }
 
 func (x *FederationRemovedEvent) GetServerId() string {
@@ -9790,7 +9878,7 @@ type AcceptMessageRequestReq struct {
 
 func (x *AcceptMessageRequestReq) Reset() {
 	*x = AcceptMessageRequestReq{}
-	mi := &file_meza_v1_chat_proto_msgTypes[170]
+	mi := &file_meza_v1_chat_proto_msgTypes[172]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9802,7 +9890,7 @@ func (x *AcceptMessageRequestReq) String() string {
 func (*AcceptMessageRequestReq) ProtoMessage() {}
 
 func (x *AcceptMessageRequestReq) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[170]
+	mi := &file_meza_v1_chat_proto_msgTypes[172]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9815,7 +9903,7 @@ func (x *AcceptMessageRequestReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptMessageRequestReq.ProtoReflect.Descriptor instead.
 func (*AcceptMessageRequestReq) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{170}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{172}
 }
 
 func (x *AcceptMessageRequestReq) GetChannelId() string {
@@ -9834,7 +9922,7 @@ type AcceptMessageRequestRes struct {
 
 func (x *AcceptMessageRequestRes) Reset() {
 	*x = AcceptMessageRequestRes{}
-	mi := &file_meza_v1_chat_proto_msgTypes[171]
+	mi := &file_meza_v1_chat_proto_msgTypes[173]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9846,7 +9934,7 @@ func (x *AcceptMessageRequestRes) String() string {
 func (*AcceptMessageRequestRes) ProtoMessage() {}
 
 func (x *AcceptMessageRequestRes) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[171]
+	mi := &file_meza_v1_chat_proto_msgTypes[173]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9859,7 +9947,7 @@ func (x *AcceptMessageRequestRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptMessageRequestRes.ProtoReflect.Descriptor instead.
 func (*AcceptMessageRequestRes) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{171}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{173}
 }
 
 func (x *AcceptMessageRequestRes) GetDmChannel() *DMChannel {
@@ -9878,7 +9966,7 @@ type DeclineMessageRequestReq struct {
 
 func (x *DeclineMessageRequestReq) Reset() {
 	*x = DeclineMessageRequestReq{}
-	mi := &file_meza_v1_chat_proto_msgTypes[172]
+	mi := &file_meza_v1_chat_proto_msgTypes[174]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9890,7 +9978,7 @@ func (x *DeclineMessageRequestReq) String() string {
 func (*DeclineMessageRequestReq) ProtoMessage() {}
 
 func (x *DeclineMessageRequestReq) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[172]
+	mi := &file_meza_v1_chat_proto_msgTypes[174]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9903,7 +9991,7 @@ func (x *DeclineMessageRequestReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineMessageRequestReq.ProtoReflect.Descriptor instead.
 func (*DeclineMessageRequestReq) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{172}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{174}
 }
 
 func (x *DeclineMessageRequestReq) GetChannelId() string {
@@ -9921,7 +10009,7 @@ type DeclineMessageRequestRes struct {
 
 func (x *DeclineMessageRequestRes) Reset() {
 	*x = DeclineMessageRequestRes{}
-	mi := &file_meza_v1_chat_proto_msgTypes[173]
+	mi := &file_meza_v1_chat_proto_msgTypes[175]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9933,7 +10021,7 @@ func (x *DeclineMessageRequestRes) String() string {
 func (*DeclineMessageRequestRes) ProtoMessage() {}
 
 func (x *DeclineMessageRequestRes) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[173]
+	mi := &file_meza_v1_chat_proto_msgTypes[175]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9946,7 +10034,7 @@ func (x *DeclineMessageRequestRes) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineMessageRequestRes.ProtoReflect.Descriptor instead.
 func (*DeclineMessageRequestRes) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{173}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{175}
 }
 
 type ReverseDeclineRequest struct {
@@ -9958,7 +10046,7 @@ type ReverseDeclineRequest struct {
 
 func (x *ReverseDeclineRequest) Reset() {
 	*x = ReverseDeclineRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[174]
+	mi := &file_meza_v1_chat_proto_msgTypes[176]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -9970,7 +10058,7 @@ func (x *ReverseDeclineRequest) String() string {
 func (*ReverseDeclineRequest) ProtoMessage() {}
 
 func (x *ReverseDeclineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[174]
+	mi := &file_meza_v1_chat_proto_msgTypes[176]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9983,7 +10071,7 @@ func (x *ReverseDeclineRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverseDeclineRequest.ProtoReflect.Descriptor instead.
 func (*ReverseDeclineRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{174}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{176}
 }
 
 func (x *ReverseDeclineRequest) GetChannelId() string {
@@ -10002,7 +10090,7 @@ type ReverseDeclineResponse struct {
 
 func (x *ReverseDeclineResponse) Reset() {
 	*x = ReverseDeclineResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[175]
+	mi := &file_meza_v1_chat_proto_msgTypes[177]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10014,7 +10102,7 @@ func (x *ReverseDeclineResponse) String() string {
 func (*ReverseDeclineResponse) ProtoMessage() {}
 
 func (x *ReverseDeclineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[175]
+	mi := &file_meza_v1_chat_proto_msgTypes[177]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10027,7 +10115,7 @@ func (x *ReverseDeclineResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverseDeclineResponse.ProtoReflect.Descriptor instead.
 func (*ReverseDeclineResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{175}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{177}
 }
 
 func (x *ReverseDeclineResponse) GetDmChannel() *DMChannel {
@@ -10045,7 +10133,7 @@ type ListMessageRequestsRequest struct {
 
 func (x *ListMessageRequestsRequest) Reset() {
 	*x = ListMessageRequestsRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[176]
+	mi := &file_meza_v1_chat_proto_msgTypes[178]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10057,7 +10145,7 @@ func (x *ListMessageRequestsRequest) String() string {
 func (*ListMessageRequestsRequest) ProtoMessage() {}
 
 func (x *ListMessageRequestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[176]
+	mi := &file_meza_v1_chat_proto_msgTypes[178]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10070,7 +10158,7 @@ func (x *ListMessageRequestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessageRequestsRequest.ProtoReflect.Descriptor instead.
 func (*ListMessageRequestsRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{176}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{178}
 }
 
 type ListMessageRequestsResponse struct {
@@ -10082,7 +10170,7 @@ type ListMessageRequestsResponse struct {
 
 func (x *ListMessageRequestsResponse) Reset() {
 	*x = ListMessageRequestsResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[177]
+	mi := &file_meza_v1_chat_proto_msgTypes[179]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10094,7 +10182,7 @@ func (x *ListMessageRequestsResponse) String() string {
 func (*ListMessageRequestsResponse) ProtoMessage() {}
 
 func (x *ListMessageRequestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[177]
+	mi := &file_meza_v1_chat_proto_msgTypes[179]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10107,7 +10195,7 @@ func (x *ListMessageRequestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMessageRequestsResponse.ProtoReflect.Descriptor instead.
 func (*ListMessageRequestsResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{177}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{179}
 }
 
 func (x *ListMessageRequestsResponse) GetDmChannels() []*DMChannel {
@@ -10126,7 +10214,7 @@ type DMRequestDeclinedEvent struct {
 
 func (x *DMRequestDeclinedEvent) Reset() {
 	*x = DMRequestDeclinedEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[178]
+	mi := &file_meza_v1_chat_proto_msgTypes[180]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10138,7 +10226,7 @@ func (x *DMRequestDeclinedEvent) String() string {
 func (*DMRequestDeclinedEvent) ProtoMessage() {}
 
 func (x *DMRequestDeclinedEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[178]
+	mi := &file_meza_v1_chat_proto_msgTypes[180]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10151,7 +10239,7 @@ func (x *DMRequestDeclinedEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DMRequestDeclinedEvent.ProtoReflect.Descriptor instead.
 func (*DMRequestDeclinedEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{178}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{180}
 }
 
 func (x *DMRequestDeclinedEvent) GetChannelId() string {
@@ -10170,7 +10258,7 @@ type BlockUserRequest struct {
 
 func (x *BlockUserRequest) Reset() {
 	*x = BlockUserRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[179]
+	mi := &file_meza_v1_chat_proto_msgTypes[181]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10182,7 +10270,7 @@ func (x *BlockUserRequest) String() string {
 func (*BlockUserRequest) ProtoMessage() {}
 
 func (x *BlockUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[179]
+	mi := &file_meza_v1_chat_proto_msgTypes[181]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10195,7 +10283,7 @@ func (x *BlockUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockUserRequest.ProtoReflect.Descriptor instead.
 func (*BlockUserRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{179}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *BlockUserRequest) GetUserId() string {
@@ -10213,7 +10301,7 @@ type BlockUserResponse struct {
 
 func (x *BlockUserResponse) Reset() {
 	*x = BlockUserResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[180]
+	mi := &file_meza_v1_chat_proto_msgTypes[182]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10225,7 +10313,7 @@ func (x *BlockUserResponse) String() string {
 func (*BlockUserResponse) ProtoMessage() {}
 
 func (x *BlockUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[180]
+	mi := &file_meza_v1_chat_proto_msgTypes[182]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10238,7 +10326,7 @@ func (x *BlockUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockUserResponse.ProtoReflect.Descriptor instead.
 func (*BlockUserResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{180}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{182}
 }
 
 type UnblockUserRequest struct {
@@ -10250,7 +10338,7 @@ type UnblockUserRequest struct {
 
 func (x *UnblockUserRequest) Reset() {
 	*x = UnblockUserRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[181]
+	mi := &file_meza_v1_chat_proto_msgTypes[183]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10262,7 +10350,7 @@ func (x *UnblockUserRequest) String() string {
 func (*UnblockUserRequest) ProtoMessage() {}
 
 func (x *UnblockUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[181]
+	mi := &file_meza_v1_chat_proto_msgTypes[183]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10275,7 +10363,7 @@ func (x *UnblockUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnblockUserRequest.ProtoReflect.Descriptor instead.
 func (*UnblockUserRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{181}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{183}
 }
 
 func (x *UnblockUserRequest) GetUserId() string {
@@ -10293,7 +10381,7 @@ type UnblockUserResponse struct {
 
 func (x *UnblockUserResponse) Reset() {
 	*x = UnblockUserResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[182]
+	mi := &file_meza_v1_chat_proto_msgTypes[184]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10305,7 +10393,7 @@ func (x *UnblockUserResponse) String() string {
 func (*UnblockUserResponse) ProtoMessage() {}
 
 func (x *UnblockUserResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[182]
+	mi := &file_meza_v1_chat_proto_msgTypes[184]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10318,7 +10406,7 @@ func (x *UnblockUserResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnblockUserResponse.ProtoReflect.Descriptor instead.
 func (*UnblockUserResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{182}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{184}
 }
 
 type ListBlocksRequest struct {
@@ -10329,7 +10417,7 @@ type ListBlocksRequest struct {
 
 func (x *ListBlocksRequest) Reset() {
 	*x = ListBlocksRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[183]
+	mi := &file_meza_v1_chat_proto_msgTypes[185]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10341,7 +10429,7 @@ func (x *ListBlocksRequest) String() string {
 func (*ListBlocksRequest) ProtoMessage() {}
 
 func (x *ListBlocksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[183]
+	mi := &file_meza_v1_chat_proto_msgTypes[185]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10354,7 +10442,7 @@ func (x *ListBlocksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBlocksRequest.ProtoReflect.Descriptor instead.
 func (*ListBlocksRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{183}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{185}
 }
 
 type ListBlocksResponse struct {
@@ -10366,7 +10454,7 @@ type ListBlocksResponse struct {
 
 func (x *ListBlocksResponse) Reset() {
 	*x = ListBlocksResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[184]
+	mi := &file_meza_v1_chat_proto_msgTypes[186]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10378,7 +10466,7 @@ func (x *ListBlocksResponse) String() string {
 func (*ListBlocksResponse) ProtoMessage() {}
 
 func (x *ListBlocksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[184]
+	mi := &file_meza_v1_chat_proto_msgTypes[186]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10391,7 +10479,7 @@ func (x *ListBlocksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListBlocksResponse.ProtoReflect.Descriptor instead.
 func (*ListBlocksResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{184}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *ListBlocksResponse) GetBlockedUsers() []*User {
@@ -10411,7 +10499,7 @@ type UserBlockEvent struct {
 
 func (x *UserBlockEvent) Reset() {
 	*x = UserBlockEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[185]
+	mi := &file_meza_v1_chat_proto_msgTypes[187]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10423,7 +10511,7 @@ func (x *UserBlockEvent) String() string {
 func (*UserBlockEvent) ProtoMessage() {}
 
 func (x *UserBlockEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[185]
+	mi := &file_meza_v1_chat_proto_msgTypes[187]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10436,7 +10524,7 @@ func (x *UserBlockEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserBlockEvent.ProtoReflect.Descriptor instead.
 func (*UserBlockEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{185}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{187}
 }
 
 func (x *UserBlockEvent) GetUserId() string {
@@ -10462,7 +10550,7 @@ type FriendEvent struct {
 
 func (x *FriendEvent) Reset() {
 	*x = FriendEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[186]
+	mi := &file_meza_v1_chat_proto_msgTypes[188]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10474,7 +10562,7 @@ func (x *FriendEvent) String() string {
 func (*FriendEvent) ProtoMessage() {}
 
 func (x *FriendEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[186]
+	mi := &file_meza_v1_chat_proto_msgTypes[188]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10487,7 +10575,7 @@ func (x *FriendEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FriendEvent.ProtoReflect.Descriptor instead.
 func (*FriendEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{186}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{188}
 }
 
 func (x *FriendEvent) GetUser() *User {
@@ -10508,7 +10596,7 @@ type FriendRequestEntry struct {
 
 func (x *FriendRequestEntry) Reset() {
 	*x = FriendRequestEntry{}
-	mi := &file_meza_v1_chat_proto_msgTypes[187]
+	mi := &file_meza_v1_chat_proto_msgTypes[189]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10520,7 +10608,7 @@ func (x *FriendRequestEntry) String() string {
 func (*FriendRequestEntry) ProtoMessage() {}
 
 func (x *FriendRequestEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[187]
+	mi := &file_meza_v1_chat_proto_msgTypes[189]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10533,7 +10621,7 @@ func (x *FriendRequestEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FriendRequestEntry.ProtoReflect.Descriptor instead.
 func (*FriendRequestEntry) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{187}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{189}
 }
 
 func (x *FriendRequestEntry) GetUser() *User {
@@ -10567,7 +10655,7 @@ type SendFriendRequestRequest struct {
 
 func (x *SendFriendRequestRequest) Reset() {
 	*x = SendFriendRequestRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[188]
+	mi := &file_meza_v1_chat_proto_msgTypes[190]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10579,7 +10667,7 @@ func (x *SendFriendRequestRequest) String() string {
 func (*SendFriendRequestRequest) ProtoMessage() {}
 
 func (x *SendFriendRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[188]
+	mi := &file_meza_v1_chat_proto_msgTypes[190]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10592,7 +10680,7 @@ func (x *SendFriendRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendFriendRequestRequest.ProtoReflect.Descriptor instead.
 func (*SendFriendRequestRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{188}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{190}
 }
 
 func (x *SendFriendRequestRequest) GetUserId() string {
@@ -10618,7 +10706,7 @@ type SendFriendRequestResponse struct {
 
 func (x *SendFriendRequestResponse) Reset() {
 	*x = SendFriendRequestResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[189]
+	mi := &file_meza_v1_chat_proto_msgTypes[191]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10630,7 +10718,7 @@ func (x *SendFriendRequestResponse) String() string {
 func (*SendFriendRequestResponse) ProtoMessage() {}
 
 func (x *SendFriendRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[189]
+	mi := &file_meza_v1_chat_proto_msgTypes[191]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10643,7 +10731,7 @@ func (x *SendFriendRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendFriendRequestResponse.ProtoReflect.Descriptor instead.
 func (*SendFriendRequestResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{189}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{191}
 }
 
 func (x *SendFriendRequestResponse) GetAutoAccepted() bool {
@@ -10662,7 +10750,7 @@ type AcceptFriendRequestRequest struct {
 
 func (x *AcceptFriendRequestRequest) Reset() {
 	*x = AcceptFriendRequestRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[190]
+	mi := &file_meza_v1_chat_proto_msgTypes[192]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10674,7 +10762,7 @@ func (x *AcceptFriendRequestRequest) String() string {
 func (*AcceptFriendRequestRequest) ProtoMessage() {}
 
 func (x *AcceptFriendRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[190]
+	mi := &file_meza_v1_chat_proto_msgTypes[192]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10687,7 +10775,7 @@ func (x *AcceptFriendRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptFriendRequestRequest.ProtoReflect.Descriptor instead.
 func (*AcceptFriendRequestRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{190}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{192}
 }
 
 func (x *AcceptFriendRequestRequest) GetUserId() string {
@@ -10705,7 +10793,7 @@ type AcceptFriendRequestResponse struct {
 
 func (x *AcceptFriendRequestResponse) Reset() {
 	*x = AcceptFriendRequestResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[191]
+	mi := &file_meza_v1_chat_proto_msgTypes[193]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10717,7 +10805,7 @@ func (x *AcceptFriendRequestResponse) String() string {
 func (*AcceptFriendRequestResponse) ProtoMessage() {}
 
 func (x *AcceptFriendRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[191]
+	mi := &file_meza_v1_chat_proto_msgTypes[193]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10730,7 +10818,7 @@ func (x *AcceptFriendRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AcceptFriendRequestResponse.ProtoReflect.Descriptor instead.
 func (*AcceptFriendRequestResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{191}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{193}
 }
 
 type DeclineFriendRequestRequest struct {
@@ -10742,7 +10830,7 @@ type DeclineFriendRequestRequest struct {
 
 func (x *DeclineFriendRequestRequest) Reset() {
 	*x = DeclineFriendRequestRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[192]
+	mi := &file_meza_v1_chat_proto_msgTypes[194]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10754,7 +10842,7 @@ func (x *DeclineFriendRequestRequest) String() string {
 func (*DeclineFriendRequestRequest) ProtoMessage() {}
 
 func (x *DeclineFriendRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[192]
+	mi := &file_meza_v1_chat_proto_msgTypes[194]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10767,7 +10855,7 @@ func (x *DeclineFriendRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineFriendRequestRequest.ProtoReflect.Descriptor instead.
 func (*DeclineFriendRequestRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{192}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{194}
 }
 
 func (x *DeclineFriendRequestRequest) GetUserId() string {
@@ -10785,7 +10873,7 @@ type DeclineFriendRequestResponse struct {
 
 func (x *DeclineFriendRequestResponse) Reset() {
 	*x = DeclineFriendRequestResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[193]
+	mi := &file_meza_v1_chat_proto_msgTypes[195]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10797,7 +10885,7 @@ func (x *DeclineFriendRequestResponse) String() string {
 func (*DeclineFriendRequestResponse) ProtoMessage() {}
 
 func (x *DeclineFriendRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[193]
+	mi := &file_meza_v1_chat_proto_msgTypes[195]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10810,7 +10898,7 @@ func (x *DeclineFriendRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeclineFriendRequestResponse.ProtoReflect.Descriptor instead.
 func (*DeclineFriendRequestResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{193}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{195}
 }
 
 type CancelFriendRequestRequest struct {
@@ -10822,7 +10910,7 @@ type CancelFriendRequestRequest struct {
 
 func (x *CancelFriendRequestRequest) Reset() {
 	*x = CancelFriendRequestRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[194]
+	mi := &file_meza_v1_chat_proto_msgTypes[196]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10834,7 +10922,7 @@ func (x *CancelFriendRequestRequest) String() string {
 func (*CancelFriendRequestRequest) ProtoMessage() {}
 
 func (x *CancelFriendRequestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[194]
+	mi := &file_meza_v1_chat_proto_msgTypes[196]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10847,7 +10935,7 @@ func (x *CancelFriendRequestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelFriendRequestRequest.ProtoReflect.Descriptor instead.
 func (*CancelFriendRequestRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{194}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{196}
 }
 
 func (x *CancelFriendRequestRequest) GetUserId() string {
@@ -10865,7 +10953,7 @@ type CancelFriendRequestResponse struct {
 
 func (x *CancelFriendRequestResponse) Reset() {
 	*x = CancelFriendRequestResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[195]
+	mi := &file_meza_v1_chat_proto_msgTypes[197]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10877,7 +10965,7 @@ func (x *CancelFriendRequestResponse) String() string {
 func (*CancelFriendRequestResponse) ProtoMessage() {}
 
 func (x *CancelFriendRequestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[195]
+	mi := &file_meza_v1_chat_proto_msgTypes[197]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10890,7 +10978,7 @@ func (x *CancelFriendRequestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelFriendRequestResponse.ProtoReflect.Descriptor instead.
 func (*CancelFriendRequestResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{195}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{197}
 }
 
 type RemoveFriendRequest struct {
@@ -10902,7 +10990,7 @@ type RemoveFriendRequest struct {
 
 func (x *RemoveFriendRequest) Reset() {
 	*x = RemoveFriendRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[196]
+	mi := &file_meza_v1_chat_proto_msgTypes[198]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10914,7 +11002,7 @@ func (x *RemoveFriendRequest) String() string {
 func (*RemoveFriendRequest) ProtoMessage() {}
 
 func (x *RemoveFriendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[196]
+	mi := &file_meza_v1_chat_proto_msgTypes[198]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10927,7 +11015,7 @@ func (x *RemoveFriendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveFriendRequest.ProtoReflect.Descriptor instead.
 func (*RemoveFriendRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{196}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{198}
 }
 
 func (x *RemoveFriendRequest) GetUserId() string {
@@ -10945,7 +11033,7 @@ type RemoveFriendResponse struct {
 
 func (x *RemoveFriendResponse) Reset() {
 	*x = RemoveFriendResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[197]
+	mi := &file_meza_v1_chat_proto_msgTypes[199]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10957,7 +11045,7 @@ func (x *RemoveFriendResponse) String() string {
 func (*RemoveFriendResponse) ProtoMessage() {}
 
 func (x *RemoveFriendResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[197]
+	mi := &file_meza_v1_chat_proto_msgTypes[199]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10970,7 +11058,7 @@ func (x *RemoveFriendResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveFriendResponse.ProtoReflect.Descriptor instead.
 func (*RemoveFriendResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{197}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{199}
 }
 
 type ListFriendsRequest struct {
@@ -10981,7 +11069,7 @@ type ListFriendsRequest struct {
 
 func (x *ListFriendsRequest) Reset() {
 	*x = ListFriendsRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[198]
+	mi := &file_meza_v1_chat_proto_msgTypes[200]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -10993,7 +11081,7 @@ func (x *ListFriendsRequest) String() string {
 func (*ListFriendsRequest) ProtoMessage() {}
 
 func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[198]
+	mi := &file_meza_v1_chat_proto_msgTypes[200]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11006,7 +11094,7 @@ func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ListFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{198}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{200}
 }
 
 type ListFriendsResponse struct {
@@ -11018,7 +11106,7 @@ type ListFriendsResponse struct {
 
 func (x *ListFriendsResponse) Reset() {
 	*x = ListFriendsResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[199]
+	mi := &file_meza_v1_chat_proto_msgTypes[201]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11030,7 +11118,7 @@ func (x *ListFriendsResponse) String() string {
 func (*ListFriendsResponse) ProtoMessage() {}
 
 func (x *ListFriendsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[199]
+	mi := &file_meza_v1_chat_proto_msgTypes[201]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11043,7 +11131,7 @@ func (x *ListFriendsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFriendsResponse.ProtoReflect.Descriptor instead.
 func (*ListFriendsResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{199}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{201}
 }
 
 func (x *ListFriendsResponse) GetFriends() []*User {
@@ -11061,7 +11149,7 @@ type ListFriendRequestsRequest struct {
 
 func (x *ListFriendRequestsRequest) Reset() {
 	*x = ListFriendRequestsRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[200]
+	mi := &file_meza_v1_chat_proto_msgTypes[202]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11073,7 +11161,7 @@ func (x *ListFriendRequestsRequest) String() string {
 func (*ListFriendRequestsRequest) ProtoMessage() {}
 
 func (x *ListFriendRequestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[200]
+	mi := &file_meza_v1_chat_proto_msgTypes[202]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11086,7 +11174,7 @@ func (x *ListFriendRequestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFriendRequestsRequest.ProtoReflect.Descriptor instead.
 func (*ListFriendRequestsRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{200}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{202}
 }
 
 type ListFriendRequestsResponse struct {
@@ -11099,7 +11187,7 @@ type ListFriendRequestsResponse struct {
 
 func (x *ListFriendRequestsResponse) Reset() {
 	*x = ListFriendRequestsResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[201]
+	mi := &file_meza_v1_chat_proto_msgTypes[203]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11111,7 +11199,7 @@ func (x *ListFriendRequestsResponse) String() string {
 func (*ListFriendRequestsResponse) ProtoMessage() {}
 
 func (x *ListFriendRequestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[201]
+	mi := &file_meza_v1_chat_proto_msgTypes[203]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11124,7 +11212,7 @@ func (x *ListFriendRequestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFriendRequestsResponse.ProtoReflect.Descriptor instead.
 func (*ListFriendRequestsResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{201}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{203}
 }
 
 func (x *ListFriendRequestsResponse) GetIncoming() []*FriendRequestEntry {
@@ -11158,7 +11246,7 @@ type SearchMessagesRequest struct {
 
 func (x *SearchMessagesRequest) Reset() {
 	*x = SearchMessagesRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[202]
+	mi := &file_meza_v1_chat_proto_msgTypes[204]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11170,7 +11258,7 @@ func (x *SearchMessagesRequest) String() string {
 func (*SearchMessagesRequest) ProtoMessage() {}
 
 func (x *SearchMessagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[202]
+	mi := &file_meza_v1_chat_proto_msgTypes[204]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11183,7 +11271,7 @@ func (x *SearchMessagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchMessagesRequest.ProtoReflect.Descriptor instead.
 func (*SearchMessagesRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{202}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{204}
 }
 
 func (x *SearchMessagesRequest) GetServerId() string {
@@ -11259,7 +11347,7 @@ type SearchMessagesResponse struct {
 
 func (x *SearchMessagesResponse) Reset() {
 	*x = SearchMessagesResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[203]
+	mi := &file_meza_v1_chat_proto_msgTypes[205]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11271,7 +11359,7 @@ func (x *SearchMessagesResponse) String() string {
 func (*SearchMessagesResponse) ProtoMessage() {}
 
 func (x *SearchMessagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[203]
+	mi := &file_meza_v1_chat_proto_msgTypes[205]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11284,7 +11372,7 @@ func (x *SearchMessagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchMessagesResponse.ProtoReflect.Descriptor instead.
 func (*SearchMessagesResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{203}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{205}
 }
 
 func (x *SearchMessagesResponse) GetMessages() []*Message {
@@ -11311,7 +11399,7 @@ type ServerUpdateEvent struct {
 
 func (x *ServerUpdateEvent) Reset() {
 	*x = ServerUpdateEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[204]
+	mi := &file_meza_v1_chat_proto_msgTypes[206]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11323,7 +11411,7 @@ func (x *ServerUpdateEvent) String() string {
 func (*ServerUpdateEvent) ProtoMessage() {}
 
 func (x *ServerUpdateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[204]
+	mi := &file_meza_v1_chat_proto_msgTypes[206]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11336,7 +11424,7 @@ func (x *ServerUpdateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerUpdateEvent.ProtoReflect.Descriptor instead.
 func (*ServerUpdateEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{204}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{206}
 }
 
 func (x *ServerUpdateEvent) GetServer() *Server {
@@ -11356,7 +11444,7 @@ type UserUpdateEvent struct {
 
 func (x *UserUpdateEvent) Reset() {
 	*x = UserUpdateEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[205]
+	mi := &file_meza_v1_chat_proto_msgTypes[207]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11368,7 +11456,7 @@ func (x *UserUpdateEvent) String() string {
 func (*UserUpdateEvent) ProtoMessage() {}
 
 func (x *UserUpdateEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[205]
+	mi := &file_meza_v1_chat_proto_msgTypes[207]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11381,7 +11469,7 @@ func (x *UserUpdateEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserUpdateEvent.ProtoReflect.Descriptor instead.
 func (*UserUpdateEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{205}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{207}
 }
 
 func (x *UserUpdateEvent) GetUser() *PublicUser {
@@ -11403,7 +11491,7 @@ type EmbedFetchJob struct {
 
 func (x *EmbedFetchJob) Reset() {
 	*x = EmbedFetchJob{}
-	mi := &file_meza_v1_chat_proto_msgTypes[206]
+	mi := &file_meza_v1_chat_proto_msgTypes[208]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11415,7 +11503,7 @@ func (x *EmbedFetchJob) String() string {
 func (*EmbedFetchJob) ProtoMessage() {}
 
 func (x *EmbedFetchJob) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[206]
+	mi := &file_meza_v1_chat_proto_msgTypes[208]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11428,7 +11516,7 @@ func (x *EmbedFetchJob) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EmbedFetchJob.ProtoReflect.Descriptor instead.
 func (*EmbedFetchJob) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{206}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{208}
 }
 
 func (x *EmbedFetchJob) GetChannelId() string {
@@ -11465,7 +11553,7 @@ type KeyRotationInternalEvent struct {
 
 func (x *KeyRotationInternalEvent) Reset() {
 	*x = KeyRotationInternalEvent{}
-	mi := &file_meza_v1_chat_proto_msgTypes[207]
+	mi := &file_meza_v1_chat_proto_msgTypes[209]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11477,7 +11565,7 @@ func (x *KeyRotationInternalEvent) String() string {
 func (*KeyRotationInternalEvent) ProtoMessage() {}
 
 func (x *KeyRotationInternalEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[207]
+	mi := &file_meza_v1_chat_proto_msgTypes[209]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11490,7 +11578,7 @@ func (x *KeyRotationInternalEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KeyRotationInternalEvent.ProtoReflect.Descriptor instead.
 func (*KeyRotationInternalEvent) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{207}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{209}
 }
 
 func (x *KeyRotationInternalEvent) GetChannelId() string {
@@ -11523,7 +11611,7 @@ type GetMutualServersRequest struct {
 
 func (x *GetMutualServersRequest) Reset() {
 	*x = GetMutualServersRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[208]
+	mi := &file_meza_v1_chat_proto_msgTypes[210]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11535,7 +11623,7 @@ func (x *GetMutualServersRequest) String() string {
 func (*GetMutualServersRequest) ProtoMessage() {}
 
 func (x *GetMutualServersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[208]
+	mi := &file_meza_v1_chat_proto_msgTypes[210]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11548,7 +11636,7 @@ func (x *GetMutualServersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMutualServersRequest.ProtoReflect.Descriptor instead.
 func (*GetMutualServersRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{208}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{210}
 }
 
 func (x *GetMutualServersRequest) GetUserId() string {
@@ -11567,7 +11655,7 @@ type GetMutualServersResponse struct {
 
 func (x *GetMutualServersResponse) Reset() {
 	*x = GetMutualServersResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[209]
+	mi := &file_meza_v1_chat_proto_msgTypes[211]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11579,7 +11667,7 @@ func (x *GetMutualServersResponse) String() string {
 func (*GetMutualServersResponse) ProtoMessage() {}
 
 func (x *GetMutualServersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[209]
+	mi := &file_meza_v1_chat_proto_msgTypes[211]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11592,7 +11680,7 @@ func (x *GetMutualServersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMutualServersResponse.ProtoReflect.Descriptor instead.
 func (*GetMutualServersResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{209}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{211}
 }
 
 func (x *GetMutualServersResponse) GetServers() []*Server {
@@ -11611,7 +11699,7 @@ type GetMutualFriendsRequest struct {
 
 func (x *GetMutualFriendsRequest) Reset() {
 	*x = GetMutualFriendsRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[210]
+	mi := &file_meza_v1_chat_proto_msgTypes[212]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11623,7 +11711,7 @@ func (x *GetMutualFriendsRequest) String() string {
 func (*GetMutualFriendsRequest) ProtoMessage() {}
 
 func (x *GetMutualFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[210]
+	mi := &file_meza_v1_chat_proto_msgTypes[212]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11636,7 +11724,7 @@ func (x *GetMutualFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMutualFriendsRequest.ProtoReflect.Descriptor instead.
 func (*GetMutualFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{210}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{212}
 }
 
 func (x *GetMutualFriendsRequest) GetUserId() string {
@@ -11655,7 +11743,7 @@ type GetMutualFriendsResponse struct {
 
 func (x *GetMutualFriendsResponse) Reset() {
 	*x = GetMutualFriendsResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[211]
+	mi := &file_meza_v1_chat_proto_msgTypes[213]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11667,7 +11755,7 @@ func (x *GetMutualFriendsResponse) String() string {
 func (*GetMutualFriendsResponse) ProtoMessage() {}
 
 func (x *GetMutualFriendsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[211]
+	mi := &file_meza_v1_chat_proto_msgTypes[213]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11680,7 +11768,7 @@ func (x *GetMutualFriendsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMutualFriendsResponse.ProtoReflect.Descriptor instead.
 func (*GetMutualFriendsResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{211}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{213}
 }
 
 func (x *GetMutualFriendsResponse) GetUsers() []*User {
@@ -11699,7 +11787,7 @@ type GetSystemMessageConfigRequest struct {
 
 func (x *GetSystemMessageConfigRequest) Reset() {
 	*x = GetSystemMessageConfigRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[212]
+	mi := &file_meza_v1_chat_proto_msgTypes[214]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11711,7 +11799,7 @@ func (x *GetSystemMessageConfigRequest) String() string {
 func (*GetSystemMessageConfigRequest) ProtoMessage() {}
 
 func (x *GetSystemMessageConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[212]
+	mi := &file_meza_v1_chat_proto_msgTypes[214]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11724,7 +11812,7 @@ func (x *GetSystemMessageConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemMessageConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetSystemMessageConfigRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{212}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{214}
 }
 
 func (x *GetSystemMessageConfigRequest) GetServerId() string {
@@ -11743,7 +11831,7 @@ type GetSystemMessageConfigResponse struct {
 
 func (x *GetSystemMessageConfigResponse) Reset() {
 	*x = GetSystemMessageConfigResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[213]
+	mi := &file_meza_v1_chat_proto_msgTypes[215]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11755,7 +11843,7 @@ func (x *GetSystemMessageConfigResponse) String() string {
 func (*GetSystemMessageConfigResponse) ProtoMessage() {}
 
 func (x *GetSystemMessageConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[213]
+	mi := &file_meza_v1_chat_proto_msgTypes[215]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11768,7 +11856,7 @@ func (x *GetSystemMessageConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemMessageConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetSystemMessageConfigResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{213}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{215}
 }
 
 func (x *GetSystemMessageConfigResponse) GetConfig() *ServerSystemMessageConfig {
@@ -11799,7 +11887,7 @@ type UpdateSystemMessageConfigRequest struct {
 
 func (x *UpdateSystemMessageConfigRequest) Reset() {
 	*x = UpdateSystemMessageConfigRequest{}
-	mi := &file_meza_v1_chat_proto_msgTypes[214]
+	mi := &file_meza_v1_chat_proto_msgTypes[216]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11811,7 +11899,7 @@ func (x *UpdateSystemMessageConfigRequest) String() string {
 func (*UpdateSystemMessageConfigRequest) ProtoMessage() {}
 
 func (x *UpdateSystemMessageConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[214]
+	mi := &file_meza_v1_chat_proto_msgTypes[216]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11824,7 +11912,7 @@ func (x *UpdateSystemMessageConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSystemMessageConfigRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSystemMessageConfigRequest) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{214}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{216}
 }
 
 func (x *UpdateSystemMessageConfigRequest) GetServerId() string {
@@ -11927,7 +12015,7 @@ type UpdateSystemMessageConfigResponse struct {
 
 func (x *UpdateSystemMessageConfigResponse) Reset() {
 	*x = UpdateSystemMessageConfigResponse{}
-	mi := &file_meza_v1_chat_proto_msgTypes[215]
+	mi := &file_meza_v1_chat_proto_msgTypes[217]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -11939,7 +12027,7 @@ func (x *UpdateSystemMessageConfigResponse) String() string {
 func (*UpdateSystemMessageConfigResponse) ProtoMessage() {}
 
 func (x *UpdateSystemMessageConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_meza_v1_chat_proto_msgTypes[215]
+	mi := &file_meza_v1_chat_proto_msgTypes[217]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -11952,7 +12040,7 @@ func (x *UpdateSystemMessageConfigResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use UpdateSystemMessageConfigResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSystemMessageConfigResponse) Descriptor() ([]byte, []int) {
-	return file_meza_v1_chat_proto_rawDescGZIP(), []int{215}
+	return file_meza_v1_chat_proto_rawDescGZIP(), []int{217}
 }
 
 func (x *UpdateSystemMessageConfigResponse) GetConfig() *ServerSystemMessageConfig {
@@ -12558,7 +12646,12 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x1eListPermissionOverridesRequest\x12\x1b\n" +
 	"\ttarget_id\x18\x01 \x01(\tR\btargetId\"q\n" +
 	"\x1fListPermissionOverridesResponse\x12N\n" +
-	"\x14permission_overrides\x18\x01 \x03(\v2\x1b.meza.v1.PermissionOverrideR\x13permissionOverrides\"\x9e\x01\n" +
+	"\x14permission_overrides\x18\x01 \x03(\v2\x1b.meza.v1.PermissionOverrideR\x13permissionOverrides\">\n" +
+	"\x1dSyncChannelPermissionsRequest\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\"L\n" +
+	"\x1eSyncChannelPermissionsResponse\x12*\n" +
+	"\achannel\x18\x01 \x01(\v2\x10.meza.v1.ChannelR\achannel\"\x9e\x01\n" +
 	"\x1eGetEffectivePermissionsRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x1d\n" +
 	"\n" +
@@ -12838,7 +12931,7 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"'PERMISSION_SOURCE_TYPE_CHANNEL_OVERRIDE\x10\x04\x12(\n" +
 	"$PERMISSION_SOURCE_TYPE_USER_OVERRIDE\x10\x05\x12(\n" +
 	"$PERMISSION_SOURCE_TYPE_ADMINISTRATOR\x10\x06\x12 \n" +
-	"\x1cPERMISSION_SOURCE_TYPE_OWNER\x10\a2\xe0;\n" +
+	"\x1cPERMISSION_SOURCE_TYPE_OWNER\x10\a2\xcb<\n" +
 	"\vChatService\x12H\n" +
 	"\vSendMessage\x12\x1b.meza.v1.SendMessageRequest\x1a\x1c.meza.v1.SendMessageResponse\x12H\n" +
 	"\vEditMessage\x12\x1b.meza.v1.EditMessageRequest\x1a\x1c.meza.v1.EditMessageResponse\x12N\n" +
@@ -12919,7 +13012,8 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x11ListChannelGroups\x12!.meza.v1.ListChannelGroupsRequest\x1a\".meza.v1.ListChannelGroupsResponse\x12f\n" +
 	"\x15SetPermissionOverride\x12%.meza.v1.SetPermissionOverrideRequest\x1a&.meza.v1.SetPermissionOverrideResponse\x12o\n" +
 	"\x18DeletePermissionOverride\x12(.meza.v1.DeletePermissionOverrideRequest\x1a).meza.v1.DeletePermissionOverrideResponse\x12l\n" +
-	"\x17ListPermissionOverrides\x12'.meza.v1.ListPermissionOverridesRequest\x1a(.meza.v1.ListPermissionOverridesResponse\x12l\n" +
+	"\x17ListPermissionOverrides\x12'.meza.v1.ListPermissionOverridesRequest\x1a(.meza.v1.ListPermissionOverridesResponse\x12i\n" +
+	"\x16SyncChannelPermissions\x12&.meza.v1.SyncChannelPermissionsRequest\x1a'.meza.v1.SyncChannelPermissionsResponse\x12l\n" +
 	"\x17GetEffectivePermissions\x12'.meza.v1.GetEffectivePermissionsRequest\x1a(.meza.v1.GetEffectivePermissionsResponse\x12Z\n" +
 	"\x14AcceptMessageRequest\x12 .meza.v1.AcceptMessageRequestReq\x1a .meza.v1.AcceptMessageRequestRes\x12]\n" +
 	"\x15DeclineMessageRequest\x12!.meza.v1.DeclineMessageRequestReq\x1a!.meza.v1.DeclineMessageRequestRes\x12Q\n" +
@@ -12958,7 +13052,7 @@ func file_meza_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 217)
+var file_meza_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 219)
 var file_meza_v1_chat_proto_goTypes = []any{
 	(EventType)(0),                            // 0: meza.v1.EventType
 	(PermissionSourceType)(0),                 // 1: meza.v1.PermissionSourceType
@@ -13121,419 +13215,424 @@ var file_meza_v1_chat_proto_goTypes = []any{
 	(*DeletePermissionOverrideResponse)(nil),  // 158: meza.v1.DeletePermissionOverrideResponse
 	(*ListPermissionOverridesRequest)(nil),    // 159: meza.v1.ListPermissionOverridesRequest
 	(*ListPermissionOverridesResponse)(nil),   // 160: meza.v1.ListPermissionOverridesResponse
-	(*GetEffectivePermissionsRequest)(nil),    // 161: meza.v1.GetEffectivePermissionsRequest
-	(*GetEffectivePermissionsResponse)(nil),   // 162: meza.v1.GetEffectivePermissionsResponse
-	(*PermissionSource)(nil),                  // 163: meza.v1.PermissionSource
-	(*PermissionOverrideUpdateEvent)(nil),     // 164: meza.v1.PermissionOverrideUpdateEvent
-	(*PermissionOverrideDeleteEvent)(nil),     // 165: meza.v1.PermissionOverrideDeleteEvent
-	(*PermissionsUpdatedEvent)(nil),           // 166: meza.v1.PermissionsUpdatedEvent
-	(*ChannelSpec)(nil),                       // 167: meza.v1.ChannelSpec
-	(*RoleSpec)(nil),                          // 168: meza.v1.RoleSpec
-	(*CreateServerFromTemplateRequest)(nil),   // 169: meza.v1.CreateServerFromTemplateRequest
-	(*CreateServerFromTemplateResponse)(nil),  // 170: meza.v1.CreateServerFromTemplateResponse
-	(*FederationRemovedEvent)(nil),            // 171: meza.v1.FederationRemovedEvent
-	(*AcceptMessageRequestReq)(nil),           // 172: meza.v1.AcceptMessageRequestReq
-	(*AcceptMessageRequestRes)(nil),           // 173: meza.v1.AcceptMessageRequestRes
-	(*DeclineMessageRequestReq)(nil),          // 174: meza.v1.DeclineMessageRequestReq
-	(*DeclineMessageRequestRes)(nil),          // 175: meza.v1.DeclineMessageRequestRes
-	(*ReverseDeclineRequest)(nil),             // 176: meza.v1.ReverseDeclineRequest
-	(*ReverseDeclineResponse)(nil),            // 177: meza.v1.ReverseDeclineResponse
-	(*ListMessageRequestsRequest)(nil),        // 178: meza.v1.ListMessageRequestsRequest
-	(*ListMessageRequestsResponse)(nil),       // 179: meza.v1.ListMessageRequestsResponse
-	(*DMRequestDeclinedEvent)(nil),            // 180: meza.v1.DMRequestDeclinedEvent
-	(*BlockUserRequest)(nil),                  // 181: meza.v1.BlockUserRequest
-	(*BlockUserResponse)(nil),                 // 182: meza.v1.BlockUserResponse
-	(*UnblockUserRequest)(nil),                // 183: meza.v1.UnblockUserRequest
-	(*UnblockUserResponse)(nil),               // 184: meza.v1.UnblockUserResponse
-	(*ListBlocksRequest)(nil),                 // 185: meza.v1.ListBlocksRequest
-	(*ListBlocksResponse)(nil),                // 186: meza.v1.ListBlocksResponse
-	(*UserBlockEvent)(nil),                    // 187: meza.v1.UserBlockEvent
-	(*FriendEvent)(nil),                       // 188: meza.v1.FriendEvent
-	(*FriendRequestEntry)(nil),                // 189: meza.v1.FriendRequestEntry
-	(*SendFriendRequestRequest)(nil),          // 190: meza.v1.SendFriendRequestRequest
-	(*SendFriendRequestResponse)(nil),         // 191: meza.v1.SendFriendRequestResponse
-	(*AcceptFriendRequestRequest)(nil),        // 192: meza.v1.AcceptFriendRequestRequest
-	(*AcceptFriendRequestResponse)(nil),       // 193: meza.v1.AcceptFriendRequestResponse
-	(*DeclineFriendRequestRequest)(nil),       // 194: meza.v1.DeclineFriendRequestRequest
-	(*DeclineFriendRequestResponse)(nil),      // 195: meza.v1.DeclineFriendRequestResponse
-	(*CancelFriendRequestRequest)(nil),        // 196: meza.v1.CancelFriendRequestRequest
-	(*CancelFriendRequestResponse)(nil),       // 197: meza.v1.CancelFriendRequestResponse
-	(*RemoveFriendRequest)(nil),               // 198: meza.v1.RemoveFriendRequest
-	(*RemoveFriendResponse)(nil),              // 199: meza.v1.RemoveFriendResponse
-	(*ListFriendsRequest)(nil),                // 200: meza.v1.ListFriendsRequest
-	(*ListFriendsResponse)(nil),               // 201: meza.v1.ListFriendsResponse
-	(*ListFriendRequestsRequest)(nil),         // 202: meza.v1.ListFriendRequestsRequest
-	(*ListFriendRequestsResponse)(nil),        // 203: meza.v1.ListFriendRequestsResponse
-	(*SearchMessagesRequest)(nil),             // 204: meza.v1.SearchMessagesRequest
-	(*SearchMessagesResponse)(nil),            // 205: meza.v1.SearchMessagesResponse
-	(*ServerUpdateEvent)(nil),                 // 206: meza.v1.ServerUpdateEvent
-	(*UserUpdateEvent)(nil),                   // 207: meza.v1.UserUpdateEvent
-	(*EmbedFetchJob)(nil),                     // 208: meza.v1.EmbedFetchJob
-	(*KeyRotationInternalEvent)(nil),          // 209: meza.v1.KeyRotationInternalEvent
-	(*GetMutualServersRequest)(nil),           // 210: meza.v1.GetMutualServersRequest
-	(*GetMutualServersResponse)(nil),          // 211: meza.v1.GetMutualServersResponse
-	(*GetMutualFriendsRequest)(nil),           // 212: meza.v1.GetMutualFriendsRequest
-	(*GetMutualFriendsResponse)(nil),          // 213: meza.v1.GetMutualFriendsResponse
-	(*GetSystemMessageConfigRequest)(nil),     // 214: meza.v1.GetSystemMessageConfigRequest
-	(*GetSystemMessageConfigResponse)(nil),    // 215: meza.v1.GetSystemMessageConfigResponse
-	(*UpdateSystemMessageConfigRequest)(nil),  // 216: meza.v1.UpdateSystemMessageConfigRequest
-	(*UpdateSystemMessageConfigResponse)(nil), // 217: meza.v1.UpdateSystemMessageConfigResponse
-	nil,                               // 218: meza.v1.GetReactionsResponse.ReactionsEntry
-	(*timestamppb.Timestamp)(nil),     // 219: google.protobuf.Timestamp
-	(*Message)(nil),                   // 220: meza.v1.Message
-	(ChannelType)(0),                  // 221: meza.v1.ChannelType
-	(*Channel)(nil),                   // 222: meza.v1.Channel
-	(*Server)(nil),                    // 223: meza.v1.Server
-	(*Member)(nil),                    // 224: meza.v1.Member
-	(*PublicUser)(nil),                // 225: meza.v1.PublicUser
-	(*Role)(nil),                      // 226: meza.v1.Role
-	(*Invite)(nil),                    // 227: meza.v1.Invite
-	(*CustomEmoji)(nil),               // 228: meza.v1.CustomEmoji
-	(*PinnedMessage)(nil),             // 229: meza.v1.PinnedMessage
-	(*SoundboardSound)(nil),           // 230: meza.v1.SoundboardSound
-	(*Reaction)(nil),                  // 231: meza.v1.Reaction
-	(*ReadState)(nil),                 // 232: meza.v1.ReadState
-	(*ChannelGroup)(nil),              // 233: meza.v1.ChannelGroup
-	(*DMChannel)(nil),                 // 234: meza.v1.DMChannel
-	(*GetPresenceResponse)(nil),       // 235: meza.v1.GetPresenceResponse
-	(*Ban)(nil),                       // 236: meza.v1.Ban
-	(*AuditLogEntry)(nil),             // 237: meza.v1.AuditLogEntry
-	(*ReactionGroup)(nil),             // 238: meza.v1.ReactionGroup
-	(*LinkEmbed)(nil),                 // 239: meza.v1.LinkEmbed
-	(*PermissionOverride)(nil),        // 240: meza.v1.PermissionOverride
-	(*User)(nil),                      // 241: meza.v1.User
-	(MessageType)(0),                  // 242: meza.v1.MessageType
-	(*ServerSystemMessageConfig)(nil), // 243: meza.v1.ServerSystemMessageConfig
+	(*SyncChannelPermissionsRequest)(nil),     // 161: meza.v1.SyncChannelPermissionsRequest
+	(*SyncChannelPermissionsResponse)(nil),    // 162: meza.v1.SyncChannelPermissionsResponse
+	(*GetEffectivePermissionsRequest)(nil),    // 163: meza.v1.GetEffectivePermissionsRequest
+	(*GetEffectivePermissionsResponse)(nil),   // 164: meza.v1.GetEffectivePermissionsResponse
+	(*PermissionSource)(nil),                  // 165: meza.v1.PermissionSource
+	(*PermissionOverrideUpdateEvent)(nil),     // 166: meza.v1.PermissionOverrideUpdateEvent
+	(*PermissionOverrideDeleteEvent)(nil),     // 167: meza.v1.PermissionOverrideDeleteEvent
+	(*PermissionsUpdatedEvent)(nil),           // 168: meza.v1.PermissionsUpdatedEvent
+	(*ChannelSpec)(nil),                       // 169: meza.v1.ChannelSpec
+	(*RoleSpec)(nil),                          // 170: meza.v1.RoleSpec
+	(*CreateServerFromTemplateRequest)(nil),   // 171: meza.v1.CreateServerFromTemplateRequest
+	(*CreateServerFromTemplateResponse)(nil),  // 172: meza.v1.CreateServerFromTemplateResponse
+	(*FederationRemovedEvent)(nil),            // 173: meza.v1.FederationRemovedEvent
+	(*AcceptMessageRequestReq)(nil),           // 174: meza.v1.AcceptMessageRequestReq
+	(*AcceptMessageRequestRes)(nil),           // 175: meza.v1.AcceptMessageRequestRes
+	(*DeclineMessageRequestReq)(nil),          // 176: meza.v1.DeclineMessageRequestReq
+	(*DeclineMessageRequestRes)(nil),          // 177: meza.v1.DeclineMessageRequestRes
+	(*ReverseDeclineRequest)(nil),             // 178: meza.v1.ReverseDeclineRequest
+	(*ReverseDeclineResponse)(nil),            // 179: meza.v1.ReverseDeclineResponse
+	(*ListMessageRequestsRequest)(nil),        // 180: meza.v1.ListMessageRequestsRequest
+	(*ListMessageRequestsResponse)(nil),       // 181: meza.v1.ListMessageRequestsResponse
+	(*DMRequestDeclinedEvent)(nil),            // 182: meza.v1.DMRequestDeclinedEvent
+	(*BlockUserRequest)(nil),                  // 183: meza.v1.BlockUserRequest
+	(*BlockUserResponse)(nil),                 // 184: meza.v1.BlockUserResponse
+	(*UnblockUserRequest)(nil),                // 185: meza.v1.UnblockUserRequest
+	(*UnblockUserResponse)(nil),               // 186: meza.v1.UnblockUserResponse
+	(*ListBlocksRequest)(nil),                 // 187: meza.v1.ListBlocksRequest
+	(*ListBlocksResponse)(nil),                // 188: meza.v1.ListBlocksResponse
+	(*UserBlockEvent)(nil),                    // 189: meza.v1.UserBlockEvent
+	(*FriendEvent)(nil),                       // 190: meza.v1.FriendEvent
+	(*FriendRequestEntry)(nil),                // 191: meza.v1.FriendRequestEntry
+	(*SendFriendRequestRequest)(nil),          // 192: meza.v1.SendFriendRequestRequest
+	(*SendFriendRequestResponse)(nil),         // 193: meza.v1.SendFriendRequestResponse
+	(*AcceptFriendRequestRequest)(nil),        // 194: meza.v1.AcceptFriendRequestRequest
+	(*AcceptFriendRequestResponse)(nil),       // 195: meza.v1.AcceptFriendRequestResponse
+	(*DeclineFriendRequestRequest)(nil),       // 196: meza.v1.DeclineFriendRequestRequest
+	(*DeclineFriendRequestResponse)(nil),      // 197: meza.v1.DeclineFriendRequestResponse
+	(*CancelFriendRequestRequest)(nil),        // 198: meza.v1.CancelFriendRequestRequest
+	(*CancelFriendRequestResponse)(nil),       // 199: meza.v1.CancelFriendRequestResponse
+	(*RemoveFriendRequest)(nil),               // 200: meza.v1.RemoveFriendRequest
+	(*RemoveFriendResponse)(nil),              // 201: meza.v1.RemoveFriendResponse
+	(*ListFriendsRequest)(nil),                // 202: meza.v1.ListFriendsRequest
+	(*ListFriendsResponse)(nil),               // 203: meza.v1.ListFriendsResponse
+	(*ListFriendRequestsRequest)(nil),         // 204: meza.v1.ListFriendRequestsRequest
+	(*ListFriendRequestsResponse)(nil),        // 205: meza.v1.ListFriendRequestsResponse
+	(*SearchMessagesRequest)(nil),             // 206: meza.v1.SearchMessagesRequest
+	(*SearchMessagesResponse)(nil),            // 207: meza.v1.SearchMessagesResponse
+	(*ServerUpdateEvent)(nil),                 // 208: meza.v1.ServerUpdateEvent
+	(*UserUpdateEvent)(nil),                   // 209: meza.v1.UserUpdateEvent
+	(*EmbedFetchJob)(nil),                     // 210: meza.v1.EmbedFetchJob
+	(*KeyRotationInternalEvent)(nil),          // 211: meza.v1.KeyRotationInternalEvent
+	(*GetMutualServersRequest)(nil),           // 212: meza.v1.GetMutualServersRequest
+	(*GetMutualServersResponse)(nil),          // 213: meza.v1.GetMutualServersResponse
+	(*GetMutualFriendsRequest)(nil),           // 214: meza.v1.GetMutualFriendsRequest
+	(*GetMutualFriendsResponse)(nil),          // 215: meza.v1.GetMutualFriendsResponse
+	(*GetSystemMessageConfigRequest)(nil),     // 216: meza.v1.GetSystemMessageConfigRequest
+	(*GetSystemMessageConfigResponse)(nil),    // 217: meza.v1.GetSystemMessageConfigResponse
+	(*UpdateSystemMessageConfigRequest)(nil),  // 218: meza.v1.UpdateSystemMessageConfigRequest
+	(*UpdateSystemMessageConfigResponse)(nil), // 219: meza.v1.UpdateSystemMessageConfigResponse
+	nil,                               // 220: meza.v1.GetReactionsResponse.ReactionsEntry
+	(*timestamppb.Timestamp)(nil),     // 221: google.protobuf.Timestamp
+	(*Message)(nil),                   // 222: meza.v1.Message
+	(ChannelType)(0),                  // 223: meza.v1.ChannelType
+	(*Channel)(nil),                   // 224: meza.v1.Channel
+	(*Server)(nil),                    // 225: meza.v1.Server
+	(*Member)(nil),                    // 226: meza.v1.Member
+	(*PublicUser)(nil),                // 227: meza.v1.PublicUser
+	(*Role)(nil),                      // 228: meza.v1.Role
+	(*Invite)(nil),                    // 229: meza.v1.Invite
+	(*CustomEmoji)(nil),               // 230: meza.v1.CustomEmoji
+	(*PinnedMessage)(nil),             // 231: meza.v1.PinnedMessage
+	(*SoundboardSound)(nil),           // 232: meza.v1.SoundboardSound
+	(*Reaction)(nil),                  // 233: meza.v1.Reaction
+	(*ReadState)(nil),                 // 234: meza.v1.ReadState
+	(*ChannelGroup)(nil),              // 235: meza.v1.ChannelGroup
+	(*DMChannel)(nil),                 // 236: meza.v1.DMChannel
+	(*GetPresenceResponse)(nil),       // 237: meza.v1.GetPresenceResponse
+	(*Ban)(nil),                       // 238: meza.v1.Ban
+	(*AuditLogEntry)(nil),             // 239: meza.v1.AuditLogEntry
+	(*ReactionGroup)(nil),             // 240: meza.v1.ReactionGroup
+	(*LinkEmbed)(nil),                 // 241: meza.v1.LinkEmbed
+	(*PermissionOverride)(nil),        // 242: meza.v1.PermissionOverride
+	(*User)(nil),                      // 243: meza.v1.User
+	(MessageType)(0),                  // 244: meza.v1.MessageType
+	(*ServerSystemMessageConfig)(nil), // 245: meza.v1.ServerSystemMessageConfig
 }
 var file_meza_v1_chat_proto_depIdxs = []int32{
-	219, // 0: meza.v1.SendMessageResponse.created_at:type_name -> google.protobuf.Timestamp
-	219, // 1: meza.v1.EditMessageResponse.edited_at:type_name -> google.protobuf.Timestamp
-	220, // 2: meza.v1.GetMessagesResponse.messages:type_name -> meza.v1.Message
-	221, // 3: meza.v1.CreateChannelRequest.type:type_name -> meza.v1.ChannelType
-	222, // 4: meza.v1.CreateChannelResponse.channel:type_name -> meza.v1.Channel
-	222, // 5: meza.v1.UpdateChannelResponse.channel:type_name -> meza.v1.Channel
-	222, // 6: meza.v1.GetChannelResponse.channel:type_name -> meza.v1.Channel
-	222, // 7: meza.v1.ListChannelsResponse.channels:type_name -> meza.v1.Channel
-	223, // 8: meza.v1.CreateServerResponse.server:type_name -> meza.v1.Server
-	223, // 9: meza.v1.UpdateServerResponse.server:type_name -> meza.v1.Server
-	223, // 10: meza.v1.GetServerResponse.server:type_name -> meza.v1.Server
-	223, // 11: meza.v1.ListServersResponse.servers:type_name -> meza.v1.Server
-	223, // 12: meza.v1.JoinServerResponse.server:type_name -> meza.v1.Server
-	224, // 13: meza.v1.ListMembersResponse.members:type_name -> meza.v1.Member
-	225, // 14: meza.v1.ListMembersResponse.users:type_name -> meza.v1.PublicUser
-	224, // 15: meza.v1.UpdateMemberResponse.member:type_name -> meza.v1.Member
-	224, // 16: meza.v1.SetMemberRolesResponse.member:type_name -> meza.v1.Member
-	226, // 17: meza.v1.CreateRoleResponse.role:type_name -> meza.v1.Role
-	226, // 18: meza.v1.UpdateRoleResponse.role:type_name -> meza.v1.Role
-	227, // 19: meza.v1.CreateInviteResponse.invite:type_name -> meza.v1.Invite
-	223, // 20: meza.v1.ResolveInviteResponse.server:type_name -> meza.v1.Server
-	227, // 21: meza.v1.ResolveInviteResponse.invite:type_name -> meza.v1.Invite
-	227, // 22: meza.v1.ListInvitesResponse.invites:type_name -> meza.v1.Invite
-	224, // 23: meza.v1.ListChannelMembersResponse.members:type_name -> meza.v1.Member
+	221, // 0: meza.v1.SendMessageResponse.created_at:type_name -> google.protobuf.Timestamp
+	221, // 1: meza.v1.EditMessageResponse.edited_at:type_name -> google.protobuf.Timestamp
+	222, // 2: meza.v1.GetMessagesResponse.messages:type_name -> meza.v1.Message
+	223, // 3: meza.v1.CreateChannelRequest.type:type_name -> meza.v1.ChannelType
+	224, // 4: meza.v1.CreateChannelResponse.channel:type_name -> meza.v1.Channel
+	224, // 5: meza.v1.UpdateChannelResponse.channel:type_name -> meza.v1.Channel
+	224, // 6: meza.v1.GetChannelResponse.channel:type_name -> meza.v1.Channel
+	224, // 7: meza.v1.ListChannelsResponse.channels:type_name -> meza.v1.Channel
+	225, // 8: meza.v1.CreateServerResponse.server:type_name -> meza.v1.Server
+	225, // 9: meza.v1.UpdateServerResponse.server:type_name -> meza.v1.Server
+	225, // 10: meza.v1.GetServerResponse.server:type_name -> meza.v1.Server
+	225, // 11: meza.v1.ListServersResponse.servers:type_name -> meza.v1.Server
+	225, // 12: meza.v1.JoinServerResponse.server:type_name -> meza.v1.Server
+	226, // 13: meza.v1.ListMembersResponse.members:type_name -> meza.v1.Member
+	227, // 14: meza.v1.ListMembersResponse.users:type_name -> meza.v1.PublicUser
+	226, // 15: meza.v1.UpdateMemberResponse.member:type_name -> meza.v1.Member
+	226, // 16: meza.v1.SetMemberRolesResponse.member:type_name -> meza.v1.Member
+	228, // 17: meza.v1.CreateRoleResponse.role:type_name -> meza.v1.Role
+	228, // 18: meza.v1.UpdateRoleResponse.role:type_name -> meza.v1.Role
+	229, // 19: meza.v1.CreateInviteResponse.invite:type_name -> meza.v1.Invite
+	225, // 20: meza.v1.ResolveInviteResponse.server:type_name -> meza.v1.Server
+	229, // 21: meza.v1.ResolveInviteResponse.invite:type_name -> meza.v1.Invite
+	229, // 22: meza.v1.ListInvitesResponse.invites:type_name -> meza.v1.Invite
+	226, // 23: meza.v1.ListChannelMembersResponse.members:type_name -> meza.v1.Member
 	0,   // 24: meza.v1.Event.type:type_name -> meza.v1.EventType
-	219, // 25: meza.v1.Event.timestamp:type_name -> google.protobuf.Timestamp
-	220, // 26: meza.v1.Event.message_create:type_name -> meza.v1.Message
-	220, // 27: meza.v1.Event.message_update:type_name -> meza.v1.Message
+	221, // 25: meza.v1.Event.timestamp:type_name -> google.protobuf.Timestamp
+	222, // 26: meza.v1.Event.message_create:type_name -> meza.v1.Message
+	222, // 27: meza.v1.Event.message_update:type_name -> meza.v1.Message
 	68,  // 28: meza.v1.Event.message_delete:type_name -> meza.v1.MessageDeleteEvent
-	222, // 29: meza.v1.Event.channel_create:type_name -> meza.v1.Channel
-	222, // 30: meza.v1.Event.channel_update:type_name -> meza.v1.Channel
+	224, // 29: meza.v1.Event.channel_create:type_name -> meza.v1.Channel
+	224, // 30: meza.v1.Event.channel_update:type_name -> meza.v1.Channel
 	69,  // 31: meza.v1.Event.channel_delete:type_name -> meza.v1.ChannelDeleteEvent
-	224, // 32: meza.v1.Event.member_join:type_name -> meza.v1.Member
-	224, // 33: meza.v1.Event.member_update:type_name -> meza.v1.Member
+	226, // 32: meza.v1.Event.member_join:type_name -> meza.v1.Member
+	226, // 33: meza.v1.Event.member_update:type_name -> meza.v1.Member
 	71,  // 34: meza.v1.Event.member_remove:type_name -> meza.v1.MemberRemoveEvent
 	72,  // 35: meza.v1.Event.typing_start:type_name -> meza.v1.TypingEvent
-	226, // 36: meza.v1.Event.role_create:type_name -> meza.v1.Role
-	226, // 37: meza.v1.Event.role_update:type_name -> meza.v1.Role
+	228, // 36: meza.v1.Event.role_create:type_name -> meza.v1.Role
+	228, // 37: meza.v1.Event.role_update:type_name -> meza.v1.Role
 	75,  // 38: meza.v1.Event.role_delete:type_name -> meza.v1.RoleDeleteEvent
-	228, // 39: meza.v1.Event.emoji_create:type_name -> meza.v1.CustomEmoji
-	228, // 40: meza.v1.Event.emoji_update:type_name -> meza.v1.CustomEmoji
+	230, // 39: meza.v1.Event.emoji_create:type_name -> meza.v1.CustomEmoji
+	230, // 40: meza.v1.Event.emoji_update:type_name -> meza.v1.CustomEmoji
 	101, // 41: meza.v1.Event.emoji_delete:type_name -> meza.v1.EmojiDeleteEvent
 	77,  // 42: meza.v1.Event.channel_member_add:type_name -> meza.v1.ChannelMemberEvent
 	77,  // 43: meza.v1.Event.channel_member_remove:type_name -> meza.v1.ChannelMemberEvent
-	229, // 44: meza.v1.Event.pin_add:type_name -> meza.v1.PinnedMessage
+	231, // 44: meza.v1.Event.pin_add:type_name -> meza.v1.PinnedMessage
 	90,  // 45: meza.v1.Event.pin_remove:type_name -> meza.v1.PinRemoveEvent
 	104, // 46: meza.v1.Event.message_bulk_delete:type_name -> meza.v1.MessageBulkDeleteEvent
-	230, // 47: meza.v1.Event.sound_create:type_name -> meza.v1.SoundboardSound
-	230, // 48: meza.v1.Event.sound_update:type_name -> meza.v1.SoundboardSound
+	232, // 47: meza.v1.Event.sound_create:type_name -> meza.v1.SoundboardSound
+	232, // 48: meza.v1.Event.sound_update:type_name -> meza.v1.SoundboardSound
 	121, // 49: meza.v1.Event.sound_delete:type_name -> meza.v1.SoundDeleteEvent
-	231, // 50: meza.v1.Event.reaction_add:type_name -> meza.v1.Reaction
-	231, // 51: meza.v1.Event.reaction_remove:type_name -> meza.v1.Reaction
-	232, // 52: meza.v1.Event.read_state_update:type_name -> meza.v1.ReadState
+	233, // 50: meza.v1.Event.reaction_add:type_name -> meza.v1.Reaction
+	233, // 51: meza.v1.Event.reaction_remove:type_name -> meza.v1.Reaction
+	234, // 52: meza.v1.Event.read_state_update:type_name -> meza.v1.ReadState
 	146, // 53: meza.v1.Event.embeds_update:type_name -> meza.v1.EmbedsUpdateEvent
-	233, // 54: meza.v1.Event.channel_group_create:type_name -> meza.v1.ChannelGroup
-	233, // 55: meza.v1.Event.channel_group_update:type_name -> meza.v1.ChannelGroup
+	235, // 54: meza.v1.Event.channel_group_create:type_name -> meza.v1.ChannelGroup
+	235, // 55: meza.v1.Event.channel_group_update:type_name -> meza.v1.ChannelGroup
 	70,  // 56: meza.v1.Event.channel_group_delete:type_name -> meza.v1.ChannelGroupDeleteEvent
-	171, // 57: meza.v1.Event.federation_removed:type_name -> meza.v1.FederationRemovedEvent
-	164, // 58: meza.v1.Event.permission_override_update:type_name -> meza.v1.PermissionOverrideUpdateEvent
-	165, // 59: meza.v1.Event.permission_override_delete:type_name -> meza.v1.PermissionOverrideDeleteEvent
-	166, // 60: meza.v1.Event.permissions_updated:type_name -> meza.v1.PermissionsUpdatedEvent
-	234, // 61: meza.v1.Event.dm_request_received:type_name -> meza.v1.DMChannel
-	234, // 62: meza.v1.Event.dm_request_accepted:type_name -> meza.v1.DMChannel
-	180, // 63: meza.v1.Event.dm_request_declined:type_name -> meza.v1.DMRequestDeclinedEvent
-	187, // 64: meza.v1.Event.user_blocked:type_name -> meza.v1.UserBlockEvent
-	187, // 65: meza.v1.Event.user_unblocked:type_name -> meza.v1.UserBlockEvent
-	188, // 66: meza.v1.Event.friend_request_received:type_name -> meza.v1.FriendEvent
-	188, // 67: meza.v1.Event.friend_request_accepted:type_name -> meza.v1.FriendEvent
-	188, // 68: meza.v1.Event.friend_request_declined:type_name -> meza.v1.FriendEvent
-	188, // 69: meza.v1.Event.friend_removed:type_name -> meza.v1.FriendEvent
-	188, // 70: meza.v1.Event.friend_request_cancelled:type_name -> meza.v1.FriendEvent
-	235, // 71: meza.v1.Event.presence_update:type_name -> meza.v1.GetPresenceResponse
+	173, // 57: meza.v1.Event.federation_removed:type_name -> meza.v1.FederationRemovedEvent
+	166, // 58: meza.v1.Event.permission_override_update:type_name -> meza.v1.PermissionOverrideUpdateEvent
+	167, // 59: meza.v1.Event.permission_override_delete:type_name -> meza.v1.PermissionOverrideDeleteEvent
+	168, // 60: meza.v1.Event.permissions_updated:type_name -> meza.v1.PermissionsUpdatedEvent
+	236, // 61: meza.v1.Event.dm_request_received:type_name -> meza.v1.DMChannel
+	236, // 62: meza.v1.Event.dm_request_accepted:type_name -> meza.v1.DMChannel
+	182, // 63: meza.v1.Event.dm_request_declined:type_name -> meza.v1.DMRequestDeclinedEvent
+	189, // 64: meza.v1.Event.user_blocked:type_name -> meza.v1.UserBlockEvent
+	189, // 65: meza.v1.Event.user_unblocked:type_name -> meza.v1.UserBlockEvent
+	190, // 66: meza.v1.Event.friend_request_received:type_name -> meza.v1.FriendEvent
+	190, // 67: meza.v1.Event.friend_request_accepted:type_name -> meza.v1.FriendEvent
+	190, // 68: meza.v1.Event.friend_request_declined:type_name -> meza.v1.FriendEvent
+	190, // 69: meza.v1.Event.friend_removed:type_name -> meza.v1.FriendEvent
+	190, // 70: meza.v1.Event.friend_request_cancelled:type_name -> meza.v1.FriendEvent
+	237, // 71: meza.v1.Event.presence_update:type_name -> meza.v1.GetPresenceResponse
 	76,  // 72: meza.v1.Event.roles_reordered:type_name -> meza.v1.RolesReorderedEvent
 	73,  // 73: meza.v1.Event.key_request:type_name -> meza.v1.KeyRequestEvent
 	74,  // 74: meza.v1.Event.device_recovery_request:type_name -> meza.v1.DeviceRecoveryRequestEvent
-	206, // 75: meza.v1.Event.server_update:type_name -> meza.v1.ServerUpdateEvent
-	207, // 76: meza.v1.Event.user_update:type_name -> meza.v1.UserUpdateEvent
-	226, // 77: meza.v1.RolesReorderedEvent.roles:type_name -> meza.v1.Role
-	236, // 78: meza.v1.ListBansResponse.bans:type_name -> meza.v1.Ban
-	226, // 79: meza.v1.ListRolesResponse.roles:type_name -> meza.v1.Role
-	229, // 80: meza.v1.PinMessageResponse.pinned_message:type_name -> meza.v1.PinnedMessage
-	229, // 81: meza.v1.GetPinnedMessagesResponse.pinned_messages:type_name -> meza.v1.PinnedMessage
-	228, // 82: meza.v1.CreateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
-	228, // 83: meza.v1.UpdateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
-	228, // 84: meza.v1.ListEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
-	228, // 85: meza.v1.ListUserEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
-	219, // 86: meza.v1.TimeoutMemberRequest.timed_out_until:type_name -> google.protobuf.Timestamp
-	224, // 87: meza.v1.TimeoutMemberResponse.member:type_name -> meza.v1.Member
-	224, // 88: meza.v1.RemoveTimeoutResponse.member:type_name -> meza.v1.Member
-	237, // 89: meza.v1.ListAuditLogResponse.entries:type_name -> meza.v1.AuditLogEntry
-	230, // 90: meza.v1.CreateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
-	230, // 91: meza.v1.UpdateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
-	230, // 92: meza.v1.ListUserSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
-	230, // 93: meza.v1.ListServerSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
-	218, // 94: meza.v1.GetReactionsResponse.reactions:type_name -> meza.v1.GetReactionsResponse.ReactionsEntry
-	238, // 95: meza.v1.ReactionGroupList.groups:type_name -> meza.v1.ReactionGroup
-	232, // 96: meza.v1.AckMessageResponse.read_state:type_name -> meza.v1.ReadState
-	234, // 97: meza.v1.CreateOrGetDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
-	234, // 98: meza.v1.CreateGroupDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
-	234, // 99: meza.v1.ListDMChannelsResponse.dm_channels:type_name -> meza.v1.DMChannel
-	219, // 100: meza.v1.ReplyEntry.created_at:type_name -> google.protobuf.Timestamp
+	208, // 75: meza.v1.Event.server_update:type_name -> meza.v1.ServerUpdateEvent
+	209, // 76: meza.v1.Event.user_update:type_name -> meza.v1.UserUpdateEvent
+	228, // 77: meza.v1.RolesReorderedEvent.roles:type_name -> meza.v1.Role
+	238, // 78: meza.v1.ListBansResponse.bans:type_name -> meza.v1.Ban
+	228, // 79: meza.v1.ListRolesResponse.roles:type_name -> meza.v1.Role
+	231, // 80: meza.v1.PinMessageResponse.pinned_message:type_name -> meza.v1.PinnedMessage
+	231, // 81: meza.v1.GetPinnedMessagesResponse.pinned_messages:type_name -> meza.v1.PinnedMessage
+	230, // 82: meza.v1.CreateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
+	230, // 83: meza.v1.UpdateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
+	230, // 84: meza.v1.ListEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
+	230, // 85: meza.v1.ListUserEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
+	221, // 86: meza.v1.TimeoutMemberRequest.timed_out_until:type_name -> google.protobuf.Timestamp
+	226, // 87: meza.v1.TimeoutMemberResponse.member:type_name -> meza.v1.Member
+	226, // 88: meza.v1.RemoveTimeoutResponse.member:type_name -> meza.v1.Member
+	239, // 89: meza.v1.ListAuditLogResponse.entries:type_name -> meza.v1.AuditLogEntry
+	232, // 90: meza.v1.CreateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
+	232, // 91: meza.v1.UpdateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
+	232, // 92: meza.v1.ListUserSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
+	232, // 93: meza.v1.ListServerSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
+	220, // 94: meza.v1.GetReactionsResponse.reactions:type_name -> meza.v1.GetReactionsResponse.ReactionsEntry
+	240, // 95: meza.v1.ReactionGroupList.groups:type_name -> meza.v1.ReactionGroup
+	234, // 96: meza.v1.AckMessageResponse.read_state:type_name -> meza.v1.ReadState
+	236, // 97: meza.v1.CreateOrGetDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
+	236, // 98: meza.v1.CreateGroupDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
+	236, // 99: meza.v1.ListDMChannelsResponse.dm_channels:type_name -> meza.v1.DMChannel
+	221, // 100: meza.v1.ReplyEntry.created_at:type_name -> google.protobuf.Timestamp
 	138, // 101: meza.v1.GetRepliesResponse.replies:type_name -> meza.v1.ReplyEntry
-	220, // 102: meza.v1.GetMessagesByIDsResponse.messages:type_name -> meza.v1.Message
-	219, // 103: meza.v1.AcknowledgeRulesResponse.acknowledged_at:type_name -> google.protobuf.Timestamp
-	219, // 104: meza.v1.CompleteOnboardingResponse.completed_at:type_name -> google.protobuf.Timestamp
-	239, // 105: meza.v1.EmbedsUpdateEvent.embeds:type_name -> meza.v1.LinkEmbed
-	233, // 106: meza.v1.CreateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
-	233, // 107: meza.v1.UpdateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
-	233, // 108: meza.v1.ListChannelGroupsResponse.channel_groups:type_name -> meza.v1.ChannelGroup
-	240, // 109: meza.v1.SetPermissionOverrideResponse.permission_override:type_name -> meza.v1.PermissionOverride
-	240, // 110: meza.v1.ListPermissionOverridesResponse.permission_overrides:type_name -> meza.v1.PermissionOverride
-	163, // 111: meza.v1.GetEffectivePermissionsResponse.sources:type_name -> meza.v1.PermissionSource
-	1,   // 112: meza.v1.PermissionSource.source_type:type_name -> meza.v1.PermissionSourceType
-	240, // 113: meza.v1.PermissionOverrideUpdateEvent.override:type_name -> meza.v1.PermissionOverride
-	221, // 114: meza.v1.ChannelSpec.type:type_name -> meza.v1.ChannelType
-	167, // 115: meza.v1.CreateServerFromTemplateRequest.channels:type_name -> meza.v1.ChannelSpec
-	168, // 116: meza.v1.CreateServerFromTemplateRequest.roles:type_name -> meza.v1.RoleSpec
-	223, // 117: meza.v1.CreateServerFromTemplateResponse.server:type_name -> meza.v1.Server
-	222, // 118: meza.v1.CreateServerFromTemplateResponse.channels:type_name -> meza.v1.Channel
-	226, // 119: meza.v1.CreateServerFromTemplateResponse.roles:type_name -> meza.v1.Role
-	227, // 120: meza.v1.CreateServerFromTemplateResponse.invite:type_name -> meza.v1.Invite
-	234, // 121: meza.v1.AcceptMessageRequestRes.dm_channel:type_name -> meza.v1.DMChannel
-	234, // 122: meza.v1.ReverseDeclineResponse.dm_channel:type_name -> meza.v1.DMChannel
-	234, // 123: meza.v1.ListMessageRequestsResponse.dm_channels:type_name -> meza.v1.DMChannel
-	241, // 124: meza.v1.ListBlocksResponse.blocked_users:type_name -> meza.v1.User
-	241, // 125: meza.v1.FriendEvent.user:type_name -> meza.v1.User
-	241, // 126: meza.v1.FriendRequestEntry.user:type_name -> meza.v1.User
-	241, // 127: meza.v1.ListFriendsResponse.friends:type_name -> meza.v1.User
-	189, // 128: meza.v1.ListFriendRequestsResponse.incoming:type_name -> meza.v1.FriendRequestEntry
-	189, // 129: meza.v1.ListFriendRequestsResponse.outgoing:type_name -> meza.v1.FriendRequestEntry
-	242, // 130: meza.v1.SearchMessagesRequest.message_types:type_name -> meza.v1.MessageType
-	220, // 131: meza.v1.SearchMessagesResponse.messages:type_name -> meza.v1.Message
-	223, // 132: meza.v1.ServerUpdateEvent.server:type_name -> meza.v1.Server
-	225, // 133: meza.v1.UserUpdateEvent.user:type_name -> meza.v1.PublicUser
-	223, // 134: meza.v1.GetMutualServersResponse.servers:type_name -> meza.v1.Server
-	241, // 135: meza.v1.GetMutualFriendsResponse.users:type_name -> meza.v1.User
-	243, // 136: meza.v1.GetSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
-	243, // 137: meza.v1.UpdateSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
-	128, // 138: meza.v1.GetReactionsResponse.ReactionsEntry.value:type_name -> meza.v1.ReactionGroupList
-	2,   // 139: meza.v1.ChatService.SendMessage:input_type -> meza.v1.SendMessageRequest
-	4,   // 140: meza.v1.ChatService.EditMessage:input_type -> meza.v1.EditMessageRequest
-	6,   // 141: meza.v1.ChatService.DeleteMessage:input_type -> meza.v1.DeleteMessageRequest
-	8,   // 142: meza.v1.ChatService.GetMessages:input_type -> meza.v1.GetMessagesRequest
-	10,  // 143: meza.v1.ChatService.CreateChannel:input_type -> meza.v1.CreateChannelRequest
-	12,  // 144: meza.v1.ChatService.UpdateChannel:input_type -> meza.v1.UpdateChannelRequest
-	14,  // 145: meza.v1.ChatService.DeleteChannel:input_type -> meza.v1.DeleteChannelRequest
-	16,  // 146: meza.v1.ChatService.GetChannel:input_type -> meza.v1.GetChannelRequest
-	18,  // 147: meza.v1.ChatService.ListChannels:input_type -> meza.v1.ListChannelsRequest
-	20,  // 148: meza.v1.ChatService.CreateServer:input_type -> meza.v1.CreateServerRequest
-	22,  // 149: meza.v1.ChatService.UpdateServer:input_type -> meza.v1.UpdateServerRequest
-	24,  // 150: meza.v1.ChatService.DeleteServer:input_type -> meza.v1.DeleteServerRequest
-	26,  // 151: meza.v1.ChatService.GetServer:input_type -> meza.v1.GetServerRequest
-	28,  // 152: meza.v1.ChatService.ListServers:input_type -> meza.v1.ListServersRequest
-	30,  // 153: meza.v1.ChatService.JoinServer:input_type -> meza.v1.JoinServerRequest
-	32,  // 154: meza.v1.ChatService.LeaveServer:input_type -> meza.v1.LeaveServerRequest
-	34,  // 155: meza.v1.ChatService.ListMembers:input_type -> meza.v1.ListMembersRequest
-	36,  // 156: meza.v1.ChatService.UpdateMember:input_type -> meza.v1.UpdateMemberRequest
-	38,  // 157: meza.v1.ChatService.SetMemberRoles:input_type -> meza.v1.SetMemberRolesRequest
-	40,  // 158: meza.v1.ChatService.KickMember:input_type -> meza.v1.KickMemberRequest
-	42,  // 159: meza.v1.ChatService.BanMember:input_type -> meza.v1.BanMemberRequest
-	44,  // 160: meza.v1.ChatService.CreateRole:input_type -> meza.v1.CreateRoleRequest
-	46,  // 161: meza.v1.ChatService.UpdateRole:input_type -> meza.v1.UpdateRoleRequest
-	48,  // 162: meza.v1.ChatService.DeleteRole:input_type -> meza.v1.DeleteRoleRequest
-	78,  // 163: meza.v1.ChatService.UnbanMember:input_type -> meza.v1.UnbanMemberRequest
-	80,  // 164: meza.v1.ChatService.ListBans:input_type -> meza.v1.ListBansRequest
-	82,  // 165: meza.v1.ChatService.ListRoles:input_type -> meza.v1.ListRolesRequest
-	50,  // 166: meza.v1.ChatService.ReorderRoles:input_type -> meza.v1.ReorderRolesRequest
-	91,  // 167: meza.v1.ChatService.CreateEmoji:input_type -> meza.v1.CreateEmojiRequest
-	93,  // 168: meza.v1.ChatService.DeleteEmoji:input_type -> meza.v1.DeleteEmojiRequest
-	95,  // 169: meza.v1.ChatService.UpdateEmoji:input_type -> meza.v1.UpdateEmojiRequest
-	97,  // 170: meza.v1.ChatService.ListEmojis:input_type -> meza.v1.ListEmojisRequest
-	99,  // 171: meza.v1.ChatService.ListUserEmojis:input_type -> meza.v1.ListUserEmojisRequest
-	52,  // 172: meza.v1.ChatService.CreateInvite:input_type -> meza.v1.CreateInviteRequest
-	54,  // 173: meza.v1.ChatService.ResolveInvite:input_type -> meza.v1.ResolveInviteRequest
-	56,  // 174: meza.v1.ChatService.RevokeInvite:input_type -> meza.v1.RevokeInviteRequest
-	58,  // 175: meza.v1.ChatService.ListInvites:input_type -> meza.v1.ListInvitesRequest
-	84,  // 176: meza.v1.ChatService.PinMessage:input_type -> meza.v1.PinMessageRequest
-	86,  // 177: meza.v1.ChatService.UnpinMessage:input_type -> meza.v1.UnpinMessageRequest
-	88,  // 178: meza.v1.ChatService.GetPinnedMessages:input_type -> meza.v1.GetPinnedMessagesRequest
-	60,  // 179: meza.v1.ChatService.AddChannelMember:input_type -> meza.v1.AddChannelMemberRequest
-	62,  // 180: meza.v1.ChatService.RemoveChannelMember:input_type -> meza.v1.RemoveChannelMemberRequest
-	64,  // 181: meza.v1.ChatService.ListChannelMembers:input_type -> meza.v1.ListChannelMembersRequest
-	111, // 182: meza.v1.ChatService.CreateSound:input_type -> meza.v1.CreateSoundRequest
-	113, // 183: meza.v1.ChatService.DeleteSound:input_type -> meza.v1.DeleteSoundRequest
-	115, // 184: meza.v1.ChatService.UpdateSound:input_type -> meza.v1.UpdateSoundRequest
-	117, // 185: meza.v1.ChatService.ListUserSounds:input_type -> meza.v1.ListUserSoundsRequest
-	119, // 186: meza.v1.ChatService.ListServerSounds:input_type -> meza.v1.ListServerSoundsRequest
-	102, // 187: meza.v1.ChatService.BulkDeleteMessages:input_type -> meza.v1.BulkDeleteMessagesRequest
-	105, // 188: meza.v1.ChatService.TimeoutMember:input_type -> meza.v1.TimeoutMemberRequest
-	107, // 189: meza.v1.ChatService.RemoveTimeout:input_type -> meza.v1.RemoveTimeoutRequest
-	109, // 190: meza.v1.ChatService.ListAuditLog:input_type -> meza.v1.ListAuditLogRequest
-	122, // 191: meza.v1.ChatService.AddReaction:input_type -> meza.v1.AddReactionRequest
-	124, // 192: meza.v1.ChatService.RemoveReaction:input_type -> meza.v1.RemoveReactionRequest
-	126, // 193: meza.v1.ChatService.GetReactions:input_type -> meza.v1.GetReactionsRequest
-	129, // 194: meza.v1.ChatService.AckMessage:input_type -> meza.v1.AckMessageRequest
-	131, // 195: meza.v1.ChatService.CreateOrGetDMChannel:input_type -> meza.v1.CreateOrGetDMChannelRequest
-	135, // 196: meza.v1.ChatService.ListDMChannels:input_type -> meza.v1.ListDMChannelsRequest
-	133, // 197: meza.v1.ChatService.CreateGroupDMChannel:input_type -> meza.v1.CreateGroupDMChannelRequest
-	137, // 198: meza.v1.ChatService.GetReplies:input_type -> meza.v1.GetRepliesRequest
-	140, // 199: meza.v1.ChatService.GetMessagesByIDs:input_type -> meza.v1.GetMessagesByIDsRequest
-	142, // 200: meza.v1.ChatService.AcknowledgeRules:input_type -> meza.v1.AcknowledgeRulesRequest
-	144, // 201: meza.v1.ChatService.CompleteOnboarding:input_type -> meza.v1.CompleteOnboardingRequest
-	147, // 202: meza.v1.ChatService.CreateChannelGroup:input_type -> meza.v1.CreateChannelGroupRequest
-	149, // 203: meza.v1.ChatService.UpdateChannelGroup:input_type -> meza.v1.UpdateChannelGroupRequest
-	151, // 204: meza.v1.ChatService.DeleteChannelGroup:input_type -> meza.v1.DeleteChannelGroupRequest
-	153, // 205: meza.v1.ChatService.ListChannelGroups:input_type -> meza.v1.ListChannelGroupsRequest
-	155, // 206: meza.v1.ChatService.SetPermissionOverride:input_type -> meza.v1.SetPermissionOverrideRequest
-	157, // 207: meza.v1.ChatService.DeletePermissionOverride:input_type -> meza.v1.DeletePermissionOverrideRequest
-	159, // 208: meza.v1.ChatService.ListPermissionOverrides:input_type -> meza.v1.ListPermissionOverridesRequest
-	161, // 209: meza.v1.ChatService.GetEffectivePermissions:input_type -> meza.v1.GetEffectivePermissionsRequest
-	172, // 210: meza.v1.ChatService.AcceptMessageRequest:input_type -> meza.v1.AcceptMessageRequestReq
-	174, // 211: meza.v1.ChatService.DeclineMessageRequest:input_type -> meza.v1.DeclineMessageRequestReq
-	176, // 212: meza.v1.ChatService.ReverseDecline:input_type -> meza.v1.ReverseDeclineRequest
-	178, // 213: meza.v1.ChatService.ListMessageRequests:input_type -> meza.v1.ListMessageRequestsRequest
-	181, // 214: meza.v1.ChatService.BlockUser:input_type -> meza.v1.BlockUserRequest
-	183, // 215: meza.v1.ChatService.UnblockUser:input_type -> meza.v1.UnblockUserRequest
-	185, // 216: meza.v1.ChatService.ListBlocks:input_type -> meza.v1.ListBlocksRequest
-	190, // 217: meza.v1.ChatService.SendFriendRequest:input_type -> meza.v1.SendFriendRequestRequest
-	192, // 218: meza.v1.ChatService.AcceptFriendRequest:input_type -> meza.v1.AcceptFriendRequestRequest
-	194, // 219: meza.v1.ChatService.DeclineFriendRequest:input_type -> meza.v1.DeclineFriendRequestRequest
-	196, // 220: meza.v1.ChatService.CancelFriendRequest:input_type -> meza.v1.CancelFriendRequestRequest
-	198, // 221: meza.v1.ChatService.RemoveFriend:input_type -> meza.v1.RemoveFriendRequest
-	200, // 222: meza.v1.ChatService.ListFriends:input_type -> meza.v1.ListFriendsRequest
-	202, // 223: meza.v1.ChatService.ListFriendRequests:input_type -> meza.v1.ListFriendRequestsRequest
-	169, // 224: meza.v1.ChatService.CreateServerFromTemplate:input_type -> meza.v1.CreateServerFromTemplateRequest
-	204, // 225: meza.v1.ChatService.SearchMessages:input_type -> meza.v1.SearchMessagesRequest
-	66,  // 226: meza.v1.ChatService.StreamEvents:input_type -> meza.v1.StreamEventsRequest
-	210, // 227: meza.v1.ChatService.GetMutualServers:input_type -> meza.v1.GetMutualServersRequest
-	212, // 228: meza.v1.ChatService.GetMutualFriends:input_type -> meza.v1.GetMutualFriendsRequest
-	214, // 229: meza.v1.ChatService.GetSystemMessageConfig:input_type -> meza.v1.GetSystemMessageConfigRequest
-	216, // 230: meza.v1.ChatService.UpdateSystemMessageConfig:input_type -> meza.v1.UpdateSystemMessageConfigRequest
-	3,   // 231: meza.v1.ChatService.SendMessage:output_type -> meza.v1.SendMessageResponse
-	5,   // 232: meza.v1.ChatService.EditMessage:output_type -> meza.v1.EditMessageResponse
-	7,   // 233: meza.v1.ChatService.DeleteMessage:output_type -> meza.v1.DeleteMessageResponse
-	9,   // 234: meza.v1.ChatService.GetMessages:output_type -> meza.v1.GetMessagesResponse
-	11,  // 235: meza.v1.ChatService.CreateChannel:output_type -> meza.v1.CreateChannelResponse
-	13,  // 236: meza.v1.ChatService.UpdateChannel:output_type -> meza.v1.UpdateChannelResponse
-	15,  // 237: meza.v1.ChatService.DeleteChannel:output_type -> meza.v1.DeleteChannelResponse
-	17,  // 238: meza.v1.ChatService.GetChannel:output_type -> meza.v1.GetChannelResponse
-	19,  // 239: meza.v1.ChatService.ListChannels:output_type -> meza.v1.ListChannelsResponse
-	21,  // 240: meza.v1.ChatService.CreateServer:output_type -> meza.v1.CreateServerResponse
-	23,  // 241: meza.v1.ChatService.UpdateServer:output_type -> meza.v1.UpdateServerResponse
-	25,  // 242: meza.v1.ChatService.DeleteServer:output_type -> meza.v1.DeleteServerResponse
-	27,  // 243: meza.v1.ChatService.GetServer:output_type -> meza.v1.GetServerResponse
-	29,  // 244: meza.v1.ChatService.ListServers:output_type -> meza.v1.ListServersResponse
-	31,  // 245: meza.v1.ChatService.JoinServer:output_type -> meza.v1.JoinServerResponse
-	33,  // 246: meza.v1.ChatService.LeaveServer:output_type -> meza.v1.LeaveServerResponse
-	35,  // 247: meza.v1.ChatService.ListMembers:output_type -> meza.v1.ListMembersResponse
-	37,  // 248: meza.v1.ChatService.UpdateMember:output_type -> meza.v1.UpdateMemberResponse
-	39,  // 249: meza.v1.ChatService.SetMemberRoles:output_type -> meza.v1.SetMemberRolesResponse
-	41,  // 250: meza.v1.ChatService.KickMember:output_type -> meza.v1.KickMemberResponse
-	43,  // 251: meza.v1.ChatService.BanMember:output_type -> meza.v1.BanMemberResponse
-	45,  // 252: meza.v1.ChatService.CreateRole:output_type -> meza.v1.CreateRoleResponse
-	47,  // 253: meza.v1.ChatService.UpdateRole:output_type -> meza.v1.UpdateRoleResponse
-	49,  // 254: meza.v1.ChatService.DeleteRole:output_type -> meza.v1.DeleteRoleResponse
-	79,  // 255: meza.v1.ChatService.UnbanMember:output_type -> meza.v1.UnbanMemberResponse
-	81,  // 256: meza.v1.ChatService.ListBans:output_type -> meza.v1.ListBansResponse
-	83,  // 257: meza.v1.ChatService.ListRoles:output_type -> meza.v1.ListRolesResponse
-	51,  // 258: meza.v1.ChatService.ReorderRoles:output_type -> meza.v1.ReorderRolesResponse
-	92,  // 259: meza.v1.ChatService.CreateEmoji:output_type -> meza.v1.CreateEmojiResponse
-	94,  // 260: meza.v1.ChatService.DeleteEmoji:output_type -> meza.v1.DeleteEmojiResponse
-	96,  // 261: meza.v1.ChatService.UpdateEmoji:output_type -> meza.v1.UpdateEmojiResponse
-	98,  // 262: meza.v1.ChatService.ListEmojis:output_type -> meza.v1.ListEmojisResponse
-	100, // 263: meza.v1.ChatService.ListUserEmojis:output_type -> meza.v1.ListUserEmojisResponse
-	53,  // 264: meza.v1.ChatService.CreateInvite:output_type -> meza.v1.CreateInviteResponse
-	55,  // 265: meza.v1.ChatService.ResolveInvite:output_type -> meza.v1.ResolveInviteResponse
-	57,  // 266: meza.v1.ChatService.RevokeInvite:output_type -> meza.v1.RevokeInviteResponse
-	59,  // 267: meza.v1.ChatService.ListInvites:output_type -> meza.v1.ListInvitesResponse
-	85,  // 268: meza.v1.ChatService.PinMessage:output_type -> meza.v1.PinMessageResponse
-	87,  // 269: meza.v1.ChatService.UnpinMessage:output_type -> meza.v1.UnpinMessageResponse
-	89,  // 270: meza.v1.ChatService.GetPinnedMessages:output_type -> meza.v1.GetPinnedMessagesResponse
-	61,  // 271: meza.v1.ChatService.AddChannelMember:output_type -> meza.v1.AddChannelMemberResponse
-	63,  // 272: meza.v1.ChatService.RemoveChannelMember:output_type -> meza.v1.RemoveChannelMemberResponse
-	65,  // 273: meza.v1.ChatService.ListChannelMembers:output_type -> meza.v1.ListChannelMembersResponse
-	112, // 274: meza.v1.ChatService.CreateSound:output_type -> meza.v1.CreateSoundResponse
-	114, // 275: meza.v1.ChatService.DeleteSound:output_type -> meza.v1.DeleteSoundResponse
-	116, // 276: meza.v1.ChatService.UpdateSound:output_type -> meza.v1.UpdateSoundResponse
-	118, // 277: meza.v1.ChatService.ListUserSounds:output_type -> meza.v1.ListUserSoundsResponse
-	120, // 278: meza.v1.ChatService.ListServerSounds:output_type -> meza.v1.ListServerSoundsResponse
-	103, // 279: meza.v1.ChatService.BulkDeleteMessages:output_type -> meza.v1.BulkDeleteMessagesResponse
-	106, // 280: meza.v1.ChatService.TimeoutMember:output_type -> meza.v1.TimeoutMemberResponse
-	108, // 281: meza.v1.ChatService.RemoveTimeout:output_type -> meza.v1.RemoveTimeoutResponse
-	110, // 282: meza.v1.ChatService.ListAuditLog:output_type -> meza.v1.ListAuditLogResponse
-	123, // 283: meza.v1.ChatService.AddReaction:output_type -> meza.v1.AddReactionResponse
-	125, // 284: meza.v1.ChatService.RemoveReaction:output_type -> meza.v1.RemoveReactionResponse
-	127, // 285: meza.v1.ChatService.GetReactions:output_type -> meza.v1.GetReactionsResponse
-	130, // 286: meza.v1.ChatService.AckMessage:output_type -> meza.v1.AckMessageResponse
-	132, // 287: meza.v1.ChatService.CreateOrGetDMChannel:output_type -> meza.v1.CreateOrGetDMChannelResponse
-	136, // 288: meza.v1.ChatService.ListDMChannels:output_type -> meza.v1.ListDMChannelsResponse
-	134, // 289: meza.v1.ChatService.CreateGroupDMChannel:output_type -> meza.v1.CreateGroupDMChannelResponse
-	139, // 290: meza.v1.ChatService.GetReplies:output_type -> meza.v1.GetRepliesResponse
-	141, // 291: meza.v1.ChatService.GetMessagesByIDs:output_type -> meza.v1.GetMessagesByIDsResponse
-	143, // 292: meza.v1.ChatService.AcknowledgeRules:output_type -> meza.v1.AcknowledgeRulesResponse
-	145, // 293: meza.v1.ChatService.CompleteOnboarding:output_type -> meza.v1.CompleteOnboardingResponse
-	148, // 294: meza.v1.ChatService.CreateChannelGroup:output_type -> meza.v1.CreateChannelGroupResponse
-	150, // 295: meza.v1.ChatService.UpdateChannelGroup:output_type -> meza.v1.UpdateChannelGroupResponse
-	152, // 296: meza.v1.ChatService.DeleteChannelGroup:output_type -> meza.v1.DeleteChannelGroupResponse
-	154, // 297: meza.v1.ChatService.ListChannelGroups:output_type -> meza.v1.ListChannelGroupsResponse
-	156, // 298: meza.v1.ChatService.SetPermissionOverride:output_type -> meza.v1.SetPermissionOverrideResponse
-	158, // 299: meza.v1.ChatService.DeletePermissionOverride:output_type -> meza.v1.DeletePermissionOverrideResponse
-	160, // 300: meza.v1.ChatService.ListPermissionOverrides:output_type -> meza.v1.ListPermissionOverridesResponse
-	162, // 301: meza.v1.ChatService.GetEffectivePermissions:output_type -> meza.v1.GetEffectivePermissionsResponse
-	173, // 302: meza.v1.ChatService.AcceptMessageRequest:output_type -> meza.v1.AcceptMessageRequestRes
-	175, // 303: meza.v1.ChatService.DeclineMessageRequest:output_type -> meza.v1.DeclineMessageRequestRes
-	177, // 304: meza.v1.ChatService.ReverseDecline:output_type -> meza.v1.ReverseDeclineResponse
-	179, // 305: meza.v1.ChatService.ListMessageRequests:output_type -> meza.v1.ListMessageRequestsResponse
-	182, // 306: meza.v1.ChatService.BlockUser:output_type -> meza.v1.BlockUserResponse
-	184, // 307: meza.v1.ChatService.UnblockUser:output_type -> meza.v1.UnblockUserResponse
-	186, // 308: meza.v1.ChatService.ListBlocks:output_type -> meza.v1.ListBlocksResponse
-	191, // 309: meza.v1.ChatService.SendFriendRequest:output_type -> meza.v1.SendFriendRequestResponse
-	193, // 310: meza.v1.ChatService.AcceptFriendRequest:output_type -> meza.v1.AcceptFriendRequestResponse
-	195, // 311: meza.v1.ChatService.DeclineFriendRequest:output_type -> meza.v1.DeclineFriendRequestResponse
-	197, // 312: meza.v1.ChatService.CancelFriendRequest:output_type -> meza.v1.CancelFriendRequestResponse
-	199, // 313: meza.v1.ChatService.RemoveFriend:output_type -> meza.v1.RemoveFriendResponse
-	201, // 314: meza.v1.ChatService.ListFriends:output_type -> meza.v1.ListFriendsResponse
-	203, // 315: meza.v1.ChatService.ListFriendRequests:output_type -> meza.v1.ListFriendRequestsResponse
-	170, // 316: meza.v1.ChatService.CreateServerFromTemplate:output_type -> meza.v1.CreateServerFromTemplateResponse
-	205, // 317: meza.v1.ChatService.SearchMessages:output_type -> meza.v1.SearchMessagesResponse
-	67,  // 318: meza.v1.ChatService.StreamEvents:output_type -> meza.v1.Event
-	211, // 319: meza.v1.ChatService.GetMutualServers:output_type -> meza.v1.GetMutualServersResponse
-	213, // 320: meza.v1.ChatService.GetMutualFriends:output_type -> meza.v1.GetMutualFriendsResponse
-	215, // 321: meza.v1.ChatService.GetSystemMessageConfig:output_type -> meza.v1.GetSystemMessageConfigResponse
-	217, // 322: meza.v1.ChatService.UpdateSystemMessageConfig:output_type -> meza.v1.UpdateSystemMessageConfigResponse
-	231, // [231:323] is the sub-list for method output_type
-	139, // [139:231] is the sub-list for method input_type
-	139, // [139:139] is the sub-list for extension type_name
-	139, // [139:139] is the sub-list for extension extendee
-	0,   // [0:139] is the sub-list for field type_name
+	222, // 102: meza.v1.GetMessagesByIDsResponse.messages:type_name -> meza.v1.Message
+	221, // 103: meza.v1.AcknowledgeRulesResponse.acknowledged_at:type_name -> google.protobuf.Timestamp
+	221, // 104: meza.v1.CompleteOnboardingResponse.completed_at:type_name -> google.protobuf.Timestamp
+	241, // 105: meza.v1.EmbedsUpdateEvent.embeds:type_name -> meza.v1.LinkEmbed
+	235, // 106: meza.v1.CreateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
+	235, // 107: meza.v1.UpdateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
+	235, // 108: meza.v1.ListChannelGroupsResponse.channel_groups:type_name -> meza.v1.ChannelGroup
+	242, // 109: meza.v1.SetPermissionOverrideResponse.permission_override:type_name -> meza.v1.PermissionOverride
+	242, // 110: meza.v1.ListPermissionOverridesResponse.permission_overrides:type_name -> meza.v1.PermissionOverride
+	224, // 111: meza.v1.SyncChannelPermissionsResponse.channel:type_name -> meza.v1.Channel
+	165, // 112: meza.v1.GetEffectivePermissionsResponse.sources:type_name -> meza.v1.PermissionSource
+	1,   // 113: meza.v1.PermissionSource.source_type:type_name -> meza.v1.PermissionSourceType
+	242, // 114: meza.v1.PermissionOverrideUpdateEvent.override:type_name -> meza.v1.PermissionOverride
+	223, // 115: meza.v1.ChannelSpec.type:type_name -> meza.v1.ChannelType
+	169, // 116: meza.v1.CreateServerFromTemplateRequest.channels:type_name -> meza.v1.ChannelSpec
+	170, // 117: meza.v1.CreateServerFromTemplateRequest.roles:type_name -> meza.v1.RoleSpec
+	225, // 118: meza.v1.CreateServerFromTemplateResponse.server:type_name -> meza.v1.Server
+	224, // 119: meza.v1.CreateServerFromTemplateResponse.channels:type_name -> meza.v1.Channel
+	228, // 120: meza.v1.CreateServerFromTemplateResponse.roles:type_name -> meza.v1.Role
+	229, // 121: meza.v1.CreateServerFromTemplateResponse.invite:type_name -> meza.v1.Invite
+	236, // 122: meza.v1.AcceptMessageRequestRes.dm_channel:type_name -> meza.v1.DMChannel
+	236, // 123: meza.v1.ReverseDeclineResponse.dm_channel:type_name -> meza.v1.DMChannel
+	236, // 124: meza.v1.ListMessageRequestsResponse.dm_channels:type_name -> meza.v1.DMChannel
+	243, // 125: meza.v1.ListBlocksResponse.blocked_users:type_name -> meza.v1.User
+	243, // 126: meza.v1.FriendEvent.user:type_name -> meza.v1.User
+	243, // 127: meza.v1.FriendRequestEntry.user:type_name -> meza.v1.User
+	243, // 128: meza.v1.ListFriendsResponse.friends:type_name -> meza.v1.User
+	191, // 129: meza.v1.ListFriendRequestsResponse.incoming:type_name -> meza.v1.FriendRequestEntry
+	191, // 130: meza.v1.ListFriendRequestsResponse.outgoing:type_name -> meza.v1.FriendRequestEntry
+	244, // 131: meza.v1.SearchMessagesRequest.message_types:type_name -> meza.v1.MessageType
+	222, // 132: meza.v1.SearchMessagesResponse.messages:type_name -> meza.v1.Message
+	225, // 133: meza.v1.ServerUpdateEvent.server:type_name -> meza.v1.Server
+	227, // 134: meza.v1.UserUpdateEvent.user:type_name -> meza.v1.PublicUser
+	225, // 135: meza.v1.GetMutualServersResponse.servers:type_name -> meza.v1.Server
+	243, // 136: meza.v1.GetMutualFriendsResponse.users:type_name -> meza.v1.User
+	245, // 137: meza.v1.GetSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
+	245, // 138: meza.v1.UpdateSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
+	128, // 139: meza.v1.GetReactionsResponse.ReactionsEntry.value:type_name -> meza.v1.ReactionGroupList
+	2,   // 140: meza.v1.ChatService.SendMessage:input_type -> meza.v1.SendMessageRequest
+	4,   // 141: meza.v1.ChatService.EditMessage:input_type -> meza.v1.EditMessageRequest
+	6,   // 142: meza.v1.ChatService.DeleteMessage:input_type -> meza.v1.DeleteMessageRequest
+	8,   // 143: meza.v1.ChatService.GetMessages:input_type -> meza.v1.GetMessagesRequest
+	10,  // 144: meza.v1.ChatService.CreateChannel:input_type -> meza.v1.CreateChannelRequest
+	12,  // 145: meza.v1.ChatService.UpdateChannel:input_type -> meza.v1.UpdateChannelRequest
+	14,  // 146: meza.v1.ChatService.DeleteChannel:input_type -> meza.v1.DeleteChannelRequest
+	16,  // 147: meza.v1.ChatService.GetChannel:input_type -> meza.v1.GetChannelRequest
+	18,  // 148: meza.v1.ChatService.ListChannels:input_type -> meza.v1.ListChannelsRequest
+	20,  // 149: meza.v1.ChatService.CreateServer:input_type -> meza.v1.CreateServerRequest
+	22,  // 150: meza.v1.ChatService.UpdateServer:input_type -> meza.v1.UpdateServerRequest
+	24,  // 151: meza.v1.ChatService.DeleteServer:input_type -> meza.v1.DeleteServerRequest
+	26,  // 152: meza.v1.ChatService.GetServer:input_type -> meza.v1.GetServerRequest
+	28,  // 153: meza.v1.ChatService.ListServers:input_type -> meza.v1.ListServersRequest
+	30,  // 154: meza.v1.ChatService.JoinServer:input_type -> meza.v1.JoinServerRequest
+	32,  // 155: meza.v1.ChatService.LeaveServer:input_type -> meza.v1.LeaveServerRequest
+	34,  // 156: meza.v1.ChatService.ListMembers:input_type -> meza.v1.ListMembersRequest
+	36,  // 157: meza.v1.ChatService.UpdateMember:input_type -> meza.v1.UpdateMemberRequest
+	38,  // 158: meza.v1.ChatService.SetMemberRoles:input_type -> meza.v1.SetMemberRolesRequest
+	40,  // 159: meza.v1.ChatService.KickMember:input_type -> meza.v1.KickMemberRequest
+	42,  // 160: meza.v1.ChatService.BanMember:input_type -> meza.v1.BanMemberRequest
+	44,  // 161: meza.v1.ChatService.CreateRole:input_type -> meza.v1.CreateRoleRequest
+	46,  // 162: meza.v1.ChatService.UpdateRole:input_type -> meza.v1.UpdateRoleRequest
+	48,  // 163: meza.v1.ChatService.DeleteRole:input_type -> meza.v1.DeleteRoleRequest
+	78,  // 164: meza.v1.ChatService.UnbanMember:input_type -> meza.v1.UnbanMemberRequest
+	80,  // 165: meza.v1.ChatService.ListBans:input_type -> meza.v1.ListBansRequest
+	82,  // 166: meza.v1.ChatService.ListRoles:input_type -> meza.v1.ListRolesRequest
+	50,  // 167: meza.v1.ChatService.ReorderRoles:input_type -> meza.v1.ReorderRolesRequest
+	91,  // 168: meza.v1.ChatService.CreateEmoji:input_type -> meza.v1.CreateEmojiRequest
+	93,  // 169: meza.v1.ChatService.DeleteEmoji:input_type -> meza.v1.DeleteEmojiRequest
+	95,  // 170: meza.v1.ChatService.UpdateEmoji:input_type -> meza.v1.UpdateEmojiRequest
+	97,  // 171: meza.v1.ChatService.ListEmojis:input_type -> meza.v1.ListEmojisRequest
+	99,  // 172: meza.v1.ChatService.ListUserEmojis:input_type -> meza.v1.ListUserEmojisRequest
+	52,  // 173: meza.v1.ChatService.CreateInvite:input_type -> meza.v1.CreateInviteRequest
+	54,  // 174: meza.v1.ChatService.ResolveInvite:input_type -> meza.v1.ResolveInviteRequest
+	56,  // 175: meza.v1.ChatService.RevokeInvite:input_type -> meza.v1.RevokeInviteRequest
+	58,  // 176: meza.v1.ChatService.ListInvites:input_type -> meza.v1.ListInvitesRequest
+	84,  // 177: meza.v1.ChatService.PinMessage:input_type -> meza.v1.PinMessageRequest
+	86,  // 178: meza.v1.ChatService.UnpinMessage:input_type -> meza.v1.UnpinMessageRequest
+	88,  // 179: meza.v1.ChatService.GetPinnedMessages:input_type -> meza.v1.GetPinnedMessagesRequest
+	60,  // 180: meza.v1.ChatService.AddChannelMember:input_type -> meza.v1.AddChannelMemberRequest
+	62,  // 181: meza.v1.ChatService.RemoveChannelMember:input_type -> meza.v1.RemoveChannelMemberRequest
+	64,  // 182: meza.v1.ChatService.ListChannelMembers:input_type -> meza.v1.ListChannelMembersRequest
+	111, // 183: meza.v1.ChatService.CreateSound:input_type -> meza.v1.CreateSoundRequest
+	113, // 184: meza.v1.ChatService.DeleteSound:input_type -> meza.v1.DeleteSoundRequest
+	115, // 185: meza.v1.ChatService.UpdateSound:input_type -> meza.v1.UpdateSoundRequest
+	117, // 186: meza.v1.ChatService.ListUserSounds:input_type -> meza.v1.ListUserSoundsRequest
+	119, // 187: meza.v1.ChatService.ListServerSounds:input_type -> meza.v1.ListServerSoundsRequest
+	102, // 188: meza.v1.ChatService.BulkDeleteMessages:input_type -> meza.v1.BulkDeleteMessagesRequest
+	105, // 189: meza.v1.ChatService.TimeoutMember:input_type -> meza.v1.TimeoutMemberRequest
+	107, // 190: meza.v1.ChatService.RemoveTimeout:input_type -> meza.v1.RemoveTimeoutRequest
+	109, // 191: meza.v1.ChatService.ListAuditLog:input_type -> meza.v1.ListAuditLogRequest
+	122, // 192: meza.v1.ChatService.AddReaction:input_type -> meza.v1.AddReactionRequest
+	124, // 193: meza.v1.ChatService.RemoveReaction:input_type -> meza.v1.RemoveReactionRequest
+	126, // 194: meza.v1.ChatService.GetReactions:input_type -> meza.v1.GetReactionsRequest
+	129, // 195: meza.v1.ChatService.AckMessage:input_type -> meza.v1.AckMessageRequest
+	131, // 196: meza.v1.ChatService.CreateOrGetDMChannel:input_type -> meza.v1.CreateOrGetDMChannelRequest
+	135, // 197: meza.v1.ChatService.ListDMChannels:input_type -> meza.v1.ListDMChannelsRequest
+	133, // 198: meza.v1.ChatService.CreateGroupDMChannel:input_type -> meza.v1.CreateGroupDMChannelRequest
+	137, // 199: meza.v1.ChatService.GetReplies:input_type -> meza.v1.GetRepliesRequest
+	140, // 200: meza.v1.ChatService.GetMessagesByIDs:input_type -> meza.v1.GetMessagesByIDsRequest
+	142, // 201: meza.v1.ChatService.AcknowledgeRules:input_type -> meza.v1.AcknowledgeRulesRequest
+	144, // 202: meza.v1.ChatService.CompleteOnboarding:input_type -> meza.v1.CompleteOnboardingRequest
+	147, // 203: meza.v1.ChatService.CreateChannelGroup:input_type -> meza.v1.CreateChannelGroupRequest
+	149, // 204: meza.v1.ChatService.UpdateChannelGroup:input_type -> meza.v1.UpdateChannelGroupRequest
+	151, // 205: meza.v1.ChatService.DeleteChannelGroup:input_type -> meza.v1.DeleteChannelGroupRequest
+	153, // 206: meza.v1.ChatService.ListChannelGroups:input_type -> meza.v1.ListChannelGroupsRequest
+	155, // 207: meza.v1.ChatService.SetPermissionOverride:input_type -> meza.v1.SetPermissionOverrideRequest
+	157, // 208: meza.v1.ChatService.DeletePermissionOverride:input_type -> meza.v1.DeletePermissionOverrideRequest
+	159, // 209: meza.v1.ChatService.ListPermissionOverrides:input_type -> meza.v1.ListPermissionOverridesRequest
+	161, // 210: meza.v1.ChatService.SyncChannelPermissions:input_type -> meza.v1.SyncChannelPermissionsRequest
+	163, // 211: meza.v1.ChatService.GetEffectivePermissions:input_type -> meza.v1.GetEffectivePermissionsRequest
+	174, // 212: meza.v1.ChatService.AcceptMessageRequest:input_type -> meza.v1.AcceptMessageRequestReq
+	176, // 213: meza.v1.ChatService.DeclineMessageRequest:input_type -> meza.v1.DeclineMessageRequestReq
+	178, // 214: meza.v1.ChatService.ReverseDecline:input_type -> meza.v1.ReverseDeclineRequest
+	180, // 215: meza.v1.ChatService.ListMessageRequests:input_type -> meza.v1.ListMessageRequestsRequest
+	183, // 216: meza.v1.ChatService.BlockUser:input_type -> meza.v1.BlockUserRequest
+	185, // 217: meza.v1.ChatService.UnblockUser:input_type -> meza.v1.UnblockUserRequest
+	187, // 218: meza.v1.ChatService.ListBlocks:input_type -> meza.v1.ListBlocksRequest
+	192, // 219: meza.v1.ChatService.SendFriendRequest:input_type -> meza.v1.SendFriendRequestRequest
+	194, // 220: meza.v1.ChatService.AcceptFriendRequest:input_type -> meza.v1.AcceptFriendRequestRequest
+	196, // 221: meza.v1.ChatService.DeclineFriendRequest:input_type -> meza.v1.DeclineFriendRequestRequest
+	198, // 222: meza.v1.ChatService.CancelFriendRequest:input_type -> meza.v1.CancelFriendRequestRequest
+	200, // 223: meza.v1.ChatService.RemoveFriend:input_type -> meza.v1.RemoveFriendRequest
+	202, // 224: meza.v1.ChatService.ListFriends:input_type -> meza.v1.ListFriendsRequest
+	204, // 225: meza.v1.ChatService.ListFriendRequests:input_type -> meza.v1.ListFriendRequestsRequest
+	171, // 226: meza.v1.ChatService.CreateServerFromTemplate:input_type -> meza.v1.CreateServerFromTemplateRequest
+	206, // 227: meza.v1.ChatService.SearchMessages:input_type -> meza.v1.SearchMessagesRequest
+	66,  // 228: meza.v1.ChatService.StreamEvents:input_type -> meza.v1.StreamEventsRequest
+	212, // 229: meza.v1.ChatService.GetMutualServers:input_type -> meza.v1.GetMutualServersRequest
+	214, // 230: meza.v1.ChatService.GetMutualFriends:input_type -> meza.v1.GetMutualFriendsRequest
+	216, // 231: meza.v1.ChatService.GetSystemMessageConfig:input_type -> meza.v1.GetSystemMessageConfigRequest
+	218, // 232: meza.v1.ChatService.UpdateSystemMessageConfig:input_type -> meza.v1.UpdateSystemMessageConfigRequest
+	3,   // 233: meza.v1.ChatService.SendMessage:output_type -> meza.v1.SendMessageResponse
+	5,   // 234: meza.v1.ChatService.EditMessage:output_type -> meza.v1.EditMessageResponse
+	7,   // 235: meza.v1.ChatService.DeleteMessage:output_type -> meza.v1.DeleteMessageResponse
+	9,   // 236: meza.v1.ChatService.GetMessages:output_type -> meza.v1.GetMessagesResponse
+	11,  // 237: meza.v1.ChatService.CreateChannel:output_type -> meza.v1.CreateChannelResponse
+	13,  // 238: meza.v1.ChatService.UpdateChannel:output_type -> meza.v1.UpdateChannelResponse
+	15,  // 239: meza.v1.ChatService.DeleteChannel:output_type -> meza.v1.DeleteChannelResponse
+	17,  // 240: meza.v1.ChatService.GetChannel:output_type -> meza.v1.GetChannelResponse
+	19,  // 241: meza.v1.ChatService.ListChannels:output_type -> meza.v1.ListChannelsResponse
+	21,  // 242: meza.v1.ChatService.CreateServer:output_type -> meza.v1.CreateServerResponse
+	23,  // 243: meza.v1.ChatService.UpdateServer:output_type -> meza.v1.UpdateServerResponse
+	25,  // 244: meza.v1.ChatService.DeleteServer:output_type -> meza.v1.DeleteServerResponse
+	27,  // 245: meza.v1.ChatService.GetServer:output_type -> meza.v1.GetServerResponse
+	29,  // 246: meza.v1.ChatService.ListServers:output_type -> meza.v1.ListServersResponse
+	31,  // 247: meza.v1.ChatService.JoinServer:output_type -> meza.v1.JoinServerResponse
+	33,  // 248: meza.v1.ChatService.LeaveServer:output_type -> meza.v1.LeaveServerResponse
+	35,  // 249: meza.v1.ChatService.ListMembers:output_type -> meza.v1.ListMembersResponse
+	37,  // 250: meza.v1.ChatService.UpdateMember:output_type -> meza.v1.UpdateMemberResponse
+	39,  // 251: meza.v1.ChatService.SetMemberRoles:output_type -> meza.v1.SetMemberRolesResponse
+	41,  // 252: meza.v1.ChatService.KickMember:output_type -> meza.v1.KickMemberResponse
+	43,  // 253: meza.v1.ChatService.BanMember:output_type -> meza.v1.BanMemberResponse
+	45,  // 254: meza.v1.ChatService.CreateRole:output_type -> meza.v1.CreateRoleResponse
+	47,  // 255: meza.v1.ChatService.UpdateRole:output_type -> meza.v1.UpdateRoleResponse
+	49,  // 256: meza.v1.ChatService.DeleteRole:output_type -> meza.v1.DeleteRoleResponse
+	79,  // 257: meza.v1.ChatService.UnbanMember:output_type -> meza.v1.UnbanMemberResponse
+	81,  // 258: meza.v1.ChatService.ListBans:output_type -> meza.v1.ListBansResponse
+	83,  // 259: meza.v1.ChatService.ListRoles:output_type -> meza.v1.ListRolesResponse
+	51,  // 260: meza.v1.ChatService.ReorderRoles:output_type -> meza.v1.ReorderRolesResponse
+	92,  // 261: meza.v1.ChatService.CreateEmoji:output_type -> meza.v1.CreateEmojiResponse
+	94,  // 262: meza.v1.ChatService.DeleteEmoji:output_type -> meza.v1.DeleteEmojiResponse
+	96,  // 263: meza.v1.ChatService.UpdateEmoji:output_type -> meza.v1.UpdateEmojiResponse
+	98,  // 264: meza.v1.ChatService.ListEmojis:output_type -> meza.v1.ListEmojisResponse
+	100, // 265: meza.v1.ChatService.ListUserEmojis:output_type -> meza.v1.ListUserEmojisResponse
+	53,  // 266: meza.v1.ChatService.CreateInvite:output_type -> meza.v1.CreateInviteResponse
+	55,  // 267: meza.v1.ChatService.ResolveInvite:output_type -> meza.v1.ResolveInviteResponse
+	57,  // 268: meza.v1.ChatService.RevokeInvite:output_type -> meza.v1.RevokeInviteResponse
+	59,  // 269: meza.v1.ChatService.ListInvites:output_type -> meza.v1.ListInvitesResponse
+	85,  // 270: meza.v1.ChatService.PinMessage:output_type -> meza.v1.PinMessageResponse
+	87,  // 271: meza.v1.ChatService.UnpinMessage:output_type -> meza.v1.UnpinMessageResponse
+	89,  // 272: meza.v1.ChatService.GetPinnedMessages:output_type -> meza.v1.GetPinnedMessagesResponse
+	61,  // 273: meza.v1.ChatService.AddChannelMember:output_type -> meza.v1.AddChannelMemberResponse
+	63,  // 274: meza.v1.ChatService.RemoveChannelMember:output_type -> meza.v1.RemoveChannelMemberResponse
+	65,  // 275: meza.v1.ChatService.ListChannelMembers:output_type -> meza.v1.ListChannelMembersResponse
+	112, // 276: meza.v1.ChatService.CreateSound:output_type -> meza.v1.CreateSoundResponse
+	114, // 277: meza.v1.ChatService.DeleteSound:output_type -> meza.v1.DeleteSoundResponse
+	116, // 278: meza.v1.ChatService.UpdateSound:output_type -> meza.v1.UpdateSoundResponse
+	118, // 279: meza.v1.ChatService.ListUserSounds:output_type -> meza.v1.ListUserSoundsResponse
+	120, // 280: meza.v1.ChatService.ListServerSounds:output_type -> meza.v1.ListServerSoundsResponse
+	103, // 281: meza.v1.ChatService.BulkDeleteMessages:output_type -> meza.v1.BulkDeleteMessagesResponse
+	106, // 282: meza.v1.ChatService.TimeoutMember:output_type -> meza.v1.TimeoutMemberResponse
+	108, // 283: meza.v1.ChatService.RemoveTimeout:output_type -> meza.v1.RemoveTimeoutResponse
+	110, // 284: meza.v1.ChatService.ListAuditLog:output_type -> meza.v1.ListAuditLogResponse
+	123, // 285: meza.v1.ChatService.AddReaction:output_type -> meza.v1.AddReactionResponse
+	125, // 286: meza.v1.ChatService.RemoveReaction:output_type -> meza.v1.RemoveReactionResponse
+	127, // 287: meza.v1.ChatService.GetReactions:output_type -> meza.v1.GetReactionsResponse
+	130, // 288: meza.v1.ChatService.AckMessage:output_type -> meza.v1.AckMessageResponse
+	132, // 289: meza.v1.ChatService.CreateOrGetDMChannel:output_type -> meza.v1.CreateOrGetDMChannelResponse
+	136, // 290: meza.v1.ChatService.ListDMChannels:output_type -> meza.v1.ListDMChannelsResponse
+	134, // 291: meza.v1.ChatService.CreateGroupDMChannel:output_type -> meza.v1.CreateGroupDMChannelResponse
+	139, // 292: meza.v1.ChatService.GetReplies:output_type -> meza.v1.GetRepliesResponse
+	141, // 293: meza.v1.ChatService.GetMessagesByIDs:output_type -> meza.v1.GetMessagesByIDsResponse
+	143, // 294: meza.v1.ChatService.AcknowledgeRules:output_type -> meza.v1.AcknowledgeRulesResponse
+	145, // 295: meza.v1.ChatService.CompleteOnboarding:output_type -> meza.v1.CompleteOnboardingResponse
+	148, // 296: meza.v1.ChatService.CreateChannelGroup:output_type -> meza.v1.CreateChannelGroupResponse
+	150, // 297: meza.v1.ChatService.UpdateChannelGroup:output_type -> meza.v1.UpdateChannelGroupResponse
+	152, // 298: meza.v1.ChatService.DeleteChannelGroup:output_type -> meza.v1.DeleteChannelGroupResponse
+	154, // 299: meza.v1.ChatService.ListChannelGroups:output_type -> meza.v1.ListChannelGroupsResponse
+	156, // 300: meza.v1.ChatService.SetPermissionOverride:output_type -> meza.v1.SetPermissionOverrideResponse
+	158, // 301: meza.v1.ChatService.DeletePermissionOverride:output_type -> meza.v1.DeletePermissionOverrideResponse
+	160, // 302: meza.v1.ChatService.ListPermissionOverrides:output_type -> meza.v1.ListPermissionOverridesResponse
+	162, // 303: meza.v1.ChatService.SyncChannelPermissions:output_type -> meza.v1.SyncChannelPermissionsResponse
+	164, // 304: meza.v1.ChatService.GetEffectivePermissions:output_type -> meza.v1.GetEffectivePermissionsResponse
+	175, // 305: meza.v1.ChatService.AcceptMessageRequest:output_type -> meza.v1.AcceptMessageRequestRes
+	177, // 306: meza.v1.ChatService.DeclineMessageRequest:output_type -> meza.v1.DeclineMessageRequestRes
+	179, // 307: meza.v1.ChatService.ReverseDecline:output_type -> meza.v1.ReverseDeclineResponse
+	181, // 308: meza.v1.ChatService.ListMessageRequests:output_type -> meza.v1.ListMessageRequestsResponse
+	184, // 309: meza.v1.ChatService.BlockUser:output_type -> meza.v1.BlockUserResponse
+	186, // 310: meza.v1.ChatService.UnblockUser:output_type -> meza.v1.UnblockUserResponse
+	188, // 311: meza.v1.ChatService.ListBlocks:output_type -> meza.v1.ListBlocksResponse
+	193, // 312: meza.v1.ChatService.SendFriendRequest:output_type -> meza.v1.SendFriendRequestResponse
+	195, // 313: meza.v1.ChatService.AcceptFriendRequest:output_type -> meza.v1.AcceptFriendRequestResponse
+	197, // 314: meza.v1.ChatService.DeclineFriendRequest:output_type -> meza.v1.DeclineFriendRequestResponse
+	199, // 315: meza.v1.ChatService.CancelFriendRequest:output_type -> meza.v1.CancelFriendRequestResponse
+	201, // 316: meza.v1.ChatService.RemoveFriend:output_type -> meza.v1.RemoveFriendResponse
+	203, // 317: meza.v1.ChatService.ListFriends:output_type -> meza.v1.ListFriendsResponse
+	205, // 318: meza.v1.ChatService.ListFriendRequests:output_type -> meza.v1.ListFriendRequestsResponse
+	172, // 319: meza.v1.ChatService.CreateServerFromTemplate:output_type -> meza.v1.CreateServerFromTemplateResponse
+	207, // 320: meza.v1.ChatService.SearchMessages:output_type -> meza.v1.SearchMessagesResponse
+	67,  // 321: meza.v1.ChatService.StreamEvents:output_type -> meza.v1.Event
+	213, // 322: meza.v1.ChatService.GetMutualServers:output_type -> meza.v1.GetMutualServersResponse
+	215, // 323: meza.v1.ChatService.GetMutualFriends:output_type -> meza.v1.GetMutualFriendsResponse
+	217, // 324: meza.v1.ChatService.GetSystemMessageConfig:output_type -> meza.v1.GetSystemMessageConfigResponse
+	219, // 325: meza.v1.ChatService.UpdateSystemMessageConfig:output_type -> meza.v1.UpdateSystemMessageConfigResponse
+	233, // [233:326] is the sub-list for method output_type
+	140, // [140:233] is the sub-list for method input_type
+	140, // [140:140] is the sub-list for extension type_name
+	140, // [140:140] is the sub-list for extension extendee
+	0,   // [0:140] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_chat_proto_init() }
@@ -13610,17 +13709,17 @@ func file_meza_v1_chat_proto_init() {
 	file_meza_v1_chat_proto_msgTypes[131].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[135].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[147].OneofWrappers = []any{}
-	file_meza_v1_chat_proto_msgTypes[167].OneofWrappers = []any{}
-	file_meza_v1_chat_proto_msgTypes[188].OneofWrappers = []any{}
-	file_meza_v1_chat_proto_msgTypes[202].OneofWrappers = []any{}
-	file_meza_v1_chat_proto_msgTypes[214].OneofWrappers = []any{}
+	file_meza_v1_chat_proto_msgTypes[169].OneofWrappers = []any{}
+	file_meza_v1_chat_proto_msgTypes[190].OneofWrappers = []any{}
+	file_meza_v1_chat_proto_msgTypes[204].OneofWrappers = []any{}
+	file_meza_v1_chat_proto_msgTypes[216].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_chat_proto_rawDesc), len(file_meza_v1_chat_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   217,
+			NumMessages:   219,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

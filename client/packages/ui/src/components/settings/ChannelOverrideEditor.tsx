@@ -13,7 +13,9 @@ import {
   PERMISSIONS_BY_CATEGORY,
   Permissions,
   setPermissionOverride,
+  syncChannelPermissions,
   useAuthStore,
+  useChannelGroupStore,
   useChannelStore,
   useGatewayStore,
   useMemberStore,
@@ -29,6 +31,8 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { roleColorHex } from '../../utils/color.ts';
+import { SyncConfirmationDialog } from './SyncConfirmationDialog.tsx';
+import { SyncStatusBanner } from './SyncStatusBanner.tsx';
 
 /* ---------------------------------------------------------------------------
  * Types
@@ -520,8 +524,19 @@ export function ChannelOverrideEditor({
   const [memberSearch, setMemberSearch] = useState('');
   const [activeTab, setActiveTab] = useState<OverrideTab>('roles');
   const [fetchError, setFetchError] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
 
   const isOwner = server?.ownerId === userId;
+
+  // Look up the category name when the channel belongs to a channel group.
+  const channelGroups = useChannelGroupStore((s) =>
+    serverId ? s.byServer[serverId] : undefined,
+  );
+  const categoryName = useMemo(() => {
+    if (!channel?.channelGroupId || !channelGroups) return undefined;
+    return channelGroups.find((g) => g.id === channel.channelGroupId)?.name;
+  }, [channel?.channelGroupId, channelGroups]);
 
   // Caller's max role position for escalation prevention.
   const callerMaxPosition = useMemo(() => {
@@ -730,6 +745,19 @@ export function ChannelOverrideEditor({
     }
   }
 
+  async function handleSync() {
+    setIsSyncing(true);
+    setFetchError('');
+    try {
+      await syncChannelPermissions(channelId);
+      setSyncDialogOpen(false);
+    } catch {
+      setFetchError('Failed to sync permissions');
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   function refreshOverrides() {
     listPermissionOverrides(channelId)
       .then((result) => {
@@ -755,6 +783,25 @@ export function ChannelOverrideEditor({
           </p>
         </div>
       </div>
+
+      <SyncStatusBanner
+        channelId={channelId}
+        channelGroupId={channel?.channelGroupId}
+        permissionsSynced={channel?.permissionsSynced}
+        categoryName={categoryName}
+        onSync={() => setSyncDialogOpen(true)}
+        isSyncing={isSyncing}
+      />
+
+      <SyncConfirmationDialog
+        isOpen={syncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+        onConfirm={handleSync}
+        channelName={channel?.name ?? ''}
+        categoryName={categoryName ?? 'category'}
+        overrideCount={overrides.length}
+        isSyncing={isSyncing}
+      />
 
       {/* Segmented control: Roles | Members */}
       <div className="mb-4 flex gap-0.5 rounded-md bg-bg-surface p-0.5">
@@ -825,7 +872,7 @@ export function ChannelOverrideEditor({
               <button
                 type="button"
                 onClick={() => setAddingRoleId('')}
-                disabled={availableRoles.length === 0}
+                disabled={availableRoles.length === 0 || isSyncing}
                 className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent/80 disabled:opacity-50"
               >
                 Add Role Override
@@ -958,7 +1005,8 @@ export function ChannelOverrideEditor({
               <button
                 type="button"
                 onClick={() => setAddingUser(true)}
-                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent/80"
+                disabled={isSyncing}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent/80 disabled:opacity-50"
               >
                 Add Member Override
               </button>

@@ -114,6 +114,30 @@ func (s *PermissionOverrideStore) DeleteOverrideByUser(ctx context.Context, targ
 	return nil
 }
 
+func (s *PermissionOverrideStore) DeleteAllChannelOverrides(ctx context.Context, channelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx, `DELETE FROM permission_overrides WHERE channel_id = $1`, channelID)
+	return err
+}
+
+func (s *PermissionOverrideStore) CopyCategoryOverridesToChannel(ctx context.Context, channelGroupID, channelID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO permission_overrides (id, channel_id, role_id, user_id, allow, deny)
+		 SELECT gen_random_uuid(), $2, po.role_id, po.user_id, po.allow, po.deny
+		 FROM permission_overrides po
+		 WHERE po.channel_group_id = $1
+		 ON CONFLICT DO NOTHING`,
+		channelGroupID, channelID,
+	)
+	if err != nil {
+		return fmt.Errorf("copy category overrides to channel: %w", err)
+	}
+	return nil
+}
+
 func (s *PermissionOverrideStore) ListOverridesByTarget(ctx context.Context, targetID string) ([]*models.PermissionOverride, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

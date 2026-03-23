@@ -214,6 +214,9 @@ const (
 	// ChatServiceListPermissionOverridesProcedure is the fully-qualified name of the ChatService's
 	// ListPermissionOverrides RPC.
 	ChatServiceListPermissionOverridesProcedure = "/meza.v1.ChatService/ListPermissionOverrides"
+	// ChatServiceSyncChannelPermissionsProcedure is the fully-qualified name of the ChatService's
+	// SyncChannelPermissions RPC.
+	ChatServiceSyncChannelPermissionsProcedure = "/meza.v1.ChatService/SyncChannelPermissions"
 	// ChatServiceGetEffectivePermissionsProcedure is the fully-qualified name of the ChatService's
 	// GetEffectivePermissions RPC.
 	ChatServiceGetEffectivePermissionsProcedure = "/meza.v1.ChatService/GetEffectivePermissions"
@@ -350,6 +353,7 @@ type ChatServiceClient interface {
 	SetPermissionOverride(context.Context, *connect.Request[v1.SetPermissionOverrideRequest]) (*connect.Response[v1.SetPermissionOverrideResponse], error)
 	DeletePermissionOverride(context.Context, *connect.Request[v1.DeletePermissionOverrideRequest]) (*connect.Response[v1.DeletePermissionOverrideResponse], error)
 	ListPermissionOverrides(context.Context, *connect.Request[v1.ListPermissionOverridesRequest]) (*connect.Response[v1.ListPermissionOverridesResponse], error)
+	SyncChannelPermissions(context.Context, *connect.Request[v1.SyncChannelPermissionsRequest]) (*connect.Response[v1.SyncChannelPermissionsResponse], error)
 	GetEffectivePermissions(context.Context, *connect.Request[v1.GetEffectivePermissionsRequest]) (*connect.Response[v1.GetEffectivePermissionsResponse], error)
 	AcceptMessageRequest(context.Context, *connect.Request[v1.AcceptMessageRequestReq]) (*connect.Response[v1.AcceptMessageRequestRes], error)
 	DeclineMessageRequest(context.Context, *connect.Request[v1.DeclineMessageRequestReq]) (*connect.Response[v1.DeclineMessageRequestRes], error)
@@ -805,6 +809,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ListPermissionOverrides")),
 			connect.WithClientOptions(opts...),
 		),
+		syncChannelPermissions: connect.NewClient[v1.SyncChannelPermissionsRequest, v1.SyncChannelPermissionsResponse](
+			httpClient,
+			baseURL+ChatServiceSyncChannelPermissionsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("SyncChannelPermissions")),
+			connect.WithClientOptions(opts...),
+		),
 		getEffectivePermissions: connect.NewClient[v1.GetEffectivePermissionsRequest, v1.GetEffectivePermissionsResponse](
 			httpClient,
 			baseURL+ChatServiceGetEffectivePermissionsProcedure,
@@ -1012,6 +1022,7 @@ type chatServiceClient struct {
 	setPermissionOverride     *connect.Client[v1.SetPermissionOverrideRequest, v1.SetPermissionOverrideResponse]
 	deletePermissionOverride  *connect.Client[v1.DeletePermissionOverrideRequest, v1.DeletePermissionOverrideResponse]
 	listPermissionOverrides   *connect.Client[v1.ListPermissionOverridesRequest, v1.ListPermissionOverridesResponse]
+	syncChannelPermissions    *connect.Client[v1.SyncChannelPermissionsRequest, v1.SyncChannelPermissionsResponse]
 	getEffectivePermissions   *connect.Client[v1.GetEffectivePermissionsRequest, v1.GetEffectivePermissionsResponse]
 	acceptMessageRequest      *connect.Client[v1.AcceptMessageRequestReq, v1.AcceptMessageRequestRes]
 	declineMessageRequest     *connect.Client[v1.DeclineMessageRequestReq, v1.DeclineMessageRequestRes]
@@ -1386,6 +1397,11 @@ func (c *chatServiceClient) ListPermissionOverrides(ctx context.Context, req *co
 	return c.listPermissionOverrides.CallUnary(ctx, req)
 }
 
+// SyncChannelPermissions calls meza.v1.ChatService.SyncChannelPermissions.
+func (c *chatServiceClient) SyncChannelPermissions(ctx context.Context, req *connect.Request[v1.SyncChannelPermissionsRequest]) (*connect.Response[v1.SyncChannelPermissionsResponse], error) {
+	return c.syncChannelPermissions.CallUnary(ctx, req)
+}
+
 // GetEffectivePermissions calls meza.v1.ChatService.GetEffectivePermissions.
 func (c *chatServiceClient) GetEffectivePermissions(ctx context.Context, req *connect.Request[v1.GetEffectivePermissionsRequest]) (*connect.Response[v1.GetEffectivePermissionsResponse], error) {
 	return c.getEffectivePermissions.CallUnary(ctx, req)
@@ -1568,6 +1584,7 @@ type ChatServiceHandler interface {
 	SetPermissionOverride(context.Context, *connect.Request[v1.SetPermissionOverrideRequest]) (*connect.Response[v1.SetPermissionOverrideResponse], error)
 	DeletePermissionOverride(context.Context, *connect.Request[v1.DeletePermissionOverrideRequest]) (*connect.Response[v1.DeletePermissionOverrideResponse], error)
 	ListPermissionOverrides(context.Context, *connect.Request[v1.ListPermissionOverridesRequest]) (*connect.Response[v1.ListPermissionOverridesResponse], error)
+	SyncChannelPermissions(context.Context, *connect.Request[v1.SyncChannelPermissionsRequest]) (*connect.Response[v1.SyncChannelPermissionsResponse], error)
 	GetEffectivePermissions(context.Context, *connect.Request[v1.GetEffectivePermissionsRequest]) (*connect.Response[v1.GetEffectivePermissionsResponse], error)
 	AcceptMessageRequest(context.Context, *connect.Request[v1.AcceptMessageRequestReq]) (*connect.Response[v1.AcceptMessageRequestRes], error)
 	DeclineMessageRequest(context.Context, *connect.Request[v1.DeclineMessageRequestReq]) (*connect.Response[v1.DeclineMessageRequestRes], error)
@@ -2019,6 +2036,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ListPermissionOverrides")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceSyncChannelPermissionsHandler := connect.NewUnaryHandler(
+		ChatServiceSyncChannelPermissionsProcedure,
+		svc.SyncChannelPermissions,
+		connect.WithSchema(chatServiceMethods.ByName("SyncChannelPermissions")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceGetEffectivePermissionsHandler := connect.NewUnaryHandler(
 		ChatServiceGetEffectivePermissionsProcedure,
 		svc.GetEffectivePermissions,
@@ -2293,6 +2316,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceDeletePermissionOverrideHandler.ServeHTTP(w, r)
 		case ChatServiceListPermissionOverridesProcedure:
 			chatServiceListPermissionOverridesHandler.ServeHTTP(w, r)
+		case ChatServiceSyncChannelPermissionsProcedure:
+			chatServiceSyncChannelPermissionsHandler.ServeHTTP(w, r)
 		case ChatServiceGetEffectivePermissionsProcedure:
 			chatServiceGetEffectivePermissionsHandler.ServeHTTP(w, r)
 		case ChatServiceAcceptMessageRequestProcedure:
@@ -2624,6 +2649,10 @@ func (UnimplementedChatServiceHandler) DeletePermissionOverride(context.Context,
 
 func (UnimplementedChatServiceHandler) ListPermissionOverrides(context.Context, *connect.Request[v1.ListPermissionOverridesRequest]) (*connect.Response[v1.ListPermissionOverridesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListPermissionOverrides is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) SyncChannelPermissions(context.Context, *connect.Request[v1.SyncChannelPermissionsRequest]) (*connect.Response[v1.SyncChannelPermissionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.SyncChannelPermissions is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) GetEffectivePermissions(context.Context, *connect.Request[v1.GetEffectivePermissionsRequest]) (*connect.Response[v1.GetEffectivePermissionsResponse], error) {

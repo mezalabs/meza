@@ -26,7 +26,9 @@ import {
   useInviteStore,
   useMemberStore,
   useNotificationSettingsStore,
+  Permissions,
   useReadStateStore,
+  useRoleStore,
   useServerStore,
   useUsersStore,
   useVoiceParticipantsStore,
@@ -40,6 +42,7 @@ import {
   EarSlashIcon,
   GearIcon,
   HashIcon,
+  LinkBreakIcon,
   LockSimpleIcon,
   MagnifyingGlassIcon,
   MicrophoneIcon,
@@ -353,6 +356,26 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       (m) => m.userId === currentUserId,
     );
   });
+  // Show sync divergence indicators for users who can manage channels.
+  // Server owners always see them; for others, check role permissions.
+  const showSyncIndicators = useMemo(() => {
+    if (!selectedServerId || !currentUserId) return false;
+    if (selectedServer?.ownerId === currentUserId) return true;
+    // Check if any of the user's roles have ManageChannels permission
+    const member = currentMember;
+    if (!member) return false;
+    const roles = useRoleStore.getState().byServer[selectedServerId] ?? [];
+    for (const role of roles) {
+      if (
+        member.roleIds.includes(role.id) &&
+        (role.permissions & Permissions.MANAGE_CHANNELS) !== 0n
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [selectedServerId, currentUserId, selectedServer?.ownerId, currentMember]);
+
   // Block until we have member data confirming rules were acknowledged.
   // When currentMember is undefined (not loaded yet), stay blocked to
   // prevent a flash of channel content before the member record arrives.
@@ -740,6 +763,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                         setCreateChannelGroupId(group.id);
                         setCreateChannelOpen(true);
                       }}
+                      showSyncIndicators={showSyncIndicators}
                     />
                   ))}
 
@@ -1135,6 +1159,7 @@ function SidebarChannelGroup({
   channels,
   serverId,
   onCreateChannel,
+  showSyncIndicators,
 }: {
   groupId: string;
   groupName: string;
@@ -1147,6 +1172,7 @@ function SidebarChannelGroup({
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
+  showSyncIndicators?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1193,6 +1219,7 @@ function SidebarChannelGroup({
               serverId={serverId}
               channelGroupId={groupId}
               voiceTextChannelId={channel.voiceTextChannelId}
+              showSyncIndicator={showSyncIndicators}
             />
           ))}
         </div>
@@ -1207,8 +1234,9 @@ function SidebarChannelItem({
   channelType,
   isPrivate,
   serverId,
-  channelGroupId: _channelGroupId,
+  channelGroupId,
   voiceTextChannelId,
+  showSyncIndicator,
 }: {
   channelId: string;
   channelName: string;
@@ -1217,6 +1245,7 @@ function SidebarChannelItem({
   serverId?: string;
   channelGroupId?: string;
   voiceTextChannelId?: string;
+  showSyncIndicator?: boolean;
 }) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
@@ -1245,6 +1274,15 @@ function SidebarChannelItem({
 
   const channelDataType = isVoice ? 'voice' : isPrivate ? 'private' : 'text';
   const hasUnread = unreadCount > 0;
+
+  // Check if this channel has diverged permissions from its category
+  const permissionsSynced = useChannelStore((s) => {
+    if (!serverId) return true;
+    const ch = s.byServer[serverId]?.find((c) => c.id === channelId);
+    return ch?.permissionsSynced ?? true;
+  });
+  const showDiverged =
+    showSyncIndicator && !!channelGroupId && !permissionsSynced;
 
   const participants = useVoiceParticipantsStore((s) => s.byChannel[channelId]);
   const voiceParticipants = isVoice && participants ? participants : EMPTY_ARR;
@@ -1324,6 +1362,14 @@ function SidebarChannelItem({
           >
             {channelName}
           </span>
+          {showDiverged && (
+            <span
+              className="shrink-0 text-warning"
+              title="Permissions diverged from category"
+            >
+              <LinkBreakIcon size={14} aria-hidden="true" />
+            </span>
+          )}
           {hasUnread && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-xs font-bold text-black">
               {unreadCount >= 1000 ? '999+' : unreadCount}

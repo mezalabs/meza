@@ -3716,6 +3716,40 @@ export const ListPermissionOverridesResponseSchema: GenMessage<ListPermissionOve
   messageDesc(file_meza_v1_chat, 158);
 
 /**
+ * @generated from message meza.v1.SyncChannelPermissionsRequest
+ */
+export type SyncChannelPermissionsRequest = Message<"meza.v1.SyncChannelPermissionsRequest"> & {
+  /**
+   * @generated from field: string channel_id = 1;
+   */
+  channelId: string;
+};
+
+/**
+ * Describes the message meza.v1.SyncChannelPermissionsRequest.
+ * Use `create(SyncChannelPermissionsRequestSchema)` to create a new message.
+ */
+export const SyncChannelPermissionsRequestSchema: GenMessage<SyncChannelPermissionsRequest> = /*@__PURE__*/
+  messageDesc(file_meza_v1_chat, 159);
+
+/**
+ * @generated from message meza.v1.SyncChannelPermissionsResponse
+ */
+export type SyncChannelPermissionsResponse = Message<"meza.v1.SyncChannelPermissionsResponse"> & {
+  /**
+   * @generated from field: Channel channel = 1;
+   */
+  channel?: Channel;
+};
+
+/**
+ * Describes the message meza.v1.SyncChannelPermissionsResponse.
+ * Use `create(SyncChannelPermissionsResponseSchema)` to create a new message.
+ */
+export const SyncChannelPermissionsResponseSchema: GenMessage<SyncChannelPermissionsResponse> = /*@__PURE__*/
+  messageDesc(file_meza_v1_chat, 160);
+
+/**
  * @generated from message meza.v1.GetEffectivePermissionsRequest
  */
 export type GetEffectivePermissionsRequest = Message<"meza.v1.GetEffectivePermissionsRequest"> & {
@@ -5878,6 +5912,14 @@ export const ChatService: GenService<{
     methodKind: "unary";
     input: typeof GetEffectivePermissionsRequestSchema;
     output: typeof GetEffectivePermissionsResponseSchema;
+  },
+  /**
+   * @generated from rpc meza.v1.ChatService.SyncChannelPermissions
+   */
+  syncChannelPermissions: {
+    methodKind: "unary";
+    input: typeof SyncChannelPermissionsRequestSchema;
+    output: typeof SyncChannelPermissionsResponseSchema;
   },
   /**
    * @generated from rpc meza.v1.ChatService.AcceptMessageRequest

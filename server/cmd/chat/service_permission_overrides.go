@@ -184,19 +184,45 @@ func (s *chatService) SetPermissionOverride(ctx context.Context, req *connect.Re
 	}
 
 	// Mirror override to companion text channel if target is a voice channel.
+	// Also unsync the channel if it was previously synced with its category.
 	if !isGroup && override.ChannelID != "" {
 		targetCh, chErr := s.chatStore.GetChannel(ctx, override.ChannelID)
-		if chErr == nil && targetCh.VoiceTextChannelID != "" {
-			companionOverride := &models.PermissionOverride{
-				ID:        models.NewID(),
-				ChannelID: targetCh.VoiceTextChannelID,
-				RoleID:    override.RoleID,
-				UserID:    override.UserID,
-				Allow:     override.Allow,
-				Deny:      override.Deny,
+		if chErr == nil {
+			if targetCh.VoiceTextChannelID != "" {
+				companionOverride := &models.PermissionOverride{
+					ID:        models.NewID(),
+					ChannelID: targetCh.VoiceTextChannelID,
+					RoleID:    override.RoleID,
+					UserID:    override.UserID,
+					Allow:     override.Allow,
+					Deny:      override.Deny,
+				}
+				if _, mirrorErr := s.permissionOverrideStore.SetOverride(ctx, companionOverride); mirrorErr != nil {
+					slog.Error("mirroring override to companion channel", "err", mirrorErr, "companion", targetCh.VoiceTextChannelID)
+				}
 			}
-			if _, mirrorErr := s.permissionOverrideStore.SetOverride(ctx, companionOverride); mirrorErr != nil {
-				slog.Error("mirroring override to companion channel", "err", mirrorErr, "companion", targetCh.VoiceTextChannelID)
+			// If channel was synced, mark as unsynced and emit CHANNEL_UPDATE.
+			if targetCh.PermissionsSynced {
+				if err := s.chatStore.SetPermissionsSynced(ctx, override.ChannelID, false); err != nil {
+					slog.Error("unsyncing channel permissions", "err", err, "channel", override.ChannelID)
+				} else {
+					targetCh.PermissionsSynced = false
+					chEvent := &v1.Event{
+						Id:        models.NewID(),
+						Type:      v1.EventType_EVENT_TYPE_CHANNEL_UPDATE,
+						Timestamp: timestamppb.New(time.Now()),
+						Payload: &v1.Event_ChannelUpdate{
+							ChannelUpdate: channelToProto(targetCh),
+						},
+					}
+					if eventData, mErr := proto.Marshal(chEvent); mErr == nil {
+						privateChID := ""
+						if targetCh.IsPrivate {
+							privateChID = targetCh.ID
+						}
+						s.nc.Publish(subjects.ServerChannel(targetCh.ServerID), subjects.EncodeServerChannelEvent(eventData, privateChID))
+					}
+				}
 			}
 		}
 	}
@@ -362,6 +388,140 @@ func (s *chatService) DeletePermissionOverride(ctx context.Context, req *connect
 	s.publishPermissionsUpdated(ctx, serverID, req.Msg.TargetId)
 
 	return connect.NewResponse(&v1.DeletePermissionOverrideResponse{}), nil
+}
+
+func (s *chatService) SyncChannelPermissions(ctx context.Context, req *connect.Request[v1.SyncChannelPermissionsRequest]) (*connect.Response[v1.SyncChannelPermissionsResponse], error) {
+	userID, ok := auth.UserIDFromContext(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("missing user"))
+	}
+	if req.Msg.ChannelId == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("channel_id is required"))
+	}
+
+	ch, err := s.chatStore.GetChannel(ctx, req.Msg.ChannelId)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
+	}
+	if ch.ChannelGroupID == "" {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("channel must belong to a category to sync permissions"))
+	}
+
+	isCompanion, compErr := s.chatStore.IsVoiceTextCompanion(ctx, req.Msg.ChannelId)
+	if compErr != nil {
+		slog.Error("checking voice text companion for sync", "err", compErr, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if isCompanion {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("sync permissions on the parent voice channel; they are mirrored automatically"))
+	}
+
+	if err := s.requireMembership(ctx, userID, ch.ServerID); err != nil {
+		return nil, err
+	}
+
+	callerPos, _, srv, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageRoles)
+	if permErr != nil {
+		return nil, permErr
+	}
+
+	// Verify caller outranks ALL targets of existing channel overrides.
+	overrides, err := s.permissionOverrideStore.ListOverridesByTarget(ctx, req.Msg.ChannelId)
+	if err != nil {
+		slog.Error("listing overrides for sync", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	for _, o := range overrides {
+		if o.RoleID != "" {
+			role, err := s.roleStore.GetRole(ctx, o.RoleID)
+			if err != nil {
+				slog.Error("getting role for sync check", "err", err, "role", o.RoleID)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if callerPos <= role.Position && userID != srv.OwnerID {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot sync: channel has overrides for a role at or above your position"))
+			}
+		}
+		if o.UserID != "" {
+			targetMember, err := s.chatStore.GetMember(ctx, o.UserID, ch.ServerID)
+			if err != nil {
+				if !errors.Is(err, store.ErrNotFound) {
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				// Member left — tolerate.
+				continue
+			}
+			targetMaxPos := 0
+			if len(targetMember.RoleIDs) > 0 {
+				targetRoles, err := s.roleStore.GetRolesByIDs(ctx, targetMember.RoleIDs, ch.ServerID)
+				if err != nil {
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				for _, r := range targetRoles {
+					if r.Position > targetMaxPos {
+						targetMaxPos = r.Position
+					}
+				}
+			}
+			if callerPos <= targetMaxPos && userID != srv.OwnerID {
+				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot sync: channel has overrides for a user at or above your role position"))
+			}
+		}
+	}
+
+	// Delete all channel-level overrides and mark as synced.
+	if err := s.permissionOverrideStore.DeleteAllChannelOverrides(ctx, req.Msg.ChannelId); err != nil {
+		slog.Error("deleting channel overrides for sync", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if err := s.chatStore.SetPermissionsSynced(ctx, req.Msg.ChannelId, true); err != nil {
+		slog.Error("setting permissions synced", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	// Mirror to companion text channel if this is a voice channel.
+	if ch.VoiceTextChannelID != "" {
+		if err := s.permissionOverrideStore.DeleteAllChannelOverrides(ctx, ch.VoiceTextChannelID); err != nil {
+			slog.Error("deleting companion overrides for sync", "err", err, "companion", ch.VoiceTextChannelID)
+		}
+		if err := s.chatStore.SetPermissionsSynced(ctx, ch.VoiceTextChannelID, true); err != nil {
+			slog.Error("setting companion permissions synced", "err", err, "companion", ch.VoiceTextChannelID)
+		}
+	}
+
+	// Invalidate permission cache for the channel.
+	s.permCache.InvalidateChannel(ctx, req.Msg.ChannelId)
+
+	// Broadcast CHANNEL_UPDATE event.
+	updated, err := s.chatStore.GetChannel(ctx, req.Msg.ChannelId)
+	if err != nil {
+		slog.Error("fetching channel after sync", "err", err, "channel", req.Msg.ChannelId)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	now := time.Now()
+	event := &v1.Event{
+		Id:        models.NewID(),
+		Type:      v1.EventType_EVENT_TYPE_CHANNEL_UPDATE,
+		Timestamp: timestamppb.New(now),
+		Payload: &v1.Event_ChannelUpdate{
+			ChannelUpdate: channelToProto(updated),
+		},
+	}
+	if eventData, err := proto.Marshal(event); err == nil {
+		privateChID := ""
+		if updated.IsPrivate {
+			privateChID = updated.ID
+		}
+		s.nc.Publish(subjects.ServerChannel(updated.ServerID), subjects.EncodeServerChannelEvent(eventData, privateChID))
+	}
+
+	// Publish PERMISSIONS_UPDATED signal.
+	s.publishPermissionsUpdated(ctx, ch.ServerID, req.Msg.ChannelId)
+
+	return connect.NewResponse(&v1.SyncChannelPermissionsResponse{
+		Channel: channelToProto(updated),
+	}), nil
 }
 
 func (s *chatService) ListPermissionOverrides(ctx context.Context, req *connect.Request[v1.ListPermissionOverridesRequest]) (*connect.Response[v1.ListPermissionOverridesResponse], error) {
