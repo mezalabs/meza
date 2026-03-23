@@ -18,10 +18,6 @@ export interface AutocompleteCallbacks {
     range: { from: number; to: number },
   ) => void;
   onClose: (trigger: TriggerName) => void;
-  /** Arrow key navigation inside the popup. */
-  onArrow: (direction: 'up' | 'down') => void;
-  /** User pressed Enter/Tab to confirm the highlighted item. */
-  onSelect: () => void;
 }
 
 export function createAutocompletePlugins(callbacks: AutocompleteCallbacks) {
@@ -49,15 +45,9 @@ export function createAutocompletePlugins(callbacks: AutocompleteCallbacks) {
         case ActionKind.close:
           callbacks.onClose(triggerName);
           return true;
-        case ActionKind.up:
-          callbacks.onArrow('up');
-          return true;
-        case ActionKind.down:
-          callbacks.onArrow('down');
-          return true;
-        case ActionKind.enter:
-          callbacks.onSelect();
-          return true;
+        // Arrow/Enter/Escape are handled by EditorView.handleKeyDown
+        // which fires BEFORE plugin handleKeyDown. Return false so the
+        // plugin doesn't also try to handle them.
         default:
           return false;
       }

@@ -200,12 +200,6 @@ export const ComposerEditor = forwardRef<
       setAutocomplete(state);
       onAutocompleteChangeRef.current?.(state);
     },
-    onArrow(direction) {
-      onAutocompleteArrowRef.current?.(direction);
-    },
-    onSelect() {
-      onAutocompleteSelectRef.current?.();
-    },
   });
 
   // Create plugins once at module scope equivalent (via useMemo with [])
@@ -312,6 +306,43 @@ export const ComposerEditor = forwardRef<
           tr.getMeta('addToHistory') !== false
         ) {
           onTypingRef.current?.();
+        }
+      },
+      // Intercept keys BEFORE plugins — this is the single source of truth
+      // for Enter/Escape/Arrow when autocomplete is open.
+      handleKeyDown(_view, event) {
+        const ac = autocompleteRangeRef.current;
+        if (!ac) return false; // No autocomplete open — let plugins handle it
+
+        switch (event.key) {
+          case 'ArrowUp':
+            event.preventDefault();
+            onAutocompleteArrowRef.current?.('up');
+            return true;
+          case 'ArrowDown':
+            event.preventDefault();
+            onAutocompleteArrowRef.current?.('down');
+            return true;
+          case 'Enter':
+          case 'Tab':
+            event.preventDefault();
+            onAutocompleteSelectRef.current?.();
+            return true;
+          case 'Escape': {
+            event.preventDefault();
+            // Close autocomplete and re-focus (don't propagate to onCancel)
+            autocompleteRangeRef.current = null;
+            const closedState: AutocompleteState = {
+              trigger: null,
+              query: '',
+              range: null,
+            };
+            setAutocomplete(closedState);
+            onAutocompleteChangeRef.current?.(closedState);
+            return true;
+          }
+          default:
+            return false;
         }
       },
       handlePaste(view, event) {
