@@ -1,3 +1,4 @@
+export type { AutocompleteState } from './ComposerEditor.tsx';
 export { ComposerEditor } from './ComposerEditor.tsx';
 export type {
   ChannelLinkAttrs,

@@ -163,6 +163,10 @@ export const composerSchema = new Schema({
 export interface ComposerEditorHandle {
   isDirty(): boolean;
   insertText(text: string): void;
+  /** Replace the current autocomplete range with a ProseMirror node. */
+  insertMention(id: string, type: MentionAttrs['type']): void;
+  insertCustomEmoji(id: string, name: string, animated: boolean): void;
+  insertChannelLink(id: string): void;
   focus(): void;
   clear(): void;
   /** Serialize the doc and invoke the onSend callback (for mobile send button). */

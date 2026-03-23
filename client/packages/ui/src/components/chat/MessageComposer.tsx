@@ -31,9 +31,14 @@ import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
+import { ChannelAutocomplete } from './ChannelAutocomplete.tsx';
+import type { AutocompleteState } from './composer/ComposerEditor.tsx';
 import type { ComposerEditorHandle } from './composer/schema.ts';
+import { EmojiAutocomplete } from './EmojiAutocomplete.tsx';
 import { EmojiPickerButton } from './EmojiPickerButton.tsx';
 import { GifPicker } from './GifPicker.tsx';
+import { MentionAutocomplete } from './MentionAutocomplete.tsx';
+import { SlashCommandAutocomplete } from './SlashCommandAutocomplete.tsx';
 
 // Lazy-load ProseMirror chunk (~50KB gzipped)
 const ComposerEditor = lazy(() =>
@@ -93,6 +98,11 @@ export function MessageComposer({
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [gifPickerQuery, setGifPickerQuery] = useState<string | null>(null);
+  const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
+    trigger: null,
+    query: '',
+    range: null,
+  });
   const sendingRef = useRef(false);
   const editorRef = useRef<ComposerEditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -537,6 +547,70 @@ export function MessageComposer({
           />
         )}
 
+        {/* Autocomplete popups */}
+        {autocomplete.trigger === 'mention' && (
+          <MentionAutocomplete
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            onSelect={(item) => {
+              if (item.type === 'everyone') {
+                editorRef.current?.insertMention('', 'everyone');
+              } else {
+                editorRef.current?.insertMention(
+                  item.id,
+                  item.type as 'user' | 'role',
+                );
+              }
+            }}
+            onClose={() => editorRef.current?.focus()}
+            position={{ bottom: 48, left: 0 }}
+          />
+        )}
+        {autocomplete.trigger === 'channel' && (
+          <ChannelAutocomplete
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            onSelect={(item) => {
+              editorRef.current?.insertChannelLink(item.id);
+            }}
+            onClose={() => editorRef.current?.focus()}
+            position={{ bottom: 48, left: 0 }}
+          />
+        )}
+        {autocomplete.trigger === 'emoji' && (
+          <EmojiAutocomplete
+            query={autocomplete.query}
+            serverId={resolvedServerId}
+            onSelect={(insertText) => {
+              // EmojiAutocomplete returns wire format like <:name:id>
+              // Parse it to extract name and id for the node
+              const match = insertText.match(/^<(a?):([^:]+):([^>]+)>$/);
+              if (match) {
+                editorRef.current?.insertCustomEmoji(
+                  match[3],
+                  match[2],
+                  match[1] === 'a',
+                );
+              } else {
+                editorRef.current?.insertText(insertText);
+              }
+            }}
+            onClose={() => editorRef.current?.focus()}
+            position={{ bottom: 48, left: 0 }}
+          />
+        )}
+        {autocomplete.trigger === 'slash' && (
+          <SlashCommandAutocomplete
+            query={autocomplete.query}
+            onSelect={(name) => {
+              editorRef.current?.clear();
+              editorRef.current?.insertText(`/${name} `);
+            }}
+            onClose={() => editorRef.current?.focus()}
+            position={{ bottom: 48, left: 0 }}
+          />
+        )}
+
         <input
           ref={fileInputRef}
           type="file"
@@ -584,6 +658,7 @@ export function MessageComposer({
                   onTyping={handleTyping}
                   placeholder={placeholderText}
                   autoFocus={!isMobile}
+                  onAutocompleteChange={setAutocomplete}
                 />
               </ProsemirrorAdapterProvider>
             </Suspense>

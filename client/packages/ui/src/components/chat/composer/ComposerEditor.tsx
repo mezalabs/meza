@@ -96,6 +96,7 @@ interface ComposerEditorProps {
   placeholder?: string;
   channelId: string;
   autoFocus?: boolean;
+  onAutocompleteChange?: (state: AutocompleteState) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +123,7 @@ export const ComposerEditor = forwardRef<
     placeholder = 'Type a message\u2026',
     channelId,
     autoFocus,
+    onAutocompleteChange,
   },
   ref,
 ) {
@@ -135,11 +137,16 @@ export const ComposerEditor = forwardRef<
   onTypingRef.current = onTyping;
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
+  const onAutocompleteChangeRef = useRef(onAutocompleteChange);
+  onAutocompleteChangeRef.current = onAutocompleteChange;
   const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
     trigger: null,
     query: '',
     range: null,
   });
+  const autocompleteRangeRef = useRef<{ from: number; to: number } | null>(
+    null,
+  );
 
   const nodeViewFactory = useNodeViewFactory();
 
@@ -162,13 +169,26 @@ export const ComposerEditor = forwardRef<
   // Autocomplete callbacks (stable refs)
   const autocompleteCallbacks = useRef<AutocompleteCallbacks>({
     onOpen(trigger, query, range) {
-      setAutocomplete({ trigger, query, range });
+      autocompleteRangeRef.current = range;
+      const state = { trigger, query, range };
+      setAutocomplete(state);
+      onAutocompleteChangeRef.current?.(state);
     },
     onUpdate(trigger, query, range) {
-      setAutocomplete({ trigger, query, range });
+      autocompleteRangeRef.current = range;
+      const state = { trigger, query, range };
+      setAutocomplete(state);
+      onAutocompleteChangeRef.current?.(state);
     },
     onClose() {
-      setAutocomplete({ trigger: null, query: '', range: null });
+      autocompleteRangeRef.current = null;
+      const state: AutocompleteState = {
+        trigger: null,
+        query: '',
+        range: null,
+      };
+      setAutocomplete(state);
+      onAutocompleteChangeRef.current?.(state);
     },
   });
 
@@ -348,6 +368,37 @@ export const ComposerEditor = forwardRef<
         if (!view || view.isDestroyed) return;
         const { from, to } = view.state.selection;
         const tr = view.state.tr.insertText(text, from, to);
+        view.dispatch(tr.scrollIntoView());
+        view.focus();
+      },
+      insertMention(id: string, type: 'user' | 'role' | 'everyone') {
+        const view = viewRef.current;
+        const range = autocompleteRangeRef.current;
+        if (!view || view.isDestroyed || !range) return;
+        const node = composerSchema.nodes.mention.create({ id, type });
+        const tr = view.state.tr.replaceWith(range.from, range.to, node);
+        view.dispatch(tr.scrollIntoView());
+        view.focus();
+      },
+      insertCustomEmoji(id: string, name: string, animated: boolean) {
+        const view = viewRef.current;
+        const range = autocompleteRangeRef.current;
+        if (!view || view.isDestroyed || !range) return;
+        const node = composerSchema.nodes.customEmoji.create({
+          id,
+          name,
+          animated,
+        });
+        const tr = view.state.tr.replaceWith(range.from, range.to, node);
+        view.dispatch(tr.scrollIntoView());
+        view.focus();
+      },
+      insertChannelLink(id: string) {
+        const view = viewRef.current;
+        const range = autocompleteRangeRef.current;
+        if (!view || view.isDestroyed || !range) return;
+        const node = composerSchema.nodes.channelLink.create({ id });
+        const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
         view.focus();
       },
