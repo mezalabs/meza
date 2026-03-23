@@ -17,6 +17,7 @@ import {
   hasChannelKey,
   hasPermission,
   hideKeyboard,
+  onKeyboardWillShow,
   isSessionReady,
   listEmojis,
   listMembers,
@@ -282,6 +283,20 @@ export function ChannelView({
   const isMobile = useMobile();
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
   const keyboardHeightRef = useKeyboardHeight(mobileEmojiOpen);
+  // Height of the spacer kept visible while the keyboard animates in
+  // after closing the emoji panel (prevents layout jump).
+  const [transitionHeight, setTransitionHeight] = useState(0);
+
+  // Clear transition spacer when the keyboard appears (or after timeout)
+  useEffect(() => {
+    if (transitionHeight === 0) return;
+    const unsub = onKeyboardWillShow(() => setTransitionHeight(0));
+    const timeout = setTimeout(() => setTransitionHeight(0), 400);
+    return () => {
+      unsub?.();
+      clearTimeout(timeout);
+    };
+  }, [transitionHeight]);
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
@@ -291,6 +306,7 @@ export function ChannelView({
       if (!prev) {
         // Opening picker: dismiss keyboard and blur editor so that
         // tapping the composer later triggers a fresh focus + keyboard.
+        setTransitionHeight(0);
         hideKeyboard();
         const active = document.activeElement;
         if (active instanceof HTMLElement) active.blur();
@@ -298,6 +314,13 @@ export function ChannelView({
       return !prev;
     });
   }, []);
+
+  // Close emoji panel when transitioning to keyboard (e.g. tapping composer).
+  // Keeps a spacer at the panel height until the keyboard animates in.
+  const handleMobileEmojiClose = useCallback(() => {
+    setTransitionHeight(keyboardHeightRef.current);
+    setMobileEmojiOpen(false);
+  }, [keyboardHeightRef]);
 
   const handleMobileEmojiSelect = useCallback((text: string) => {
     insertEmojiRef.current?.(text);
@@ -809,17 +832,24 @@ export function ChannelView({
             disabled={viewMode === 'historical'}
             mobileEmojiOpen={mobileEmojiOpen}
             onMobileEmojiToggle={handleMobileEmojiToggle}
+            onMobileEmojiClose={handleMobileEmojiClose}
             insertEmojiRef={insertEmojiRef}
           />
         )}
 
-        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {/* Mobile emoji picker panel / transition spacer */}
         {isMobile && mobileEmojiOpen && (
           <MobileEmojiPanel
             serverId={serverId}
             panelHeight={keyboardHeightRef.current}
             onEmojiSelect={handleMobileEmojiSelect}
             onSearchFocusChange={handleMobileSearchFocusChange}
+          />
+        )}
+        {isMobile && !mobileEmojiOpen && transitionHeight > 0 && (
+          <div
+            className="flex-shrink-0 bg-bg-elevated border-t border-border safe-bottom"
+            style={{ height: transitionHeight }}
           />
         )}
       </div>

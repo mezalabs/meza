@@ -83,6 +83,8 @@ interface MessageComposerProps {
   mobileEmojiOpen?: boolean;
   /** Mobile-only: toggle the emoji panel. */
   onMobileEmojiToggle?: () => void;
+  /** Mobile-only: close emoji panel while keeping a spacer for keyboard transition. */
+  onMobileEmojiClose?: () => void;
   /** Ref that ChannelView uses to call insertEmoji from the mobile panel. */
   insertEmojiRef?: React.MutableRefObject<((text: string) => void) | null>;
 }
@@ -93,6 +95,7 @@ export function MessageComposer({
   disabled,
   mobileEmojiOpen,
   onMobileEmojiToggle,
+  onMobileEmojiClose,
   insertEmojiRef,
 }: MessageComposerProps) {
   const [sending, setSending] = useState(false);
@@ -646,7 +649,7 @@ export function MessageComposer({
             className="flex-1 overflow-y-auto"
             style={{ maxHeight: isMobile ? '80px' : '150px' }}
             onClick={
-              mobileEmojiOpen ? onMobileEmojiToggle : undefined
+              mobileEmojiOpen ? onMobileEmojiClose : undefined
             }
           >
             <Suspense
