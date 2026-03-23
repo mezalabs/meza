@@ -23,6 +23,7 @@ import {
   listRoles,
   listUserEmojis,
   MessageType,
+  onKeyboardWillShow,
   Permissions,
   pinMessage,
   safeParseMessageText,
@@ -42,13 +43,14 @@ import {
   useUsersStore,
 } from '@meza/core';
 import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
-
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import {
   Fragment,
-  type KeyboardEvent,
+  lazy,
   memo,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -70,6 +72,7 @@ import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
 import { ContentWarningInterstitial } from './ContentWarningInterstitial.tsx';
+import type { ComposerEditorHandle } from './composer/schema.ts';
 import { DeleteMessageDialog } from './DeleteMessageDialog.tsx';
 import { EmojiPicker } from './EmojiPicker.tsx';
 import { LinkPreviewCard } from './LinkPreviewCard.tsx';
@@ -77,6 +80,13 @@ import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
 import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
+
+const ComposerEditor = lazy(() =>
+  import('./composer/ComposerEditor.tsx').then((m) => ({
+    default: m.ComposerEditor,
+  })),
+);
+
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
@@ -273,6 +283,20 @@ export function ChannelView({
   const isMobile = useMobile();
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
   const keyboardHeightRef = useKeyboardHeight(mobileEmojiOpen);
+  // Height of the spacer kept visible while the keyboard animates in
+  // after closing the emoji panel (prevents layout jump).
+  const [transitionHeight, setTransitionHeight] = useState(0);
+
+  // Clear transition spacer when the keyboard appears (or after timeout)
+  useEffect(() => {
+    if (transitionHeight === 0) return;
+    const unsub = onKeyboardWillShow(() => setTransitionHeight(0));
+    const timeout = setTimeout(() => setTransitionHeight(0), 400);
+    return () => {
+      unsub?.();
+      clearTimeout(timeout);
+    };
+  }, [transitionHeight]);
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
@@ -280,15 +304,23 @@ export function ChannelView({
   const handleMobileEmojiToggle = useCallback(() => {
     setMobileEmojiOpen((prev) => {
       if (!prev) {
-        // Opening picker: dismiss keyboard
+        // Opening picker: dismiss keyboard and blur editor so that
+        // tapping the composer later triggers a fresh focus + keyboard.
+        setTransitionHeight(0);
         hideKeyboard();
-        // Also blur textarea to ensure keyboard hides on web
         const active = document.activeElement;
-        if (active instanceof HTMLTextAreaElement) active.blur();
+        if (active instanceof HTMLElement) active.blur();
       }
       return !prev;
     });
   }, []);
+
+  // Close emoji panel when transitioning to keyboard (e.g. tapping composer).
+  // Keeps a spacer at the panel height until the keyboard animates in.
+  const handleMobileEmojiClose = useCallback(() => {
+    setTransitionHeight(keyboardHeightRef.current);
+    setMobileEmojiOpen(false);
+  }, [keyboardHeightRef]);
 
   const handleMobileEmojiSelect = useCallback((text: string) => {
     insertEmojiRef.current?.(text);
@@ -837,17 +869,24 @@ export function ChannelView({
             disabled={viewMode === 'historical'}
             mobileEmojiOpen={mobileEmojiOpen}
             onMobileEmojiToggle={handleMobileEmojiToggle}
+            onMobileEmojiClose={handleMobileEmojiClose}
             insertEmojiRef={insertEmojiRef}
           />
         )}
 
-        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {/* Mobile emoji picker panel / transition spacer */}
         {isMobile && mobileEmojiOpen && (
           <MobileEmojiPanel
             serverId={serverId}
             panelHeight={keyboardHeightRef.current}
             onEmojiSelect={handleMobileEmojiSelect}
             onSearchFocusChange={handleMobileSearchFocusChange}
+          />
+        )}
+        {isMobile && !mobileEmojiOpen && transitionHeight > 0 && (
+          <div
+            className="flex-shrink-0 bg-bg-elevated border-t border-border safe-bottom"
+            style={{ height: transitionHeight }}
           />
         )}
       </div>
@@ -1188,7 +1227,6 @@ const MessageItem = memo(function MessageItem({
   }
 
   const isMobile = useMobile();
-  const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1197,18 +1235,16 @@ const MessageItem = memo(function MessageItem({
     useState<DOMRect | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
-  const editRef = useRef<HTMLTextAreaElement>(null);
+  const editEditorRef = useRef<ComposerEditorHandle>(null);
 
   const longPressHandlers = useLongPress(
     useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
   );
 
-  // Initialize edit text when isEditing transitions to true (handles both
-  // direct clicks and discard-dialog switches from ChannelView).
+  // Clear edit error when isEditing transitions to true.
   const prevIsEditingRef = useRef(false);
   useLayoutEffect(() => {
     if (isEditing && !prevIsEditingRef.current) {
-      setEditText(text);
       setEditError('');
     }
     prevIsEditingRef.current = isEditing;
@@ -1217,8 +1253,8 @@ const MessageItem = memo(function MessageItem({
   // Report dirty state to ChannelView so it can decide whether to show
   // the discard dialog on Escape or when switching to another message.
   useEffect(() => {
-    onEditDirtyChange(isEditing && editText !== text);
-  }, [isEditing, editText, text, onEditDirtyChange]);
+    onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? false));
+  }, [isEditing, onEditDirtyChange]);
 
   const handleReactionSelect = useCallback(
     (emoji: string) => {
@@ -1238,73 +1274,9 @@ const MessageItem = memo(function MessageItem({
   );
 
   function cancelEdit() {
-    setEditText('');
     setEditError('');
     onCancelEdit();
   }
-
-  async function saveEdit() {
-    const trimmed = editText.trim();
-    if (!trimmed || trimmed === text) {
-      cancelEdit();
-      return;
-    }
-    setIsSaving(true);
-    setEditError('');
-    try {
-      // Use V1 JSON format for edited messages (preserves compatibility)
-      const plaintext = buildMessageContent(trimmed);
-      // Encrypt edited content for encrypted channels
-      let content: Uint8Array;
-      let keyVersion: number | undefined;
-      if (needsEncryption) {
-        try {
-          const encrypted = await encryptMessage(channelId, plaintext);
-          content = encrypted.data;
-          keyVersion = encrypted.keyVersion;
-        } catch {
-          setEditError('Encryption failed');
-          setIsSaving(false);
-          return;
-        }
-      } else {
-        content = plaintext;
-      }
-      await editMessage({
-        channelId: msg.channelId,
-        messageId: msg.id,
-        encryptedContent: content,
-        keyVersion,
-      });
-      onCancelEdit();
-    } catch {
-      setEditError('Failed to save edit');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function handleEditKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Escape is handled by the document-level listener in ChannelView
-    // so it can check dirty state and show the discard dialog.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      saveEdit();
-    }
-  }
-
-  useEffect(() => {
-    if (isEditing && editRef.current) {
-      editRef.current.focus();
-      editRef.current.setSelectionRange(
-        editRef.current.value.length,
-        editRef.current.value.length,
-      );
-      // Auto-grow to fit existing content
-      editRef.current.style.height = 'auto';
-      editRef.current.style.height = `${editRef.current.scrollHeight}px`;
-    }
-  }, [isEditing]);
 
   const messageBody = (
     <div
@@ -1452,21 +1424,63 @@ const MessageItem = memo(function MessageItem({
 
           {isEditing ? (
             <div className="mt-1">
-              <textarea
-                ref={editRef}
-                value={editText}
-                onChange={(e) => {
-                  setEditText(e.target.value);
-                  // Auto-grow textarea
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                }}
-                onKeyDown={handleEditKeyDown}
-                disabled={isSaving}
-                rows={1}
+              <div
+                className="w-full overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus-within:border-accent"
                 style={{ maxHeight: isMobile ? '80px' : '150px' }}
-                className="w-full resize-none overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
-              />
+              >
+                <Suspense fallback={<div className="h-6 animate-pulse" />}>
+                  <ProsemirrorAdapterProvider>
+                    <ComposerEditor
+                      ref={editEditorRef}
+                      initialText={text}
+                      onSend={async (wireText) => {
+                        const trimmed = wireText.trim();
+                        if (!trimmed || trimmed === text) {
+                          cancelEdit();
+                          return;
+                        }
+                        setIsSaving(true);
+                        setEditError('');
+                        try {
+                          const plaintext = buildMessageContent(trimmed);
+                          let content: Uint8Array;
+                          let kv: number | undefined;
+                          if (needsEncryption) {
+                            try {
+                              const encrypted = await encryptMessage(
+                                channelId,
+                                plaintext,
+                              );
+                              content = encrypted.data;
+                              kv = encrypted.keyVersion;
+                            } catch {
+                              setEditError('Encryption failed');
+                              setIsSaving(false);
+                              return;
+                            }
+                          } else {
+                            content = plaintext;
+                          }
+                          await editMessage({
+                            channelId: msg.channelId,
+                            messageId: msg.id,
+                            encryptedContent: content,
+                            keyVersion: kv,
+                          });
+                          onCancelEdit();
+                        } catch {
+                          setEditError('Failed to save edit');
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      onCancel={cancelEdit}
+                      channelId={channelId}
+                      autoFocus
+                    />
+                  </ProsemirrorAdapterProvider>
+                </Suspense>
+              </div>
               {editError && (
                 <p className="text-xs text-error mt-1">{editError}</p>
               )}
@@ -1478,14 +1492,6 @@ const MessageItem = memo(function MessageItem({
                   className="text-xs text-text-muted hover:text-text"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  disabled={isSaving}
-                  className="text-xs text-accent hover:text-accent-hover font-medium"
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
                 <span className="text-xs text-text-subtle">
                   escape to cancel &middot; enter to save

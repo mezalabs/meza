@@ -15,11 +15,11 @@ import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 // ----- Constants -----
 
 const COLS_DESKTOP = 9;
-const COLS_MOBILE = 8;
 const EMOJI_SIZE = 32;
 const BUTTON_SIZE = 40;
 const HEADER_HEIGHT = 28;
-const ROW_HEIGHT = BUTTON_SIZE;
+const MIN_BUTTON_SIZE = 40;
+const GRID_PADDING = 8; // px-1 each side = 4px × 2
 
 // ----- Types -----
 
@@ -221,7 +221,35 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const isMobile = useMobile();
-  const cols = isMobile ? COLS_MOBILE : COLS_DESKTOP;
+
+  // Measure container width so mobile can fill the full width with emojis
+  const [containerWidth, setContainerWidth] = useState(0);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // On mobile: fit as many emojis as possible, then scale up to fill width
+  const { cols, buttonSize, emojiSize, rowHeight } = useMemo(() => {
+    if (!isMobile || containerWidth === 0) {
+      return {
+        cols: COLS_DESKTOP,
+        buttonSize: BUTTON_SIZE,
+        emojiSize: EMOJI_SIZE,
+        rowHeight: BUTTON_SIZE,
+      };
+    }
+    const usable = containerWidth - GRID_PADDING;
+    const c = Math.max(1, Math.floor(usable / MIN_BUTTON_SIZE));
+    const bs = usable / c;
+    const es = Math.floor(bs * (EMOJI_SIZE / BUTTON_SIZE));
+    return { cols: c, buttonSize: bs, emojiSize: es, rowHeight: bs };
+  }, [isMobile, containerWidth]);
 
   // Build a map of all custom emojis for frequent lookup
   const allCustom = useMemo(() => {
@@ -297,7 +325,7 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) =>
-      rows[index].kind === 'header' ? HEADER_HEIGHT : ROW_HEIGHT,
+      rows[index].kind === 'header' ? HEADER_HEIGHT : rowHeight,
     overscan: 5,
   });
 
@@ -322,6 +350,9 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
       } else {
         onSelect(applySkinTone(item.emoji, skinTone));
       }
+      // Reset keyboard focus so the document-level Enter handler doesn't
+      // re-insert the same emoji when the iOS keyboard pops up.
+      setFocusedIndex(-1);
     },
     [onSelect, skinTone],
   );
@@ -532,7 +563,7 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
                 <div
                   className="flex px-1"
                   role="row"
-                  style={{ height: ROW_HEIGHT }}
+                  style={{ height: rowHeight }}
                 >
                   {row.items.map((item, colIdx) => {
                     const globalIdx =
@@ -553,6 +584,8 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
                         onHover={handleItemHover}
                         globalIdx={globalIdx}
                         onFocusChange={handleButtonClick}
+                        buttonSize={buttonSize}
+                        emojiSize={emojiSize}
                       />
                     );
                   })}
@@ -576,6 +609,8 @@ const EmojiButton = memo(function EmojiButton({
   onHover,
   globalIdx,
   onFocusChange,
+  buttonSize: bs,
+  emojiSize: es,
 }: {
   item: GridItem;
   skinTone: number;
@@ -584,6 +619,8 @@ const EmojiButton = memo(function EmojiButton({
   onHover: (item: GridItem) => void;
   globalIdx: number;
   onFocusChange: (index: number) => void;
+  buttonSize: number;
+  emojiSize: number;
 }) {
   const label =
     item.type === 'custom' ? `:${item.emoji.name}:` : item.emoji.label;
@@ -606,7 +643,7 @@ const EmojiButton = memo(function EmojiButton({
       className={`flex items-center justify-center rounded-md transition-colors ${
         focused ? 'bg-accent/20 ring-2 ring-accent' : 'hover:bg-bg-elevated'
       }`}
-      style={{ width: BUTTON_SIZE, height: BUTTON_SIZE }}
+      style={{ width: bs, height: bs }}
       onClick={() => {
         onFocusChange(globalIdx);
         onSelect(item);
@@ -621,14 +658,14 @@ const EmojiButton = memo(function EmojiButton({
           }
           alt={label}
           className="object-contain"
-          style={{ width: EMOJI_SIZE, height: EMOJI_SIZE }}
+          style={{ width: es, height: es }}
           onError={handleImgError}
         />
       ) : (
         <span
           className="leading-none"
           style={{
-            fontSize: EMOJI_SIZE,
+            fontSize: es,
             fontFamily:
               "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
           }}
