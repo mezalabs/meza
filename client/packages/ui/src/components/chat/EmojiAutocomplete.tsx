@@ -1,12 +1,15 @@
 import { getMediaURL, useEmojiStore } from '@meza/core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 interface EmojiAutocompleteProps {
   query: string;
   serverId?: string;
+  /** Controlled highlight index (driven by prosemirror-autocomplete arrow keys). */
+  selectedIndex: number;
   onSelect: (insertText: string) => void;
-  onClose: () => void;
   position: { bottom: number; left: number };
+  /** Optional ref to expose wire-format refs for Enter-key selection. */
+  itemsRef?: React.MutableRefObject<string[]>;
 }
 
 const MAX_RESULTS = 8;
@@ -14,11 +17,11 @@ const MAX_RESULTS = 8;
 export function EmojiAutocomplete({
   query,
   serverId,
+  selectedIndex,
   onSelect,
-  onClose,
   position,
+  itemsRef,
 }: EmojiAutocompleteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const serverEmojis = useEmojiStore((s) =>
@@ -36,7 +39,6 @@ export function EmojiAutocomplete({
       animated: boolean;
     }[] = [];
 
-    // Search personal emojis first
     for (const e of personalEmojis) {
       if (results.length >= MAX_RESULTS) break;
       if (e.name.includes(lowerQuery)) {
@@ -44,7 +46,6 @@ export function EmojiAutocomplete({
       }
     }
 
-    // Then server emojis (avoid duplicates by id)
     if (serverEmojis) {
       const seen = new Set(results.map((r) => r.id));
       for (const e of serverEmojis) {
@@ -58,42 +59,20 @@ export function EmojiAutocomplete({
     return results;
   }, [query, personalEmojis, serverEmojis]);
 
-  // Reset selection when query changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on query change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  // Expose wire-format refs to parent for Enter-key selection
+  if (itemsRef) {
+    itemsRef.current = items.map((e) =>
+      e.animated ? `<a:${e.name}:${e.id}>` : `<:${e.name}:${e.id}>`,
+    );
+  }
+
+  const clampedIndex = Math.min(selectedIndex, Math.max(0, items.length - 1));
 
   // Scroll selected item into view.
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement;
+    const el = listRef.current?.children[clampedIndex] as HTMLElement;
     el?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
-
-  // Keyboard navigation: arrow keys for highlighting, Enter/Tab for selection.
-  // Escape is handled by prosemirror-autocomplete plugin.
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, items.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        if (items.length > 0) {
-          e.preventDefault();
-          const emoji = items[selectedIndex];
-          const ref = emoji.animated
-            ? `<a:${emoji.name}:${emoji.id}>`
-            : `<:${emoji.name}:${emoji.id}>`;
-          onSelect(ref);
-        }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect]);
+  }, [clampedIndex]);
 
   if (items.length === 0) return null;
 
@@ -113,7 +92,7 @@ export function EmojiAutocomplete({
             key={emoji.id}
             type="button"
             className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
-              i === selectedIndex
+              i === clampedIndex
                 ? 'bg-accent/15 text-accent'
                 : 'text-text hover:bg-bg-surface'
             }`}
@@ -121,7 +100,6 @@ export function EmojiAutocomplete({
               e.preventDefault();
               onSelect(ref);
             }}
-            onMouseEnter={() => setSelectedIndex(i)}
           >
             <img
               src={getMediaURL(attachmentId)}

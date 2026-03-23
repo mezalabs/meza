@@ -18,6 +18,10 @@ export interface AutocompleteCallbacks {
     range: { from: number; to: number },
   ) => void;
   onClose: (trigger: TriggerName) => void;
+  /** Arrow key navigation inside the popup. */
+  onArrow: (direction: 'up' | 'down') => void;
+  /** User pressed Enter/Tab to confirm the highlighted item. */
+  onSelect: () => void;
 }
 
 export function createAutocompletePlugins(callbacks: AutocompleteCallbacks) {
@@ -46,8 +50,13 @@ export function createAutocompletePlugins(callbacks: AutocompleteCallbacks) {
           callbacks.onClose(triggerName);
           return true;
         case ActionKind.up:
+          callbacks.onArrow('up');
+          return true;
         case ActionKind.down:
+          callbacks.onArrow('down');
+          return true;
         case ActionKind.enter:
+          callbacks.onSelect();
           return true;
         default:
           return false;

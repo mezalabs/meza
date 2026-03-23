@@ -1,6 +1,6 @@
 import { ChannelType, useChannelStore } from '@meza/core';
 import { HashIcon, SpeakerHighIcon } from '@phosphor-icons/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 export interface ChannelItem {
   id: string;
@@ -11,9 +11,12 @@ export interface ChannelItem {
 interface ChannelAutocompleteProps {
   query: string;
   serverId?: string;
+  /** Controlled highlight index (driven by prosemirror-autocomplete arrow keys). */
+  selectedIndex: number;
   onSelect: (item: ChannelItem) => void;
-  onClose: () => void;
   position: { bottom: number; left: number };
+  /** Optional ref to expose current items for Enter-key selection. */
+  itemsRef?: React.MutableRefObject<ChannelItem[]>;
 }
 
 const MAX_RESULTS = 10;
@@ -24,11 +27,11 @@ const EMPTY_CHANNELS: ReturnType<
 export function ChannelAutocomplete({
   query,
   serverId,
+  selectedIndex,
   onSelect,
-  onClose,
   position,
+  itemsRef,
 }: ChannelAutocompleteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const channels = useChannelStore((s) =>
@@ -53,40 +56,16 @@ export function ChannelAutocomplete({
     return results;
   }, [query, channels]);
 
-  // Reset selection when query changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on query change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  // Expose items to parent for Enter-key selection
+  if (itemsRef) itemsRef.current = items;
+
+  const clampedIndex = Math.min(selectedIndex, Math.max(0, items.length - 1));
 
   // Scroll selected item into view.
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement;
+    const el = listRef.current?.children[clampedIndex] as HTMLElement;
     el?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
-
-  // Keyboard navigation (handled via capture-phase listener).
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, items.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        if (items.length > 0) {
-          e.preventDefault();
-          onSelect(items[selectedIndex]);
-        }
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect, onClose]);
+  }, [clampedIndex]);
 
   if (items.length === 0) return null;
 
@@ -101,15 +80,14 @@ export function ChannelAutocomplete({
           key={item.id}
           type="button"
           className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
-            i === selectedIndex
+            i === clampedIndex
               ? 'bg-accent/15 text-accent'
               : 'text-text hover:bg-bg-surface'
           }`}
           onMouseDown={(e) => {
-            e.preventDefault(); // Don't steal focus from textarea.
+            e.preventDefault();
             onSelect(item);
           }}
-          onMouseEnter={() => setSelectedIndex(i)}
         >
           <span className="flex h-6 w-6 shrink-0 items-center justify-center text-text-muted">
             {item.type === 'voice' ? (

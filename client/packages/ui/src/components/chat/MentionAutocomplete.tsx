@@ -1,9 +1,9 @@
 import { useAuthStore, useMemberStore, useRoleStore } from '@meza/core';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
 import { roleColorHex } from '../../utils/color.ts';
 
-interface MentionItem {
+export interface MentionItem {
   type: 'user' | 'role' | 'everyone';
   id: string;
   displayName: string;
@@ -14,9 +14,12 @@ interface MentionItem {
 interface MentionAutocompleteProps {
   query: string;
   serverId?: string;
+  /** Controlled highlight index (driven by prosemirror-autocomplete arrow keys). */
+  selectedIndex: number;
   onSelect: (item: MentionItem) => void;
-  onClose: () => void;
   position: { bottom: number; left: number };
+  /** Optional ref to expose the current items array to the parent. */
+  itemsRef?: React.MutableRefObject<MentionItem[]>;
 }
 
 const MAX_RESULTS = 10;
@@ -30,11 +33,11 @@ const EMPTY_ROLES: ReturnType<
 export function MentionAutocomplete({
   query,
   serverId,
+  selectedIndex,
   onSelect,
-  onClose,
   position,
+  itemsRef,
 }: MentionAutocompleteProps) {
-  const [selectedIndex, setSelectedIndex] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
 
   const members = useMemberStore((s) =>
@@ -51,8 +54,6 @@ export function MentionAutocomplete({
     const lowerQuery = query.toLowerCase();
     const results: MentionItem[] = [];
 
-    // Always show @everyone in autocomplete; the server silently strips it
-    // if the sender lacks MentionEveryone permission.
     if (serverId && 'everyone'.startsWith(lowerQuery)) {
       results.push({
         type: 'everyone',
@@ -62,7 +63,6 @@ export function MentionAutocomplete({
       });
     }
 
-    // Show matching roles.
     for (const role of roles) {
       if (results.length >= MAX_RESULTS) break;
       if (role.name.toLowerCase().startsWith(lowerQuery) || !lowerQuery) {
@@ -76,7 +76,6 @@ export function MentionAutocomplete({
       }
     }
 
-    // Filter members by nickname (which includes display name fallback).
     let matched = 0;
     for (const member of members) {
       if (matched >= MAX_RESULTS - results.length) break;
@@ -84,12 +83,11 @@ export function MentionAutocomplete({
       const name =
         member.nickname || resolveDisplayName(member.userId, serverId);
       if (name.toLowerCase().startsWith(lowerQuery) || !lowerQuery) {
-        // Find highest-positioned role color for this member
         let memberColor: number | undefined;
         for (const role of roles) {
           if (member.roleIds.includes(role.id) && role.color) {
             memberColor = role.color;
-            break; // roles sorted by position desc
+            break;
           }
         }
         results.push({
@@ -106,39 +104,17 @@ export function MentionAutocomplete({
     return results;
   }, [query, members, roles, currentUserId, serverId]);
 
-  // Reset selection when query changes (which drives item changes).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on query change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [query]);
+  // Expose items to parent for Enter-key selection
+  if (itemsRef) itemsRef.current = items;
+
+  // Clamp selectedIndex to valid range
+  const clampedIndex = Math.min(selectedIndex, Math.max(0, items.length - 1));
 
   // Scroll selected item into view.
   useEffect(() => {
-    const el = listRef.current?.children[selectedIndex] as HTMLElement;
+    const el = listRef.current?.children[clampedIndex] as HTMLElement;
     el?.scrollIntoView({ block: 'nearest' });
-  }, [selectedIndex]);
-
-  // Keyboard navigation: arrow keys only for highlighting.
-  // Enter/Tab/Escape are handled by prosemirror-autocomplete plugin.
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, items.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' || e.key === 'Tab') {
-        // Let ProseMirror handle this — select the current item
-        if (items.length > 0) {
-          e.preventDefault();
-          onSelect(items[selectedIndex]);
-        }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [items, selectedIndex, onSelect]);
+  }, [clampedIndex]);
 
   if (items.length === 0) return null;
 
@@ -155,15 +131,14 @@ export function MentionAutocomplete({
           }
           type="button"
           className={`flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors ${
-            i === selectedIndex
+            i === clampedIndex
               ? 'bg-accent/15 text-accent'
               : 'text-text hover:bg-bg-surface'
           }`}
           onMouseDown={(e) => {
-            e.preventDefault(); // Don't steal focus from textarea.
+            e.preventDefault(); // Don't steal focus from editor.
             onSelect(item);
           }}
-          onMouseEnter={() => setSelectedIndex(i)}
         >
           {item.type === 'everyone' ? (
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent">
@@ -196,7 +171,7 @@ export function MentionAutocomplete({
           <span
             className="truncate"
             style={
-              item.type !== 'everyone' && item.color && i !== selectedIndex
+              item.type !== 'everyone' && item.color && i !== clampedIndex
                 ? { color: roleColorHex(item.color) }
                 : undefined
             }

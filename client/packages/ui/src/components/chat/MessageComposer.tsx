@@ -103,9 +103,12 @@ export function MessageComposer({
     query: '',
     range: null,
   });
+  const [acSelectedIndex, setAcSelectedIndex] = useState(0);
   const sendingRef = useRef(false);
   const editorRef = useRef<ComposerEditorHandle>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Ref to hold the "select current item" function — set by each autocomplete component's parent logic
+  const acSelectCurrentRef = useRef<(() => void) | null>(null);
 
   const resolvedServerId = useChannelStore(
     (s) => serverId || s.channelToServer[channelId],
@@ -384,7 +387,24 @@ export function MessageComposer({
 
   const closeAutocomplete = useCallback(() => {
     setAutocomplete({ trigger: null, query: '', range: null });
+    setAcSelectedIndex(0);
     editorRef.current?.focus();
+  }, []);
+
+  const handleAutocompleteChange = useCallback((state: AutocompleteState) => {
+    setAutocomplete(state);
+    // Reset selection when query changes (new trigger or filter update)
+    setAcSelectedIndex(0);
+  }, []);
+
+  const handleAutocompleteArrow = useCallback((direction: 'up' | 'down') => {
+    setAcSelectedIndex((i) =>
+      direction === 'down' ? i + 1 : Math.max(0, i - 1),
+    );
+  }, []);
+
+  const handleAutocompleteSelect = useCallback(() => {
+    acSelectCurrentRef.current?.();
   }, []);
 
   // Truncate reply preview text
@@ -552,57 +572,35 @@ export function MessageComposer({
           />
         )}
 
-        {/* Autocomplete popups */}
+        {/* Autocomplete popups — keyboard nav handled by prosemirror-autocomplete */}
         {autocomplete.trigger === 'mention' && (
-          <MentionAutocomplete
+          <MentionPopup
             query={autocomplete.query}
             serverId={resolvedServerId}
-            onSelect={(item) => {
-              if (item.type === 'everyone') {
-                editorRef.current?.insertMention('', 'everyone');
-              } else {
-                editorRef.current?.insertMention(
-                  item.id,
-                  item.type as 'user' | 'role',
-                );
-              }
-              closeAutocomplete();
-            }}
-            onClose={closeAutocomplete}
-            position={{ bottom: 48, left: 0 }}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
           />
         )}
         {autocomplete.trigger === 'channel' && (
-          <ChannelAutocomplete
+          <ChannelPopup
             query={autocomplete.query}
             serverId={resolvedServerId}
-            onSelect={(item) => {
-              editorRef.current?.insertChannelLink(item.id);
-              closeAutocomplete();
-            }}
-            onClose={closeAutocomplete}
-            position={{ bottom: 48, left: 0 }}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
           />
         )}
         {autocomplete.trigger === 'emoji' && (
-          <EmojiAutocomplete
+          <EmojiPopup
             query={autocomplete.query}
             serverId={resolvedServerId}
-            onSelect={(insertText) => {
-              const match = insertText.match(/^<(a?):([^:]+):([^>]+)>$/);
-              if (match) {
-                editorRef.current?.insertCustomEmoji(
-                  match[3],
-                  match[2],
-                  match[1] === 'a',
-                );
-              } else {
-                editorRef.current?.insertText(insertText);
-              }
-              closeAutocomplete();
-            }}
-            onClose={closeAutocomplete}
-            position={{ bottom: 48, left: 0 }}
+            selectedIndex={acSelectedIndex}
+            editorRef={editorRef}
+            closeAutocomplete={closeAutocomplete}
+            acSelectCurrentRef={acSelectCurrentRef}
           />
         )}
         {autocomplete.trigger === 'slash' && (
@@ -611,8 +609,9 @@ export function MessageComposer({
             onSelect={(cmd) => {
               editorRef.current?.clear();
               editorRef.current?.insertText(`/${cmd.name} `);
+              closeAutocomplete();
             }}
-            onClose={() => editorRef.current?.focus()}
+            onClose={closeAutocomplete}
           />
         )}
 
@@ -663,7 +662,9 @@ export function MessageComposer({
                   onTyping={handleTyping}
                   placeholder={placeholderText}
                   autoFocus={!isMobile}
-                  onAutocompleteChange={setAutocomplete}
+                  onAutocompleteChange={handleAutocompleteChange}
+                  onAutocompleteArrow={handleAutocompleteArrow}
+                  onAutocompleteSelect={handleAutocompleteSelect}
                 />
               </ProsemirrorAdapterProvider>
             </Suspense>
@@ -693,5 +694,145 @@ export function MessageComposer({
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Autocomplete popup wrappers — wire acSelectCurrentRef so that
+// prosemirror-autocomplete's Enter handler can trigger selection.
+// ---------------------------------------------------------------------------
+
+interface PopupWrapperProps {
+  query: string;
+  serverId?: string;
+  selectedIndex: number;
+  editorRef: React.RefObject<ComposerEditorHandle | null>;
+  closeAutocomplete: () => void;
+  acSelectCurrentRef: React.MutableRefObject<(() => void) | null>;
+}
+
+function MentionPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<import('./MentionAutocomplete.tsx').MentionItem[]>(
+    [],
+  );
+
+  const handleSelect = useCallback(
+    (item: import('./MentionAutocomplete.tsx').MentionItem) => {
+      if (item.type === 'everyone') {
+        editorRef.current?.insertMention('', 'everyone');
+      } else {
+        editorRef.current?.insertMention(item.id, item.type as 'user' | 'role');
+      }
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  // Keep acSelectCurrentRef pointing to a function that selects the current item
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <MentionAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
+  );
+}
+
+function ChannelPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<import('./ChannelAutocomplete.tsx').ChannelItem[]>(
+    [],
+  );
+
+  const handleSelect = useCallback(
+    (item: import('./ChannelAutocomplete.tsx').ChannelItem) => {
+      editorRef.current?.insertChannelLink(item.id);
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <ChannelAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
+  );
+}
+
+function EmojiPopup({
+  query,
+  serverId,
+  selectedIndex,
+  editorRef,
+  closeAutocomplete,
+  acSelectCurrentRef,
+}: PopupWrapperProps) {
+  const itemsRef = useRef<string[]>([]);
+
+  const handleSelect = useCallback(
+    (insertText: string) => {
+      const match = insertText.match(/^<(a?):([^:]+):([^>]+)>$/);
+      if (match) {
+        editorRef.current?.insertCustomEmoji(
+          match[3],
+          match[2],
+          match[1] === 'a',
+        );
+      } else {
+        editorRef.current?.insertText(insertText);
+      }
+      closeAutocomplete();
+    },
+    [editorRef, closeAutocomplete],
+  );
+
+  acSelectCurrentRef.current = () => {
+    const items = itemsRef.current;
+    const idx = Math.min(selectedIndex, Math.max(0, items.length - 1));
+    if (items[idx]) handleSelect(items[idx]);
+  };
+
+  return (
+    <EmojiAutocomplete
+      query={query}
+      serverId={serverId}
+      selectedIndex={selectedIndex}
+      onSelect={handleSelect}
+      position={{ bottom: 48, left: 0 }}
+      itemsRef={itemsRef}
+    />
   );
 }

@@ -97,6 +97,10 @@ interface ComposerEditorProps {
   channelId: string;
   autoFocus?: boolean;
   onAutocompleteChange?: (state: AutocompleteState) => void;
+  /** Called when the user presses arrow keys while autocomplete is open. */
+  onAutocompleteArrow?: (direction: 'up' | 'down') => void;
+  /** Called when the user presses Enter/Tab to confirm the autocomplete selection. */
+  onAutocompleteSelect?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,6 +128,8 @@ export const ComposerEditor = forwardRef<
     channelId,
     autoFocus,
     onAutocompleteChange,
+    onAutocompleteArrow,
+    onAutocompleteSelect,
   },
   ref,
 ) {
@@ -139,6 +145,10 @@ export const ComposerEditor = forwardRef<
   onCancelRef.current = onCancel;
   const onAutocompleteChangeRef = useRef(onAutocompleteChange);
   onAutocompleteChangeRef.current = onAutocompleteChange;
+  const onAutocompleteArrowRef = useRef(onAutocompleteArrow);
+  onAutocompleteArrowRef.current = onAutocompleteArrow;
+  const onAutocompleteSelectRef = useRef(onAutocompleteSelect);
+  onAutocompleteSelectRef.current = onAutocompleteSelect;
   const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
     trigger: null,
     query: '',
@@ -189,6 +199,12 @@ export const ComposerEditor = forwardRef<
       };
       setAutocomplete(state);
       onAutocompleteChangeRef.current?.(state);
+    },
+    onArrow(direction) {
+      onAutocompleteArrowRef.current?.(direction);
+    },
+    onSelect() {
+      onAutocompleteSelectRef.current?.();
     },
   });
 
