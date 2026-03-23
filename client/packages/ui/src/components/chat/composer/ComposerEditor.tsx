@@ -413,9 +413,15 @@ export const ComposerEditor = forwardRef<
       insertText(text: string) {
         const view = viewRef.current;
         if (!view || view.isDestroyed) return;
-        const { from, to } = view.state.selection;
+        // If autocomplete is active, replace the trigger+query range instead of cursor
+        const range = autocompleteRangeRef.current;
+        const { from, to } = range ?? view.state.selection;
         const tr = view.state.tr.insertText(text, from, to);
         view.dispatch(tr.scrollIntoView());
+        if (range) {
+          closeAcPlugin(view);
+          autocompleteRangeRef.current = null;
+        }
         view.focus();
       },
       insertMention(id: string, type: 'user' | 'role' | 'everyone') {
