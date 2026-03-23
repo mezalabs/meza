@@ -544,6 +544,35 @@ export function ChannelOverrideEditor({
     return channelGroups.find((g) => g.id === channel.channelGroupId)?.name;
   }, [channel?.channelGroupId, channelGroups]);
 
+  // For synced channels, fetch the category's overrides so we can show inherited permissions.
+  const categoryOverrides = usePermissionOverrideStore((s) =>
+    channel?.channelGroupId
+      ? (s.byTarget[channel.channelGroupId] ?? EMPTY_OVERRIDES)
+      : EMPTY_OVERRIDES,
+  );
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount triggers refetch
+  useEffect(() => {
+    if (
+      !isCategory &&
+      channel?.channelGroupId &&
+      channel?.permissionsSynced &&
+      isAuthenticated
+    ) {
+      listPermissionOverrides(channel.channelGroupId).then((result) => {
+        usePermissionOverrideStore
+          .getState()
+          .setOverrides(channel.channelGroupId!, result);
+      });
+    }
+  }, [
+    isCategory,
+    channel?.channelGroupId,
+    channel?.permissionsSynced,
+    isAuthenticated,
+    reconnectCount,
+  ]);
+
   // Caller's max role position for escalation prevention.
   const callerMaxPosition = useMemo(() => {
     if (isOwner) return Number.MAX_SAFE_INTEGER;
@@ -813,6 +842,77 @@ export function ChannelOverrideEditor({
           isSyncing={isSyncing}
         />
       )}
+
+      {/* Inherited category overrides (shown for synced channels) */}
+      {!isCategory &&
+        channel?.permissionsSynced &&
+        channel?.channelGroupId &&
+        categoryOverrides.length > 0 && (
+          <div className="mb-4 rounded-md border border-border/50 bg-bg-surface/50 p-3">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-subtle">
+              Inherited from {categoryName ?? 'Category'}
+            </h3>
+            <div className="flex flex-col gap-1.5">
+              {categoryOverrides
+                .filter((o) => o.roleId !== '')
+                .map((o) => {
+                  const role = roles.find((r) => r.id === o.roleId);
+                  const name =
+                    o.roleId === serverId
+                      ? '@everyone'
+                      : (role?.name ?? o.roleId);
+                  return (
+                    <div key={o.id} className="flex items-center gap-2 text-sm">
+                      {role && o.roleId !== serverId && (
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{
+                            backgroundColor: roleColorHex(role.color),
+                          }}
+                        />
+                      )}
+                      <span className="font-medium text-text">{name}</span>
+                      <span className="text-text-subtle">
+                        {o.allow !== 0n && o.deny !== 0n
+                          ? 'allow + deny'
+                          : o.allow !== 0n
+                            ? 'allow'
+                            : o.deny !== 0n
+                              ? 'deny'
+                              : 'neutral'}
+                      </span>
+                    </div>
+                  );
+                })}
+              {categoryOverrides
+                .filter((o) => o.userId !== '')
+                .map((o) => {
+                  const member = members?.find((m) => m.userId === o.userId);
+                  return (
+                    <div key={o.id} className="flex items-center gap-2 text-sm">
+                      <span className="font-medium text-text">
+                        {member?.nickname || member?.userId || o.userId}
+                      </span>
+                      <span className="text-text-subtle">
+                        {o.allow !== 0n && o.deny !== 0n
+                          ? 'allow + deny'
+                          : o.allow !== 0n
+                            ? 'allow'
+                            : o.deny !== 0n
+                              ? 'deny'
+                              : 'neutral'}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+            <p className="mt-2 text-xs text-text-muted">
+              These overrides are inherited from the category. Edit the category
+              to change them, or add channel-specific overrides below to
+              diverge.
+            </p>
+          </div>
+        )}
 
       {/* Segmented control: Roles | Members */}
       <div className="mb-4 flex gap-0.5 rounded-md bg-bg-surface p-0.5">
