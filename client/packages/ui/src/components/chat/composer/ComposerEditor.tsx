@@ -327,10 +327,37 @@ export const ComposerEditor = forwardRef<
             event.preventDefault();
             onAutocompleteSelectRef.current?.();
             return true;
+          case 'Backspace': {
+            // If the filter is empty (just the trigger char), delete
+            // the trigger and close autocomplete in one keypress.
+            const v = _view;
+            if (!v || !ac) return false;
+            const text = v.state.doc.textBetween(ac.from, ac.to);
+            // text is e.g. "@" or "@sam" or ":" or ":ups"
+            // If only the trigger char remains (length 1), delete it all
+            if (text.length <= 1) {
+              event.preventDefault();
+              const tr = v.state.tr.delete(ac.from, ac.to).scrollIntoView();
+              v.dispatch(tr);
+              closeAcPlugin(v);
+              autocompleteRangeRef.current = null;
+              const closedState: AutocompleteState = {
+                trigger: null,
+                query: '',
+                range: null,
+              };
+              setAutocomplete(closedState);
+              onAutocompleteChangeRef.current?.(closedState);
+              return true;
+            }
+            // Otherwise let ProseMirror handle normal backspace
+            // (the plugin will update the filter via onUpdate)
+            return false;
+          }
           case 'Escape': {
             event.preventDefault();
             const v = _view;
-            if (v) closeAcPlugin(v); // Deactivate plugin decoration
+            if (v) closeAcPlugin(v);
             autocompleteRangeRef.current = null;
             const closedState: AutocompleteState = {
               trigger: null,
