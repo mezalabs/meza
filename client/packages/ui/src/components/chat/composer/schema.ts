@@ -162,7 +162,7 @@ export const composerSchema = new Schema({
 
 export interface ComposerEditorHandle {
   isDirty(): boolean;
-  insertText(text: string): void;
+  insertText(text: string, options?: { focus?: boolean }): void;
   /** Replace the current autocomplete range with a ProseMirror node. */
   insertMention(id: string, type: MentionAttrs['type']): void;
   insertCustomEmoji(id: string, name: string, animated: boolean): void;

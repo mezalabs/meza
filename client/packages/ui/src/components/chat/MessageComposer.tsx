@@ -135,7 +135,8 @@ export function MessageComposer({
   useEffect(() => {
     if (insertEmojiRef) {
       insertEmojiRef.current = (text: string) => {
-        editorRef.current?.insertText(text);
+        // Don't focus editor — prevents iOS keyboard from popping up over emoji panel
+        editorRef.current?.insertText(text, { focus: false });
       };
     }
     return () => {

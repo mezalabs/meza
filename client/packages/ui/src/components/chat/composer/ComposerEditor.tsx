@@ -439,7 +439,7 @@ export const ComposerEditor = forwardRef<
         const currentText = serializeDoc(viewRef.current.state.doc);
         return currentText !== originalTextRef.current;
       },
-      insertText(text: string) {
+      insertText(text: string, { focus = true }: { focus?: boolean } = {}) {
         const view = viewRef.current;
         if (!view || view.isDestroyed) return;
         // If autocomplete is active, replace the trigger+query range instead of cursor
@@ -451,7 +451,7 @@ export const ComposerEditor = forwardRef<
           closeAcPlugin(view);
           autocompleteRangeRef.current = null;
         }
-        view.focus();
+        if (focus) view.focus();
       },
       insertMention(id: string, type: 'user' | 'role' | 'everyone') {
         const view = viewRef.current;

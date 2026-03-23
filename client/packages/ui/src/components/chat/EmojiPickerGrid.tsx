@@ -322,6 +322,9 @@ export const EmojiPickerGrid = memo(function EmojiPickerGrid({
       } else {
         onSelect(applySkinTone(item.emoji, skinTone));
       }
+      // Reset keyboard focus so the document-level Enter handler doesn't
+      // re-insert the same emoji when the iOS keyboard pops up.
+      setFocusedIndex(-1);
     },
     [onSelect, skinTone],
   );
