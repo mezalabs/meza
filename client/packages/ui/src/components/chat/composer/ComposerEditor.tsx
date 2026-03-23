@@ -425,6 +425,7 @@ export const ComposerEditor = forwardRef<
         const node = composerSchema.nodes.mention.create({ id, type });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        autocompleteRangeRef.current = null;
         view.focus();
       },
       insertCustomEmoji(id: string, name: string, animated: boolean) {
@@ -438,6 +439,7 @@ export const ComposerEditor = forwardRef<
         });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        autocompleteRangeRef.current = null;
         view.focus();
       },
       insertChannelLink(id: string) {
@@ -447,6 +449,7 @@ export const ComposerEditor = forwardRef<
         const node = composerSchema.nodes.channelLink.create({ id });
         const tr = view.state.tr.replaceWith(range.from, range.to, node);
         view.dispatch(tr.scrollIntoView());
+        autocompleteRangeRef.current = null;
         view.focus();
       },
       focus() {
