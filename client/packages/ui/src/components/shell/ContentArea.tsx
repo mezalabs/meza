@@ -8,6 +8,7 @@ import {
   Permissions,
   paneCount,
   useAuthStore,
+  useChannelGroupStore,
   useChannelStore,
   useDMStore,
   useMemberStore,
@@ -68,6 +69,10 @@ function paneMeta(
   servers: Record<string, { name: string; iconUrl?: string }>,
   dmChannels: DMChannel[],
   currentUserId: string | undefined,
+  channelGroupsByServer?: Record<
+    string,
+    readonly { id: string; name: string }[]
+  >,
 ): PaneMeta {
   switch (content.type) {
     case 'channel':
@@ -139,13 +144,16 @@ function paneMeta(
         serverId: content.serverId,
       };
     }
-    case 'categoryPermissions':
+    case 'categoryPermissions': {
+      const cgs = channelGroupsByServer?.[content.serverId];
+      const cg = cgs?.find((g) => g.id === content.channelGroupId);
       return {
-        label: 'Category Permissions',
+        label: cg ? `${cg.name} — Settings` : 'Category Settings',
         serverName: servers[content.serverId]?.name,
         serverIconUrl: servers[content.serverId]?.iconUrl,
         serverId: content.serverId,
       };
+    }
     case 'serverOnboarding':
       return {
         label: 'Welcome',
@@ -316,6 +324,7 @@ export function ContentArea({
   const closePane = useTilingStore((s) => s.closePane);
   const paneCountInTree = useTilingStore((s) => paneCount(s.root));
   const channelsByServer = useChannelStore((s) => s.byServer);
+  const channelGroupsByServer = useChannelGroupStore((s) => s.byServer);
   const servers = useServerStore((s) => s.servers);
   const dmChannels = useDMStore((s) => s.dmChannels);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -399,6 +408,7 @@ export function ContentArea({
         servers,
         dmChannels,
         currentUserId,
+        channelGroupsByServer,
       );
       const isChannel = content.type === 'channel';
       const canManageThisChannel =
@@ -482,6 +492,7 @@ export function ContentArea({
       overPaneId,
       activeDropZone,
       dragDisabled,
+      channelGroupsByServer,
     ],
   );
 
@@ -554,6 +565,7 @@ function OverlayPane({
 }) {
   const dmChannels = useDMStore((s) => s.dmChannels);
   const channelsByServer = useChannelStore((s) => s.byServer);
+  const channelGroupsByServer = useChannelGroupStore((s) => s.byServer);
   const servers = useServerStore((s) => s.servers);
   const currentUserId = useAuthStore((s) => s.user?.id);
   const meta = paneMeta(
@@ -562,6 +574,7 @@ function OverlayPane({
     servers,
     dmChannels,
     currentUserId,
+    channelGroupsByServer,
   );
   const children = renderPaneContent(content, { paneId: '__overlay__' });
 

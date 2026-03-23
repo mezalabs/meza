@@ -559,10 +559,9 @@ export function ChannelOverrideEditor({
       channel?.permissionsSynced &&
       isAuthenticated
     ) {
-      listPermissionOverrides(channel.channelGroupId).then((result) => {
-        usePermissionOverrideStore
-          .getState()
-          .setOverrides(channel.channelGroupId!, result);
+      const groupId = channel.channelGroupId;
+      listPermissionOverrides(groupId).then((result) => {
+        usePermissionOverrideStore.getState().setOverrides(groupId, result);
       });
     }
   }, [

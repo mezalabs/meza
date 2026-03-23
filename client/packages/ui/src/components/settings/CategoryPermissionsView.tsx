@@ -1,5 +1,3 @@
-import { useChannelGroupStore } from '@meza/core';
-import { useMemo } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { ChannelOverrideEditor } from './ChannelOverrideEditor.tsx';
 
@@ -13,11 +11,6 @@ export function CategoryPermissionsView({
   channelGroupId,
 }: CategoryPermissionsViewProps) {
   const isMobile = useMobile();
-  const groups = useChannelGroupStore((s) => s.byServer[serverId]);
-  const group = useMemo(
-    () => groups?.find((g) => g.id === channelGroupId),
-    [groups, channelGroupId],
-  );
 
   if (isMobile) {
     return (
@@ -40,7 +33,7 @@ export function CategoryPermissionsView({
         aria-label="Category settings sections"
       >
         <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-          {group?.name ?? 'Category'}
+          Category Settings
         </h2>
         <button
           type="button"
