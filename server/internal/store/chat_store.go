@@ -146,13 +146,15 @@ func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, ch
 		groupID = &channelGroupID
 	}
 
+	permSynced := groupID != nil
+
 	var ch models.Channel
 	err := s.pool.QueryRow(ctx,
 		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, permissions_synced, created_at)
-		 SELECT $1, $2, $3, $4, COALESCE(MAX(position), -1) + 1, $5, $6, $6 IS NOT NULL, $7
-		 FROM channels WHERE server_id = $8
+		 SELECT $1, $2, $3, $4, COALESCE(MAX(position), -1) + 1, $5, $6, $7, $8
+		 FROM channels WHERE server_id = $9
 		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), content_warning, COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
-		channelID, serverID, name, channelType, isPrivate, groupID, now, serverID,
+		channelID, serverID, name, channelType, isPrivate, groupID, permSynced, now, serverID,
 	).Scan(&ch.ID, &ch.ServerID, &ch.Name, &ch.Type, &ch.Position, &ch.IsPrivate, &ch.ChannelGroupID, &ch.DMStatus, &ch.DMInitiatorID, &ch.ContentWarning, &ch.VoiceTextChannelID, &ch.PermissionsSynced, &ch.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -438,16 +440,17 @@ func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverI
 	if channelGroupID != "" {
 		groupID = &channelGroupID
 	}
+	permSynced := groupID != nil
 
 	// Create the companion text channel FIRST so the FK reference from the voice
 	// channel is valid (PostgreSQL checks FK constraints at statement time).
 	var textCh models.Channel
 	err = tx.QueryRow(ctx,
 		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, permissions_synced, created_at)
-		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $5 IS NOT NULL, $6
-		 FROM channels WHERE server_id = $7
+		 SELECT $1, $2, $3, 1, COALESCE(MAX(position), -1) + 1, $4, $5, $6, $7
+		 FROM channels WHERE server_id = $8
 		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
-		textID, serverID, name, isPrivate, groupID, now, serverID,
+		textID, serverID, name, isPrivate, groupID, permSynced, now, serverID,
 	).Scan(&textCh.ID, &textCh.ServerID, &textCh.Name, &textCh.Type, &textCh.Position, &textCh.IsPrivate, &textCh.ChannelGroupID, &textCh.DMStatus, &textCh.DMInitiatorID, &textCh.VoiceTextChannelID, &textCh.PermissionsSynced, &textCh.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -461,9 +464,9 @@ func (s *ChatStore) CreateVoiceChannelWithCompanion(ctx context.Context, serverI
 	var voiceCh models.Channel
 	err = tx.QueryRow(ctx,
 		`INSERT INTO channels (id, server_id, name, type, position, is_private, channel_group_id, voice_text_channel_id, permissions_synced, created_at)
-		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $6 IS NOT NULL, $8)
+		 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $8, $9)
 		 RETURNING id, server_id, name, type, position, is_private, COALESCE(channel_group_id, ''), dm_status, COALESCE(dm_initiator_id, ''), COALESCE(voice_text_channel_id, ''), permissions_synced, created_at`,
-		voiceID, serverID, name, textCh.Position, isPrivate, groupID, textID, now,
+		voiceID, serverID, name, textCh.Position, isPrivate, groupID, textID, permSynced, now,
 	).Scan(&voiceCh.ID, &voiceCh.ServerID, &voiceCh.Name, &voiceCh.Type, &voiceCh.Position, &voiceCh.IsPrivate, &voiceCh.ChannelGroupID, &voiceCh.DMStatus, &voiceCh.DMInitiatorID, &voiceCh.VoiceTextChannelID, &voiceCh.PermissionsSynced, &voiceCh.CreatedAt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert voice channel: %w", err)
