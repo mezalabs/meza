@@ -158,6 +158,7 @@ type User struct {
 	Connections          []*UserConnection `protobuf:"bytes,17,rep,name=connections,proto3" json:"connections,omitempty"`
 	FriendRequestPrivacy string            `protobuf:"bytes,18,opt,name=friend_request_privacy,json=friendRequestPrivacy,proto3" json:"friend_request_privacy,omitempty"` // "everyone", "server_co_members", "nobody"
 	ProfilePrivacy       string            `protobuf:"bytes,19,opt,name=profile_privacy,json=profilePrivacy,proto3" json:"profile_privacy,omitempty"`                     // "everyone", "server_co_members", "friends", "nobody"
+	DismissedTips        []string          `protobuf:"bytes,20,rep,name=dismissed_tips,json=dismissedTips,proto3" json:"dismissed_tips,omitempty"`                        // Onboarding tip IDs the user has permanently dismissed
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -316,6 +317,13 @@ func (x *User) GetProfilePrivacy() string {
 		return x.ProfilePrivacy
 	}
 	return ""
+}
+
+func (x *User) GetDismissedTips() []string {
+	if x != nil {
+		return x.DismissedTips
+	}
+	return nil
 }
 
 type UserConnection struct {
@@ -2499,7 +2507,7 @@ var File_meza_v1_models_proto protoreflect.FileDescriptor
 
 const file_meza_v1_models_proto_rawDesc = "" +
 	"\n" +
-	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x05\n" +
+	"\x14meza/v1/models.proto\x12\ameza.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x99\x06\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -2525,7 +2533,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12signing_public_key\x18\x10 \x01(\fR\x10signingPublicKey\x129\n" +
 	"\vconnections\x18\x11 \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x124\n" +
 	"\x16friend_request_privacy\x18\x12 \x01(\tR\x14friendRequestPrivacy\x12'\n" +
-	"\x0fprofile_privacy\x18\x13 \x01(\tR\x0eprofilePrivacyB\x14\n" +
+	"\x0fprofile_privacy\x18\x13 \x01(\tR\x0eprofilePrivacy\x12%\n" +
+	"\x0edismissed_tips\x18\x14 \x03(\tR\rdismissedTipsB\x14\n" +
 	"\x12_audio_preferencesJ\x04\b\x06\x10\a\"T\n" +
 	"\x0eUserConnection\x12\x1a\n" +
 	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x10\n" +

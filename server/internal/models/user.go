@@ -47,6 +47,7 @@ type User struct {
 	ProfilePrivacy         string // "everyone", "server_co_members", "friends", "nobody"
 	SigningPublicKey []byte             // 32-byte Ed25519 verify key for E2EE signature verification
 	Connections     []UserConnection   // Profile social links
+	DismissedTips   []string           // Onboarding tip IDs the user has permanently dismissed
 	// Federation fields (populated for shadow users on remote instances)
 	IsFederated  bool
 	HomeServer   string // e.g. "https://home.example.com"

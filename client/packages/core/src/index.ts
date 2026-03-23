@@ -39,6 +39,8 @@ export {
   revokeAllOtherDevices,
   revokeDevice,
   toStoredUser,
+  dismissTip,
+  resetDismissedTips,
   updateProfile,
 } from './api/auth.ts';
 // API — chat

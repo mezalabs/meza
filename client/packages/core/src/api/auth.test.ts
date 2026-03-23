@@ -262,6 +262,7 @@ describe('updateProfile', () => {
         profilePrivacy: 'everyone',
         connections: [],
         createdAt: '',
+        dismissedTips: [],
       },
     });
     mockAuthClient.updateProfile.mockResolvedValue({
@@ -329,6 +330,7 @@ describe('logout', () => {
         profilePrivacy: 'everyone',
         connections: [],
         createdAt: '',
+        dismissedTips: [],
       },
     });
 

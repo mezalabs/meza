@@ -101,13 +101,13 @@ func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.Use
 		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		        audio_preferences, dm_privacy,
 		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
-		        connections, friend_request_privacy, profile_privacy
+		        connections, friend_request_privacy, profile_privacy, dismissed_tips
 		 FROM users WHERE id = $1`, userID,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 		&audioPrefsJSON, &u.DMPrivacy,
 		&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
-		&connectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy)
+		&connectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy, &u.DismissedTips)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
@@ -163,15 +163,23 @@ func (s *AuthStore) UpdateUser(ctx context.Context, params UpdateUserParams) (*m
 		     connections = COALESCE($13, connections),
 		     friend_request_privacy = COALESCE($14, friend_request_privacy),
 		     profile_privacy = COALESCE($15, profile_privacy),
+		     dismissed_tips = CASE
+		         WHEN $16::bool THEN '{}'::text[]
+		         WHEN $17::text[] IS NOT NULL THEN (
+		             SELECT ARRAY(SELECT DISTINCT unnest FROM unnest(dismissed_tips || $17::text[]) LIMIT 100)
+		         )
+		         ELSE dismissed_tips
+		     END,
 		     updated_at = now()
 		 WHERE id = $1
 		 RETURNING id, COALESCE(email,''), username, COALESCE(display_name,''), COALESCE(avatar_url,''), emoji_scale, created_at,
 		           COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
-		           audio_preferences, dm_privacy, connections, friend_request_privacy, profile_privacy`,
+		           audio_preferences, dm_privacy, connections, friend_request_privacy, profile_privacy, dismissed_tips`,
 		params.UserID, params.DisplayName, params.AvatarURL, params.EmojiScale, params.Bio, params.Pronouns, params.BannerURL, params.ThemeColorPrimary, params.ThemeColorSecondary, params.SimpleMode, audioPrefsJSON, params.DMPrivacy, connectionsJSON, params.FriendRequestPrivacy, params.ProfilePrivacy,
+		params.ClearDismissedTips, params.DismissedTips,
 	).Scan(&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
-		&returnedAudioPrefsJSON, &u.DMPrivacy, &returnedConnectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy)
+		&returnedAudioPrefsJSON, &u.DMPrivacy, &returnedConnectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy, &u.DismissedTips)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("user not found")
@@ -196,7 +204,7 @@ func (s *AuthStore) GetUsersByIDs(ctx context.Context, userIDs []string) ([]*mod
 		        COALESCE(bio,''), COALESCE(pronouns,''), COALESCE(banner_url,''), COALESCE(theme_color_primary,''), COALESCE(theme_color_secondary,''), simple_mode,
 		        audio_preferences, dm_privacy,
 		        is_federated, COALESCE(home_server,''), COALESCE(remote_user_id,''),
-		        connections, friend_request_privacy, profile_privacy
+		        connections, friend_request_privacy, profile_privacy, dismissed_tips
 		 FROM users WHERE id = ANY($1)`, userIDs,
 	)
 	if err != nil {
@@ -213,7 +221,7 @@ func (s *AuthStore) GetUsersByIDs(ctx context.Context, userIDs []string) ([]*mod
 			&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 			&audioPrefsJSON, &u.DMPrivacy,
 			&u.IsFederated, &u.HomeServer, &u.RemoteUserID,
-			&connectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy); err != nil {
+			&connectionsJSON, &u.FriendRequestPrivacy, &u.ProfilePrivacy, &u.DismissedTips); err != nil {
 			return nil, fmt.Errorf("scan user: %w", err)
 		}
 		u.AudioPreferences = models.DefaultAudioPreferences()
@@ -258,7 +266,7 @@ func (s *AuthStore) getUserWithAuth(ctx context.Context, whereClause string, val
 		`SELECT u.id, COALESCE(u.email,''), u.username, COALESCE(u.display_name,''), COALESCE(u.avatar_url,''), u.emoji_scale, u.created_at,
 		        COALESCE(u.bio,''), COALESCE(u.pronouns,''), COALESCE(u.banner_url,''), COALESCE(u.theme_color_primary,''), COALESCE(u.theme_color_secondary,''), u.simple_mode,
 		        u.audio_preferences, u.dm_privacy, u.connections,
-		        u.friend_request_privacy, u.profile_privacy,
+		        u.friend_request_privacy, u.profile_privacy, u.dismissed_tips,
 		        a.auth_key_hash, a.salt, a.encrypted_key_bundle, a.key_bundle_iv
 		 FROM users u JOIN user_auth a ON a.user_id = u.id
 		 WHERE `+whereClause, value,
@@ -266,7 +274,7 @@ func (s *AuthStore) getUserWithAuth(ctx context.Context, whereClause string, val
 		&u.ID, &u.Email, &u.Username, &u.DisplayName, &u.AvatarURL, &u.EmojiScale, &u.CreatedAt,
 		&u.Bio, &u.Pronouns, &u.BannerURL, &u.ThemeColorPrimary, &u.ThemeColorSecondary, &u.SimpleMode,
 		&audioPrefsJSON, &u.DMPrivacy, &connectionsJSON,
-		&u.FriendRequestPrivacy, &u.ProfilePrivacy,
+		&u.FriendRequestPrivacy, &u.ProfilePrivacy, &u.DismissedTips,
 		&a.AuthKeyHash, &a.Salt, &a.EncryptedKeyBundle, &a.KeyBundleIV,
 	)
 	if err != nil {

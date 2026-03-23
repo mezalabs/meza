@@ -59,6 +59,7 @@ export interface StoredUser {
   profilePrivacy: string;
   connections: StoredUserConnection[];
   createdAt: string;
+  dismissedTips: string[];
 }
 
 export interface AuthState {
@@ -92,6 +93,7 @@ export interface AuthActions {
         | 'simpleMode'
         | 'dmPrivacy'
         | 'connections'
+        | 'dismissedTips'
       >
     >,
   ) => void;

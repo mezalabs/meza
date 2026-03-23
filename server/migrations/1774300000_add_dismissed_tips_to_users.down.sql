@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE users DROP COLUMN IF EXISTS dismissed_tips;
+COMMIT;

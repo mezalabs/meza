@@ -89,6 +89,9 @@ import { InviteDialog } from './InviteDialog.tsx';
 import { JoinServerDialog } from './JoinServerDialog.tsx';
 import { SidebarContextMenu } from './SidebarContextMenu.tsx';
 import { StatusPicker } from './StatusPicker.tsx';
+import { useDwellTrigger } from '../../hooks/useDwellTrigger.ts';
+import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
+import { useOnboardingStore, selectIsDismissed } from '../../stores/onboarding.ts';
 
 const EMPTY_CHANNELS: {
   id: string;
@@ -133,6 +136,12 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const sidebarSetPaneContent = useTilingStore((s) => s.setPaneContent);
 
   const pendingInvite = useInviteStore((s) => s.pendingCode);
+
+  // Onboarding tooltip 1: hoisted to sidebar level
+  const hoveredChannelRef = useRef<HTMLElement | null>(null);
+  const sidebarDragTip = useDwellTrigger('sidebar-drag');
+  const sidebarTipLoaded = useOnboardingStore((s) => s.loaded);
+  const sidebarTipDismissed = useOnboardingStore(selectIsDismissed('sidebar-drag'));
 
   // Poll voice channel participants for the selected server
   useVoiceChannelParticipants(selectedServerId, isAuthenticated);
@@ -693,6 +702,13 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                       channelType={channel.type}
                       isPrivate={channel.isPrivate}
                       serverId={selectedServerId ?? undefined}
+                      onTipMouseEnter={(el) => {
+                        hoveredChannelRef.current = el;
+                        sidebarDragTip.onMouseEnter();
+                      }}
+                      onTipMouseLeave={() => {
+                        sidebarDragTip.onMouseLeave();
+                      }}
                     />
                   ))}
 
@@ -723,6 +739,13 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                           isPrivate={channel.isPrivate}
                           serverId={selectedServerId ?? undefined}
                           voiceTextChannelId={channel.voiceTextChannelId}
+                          onTipMouseEnter={(el) => {
+                            hoveredChannelRef.current = el;
+                            sidebarDragTip.onMouseEnter();
+                          }}
+                          onTipMouseLeave={() => {
+                            sidebarDragTip.onMouseLeave();
+                          }}
                         />
                       ))}
                     </>
@@ -739,6 +762,13 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                       onCreateChannel={() => {
                         setCreateChannelGroupId(group.id);
                         setCreateChannelOpen(true);
+                      }}
+                      onTipMouseEnter={(el) => {
+                        hoveredChannelRef.current = el;
+                        sidebarDragTip.onMouseEnter();
+                      }}
+                      onTipMouseLeave={() => {
+                        sidebarDragTip.onMouseLeave();
                       }}
                     />
                   ))}
@@ -806,6 +836,14 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
         open={createGroupDMOpen}
         onOpenChange={setCreateGroupDMOpen}
       />
+      {sidebarTipLoaded && !sidebarTipDismissed && (
+        <OnboardingTooltip
+          tipId="sidebar-drag"
+          anchorRef={hoveredChannelRef}
+          message="Drag any channel to the edge of a pane to open it side-by-side"
+          side="right"
+        />
+      )}
     </aside>
   );
 }
@@ -1135,6 +1173,8 @@ function SidebarChannelGroup({
   channels,
   serverId,
   onCreateChannel,
+  onTipMouseEnter,
+  onTipMouseLeave,
 }: {
   groupId: string;
   groupName: string;
@@ -1147,6 +1187,8 @@ function SidebarChannelGroup({
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
+  onTipMouseEnter?: (el: HTMLElement) => void;
+  onTipMouseLeave?: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -1193,6 +1235,8 @@ function SidebarChannelGroup({
               serverId={serverId}
               channelGroupId={groupId}
               voiceTextChannelId={channel.voiceTextChannelId}
+              onTipMouseEnter={onTipMouseEnter}
+              onTipMouseLeave={onTipMouseLeave}
             />
           ))}
         </div>
@@ -1209,6 +1253,8 @@ function SidebarChannelItem({
   serverId,
   channelGroupId: _channelGroupId,
   voiceTextChannelId,
+  onTipMouseEnter,
+  onTipMouseLeave,
 }: {
   channelId: string;
   channelName: string;
@@ -1217,6 +1263,8 @@ function SidebarChannelItem({
   serverId?: string;
   channelGroupId?: string;
   voiceTextChannelId?: string;
+  onTipMouseEnter?: (el: HTMLElement) => void;
+  onTipMouseLeave?: () => void;
 }) {
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
@@ -1292,6 +1340,8 @@ function SidebarChannelItem({
           {...dragListeners}
           role="button"
           tabIndex={0}
+          onMouseEnter={(e) => onTipMouseEnter?.(e.currentTarget)}
+          onMouseLeave={() => onTipMouseLeave?.()}
           className={`group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-2.5 md:py-1.5 text-base transition-colors ${
             isDragging ? 'opacity-40' : ''
           } ${

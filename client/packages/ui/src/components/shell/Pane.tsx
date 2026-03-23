@@ -8,7 +8,10 @@ import {
   UsersThreeIcon,
   XIcon,
 } from '@phosphor-icons/react';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
+import { useDwellTrigger } from '../../hooks/useDwellTrigger.ts';
+import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
+import { useOnboardingStore, selectIsDismissed } from '../../stores/onboarding.ts';
 import { DropZoneOverlay } from './PaneSlot.tsx';
 
 interface PaneProps {
@@ -62,6 +65,11 @@ export function Pane({
     ? `${base}${serverIconUrl}${iconHovered ? '' : '/thumb'}${authQuery}`
     : undefined;
 
+  const headerRef = useRef<HTMLDivElement>(null);
+  const headerDragTip = useDwellTrigger('header-drag');
+  const headerTipLoaded = useOnboardingStore((s) => s.loaded);
+  const headerTipDismissed = useOnboardingStore(selectIsDismissed('header-drag'));
+
   const {
     attributes: dragAttributes,
     listeners: dragListeners,
@@ -83,9 +91,14 @@ export function Pane({
     >
       {/* Header bar */}
       <div
-        ref={setDragRef}
+        ref={(el) => {
+          setDragRef(el);
+          headerRef.current = el;
+        }}
         {...dragAttributes}
         {...dragListeners}
+        onMouseEnter={headerDragTip.onMouseEnter}
+        onMouseLeave={headerDragTip.onMouseLeave}
         className={`flex flex-shrink-0 items-center gap-2.5 bg-bg-base px-4 text-sm border-b transition-colors ${
           serverName ? 'h-12' : 'h-10'
         } ${dragDisabled ? 'border-transparent' : isDragging ? 'cursor-grabbing border-transparent' : 'cursor-grab border-transparent hover:border-border/40'}`}
@@ -198,6 +211,14 @@ export function Pane({
           )}
         </div>
       </div>
+
+      {headerTipLoaded && !headerTipDismissed && (
+        <OnboardingTooltip
+          tipId="header-drag"
+          anchorRef={headerRef}
+          message="Drag pane headers to rearrange your layout"
+        />
+      )}
 
       {/* Content */}
       <div className="flex flex-1 flex-col min-h-0 overflow-hidden bg-bg-base">

@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE users ADD COLUMN dismissed_tips TEXT[] NOT NULL DEFAULT '{}';
+COMMIT;

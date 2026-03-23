@@ -1078,6 +1078,8 @@ type UpdateProfileRequest struct {
 	ClearConnections     bool                   `protobuf:"varint,13,opt,name=clear_connections,json=clearConnections,proto3" json:"clear_connections,omitempty"`                    // when true, replace all connections (empty list = clear)
 	FriendRequestPrivacy *string                `protobuf:"bytes,14,opt,name=friend_request_privacy,json=friendRequestPrivacy,proto3,oneof" json:"friend_request_privacy,omitempty"` // "everyone", "server_co_members", "nobody"
 	ProfilePrivacy       *string                `protobuf:"bytes,15,opt,name=profile_privacy,json=profilePrivacy,proto3,oneof" json:"profile_privacy,omitempty"`                     // "everyone", "server_co_members", "friends", "nobody"
+	DismissTips          []string               `protobuf:"bytes,16,rep,name=dismiss_tips,json=dismissTips,proto3" json:"dismiss_tips,omitempty"`                                    // Tip IDs to dismiss (additive, server appends to user's set)
+	ClearDismissedTips   bool                   `protobuf:"varint,17,opt,name=clear_dismissed_tips,json=clearDismissedTips,proto3" json:"clear_dismissed_tips,omitempty"`            // When true, clear all dismissed tips (for "reset onboarding tips" in settings)
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1215,6 +1217,20 @@ func (x *UpdateProfileRequest) GetProfilePrivacy() string {
 		return *x.ProfilePrivacy
 	}
 	return ""
+}
+
+func (x *UpdateProfileRequest) GetDismissTips() []string {
+	if x != nil {
+		return x.DismissTips
+	}
+	return nil
+}
+
+func (x *UpdateProfileRequest) GetClearDismissedTips() bool {
+	if x != nil {
+		return x.ClearDismissedTips
+	}
+	return false
 }
 
 type UpdateProfileResponse struct {
@@ -2571,7 +2587,7 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"is_current\x18\x05 \x01(\bR\tisCurrent\x12\x1a\n" +
 	"\bplatform\x18\x06 \x01(\tR\bplatform\x12!\n" +
-	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\xa4\a\n" +
+	"\fpush_enabled\x18\a \x01(\bR\vpushEnabled\"\xf9\a\n" +
 	"\x14UpdateProfileRequest\x12&\n" +
 	"\fdisplay_name\x18\x01 \x01(\tH\x00R\vdisplayName\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -2594,7 +2610,9 @@ const file_meza_v1_auth_proto_rawDesc = "" +
 	"\vconnections\x18\f \x03(\v2\x17.meza.v1.UserConnectionR\vconnections\x12+\n" +
 	"\x11clear_connections\x18\r \x01(\bR\x10clearConnections\x129\n" +
 	"\x16friend_request_privacy\x18\x0e \x01(\tH\vR\x14friendRequestPrivacy\x88\x01\x01\x12,\n" +
-	"\x0fprofile_privacy\x18\x0f \x01(\tH\fR\x0eprofilePrivacy\x88\x01\x01B\x0f\n" +
+	"\x0fprofile_privacy\x18\x0f \x01(\tH\fR\x0eprofilePrivacy\x88\x01\x01\x12!\n" +
+	"\fdismiss_tips\x18\x10 \x03(\tR\vdismissTips\x120\n" +
+	"\x14clear_dismissed_tips\x18\x11 \x01(\bR\x12clearDismissedTipsB\x0f\n" +
 	"\r_display_nameB\r\n" +
 	"\v_avatar_urlB\x0e\n" +
 	"\f_emoji_scaleB\x06\n" +

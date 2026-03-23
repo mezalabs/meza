@@ -147,6 +147,8 @@ message UpdateProfileRequest {
   bool clear_connections = 13;  // when true, replace all connections (empty list = clear)
   optional string friend_request_privacy = 14;  // "everyone", "server_co_members", "nobody"
   optional string profile_privacy = 15;          // "everyone", "server_co_members", "friends", "nobody"
+  repeated string dismiss_tips = 16;             // Tip IDs to dismiss (additive, server appends to user's set)
+  bool clear_dismissed_tips = 17;                // When true, clear all dismissed tips (for "reset onboarding tips" in settings)
 }
 
 message UpdateProfileResponse {

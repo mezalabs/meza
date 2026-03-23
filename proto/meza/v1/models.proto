@@ -26,6 +26,7 @@ message User {
   repeated UserConnection connections = 17;
   string friend_request_privacy = 18;  // "everyone", "server_co_members", "nobody"
   string profile_privacy = 19;         // "everyone", "server_co_members", "friends", "nobody"
+  repeated string dismissed_tips = 20; // Onboarding tip IDs the user has permanently dismissed
 }
 
 message UserConnection {

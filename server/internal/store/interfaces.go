@@ -33,6 +33,8 @@ type UpdateUserParams struct {
 	Connections          []models.UserConnection
 	FriendRequestPrivacy *string
 	ProfilePrivacy       *string
+	DismissedTips        []string // Tips to append (deduplicated by caller)
+	ClearDismissedTips   bool     // When true, reset dismissed_tips to '{}'
 }
 
 // AuthStorer provides access to user authentication data in Postgres.

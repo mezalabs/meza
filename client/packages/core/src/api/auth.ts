@@ -56,6 +56,7 @@ export function publicUserToStored(user: {
     profilePrivacy: '',
     connections: [],
     createdAt: '',
+    dismissedTips: [],
   };
 }
 
@@ -80,6 +81,7 @@ export function toStoredUser(user: User): StoredUser {
       url: c.url,
       label: c.label,
     })),
+    dismissedTips: user.dismissedTips ?? [],
     createdAt: user.createdAt
       ? new Date(Number(user.createdAt.seconds) * 1000).toISOString()
       : '',
@@ -209,6 +211,8 @@ export async function updateProfile(params: {
   profilePrivacy?: string;
   connections?: { platform: ConnectionPlatform; url: string; label: string }[];
   clearConnections?: boolean;
+  dismissTips?: string[];
+  clearDismissedTips?: boolean;
 }) {
   const store = useAuthStore.getState();
   try {
@@ -217,6 +221,27 @@ export async function updateProfile(params: {
       store.updateUser(toStoredUser(res.user));
     }
     return res;
+  } catch (err) {
+    throw new Error(mapAuthError(err));
+  }
+}
+
+export async function dismissTip(tipId: string): Promise<void> {
+  try {
+    await authClient.updateProfile({ dismissTips: [tipId] });
+    // Optimistic: updateUser is called when the full response comes back
+  } catch {
+    // Fire-and-forget — tip stays dismissed in memory for this session
+  }
+}
+
+export async function resetDismissedTips(): Promise<void> {
+  const store = useAuthStore.getState();
+  try {
+    const res = await authClient.updateProfile({ clearDismissedTips: true });
+    if (res.user) {
+      store.updateUser(toStoredUser(res.user));
+    }
   } catch (err) {
     throw new Error(mapAuthError(err));
   }

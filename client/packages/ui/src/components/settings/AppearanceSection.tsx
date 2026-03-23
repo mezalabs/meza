@@ -1,5 +1,6 @@
-import { updateProfile, useAuthStore } from '@meza/core';
+import { resetDismissedTips, updateProfile, useAuthStore } from '@meza/core';
 import { useState } from 'react';
+import { useOnboardingStore } from '../../stores/onboarding.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
 export function AppearanceSection() {
@@ -55,6 +56,26 @@ export function AppearanceSection() {
     }
   }
 
+  const [resetTipsSaving, setResetTipsSaving] = useState(false);
+
+  async function handleResetTips() {
+    if (resetTipsSaving) return;
+    setResetTipsSaving(true);
+    setFeedback(null);
+    try {
+      await resetDismissedTips();
+      useOnboardingStore.getState().reset();
+      setFeedback({ type: 'success', message: 'Onboarding tips have been reset.' });
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        message: err instanceof Error ? err.message : 'Failed to reset tips.',
+      });
+    } finally {
+      setResetTipsSaving(false);
+    }
+  }
+
   if (!user) return null;
 
   const previewSize = 20 * emojiScale;
@@ -96,6 +117,28 @@ export function AppearanceSection() {
           </span>
         </div>
       </div>
+
+      {/* Reset onboarding tips */}
+      {!simpleMode && (
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-text">
+            Onboarding Tips
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="rounded-md border border-border px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-bg-surface hover:text-text disabled:opacity-50"
+              disabled={resetTipsSaving}
+              onClick={handleResetTips}
+            >
+              {resetTipsSaving ? 'Resetting\u2026' : 'Reset onboarding tips'}
+            </button>
+            <span className="text-xs text-text-subtle">
+              Show tiling tips again
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Emoji size */}
       <div className="space-y-3">

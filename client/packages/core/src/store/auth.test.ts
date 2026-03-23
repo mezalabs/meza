@@ -19,6 +19,7 @@ const mockUser: StoredUser = {
   profilePrivacy: 'everyone',
   connections: [],
   createdAt: '',
+  dismissedTips: [],
 };
 
 const mockStorage = new Map<string, string>();

@@ -27,7 +27,9 @@ import {
   useSimpleMode,
   useTilingStore,
 } from '../../stores/tiling.ts';
+import { useOnboardingStore } from '../../stores/onboarding.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
+import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { ContentArea } from './ContentArea.tsx';
 import { computeDropZone } from './computeDropZone.ts';
@@ -86,6 +88,9 @@ function DesktopShell() {
   const [sidebarWidth, setSidebarWidth] = useState(readStoredWidth);
   const rafId = useRef(0);
 
+  // Onboarding: synchronous drag ref to prevent timer races
+  const isDraggingRef = useRef(false);
+
   useKeybinds({
     onShowShortcuts: useCallback(() => setHelpOpen(true), []),
   });
@@ -110,6 +115,76 @@ function DesktopShell() {
     const { focusedPaneId, setPaneContent } = useTilingStore.getState();
     setPaneContent(focusedPaneId, { type: 'getStarted' });
   }, [isAuthenticated, servers]);
+
+  // Load onboarding dismissed tips from user profile
+  useEffect(() => {
+    const user = useAuthStore.getState().user;
+    if (user) {
+      useOnboardingStore.getState().load(user.dismissedTips ?? []);
+    }
+  }, [isAuthenticated]);
+
+  // Onboarding tooltip 2: fires when user creates their first split (paneCount 1→2)
+  const tooltip2TimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const resizeHandleRef = useRef<HTMLElement | null>(null);
+  const tip2Dismissed = useOnboardingStore((s) => s.dismissedTips['resize']);
+
+  useEffect(() => {
+    if (tip2Dismissed) return;
+    let prevCount = paneCount(useTilingStore.getState().root);
+    const unsub = useTilingStore.subscribe((state) => {
+      const count = paneCount(state.root);
+      if (prevCount === 1 && count === 2 && !isDraggingRef.current) {
+        if (tooltip2TimerRef.current) clearTimeout(tooltip2TimerRef.current);
+        tooltip2TimerRef.current = setTimeout(() => {
+          if (!isDraggingRef.current) {
+            // Find the first resize handle in the DOM
+            const handle = document.querySelector(
+              '[role="separator"][aria-label="Resize panes"]',
+            );
+            if (handle) resizeHandleRef.current = handle as HTMLElement;
+            useOnboardingStore.getState().show('resize');
+          }
+        }, 300);
+      }
+      prevCount = count;
+    });
+    return () => {
+      unsub();
+      if (tooltip2TimerRef.current) clearTimeout(tooltip2TimerRef.current);
+    };
+  }, [tip2Dismissed]);
+
+  // Onboarding tooltip 4: fires when 3+ panes are open
+  const tooltip4TimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const focusedHeaderRef = useRef<HTMLElement | null>(null);
+  const tip4Dismissed = useOnboardingStore((s) => s.dismissedTips['shortcuts']);
+
+  useEffect(() => {
+    if (tip4Dismissed) return;
+    let prevCount = paneCount(useTilingStore.getState().root);
+    const unsub = useTilingStore.subscribe((state) => {
+      const count = paneCount(state.root);
+      if (count >= 3 && prevCount < 3 && !isDraggingRef.current) {
+        if (tooltip4TimerRef.current) clearTimeout(tooltip4TimerRef.current);
+        tooltip4TimerRef.current = setTimeout(() => {
+          if (!isDraggingRef.current) {
+            const focusedId = useTilingStore.getState().focusedPaneId;
+            const el = document.querySelector(
+              `[data-pane-id="${focusedId}"]`,
+            );
+            if (el) focusedHeaderRef.current = el as HTMLElement;
+            useOnboardingStore.getState().show('shortcuts');
+          }
+        }, 500);
+      }
+      prevCount = count;
+    });
+    return () => {
+      unsub();
+      if (tooltip4TimerRef.current) clearTimeout(tooltip4TimerRef.current);
+    };
+  }, [tip4Dismissed]);
 
   const handleSidebarResize = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -196,6 +271,11 @@ function DesktopShell() {
   }, []);
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    isDraggingRef.current = true;
+    useOnboardingStore.getState().hide();
+    if (tooltip2TimerRef.current) clearTimeout(tooltip2TimerRef.current);
+    if (tooltip4TimerRef.current) clearTimeout(tooltip4TimerRef.current);
+
     const data = parseDragData(event.active.data.current);
     if (!data) return;
     if (data.type === 'pane') {
@@ -233,6 +313,7 @@ function DesktopShell() {
   );
 
   const clearDragState = useCallback(() => {
+    isDraggingRef.current = false;
     cancelAnimationFrame(dragRafId.current);
     setActiveDragPaneId(null);
     setSidebarDrag(null);
@@ -328,6 +409,17 @@ function DesktopShell() {
         <ShortcutHelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
         <ImageViewer />
         <ToastContainer />
+        {/* Onboarding tooltips */}
+        <OnboardingTooltip
+          tipId="resize"
+          anchorRef={resizeHandleRef}
+          message="Resize panes by dragging the divider between them"
+        />
+        <OnboardingTooltip
+          tipId="shortcuts"
+          anchorRef={focusedHeaderRef}
+          message="Press Shift+? to see all keyboard shortcuts"
+        />
       </div>
     </IconContext.Provider>
   );

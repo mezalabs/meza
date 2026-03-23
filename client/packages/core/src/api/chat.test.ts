@@ -148,6 +148,7 @@ beforeEach(() => {
       profilePrivacy: 'everyone',
       connections: [],
       createdAt: '',
+      dismissedTips: [],
     },
   });
 });

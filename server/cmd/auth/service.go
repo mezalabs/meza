@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -43,6 +44,9 @@ type authService struct {
 func newAuthService(s store.AuthStorer, ds store.DeviceStorer, hmacSecret string, ed25519Keys *auth.Ed25519Keys) *authService {
 	return &authService{store: s, deviceStore: ds, hmacSecret: hmacSecret, ed25519Keys: ed25519Keys}
 }
+
+// tipIDPattern validates dismissed tip IDs: lowercase letters/digits/hyphens, 1-64 chars, starting with a letter.
+var tipIDPattern = regexp.MustCompile(`^[a-z][a-z0-9-]{0,63}$`)
 
 // recoveryRateLimit checks per-email rate limiting for recovery endpoints.
 // Returns a connect error if the limit is exceeded, nil otherwise.
@@ -526,6 +530,17 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		}
 	}
 
+	// Validate dismissed tips.
+	var dismissTips []string
+	if len(r.DismissTips) > 0 {
+		for _, tipID := range r.DismissTips {
+			if !tipIDPattern.MatchString(tipID) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid tip_id: %q", tipID))
+			}
+		}
+		dismissTips = r.DismissTips
+	}
+
 	user, err := s.store.UpdateUser(ctx, store.UpdateUserParams{
 		UserID:               userID,
 		DisplayName:          displayName,
@@ -542,6 +557,8 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 		Connections:          connections,
 		FriendRequestPrivacy: friendRequestPrivacy,
 		ProfilePrivacy:       profilePrivacy,
+		DismissedTips:        dismissTips,
+		ClearDismissedTips:   r.ClearDismissedTips,
 	})
 	if err != nil {
 		slog.Error("updating profile", "err", err, "user", userID)
@@ -1027,6 +1044,7 @@ func userToProto(u *models.User) *v1.User {
 		DmPrivacy:            u.DMPrivacy,
 		FriendRequestPrivacy: u.FriendRequestPrivacy,
 		ProfilePrivacy:       u.ProfilePrivacy,
+		DismissedTips:        u.DismissedTips,
 	}
 	for _, c := range u.Connections {
 		proto.Connections = append(proto.Connections, &v1.UserConnection{
