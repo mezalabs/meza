@@ -382,30 +382,38 @@ export function ChannelView({
     lastAckedIdRef.current = null;
   }, [channelId]);
 
-  // Snapshot the last-read message ID when entering a channel so the
-  // "New Activity" divider stays stable until the user navigates away
-  // or presses Escape.
-  const [newActivityAnchor, setNewActivityAnchor] = useState<string | null>(
-    null,
-  );
+  // Snapshot the last-read message ID and unread count when entering a channel
+  // so the "New Activity" divider and floating unread indicator stay stable
+  // until the user navigates away, presses Escape, or clicks the indicator.
+  // Combined into a single object to prevent desync between anchor and count.
+  const [unreadSnapshot, setUnreadSnapshot] = useState<{
+    anchor: string;
+    count: number;
+  } | null>(null);
   useEffect(() => {
     const rs = useReadStateStore.getState().byChannel[channelId];
-    setNewActivityAnchor(
-      rs && rs.unreadCount > 0 ? rs.lastReadMessageId : null,
-    );
+    if (rs && rs.unreadCount > 0 && rs.lastReadMessageId) {
+      setUnreadSnapshot({
+        anchor: rs.lastReadMessageId,
+        count: rs.unreadCount,
+      });
+    } else {
+      setUnreadSnapshot(null);
+    }
   }, [channelId]);
 
-  // Escape clears the "New Activity" divider (when not editing a message)
+  // Escape clears the "New Activity" divider and floating indicator
+  // (when not editing a message)
   useEffect(() => {
-    if (!newActivityAnchor || editingMessageId) return;
+    if (!unreadSnapshot || editingMessageId) return;
     function handleKeyDown(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape') {
-        setNewActivityAnchor(null);
+        setUnreadSnapshot(null);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [newActivityAnchor, editingMessageId]);
+  }, [unreadSnapshot, editingMessageId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
@@ -589,6 +597,14 @@ export function ChannelView({
     }
   }, [channelId]);
 
+  // Reset scroll-to-bottom intent on channel switch.
+  // Must be useLayoutEffect so it fires BEFORE the auto-scroll
+  // useLayoutEffect below which checks wasNearBottomRef.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId triggers reset on channel switch
+  useLayoutEffect(() => {
+    wasNearBottomRef.current = true;
+  }, [channelId]);
+
   // Auto-scroll to bottom on new messages or content changes (e.g. decryption
   // resolving placeholder → real text), or scroll to a jump target.
   // biome-ignore lint/correctness/useExhaustiveDependencies: _scrollTick is an intentional trigger to re-run this effect when scrollToMessage is called; messages triggers it when decryption updates content heights
@@ -673,7 +689,26 @@ export function ChannelView({
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
-      <div className="flex flex-1 flex-col min-h-0 min-w-0">
+      <div className="relative flex flex-1 flex-col min-h-0 min-w-0">
+        {/* Floating unread indicator */}
+        <div aria-live="polite">
+          {unreadSnapshot && (
+            <button
+              type="button"
+              className="absolute top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-black shadow-md hover:bg-accent-hover transition-colors animate-slide-down"
+              onClick={() => {
+                const { anchor } = unreadSnapshot;
+                setUnreadSnapshot(null);
+                scrollToMessage(anchor);
+              }}
+              aria-label={`Jump to ${unreadSnapshot.count} new messages`}
+            >
+              &uarr; {unreadSnapshot.count > 99 ? '99+' : unreadSnapshot.count}{' '}
+              new message{unreadSnapshot.count !== 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
+
         {/* Message list */}
         <div
           ref={scrollRef}
@@ -708,9 +743,9 @@ export function ChannelView({
 
               return (
                 <Fragment key={msg.id}>
-                  {newActivityAnchor &&
+                  {unreadSnapshot &&
                     idx > 0 &&
-                    messages[idx - 1]?.id === newActivityAnchor && (
+                    messages[idx - 1]?.id === unreadSnapshot.anchor && (
                       <div className="my-2 flex items-center gap-3">
                         <div className="h-px flex-1 bg-accent" />
                         <span className="text-xs font-semibold text-accent">
@@ -766,9 +801,11 @@ export function ChannelView({
             <button
               type="button"
               className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-white shadow-md hover:bg-accent-hover transition-colors"
-              onClick={async () => {
+              onClick={() => {
+                wasNearBottomRef.current = true;
+                setUnreadSnapshot(null);
                 useMessageStore.getState().returnToPresent(channelId);
-                await getMessages(channelId);
+                getMessages(channelId).catch(() => {});
               }}
             >
               Return to Present
