@@ -28,7 +28,12 @@ interface RoleGroup {
   roleName: string;
   roleColor: number;
   rolePosition: number;
-  members: { userId: string; displayName: string; avatarUrl?: string; isBot?: boolean }[];
+  members: {
+    userId: string;
+    displayName: string;
+    avatarUrl?: string;
+    isBot?: boolean;
+  }[];
 }
 
 export function MemberList({ serverId }: MemberListProps) {

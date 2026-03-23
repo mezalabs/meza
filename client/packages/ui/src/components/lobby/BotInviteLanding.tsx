@@ -3,8 +3,8 @@ import {
   getEffectivePermissions,
   hasPermission,
   PERMISSION_INFO,
-  Permissions,
   type PermissionKey,
+  Permissions,
   resolveBotInvite,
   useAuthStore,
   useBotInviteStore,
@@ -88,7 +88,11 @@ export function BotInviteLanding() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'This bot invite is no longer valid.');
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'This bot invite is no longer valid.',
+          );
           useBotInviteStore.getState().clearPendingCode();
         }
       })
@@ -184,6 +188,7 @@ export function BotInviteLanding() {
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 className="h-8 w-8 text-green-500"
+                aria-hidden="true"
               >
                 <path
                   fillRule="evenodd"
@@ -200,6 +205,7 @@ export function BotInviteLanding() {
               <span className="font-medium text-accent">{successServer}</span>.
             </p>
             <button
+              type="button"
               onClick={handleDismiss}
               className="mt-4 rounded-lg bg-accent px-6 py-2 text-sm font-medium text-black transition-colors hover:bg-accent/90"
             >
@@ -228,6 +234,7 @@ export function BotInviteLanding() {
               <>
                 <div className="text-sm text-error">{error}</div>
                 <button
+                  type="button"
                   onClick={handleDismiss}
                   className="mt-4 text-sm text-text-muted underline hover:text-text"
                 >
@@ -247,9 +254,7 @@ export function BotInviteLanding() {
                 <h1 className="mt-4 text-xl font-semibold text-text">
                   {preview.displayName || preview.name}
                 </h1>
-                <p className="mt-1 text-sm text-text-muted">
-                  @{preview.name}
-                </p>
+                <p className="mt-1 text-sm text-text-muted">@{preview.name}</p>
                 {preview.description && (
                   <p className="mt-2 text-sm text-text-muted">
                     {preview.description}
@@ -305,6 +310,7 @@ export function BotInviteLanding() {
                         permission in any of your servers.
                       </p>
                       <button
+                        type="button"
                         onClick={handleDismiss}
                         className="mt-3 text-sm text-text-muted underline hover:text-text"
                       >
@@ -340,6 +346,7 @@ export function BotInviteLanding() {
                       )}
 
                       <button
+                        type="button"
                         onClick={handleAccept}
                         disabled={!selectedServerId || accepting}
                         className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-black transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"

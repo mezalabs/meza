@@ -1,5 +1,5 @@
-import { useBotStore, getMediaURL, UploadPurpose } from '@meza/core';
 import type { Bot } from '@meza/core';
+import { getMediaURL, UploadPurpose, useBotStore } from '@meza/core';
 import * as Dialog from '@radix-ui/react-dialog';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
@@ -19,7 +19,9 @@ export function EditBotDialog({ open, onOpenChange, bot }: EditBotDialogProps) {
     bot.avatarUrl || null,
   );
   const [previewUrl, setPreviewUrl] = useState<string | null>(
-    bot.avatarUrl ? getMediaURL(bot.avatarUrl.replace('/media/', ''), true) : null,
+    bot.avatarUrl
+      ? getMediaURL(bot.avatarUrl.replace('/media/', ''), true)
+      : null,
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

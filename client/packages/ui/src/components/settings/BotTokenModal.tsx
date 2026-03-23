@@ -1,5 +1,5 @@
-import * as Dialog from '@radix-ui/react-dialog';
 import { CheckIcon, CopyIcon, WarningIcon } from '@phosphor-icons/react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useCallback, useRef, useState } from 'react';
 
 /** Encode bytes to base64 for display. */
@@ -90,7 +90,8 @@ export function BotTokenModal({
             onEscapeKeyDown={handleEscapeKeyDown}
           >
             <Dialog.Title className="text-lg font-semibold text-text">
-              {privateKeyBase64 ? 'Bot Created' : 'Token Regenerated'}: {botName}
+              {privateKeyBase64 ? 'Bot Created' : 'Token Regenerated'}:{' '}
+              {botName}
             </Dialog.Title>
 
             <div className="mt-3 flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3">
@@ -107,9 +108,9 @@ export function BotTokenModal({
             <div className="mt-4 space-y-4">
               {/* Token */}
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-subtle">
                   Bot Token
-                </label>
+                </span>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 truncate rounded-md border border-border bg-bg-surface px-3 py-2 font-mono text-xs text-text select-all">
                     {token}
@@ -132,9 +133,9 @@ export function BotTokenModal({
               {/* Private Key (only shown on creation, not on regenerate) */}
               {privateKeyBase64 && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                  <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-text-subtle">
                     Private Key (Ed25519)
-                  </label>
+                  </span>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 truncate rounded-md border border-border bg-bg-surface px-3 py-2 font-mono text-xs text-text select-all">
                       {privateKeyBase64}
@@ -188,9 +189,9 @@ export function BotTokenModal({
               Close without saving?
             </Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-text-muted">
-              You haven't confirmed that you've saved your bot credentials.
-              If you close now, you will lose access to the token and private
-              key forever.
+              You haven't confirmed that you've saved your bot credentials. If
+              you close now, you will lose access to the token and private key
+              forever.
             </Dialog.Description>
             <div className="mt-4 flex justify-end gap-2">
               <button

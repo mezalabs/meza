@@ -1,8 +1,6 @@
 import {
   acceptBotInvite,
   removeBotFromServer,
-  useAuthStore,
-  useChannelStore,
   useMemberStore,
   useUsersStore,
 } from '@meza/core';
@@ -59,9 +57,7 @@ export function ServerBotsSection({ serverId }: ServerBotsSectionProps) {
       await acceptBotInvite(code, serverId);
       setInviteCode('');
     } catch (err) {
-      setInviteError(
-        err instanceof Error ? err.message : 'Failed to add bot',
-      );
+      setInviteError(err instanceof Error ? err.message : 'Failed to add bot');
     } finally {
       setIsInviting(false);
     }
@@ -114,11 +110,7 @@ export function ServerBotsSection({ serverId }: ServerBotsSectionProps) {
       {/* Empty state */}
       {botMembers.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-border/40 bg-bg-surface/50 py-10">
-          <RobotIcon
-            size={40}
-            className="text-text-muted"
-            aria-hidden="true"
-          />
+          <RobotIcon size={40} className="text-text-muted" aria-hidden="true" />
           <div className="text-center">
             <p className="text-sm font-medium text-text">
               No bots in this server
@@ -286,15 +278,9 @@ function WebhookManagement({
         </button>
       </div>
       {tab === 'outgoing' ? (
-        <OutgoingWebhookManagement
-          serverId={serverId}
-          botUserId={botUserId}
-        />
+        <OutgoingWebhookManagement serverId={serverId} botUserId={botUserId} />
       ) : (
-        <IncomingWebhookManagement
-          serverId={serverId}
-          botUserId={botUserId}
-        />
+        <IncomingWebhookManagement serverId={serverId} botUserId={botUserId} />
       )}
     </div>
   );

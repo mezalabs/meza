@@ -1,6 +1,6 @@
-export { BotBadge } from './components/common/BotBadge.tsx';
 export { MEZA_VERSION } from '@meza/core';
 export { ChannelView } from './components/chat/ChannelView.tsx';
+export { BotBadge } from './components/common/BotBadge.tsx';
 export { BotInviteLanding } from './components/lobby/BotInviteLanding.tsx';
 export { InviteLanding } from './components/lobby/InviteLanding.tsx';
 export { LandingPage } from './components/lobby/LandingPage.tsx';

@@ -1,5 +1,5 @@
-import { useBotStore } from '@meza/core';
 import type { Bot } from '@meza/core';
+import { useBotStore } from '@meza/core';
 import {
   ArrowsClockwiseIcon,
   CodeIcon,

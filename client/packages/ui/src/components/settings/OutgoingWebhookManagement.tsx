@@ -166,9 +166,7 @@ export function OutgoingWebhookManagement({
                 className="mt-1 w-full rounded-md border border-border bg-bg-surface px-2 py-1.5 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none disabled:opacity-50"
               />
             </div>
-            {createError && (
-              <p className="text-xs text-error">{createError}</p>
-            )}
+            {createError && <p className="text-xs text-error">{createError}</p>}
             <div className="flex justify-end gap-2">
               <button
                 type="button"

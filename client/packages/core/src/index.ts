@@ -352,6 +352,8 @@ export type {
 export { PLATFORM_LABELS, useAuthStore } from './store/auth.ts';
 export type { BlockActions, BlockState } from './store/blocks.ts';
 export { useBlockStore } from './store/blocks.ts';
+export type { BotInviteState } from './store/bot-invite.ts';
+export { useBotInviteStore } from './store/bot-invite.ts';
 export type { BotActions, BotState } from './store/bots.ts';
 export { useBotStore } from './store/bots.ts';
 export type {
@@ -373,8 +375,6 @@ export type {
   GatewayStatus,
 } from './store/gateway.ts';
 export { useGatewayStore } from './store/gateway.ts';
-export type { BotInviteState } from './store/bot-invite.ts';
-export { useBotInviteStore } from './store/bot-invite.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
 export type {

@@ -1,20 +1,20 @@
 import {
+  type Bot,
+  type BotInvite,
   createBotInvite,
   deleteBotInvite,
   listBotInvites,
   PERMISSION_INFO,
-  Permissions,
-  type Bot,
-  type BotInvite,
   type PermissionKey,
+  Permissions,
 } from '@meza/core';
-import * as Dialog from '@radix-ui/react-dialog';
 import {
   CheckIcon,
   CopyIcon,
   TrashIcon,
   WarningIcon,
 } from '@phosphor-icons/react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
 
 /** All permissions available for bot invites. */

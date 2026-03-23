@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { BansSection } from './BansSection.tsx';
 import { DefaultPrivacySection } from './DefaultPrivacySection.tsx';
-import { ServerBotsSection } from './ServerBotsSection.tsx';
 import { EmojisSection } from './EmojisSection.tsx';
 import { OnboardingSection } from './OnboardingSection.tsx';
 import { OverviewSection } from './OverviewSection.tsx';
 import { RolesSection } from './RolesSection.tsx';
+import { ServerBotsSection } from './ServerBotsSection.tsx';
 import { SoundsSection } from './SoundsSection.tsx';
 import { SystemMessagesSection } from './SystemMessagesSection.tsx';
 
