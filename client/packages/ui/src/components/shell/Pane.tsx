@@ -141,7 +141,7 @@ export function Pane({
               aria-label="Channel settings"
               title="Channel settings"
             >
-              <GearIcon size={16} aria-hidden="true" />
+              <GearIcon size={20} aria-hidden="true" />
             </button>
           )}
           {onTogglePins && (
@@ -161,7 +161,7 @@ export function Pane({
                 showPins ? 'Hide pinned messages' : 'Show pinned messages'
               }
             >
-              <PushPinIcon size={16} aria-hidden="true" />
+              <PushPinIcon size={20} aria-hidden="true" />
             </button>
           )}
           {onToggleMembers && (
@@ -179,7 +179,7 @@ export function Pane({
               }}
               aria-label={showMembers ? 'Hide members' : 'Show members'}
             >
-              <UsersThreeIcon size={16} aria-hidden="true" />
+              <UsersThreeIcon size={20} aria-hidden="true" />
             </button>
           )}
           {showClose && (
@@ -193,7 +193,7 @@ export function Pane({
               }}
               aria-label={`Close ${label}`}
             >
-              <XIcon weight="regular" size={14} aria-hidden="true" />
+              <XIcon weight="regular" size={18} aria-hidden="true" />
             </button>
           )}
         </div>

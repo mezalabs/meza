@@ -561,7 +561,7 @@ function OverlayPane({
             onClick={onClose}
             aria-label={`Close ${meta.label}`}
           >
-            <XIcon weight="regular" size={14} aria-hidden="true" />
+            <XIcon weight="regular" size={18} aria-hidden="true" />
           </button>
         </div>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden bg-bg-base">

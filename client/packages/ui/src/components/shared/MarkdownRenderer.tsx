@@ -12,10 +12,12 @@ import rehypeSanitize from 'rehype-sanitize';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { MentionBadge } from '../chat/MentionBadge.tsx';
+import { EMOJI_BASE_SIZE_PX } from './emojiConstants.ts';
 import { MEZA_SANITIZE_SCHEMA } from './markdownSanitizeSchema.ts';
 import { remarkMezaEmoji } from './remarkMezaEmoji.ts';
 import { remarkMezaMention } from './remarkMezaMention.ts';
 import { remarkMezaSpoiler } from './remarkMezaSpoiler.ts';
+import { remarkUnicodeEmoji } from './remarkUnicodeEmoji.ts';
 
 type MarkdownVariant = 'message' | 'full';
 
@@ -59,6 +61,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       remarkMezaEmoji,
       remarkMezaMention,
       remarkMezaSpoiler,
+      remarkUnicodeEmoji,
     ],
     [],
   );
@@ -241,7 +244,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         const url =
           getMediaURL(attachmentId) +
           (retryCount > 0 ? `&_r=${retryCount}` : '');
-        const size = 20 * emojiScale;
+        const size = EMOJI_BASE_SIZE_PX * emojiScale;
         return (
           <img
             src={url}
@@ -252,6 +255,20 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
             loading="lazy"
             onError={() => handleEmojiError(emojiId)}
           />
+        );
+      },
+      // Native Unicode emoji wrapper
+      'meza-unicode-emoji': ({
+        children,
+      }: ComponentPropsWithoutRef<'span'>) => {
+        const size = EMOJI_BASE_SIZE_PX * emojiScale;
+        return (
+          <span
+            className="inline-block align-text-bottom leading-none"
+            style={{ fontSize: size }}
+          >
+            {children}
+          </span>
         );
       },
       // Custom Meza mention elements
@@ -286,7 +303,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   const disallowed = DISALLOWED_ELEMENTS[variant];
 
   return (
-    <div className={`markdown-body text-sm text-text ${className ?? ''}`}>
+    <div className={`markdown-body text-base text-text ${className ?? ''}`}>
       <Markdown
         remarkPlugins={remarkPlugins}
         rehypePlugins={rehypePlugins}

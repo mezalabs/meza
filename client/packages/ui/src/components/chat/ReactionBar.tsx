@@ -137,7 +137,7 @@ function ReactionPill({
       type="button"
       onClick={handleClick}
       title={tooltip}
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs border transition-colors ${
+      className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs border transition-colors ${
         group.me
           ? 'bg-accent/10 border-accent/30 text-text hover:bg-accent/20'
           : 'bg-bg-surface border-border text-text-muted hover:bg-bg-elevated'
@@ -170,7 +170,7 @@ function EmojiDisplay({
         <img
           src={getMediaURL(attachmentId)}
           alt={`:${name}:`}
-          className="inline-block h-4 w-4 object-contain"
+          className="inline-block h-4.5 w-4.5 object-contain"
           loading="lazy"
         />
       );
@@ -178,5 +178,5 @@ function EmojiDisplay({
     return <span>:{name}:</span>;
   }
 
-  return <span>{emoji}</span>;
+  return <span style={{ fontSize: 18 }}>{emoji}</span>;
 }

@@ -391,8 +391,8 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 	var emojiScale *float32
 	if r.EmojiScale != nil {
 		v := *r.EmojiScale
-		if v < 1.0 || v > 5.0 {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("emoji_scale must be between 1.0 and 5.0"))
+		if v < 0.5 || v > 5.0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("emoji_scale must be between 0.5 and 5.0"))
 		}
 		emojiScale = &v
 	}
