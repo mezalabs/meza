@@ -308,6 +308,7 @@ function RoleOverridePanel({
   initialDeny,
   categories,
   callerHasPerm,
+  disabled,
   onRemove,
   onSaved,
 }: {
@@ -319,6 +320,7 @@ function RoleOverridePanel({
   initialDeny: bigint;
   categories: PermCategory[];
   callerHasPerm: (perm: bigint) => boolean;
+  disabled?: boolean;
   onRemove: () => void;
   onSaved: () => void;
 }) {
@@ -430,7 +432,7 @@ function RoleOverridePanel({
             getState={getState}
             setState={setState}
             callerHasPerm={callerHasPerm}
-            disabled={isSaving}
+            disabled={isSaving || !!disabled}
           />
         ))}
       </div>
@@ -464,7 +466,7 @@ function RoleOverridePanel({
             <button
               type="button"
               onClick={reset}
-              disabled={isSaving}
+              disabled={isSaving || !!disabled}
               className="rounded-md bg-bg-surface px-3 py-1.5 text-sm text-text-muted hover:bg-bg-elevated hover:text-text disabled:opacity-50"
             >
               Reset
@@ -472,7 +474,7 @@ function RoleOverridePanel({
             <button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !!disabled}
               className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent/80 disabled:opacity-50"
             >
               {isSaving ? 'Saving...' : 'Save'}
@@ -559,14 +561,22 @@ export function ChannelOverrideEditor({
       channel?.permissionsSynced &&
       isAuthenticated
     ) {
+      let stale = false;
       const groupId = channel.channelGroupId;
       listPermissionOverrides(groupId)
         .then((result) => {
-          usePermissionOverrideStore.getState().setOverrides(groupId, result);
+          if (!stale) {
+            usePermissionOverrideStore.getState().setOverrides(groupId, result);
+          }
         })
         .catch(() => {
-          setFetchError('Failed to load category overrides');
+          if (!stale) {
+            setFetchError('Failed to load category overrides');
+          }
         });
+      return () => {
+        stale = true;
+      };
     }
   }, [
     isCategory,
@@ -1069,6 +1079,7 @@ export function ChannelOverrideEditor({
                         initialDeny={override.deny}
                         categories={categories}
                         callerHasPerm={callerHasPerm}
+                        disabled={isSyncing}
                         onRemove={() => setExpandedRoleId(null)}
                         onSaved={refreshOverrides}
                       />
@@ -1197,7 +1208,7 @@ export function ChannelOverrideEditor({
                         initialDeny={override.deny}
                         categories={categories}
                         callerHasPerm={callerHasPerm}
-                        disabled={!canEdit}
+                        disabled={!canEdit || isSyncing}
                         onRemove={() => setExpandedUserId(null)}
                         onSaved={refreshOverrides}
                       />

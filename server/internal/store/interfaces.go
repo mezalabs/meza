@@ -122,6 +122,9 @@ type ChatStorer interface {
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
 	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
 	SetPermissionsSynced(ctx context.Context, channelID string, synced bool) error
+	// SyncChannelToCategory atomically deletes all channel-level overrides,
+	// marks the channel as synced, and mirrors to the companion if non-empty.
+	SyncChannelToCategory(ctx context.Context, channelID, companionID string) error
 	DeleteChannelGroupWithSnapshot(ctx context.Context, channelGroupID string) error
 	// System message configuration.
 	GetSystemMessageConfig(ctx context.Context, serverID string) (*models.ServerSystemMessageConfig, error)

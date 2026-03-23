@@ -568,6 +568,41 @@ func (s *ChatStore) SetPermissionsSynced(ctx context.Context, channelID string, 
 	return err
 }
 
+// SyncChannelToCategory atomically deletes all channel-level overrides and
+// marks the channel as synced. If companionID is non-empty, the companion
+// channel is also synced in the same transaction.
+func (s *ChatStore) SyncChannelToCategory(ctx context.Context, channelID, companionID string) error {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Delete all channel-level overrides.
+	if _, err := tx.Exec(ctx, `DELETE FROM permission_overrides WHERE channel_id = $1`, channelID); err != nil {
+		return fmt.Errorf("delete channel overrides: %w", err)
+	}
+	// Mark as synced.
+	if _, err := tx.Exec(ctx, `UPDATE channels SET permissions_synced = true, updated_at = now() WHERE id = $1`, channelID); err != nil {
+		return fmt.Errorf("set permissions synced: %w", err)
+	}
+
+	// Mirror to companion if applicable.
+	if companionID != "" {
+		if _, err := tx.Exec(ctx, `DELETE FROM permission_overrides WHERE channel_id = $1`, companionID); err != nil {
+			return fmt.Errorf("delete companion overrides: %w", err)
+		}
+		if _, err := tx.Exec(ctx, `UPDATE channels SET permissions_synced = true, updated_at = now() WHERE id = $1`, companionID); err != nil {
+			return fmt.Errorf("set companion synced: %w", err)
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 // DeleteChannelGroupWithSnapshot atomically copies category overrides to all
 // channels in the group, marks them as unsynced, and deletes the group.
 func (s *ChatStore) DeleteChannelGroupWithSnapshot(ctx context.Context, channelGroupID string) error {

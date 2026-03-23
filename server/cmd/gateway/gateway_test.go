@@ -195,6 +195,9 @@ func (m *mockChatStoreGW) UpsertSystemMessageConfig(_ context.Context, _ string,
 func (m *mockChatStoreGW) SetPermissionsSynced(_ context.Context, _ string, _ bool) error {
 	return nil
 }
+func (m *mockChatStoreGW) SyncChannelToCategory(_ context.Context, _, _ string) error {
+	return nil
+}
 func (m *mockChatStoreGW) DeleteChannelGroupWithSnapshot(_ context.Context, _ string) error {
 	return nil
 }
