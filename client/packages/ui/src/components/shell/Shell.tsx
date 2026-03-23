@@ -22,12 +22,12 @@ import { IconContext } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useKeybinds } from '../../hooks/useKeybinds.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { useOnboardingStore } from '../../stores/onboarding.ts';
 import {
   MAX_PANES,
   useSimpleMode,
   useTilingStore,
 } from '../../stores/tiling.ts';
-import { useOnboardingStore } from '../../stores/onboarding.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
@@ -116,7 +116,8 @@ function DesktopShell() {
     setPaneContent(focusedPaneId, { type: 'getStarted' });
   }, [isAuthenticated, servers]);
 
-  // Load onboarding dismissed tips from user profile
+  // Load onboarding dismissed tips from user profile (re-runs on auth change)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — reload tips when auth state changes
   useEffect(() => {
     const user = useAuthStore.getState().user;
     if (user) {
@@ -127,7 +128,7 @@ function DesktopShell() {
   // Onboarding tooltip 2: fires when user creates their first split (paneCount 1→2)
   const tooltip2TimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const resizeHandleRef = useRef<HTMLElement | null>(null);
-  const tip2Dismissed = useOnboardingStore((s) => s.dismissedTips['resize']);
+  const tip2Dismissed = useOnboardingStore((s) => s.dismissedTips.resize);
 
   useEffect(() => {
     if (tip2Dismissed) return;
@@ -158,7 +159,7 @@ function DesktopShell() {
   // Onboarding tooltip 4: fires when 3+ panes are open
   const tooltip4TimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const focusedHeaderRef = useRef<HTMLElement | null>(null);
-  const tip4Dismissed = useOnboardingStore((s) => s.dismissedTips['shortcuts']);
+  const tip4Dismissed = useOnboardingStore((s) => s.dismissedTips.shortcuts);
 
   useEffect(() => {
     if (tip4Dismissed) return;

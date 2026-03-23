@@ -13,7 +13,10 @@ export type OnboardingTipId = (typeof ONBOARDING_TIP_IDS)[number];
 
 // ---- Selectors ----
 
-const dismissedSelectors = new Map<OnboardingTipId, (state: OnboardingState & OnboardingActions) => boolean>();
+const dismissedSelectors = new Map<
+  OnboardingTipId,
+  (state: OnboardingState & OnboardingActions) => boolean
+>();
 
 export function selectIsDismissed(tipId: OnboardingTipId) {
   let selector = dismissedSelectors.get(tipId);
@@ -56,9 +59,7 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
 
     load: (tips) =>
       set({
-        dismissedTips: Object.fromEntries(
-          tips.map((t) => [t, true as const]),
-        ),
+        dismissedTips: Object.fromEntries(tips.map((t) => [t, true as const])),
         loaded: true,
       }),
 

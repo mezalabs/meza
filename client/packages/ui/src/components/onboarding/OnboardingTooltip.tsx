@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef } from 'react';
-import * as Popover from '@radix-ui/react-popover';
-import { X } from '@phosphor-icons/react';
 import { dismissTip, updateProfile } from '@meza/core';
+import { X } from '@phosphor-icons/react';
+import * as Popover from '@radix-ui/react-popover';
+import { useCallback, useEffect, useRef } from 'react';
 import {
-  type OnboardingTipId,
   ONBOARDING_TIP_IDS,
+  type OnboardingTipId,
   useOnboardingStore,
 } from '../../stores/onboarding.ts';
 

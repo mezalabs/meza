@@ -62,11 +62,16 @@ import {
   useState,
 } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useDwellTrigger } from '../../hooks/useDwellTrigger.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
 import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticipants.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
+import {
+  selectIsDismissed,
+  useOnboardingStore,
+} from '../../stores/onboarding.ts';
 import {
   openChannelSettingsPane,
   openProfilePane,
@@ -74,6 +79,7 @@ import {
   useTilingStore,
 } from '../../stores/tiling.ts';
 import { CreateGroupDMDialog } from '../dm/CreateGroupDMDialog.tsx';
+import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MezaIcon } from '../shared/MezaIcon.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
@@ -89,9 +95,6 @@ import { InviteDialog } from './InviteDialog.tsx';
 import { JoinServerDialog } from './JoinServerDialog.tsx';
 import { SidebarContextMenu } from './SidebarContextMenu.tsx';
 import { StatusPicker } from './StatusPicker.tsx';
-import { useDwellTrigger } from '../../hooks/useDwellTrigger.ts';
-import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
-import { useOnboardingStore, selectIsDismissed } from '../../stores/onboarding.ts';
 
 const EMPTY_CHANNELS: {
   id: string;
@@ -141,7 +144,9 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const hoveredChannelRef = useRef<HTMLElement | null>(null);
   const sidebarDragTip = useDwellTrigger('sidebar-drag');
   const sidebarTipLoaded = useOnboardingStore((s) => s.loaded);
-  const sidebarTipDismissed = useOnboardingStore(selectIsDismissed('sidebar-drag'));
+  const sidebarTipDismissed = useOnboardingStore(
+    selectIsDismissed('sidebar-drag'),
+  );
 
   // Poll voice channel participants for the selected server
   useVoiceChannelParticipants(selectedServerId, isAuthenticated);

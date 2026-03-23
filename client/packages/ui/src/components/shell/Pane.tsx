@@ -10,8 +10,11 @@ import {
 } from '@phosphor-icons/react';
 import { type ReactNode, useRef, useState } from 'react';
 import { useDwellTrigger } from '../../hooks/useDwellTrigger.ts';
+import {
+  selectIsDismissed,
+  useOnboardingStore,
+} from '../../stores/onboarding.ts';
 import { OnboardingTooltip } from '../onboarding/OnboardingTooltip.tsx';
-import { useOnboardingStore, selectIsDismissed } from '../../stores/onboarding.ts';
 import { DropZoneOverlay } from './PaneSlot.tsx';
 
 interface PaneProps {
@@ -68,7 +71,9 @@ export function Pane({
   const headerRef = useRef<HTMLDivElement>(null);
   const headerDragTip = useDwellTrigger('header-drag');
   const headerTipLoaded = useOnboardingStore((s) => s.loaded);
-  const headerTipDismissed = useOnboardingStore(selectIsDismissed('header-drag'));
+  const headerTipDismissed = useOnboardingStore(
+    selectIsDismissed('header-drag'),
+  );
 
   const {
     attributes: dragAttributes,

@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  type OnboardingTipId,
-  selectIsDismissed,
-  useOnboardingStore,
-} from './onboarding.ts';
+import { selectIsDismissed, useOnboardingStore } from './onboarding.ts';
 
 const initialState = useOnboardingStore.getState();
 
@@ -61,7 +57,7 @@ describe('useOnboardingStore', () => {
       useOnboardingStore.getState().dismiss('resize');
       const s = useOnboardingStore.getState();
       expect(s.activeTip).toBeNull();
-      expect(s.dismissedTips['resize']).toBe(true);
+      expect(s.dismissedTips.resize).toBe(true);
     });
 
     it('prevents showing the same tip again', () => {
@@ -79,7 +75,7 @@ describe('useOnboardingStore', () => {
       useOnboardingStore.getState().hide();
       const s = useOnboardingStore.getState();
       expect(s.activeTip).toBeNull();
-      expect(s.dismissedTips['resize']).toBeUndefined();
+      expect(s.dismissedTips.resize).toBeUndefined();
     });
   });
 

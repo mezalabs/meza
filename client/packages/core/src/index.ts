@@ -26,6 +26,7 @@ export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
 // API — auth
 export {
   changePassword,
+  dismissTip,
   finalizeRegistration,
   getProfile,
   getRecoveryBundle,
@@ -36,11 +37,10 @@ export {
   recoverAccount,
   refreshAccessToken,
   register,
+  resetDismissedTips,
   revokeAllOtherDevices,
   revokeDevice,
   toStoredUser,
-  dismissTip,
-  resetDismissedTips,
   updateProfile,
 } from './api/auth.ts';
 // API — chat
