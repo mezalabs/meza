@@ -44,6 +44,7 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
@@ -138,6 +139,13 @@ function paneMeta(
         serverId: content.serverId,
       };
     }
+    case 'categoryPermissions':
+      return {
+        label: 'Category Permissions',
+        serverName: servers[content.serverId]?.name,
+        serverIconUrl: servers[content.serverId]?.iconUrl,
+        serverId: content.serverId,
+      };
     case 'serverOnboarding':
       return {
         label: 'Welcome',
@@ -189,6 +197,15 @@ function renderPaneContent(
           <ChannelSettingsView
             serverId={content.serverId}
             channelId={content.channelId}
+          />
+        </div>
+      );
+    case 'categoryPermissions':
+      return (
+        <div className="flex min-h-0 min-w-0 flex-1">
+          <CategoryPermissionsView
+            serverId={content.serverId}
+            channelGroupId={content.channelGroupId}
           />
         </div>
       );
@@ -256,6 +273,7 @@ function paneIcon(
     case 'settings':
     case 'serverSettings':
     case 'channelSettings':
+    case 'categoryPermissions':
       return <GearIcon {...sm} aria-hidden="true" />;
     case 'profile':
       return <UserIcon {...sm} aria-hidden="true" />;

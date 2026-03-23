@@ -42,7 +42,8 @@ type TriState = 'allow' | 'neutral' | 'deny';
 
 interface ChannelOverrideEditorProps {
   serverId: string;
-  channelId: string;
+  channelId?: string;
+  channelGroupId?: string;
 }
 
 /* ---------------------------------------------------------------------------
@@ -299,7 +300,7 @@ function OverrideCategorySection({
  * --------------------------------------------------------------------------- */
 
 function RoleOverridePanel({
-  channelId,
+  targetId,
   roleId,
   roleName,
   roleColor,
@@ -310,7 +311,7 @@ function RoleOverridePanel({
   onRemove,
   onSaved,
 }: {
-  channelId: string;
+  targetId: string;
   roleId: string;
   roleName: string;
   roleColor: number;
@@ -341,7 +342,7 @@ function RoleOverridePanel({
     setError('');
     try {
       const override = await setPermissionOverride(
-        channelId,
+        targetId,
         roleId,
         allow,
         deny,
@@ -349,7 +350,7 @@ function RoleOverridePanel({
       if (override) {
         usePermissionOverrideStore
           .getState()
-          .upsertOverride(channelId, override);
+          .upsertOverride(targetId, override);
       }
       onSaved();
     } catch {
@@ -363,8 +364,8 @@ function RoleOverridePanel({
     setIsRemoving(true);
     setError('');
     try {
-      await deletePermissionOverride(channelId, roleId);
-      usePermissionOverrideStore.getState().removeOverride(channelId, roleId);
+      await deletePermissionOverride(targetId, roleId);
+      usePermissionOverrideStore.getState().removeOverride(targetId, roleId);
       onRemove();
     } catch {
       setError('Failed to remove override');
@@ -495,7 +496,12 @@ type OverrideTab = 'roles' | 'members';
 export function ChannelOverrideEditor({
   serverId,
   channelId,
+  channelGroupId,
 }: ChannelOverrideEditorProps) {
+  // targetId is the entity we're editing overrides for (channel or category).
+  const targetId = channelId ?? channelGroupId ?? '';
+  const isCategory = !channelId && !!channelGroupId;
+
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const userId = useAuthStore((s) => s.user?.id);
   const reconnectCount = useGatewayStore((s) => s.reconnectCount);
@@ -503,16 +509,16 @@ export function ChannelOverrideEditor({
   const roles = useRoleStore((s) => s.byServer[serverId] ?? EMPTY_ROLES);
   const members = useMemberStore((s) => s.byServer[serverId]);
   const overrides = usePermissionOverrideStore(
-    (s) => s.byTarget[channelId] ?? EMPTY_OVERRIDES,
+    (s) => s.byTarget[targetId] ?? EMPTY_OVERRIDES,
   );
   const overrideLoading = usePermissionOverrideStore(
-    (s) => s.isLoading[channelId] ?? false,
+    (s) => s.isLoading[targetId] ?? false,
   );
 
-  // Find the channel to determine its type.
+  // Find the channel to determine its type (only relevant for channel targets).
   const channels = useChannelStore((s) => s.byServer[serverId]);
   const channel = useMemo(
-    () => channels?.find((c) => c.id === channelId),
+    () => (channelId ? channels?.find((c) => c.id === channelId) : undefined),
     [channels, channelId],
   );
 
@@ -565,15 +571,15 @@ export function ChannelOverrideEditor({
   // Fetch overrides, roles, and caller permissions on mount / reconnect.
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is intentionally included to re-fetch after gateway reconnection
   useEffect(() => {
-    if (!isAuthenticated || !serverId || !channelId) return;
+    if (!isAuthenticated || !serverId || !targetId) return;
     setFetchError('');
 
     const overrideStore = usePermissionOverrideStore.getState();
-    overrideStore.setLoading(channelId, true);
+    overrideStore.setLoading(targetId, true);
 
     Promise.all([
-      listPermissionOverrides(channelId).then((result) => {
-        usePermissionOverrideStore.getState().setOverrides(channelId, result);
+      listPermissionOverrides(targetId).then((result) => {
+        usePermissionOverrideStore.getState().setOverrides(targetId, result);
       }),
       listRoles(serverId),
       getEffectivePermissions(serverId).then((perms) =>
@@ -581,9 +587,9 @@ export function ChannelOverrideEditor({
       ),
     ]).catch(() => {
       setFetchError('Failed to load permission data');
-      usePermissionOverrideStore.getState().setLoading(channelId, false);
+      usePermissionOverrideStore.getState().setLoading(targetId, false);
     });
-  }, [serverId, channelId, isAuthenticated, reconnectCount]);
+  }, [serverId, targetId, isAuthenticated, reconnectCount]);
 
   /** Whether the caller has a given permission (for escalation prevention). */
   const callerHasPerm = useCallback(
@@ -711,11 +717,11 @@ export function ChannelOverrideEditor({
   async function handleAddOverride(roleId: string) {
     setAddingRoleId(null);
     try {
-      const override = await setPermissionOverride(channelId, roleId, 0n, 0n);
+      const override = await setPermissionOverride(targetId, roleId, 0n, 0n);
       if (override) {
         usePermissionOverrideStore
           .getState()
-          .upsertOverride(channelId, override);
+          .upsertOverride(targetId, override);
       }
       setExpandedRoleId(roleId);
     } catch {
@@ -728,7 +734,7 @@ export function ChannelOverrideEditor({
     setMemberSearch('');
     try {
       const override = await setPermissionOverride(
-        channelId,
+        targetId,
         '',
         0n,
         0n,
@@ -737,7 +743,7 @@ export function ChannelOverrideEditor({
       if (override) {
         usePermissionOverrideStore
           .getState()
-          .upsertOverride(channelId, override);
+          .upsertOverride(targetId, override);
       }
       setExpandedUserId(targetUserId);
     } catch {
@@ -746,6 +752,7 @@ export function ChannelOverrideEditor({
   }
 
   async function handleSync() {
+    if (!channelId) return;
     setIsSyncing(true);
     setFetchError('');
     try {
@@ -759,9 +766,9 @@ export function ChannelOverrideEditor({
   }
 
   function refreshOverrides() {
-    listPermissionOverrides(channelId)
+    listPermissionOverrides(targetId)
       .then((result) => {
-        usePermissionOverrideStore.getState().setOverrides(channelId, result);
+        usePermissionOverrideStore.getState().setOverrides(targetId, result);
       })
       .catch(() => {});
   }
@@ -775,32 +782,37 @@ export function ChannelOverrideEditor({
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-text">
-            Channel Permission Overrides
+            {isCategory ? 'Category' : 'Channel'} Permission Overrides
           </h2>
           <p className="text-xs text-text-muted">
-            Override permissions for this specific channel. Overrides take
-            precedence over server-level permissions.
+            {isCategory
+              ? 'Override permissions for all synced channels in this category.'
+              : 'Override permissions for this specific channel. Overrides take precedence over server-level permissions.'}
           </p>
         </div>
       </div>
 
-      <SyncStatusBanner
-        channelGroupId={channel?.channelGroupId}
-        permissionsSynced={channel?.permissionsSynced}
-        categoryName={categoryName}
-        onSync={() => setSyncDialogOpen(true)}
-        isSyncing={isSyncing}
-      />
+      {!isCategory && (
+        <SyncStatusBanner
+          channelGroupId={channel?.channelGroupId}
+          permissionsSynced={channel?.permissionsSynced}
+          categoryName={categoryName}
+          onSync={() => setSyncDialogOpen(true)}
+          isSyncing={isSyncing}
+        />
+      )}
 
-      <SyncConfirmationDialog
-        isOpen={syncDialogOpen}
-        onClose={() => setSyncDialogOpen(false)}
-        onConfirm={handleSync}
-        channelName={channel?.name ?? ''}
-        categoryName={categoryName ?? 'category'}
-        overrideCount={overrides.length}
-        isSyncing={isSyncing}
-      />
+      {!isCategory && (
+        <SyncConfirmationDialog
+          isOpen={syncDialogOpen}
+          onClose={() => setSyncDialogOpen(false)}
+          onConfirm={handleSync}
+          channelName={channel?.name ?? ''}
+          categoryName={categoryName ?? 'category'}
+          overrideCount={overrides.length}
+          isSyncing={isSyncing}
+        />
+      )}
 
       {/* Segmented control: Roles | Members */}
       <div className="mb-4 flex gap-0.5 rounded-md bg-bg-surface p-0.5">
@@ -928,7 +940,7 @@ export function ChannelOverrideEditor({
                   {isExpanded && (
                     <div className="px-3 pb-3">
                       <RoleOverridePanel
-                        channelId={channelId}
+                        targetId={targetId}
                         roleId={role.id}
                         roleName={isEveryone ? '@everyone' : role.name}
                         roleColor={role.color}
@@ -1055,7 +1067,7 @@ export function ChannelOverrideEditor({
                   {isExpanded && (
                     <div className="px-3 pb-3">
                       <UserOverridePanel
-                        channelId={channelId}
+                        targetId={targetId}
                         targetUserId={member.userId}
                         displayName={
                           member.nickname || member.userId.slice(0, 8)
@@ -1085,7 +1097,7 @@ export function ChannelOverrideEditor({
  * --------------------------------------------------------------------------- */
 
 function UserOverridePanel({
-  channelId,
+  targetId,
   targetUserId,
   displayName,
   initialAllow,
@@ -1096,7 +1108,7 @@ function UserOverridePanel({
   onRemove,
   onSaved,
 }: {
-  channelId: string;
+  targetId: string;
   targetUserId: string;
   displayName: string;
   initialAllow: bigint;
@@ -1127,7 +1139,7 @@ function UserOverridePanel({
     setError('');
     try {
       const override = await setPermissionOverride(
-        channelId,
+        targetId,
         '',
         allow,
         deny,
@@ -1136,7 +1148,7 @@ function UserOverridePanel({
       if (override) {
         usePermissionOverrideStore
           .getState()
-          .upsertOverride(channelId, override);
+          .upsertOverride(targetId, override);
       }
       onSaved();
     } catch {
@@ -1150,10 +1162,10 @@ function UserOverridePanel({
     setIsRemoving(true);
     setError('');
     try {
-      await deletePermissionOverride(channelId, '', targetUserId);
+      await deletePermissionOverride(targetId, '', targetUserId);
       usePermissionOverrideStore
         .getState()
-        .removeOverride(channelId, '', targetUserId);
+        .removeOverride(targetId, '', targetUserId);
       onRemove();
     } catch {
       setError('Failed to remove override');

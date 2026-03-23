@@ -71,6 +71,7 @@ import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticip
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import {
+  openCategoryPermissionsPane,
   openChannelSettingsPane,
   openProfilePane,
   openSearchPane,
@@ -763,6 +764,15 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                         setCreateChannelGroupId(group.id);
                         setCreateChannelOpen(true);
                       }}
+                      onEditPermissions={
+                        showSyncIndicators && selectedServerId
+                          ? () =>
+                              openCategoryPermissionsPane(
+                                selectedServerId,
+                                group.id,
+                              )
+                          : undefined
+                      }
                       showSyncIndicators={showSyncIndicators}
                     />
                   ))}
@@ -1159,6 +1169,7 @@ function SidebarChannelGroup({
   channels,
   serverId,
   onCreateChannel,
+  onEditPermissions,
   showSyncIndicators,
 }: {
   groupId: string;
@@ -1172,6 +1183,7 @@ function SidebarChannelGroup({
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
+  onEditPermissions?: () => void;
   showSyncIndicators?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -1195,6 +1207,17 @@ function SidebarChannelGroup({
             {groupName}
           </span>
         </button>
+        {onEditPermissions && (
+          <button
+            type="button"
+            onClick={onEditPermissions}
+            className="flex h-7 w-7 items-center justify-center rounded text-text-subtle opacity-0 transition-all hover:bg-bg-surface hover:text-text group-hover:opacity-100"
+            aria-label={`Edit permissions for ${groupName}`}
+            title="Edit permissions"
+          >
+            <GearIcon size={14} aria-hidden="true" />
+          </button>
+        )}
         {onCreateChannel && (
           <button
             type="button"
