@@ -26,7 +26,12 @@ export function useDwellTrigger(tipId: OnboardingTipId, dwellMs = 800) {
   const onMouseEnter = useCallback(() => {
     if (isDismissed || !loaded) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => show(tipId), dwellMs);
+    timerRef.current = setTimeout(() => {
+      // Re-check dismissal state to avoid stale closure
+      if (!useOnboardingStore.getState().dismissedTips[tipId]) {
+        show(tipId);
+      }
+    }, dwellMs);
   }, [isDismissed, loaded, show, tipId, dwellMs]);
 
   const onMouseLeave = useCallback(() => {

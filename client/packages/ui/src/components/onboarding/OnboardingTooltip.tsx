@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { X } from '@phosphor-icons/react';
-import { dismissTip } from '@meza/core';
+import { dismissTip, updateProfile } from '@meza/core';
 import {
   type OnboardingTipId,
   ONBOARDING_TIP_IDS,
@@ -38,12 +38,12 @@ export function OnboardingTooltip({
   }, [dismiss, tipId]);
 
   const handleDismissAll = useCallback(() => {
-    // Dismiss all remaining tips
     const { dismiss: d } = useOnboardingStore.getState();
     for (const id of ONBOARDING_TIP_IDS) {
       d(id);
-      dismissTip(id);
     }
+    // Single batch RPC instead of N individual calls
+    updateProfile({ dismissTips: [...ONBOARDING_TIP_IDS] }).catch(() => {});
   }, []);
 
   // Auto-dismiss after 10s
@@ -62,6 +62,8 @@ export function OnboardingTooltip({
       <Popover.Anchor virtualRef={anchorRef as React.RefObject<HTMLElement>} />
       <Popover.Portal>
         <Popover.Content
+          aria-live="polite"
+          role="status"
           side={side}
           sideOffset={sideOffset}
           align="center"

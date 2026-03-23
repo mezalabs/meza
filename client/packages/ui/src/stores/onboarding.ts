@@ -13,13 +13,21 @@ export type OnboardingTipId = (typeof ONBOARDING_TIP_IDS)[number];
 
 // ---- Selectors ----
 
-export const selectIsDismissed = (tipId: OnboardingTipId) =>
-  (state: OnboardingState) => tipId in state.dismissedTips;
+const dismissedSelectors = new Map<OnboardingTipId, (state: OnboardingState & OnboardingActions) => boolean>();
+
+export function selectIsDismissed(tipId: OnboardingTipId) {
+  let selector = dismissedSelectors.get(tipId);
+  if (!selector) {
+    selector = (state) => tipId in state.dismissedTips;
+    dismissedSelectors.set(tipId, selector);
+  }
+  return selector;
+}
 
 // ---- Store ----
 
 interface OnboardingState {
-  /** Record of dismissed tip IDs. Uses Record for immer-safe O(1) lookups. */
+  /** Record of dismissed tip IDs. Uses Record for O(1) lookups with stable Zustand equality checks. */
   dismissedTips: Record<string, true>;
   /** Whether dismissed tips have been loaded from the user object. */
   loaded: boolean;

@@ -531,6 +531,9 @@ func (s *authService) UpdateProfile(ctx context.Context, req *connect.Request[v1
 	}
 
 	// Validate dismissed tips.
+	if len(r.DismissTips) > 100 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("too many tips to dismiss: %d (max 100)", len(r.DismissTips)))
+	}
 	var dismissTips []string
 	if len(r.DismissTips) > 0 {
 		for _, tipID := range r.DismissTips {
@@ -622,6 +625,7 @@ func (s *authService) GetProfile(ctx context.Context, req *connect.Request[v1.Ge
 		proto.DmPrivacy = ""
 		proto.FriendRequestPrivacy = ""
 		proto.ProfilePrivacy = ""
+		proto.DismissedTips = nil
 	}
 
 	return connect.NewResponse(&v1.GetProfileResponse{

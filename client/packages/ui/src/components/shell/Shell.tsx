@@ -171,7 +171,7 @@ function DesktopShell() {
           if (!isDraggingRef.current) {
             const focusedId = useTilingStore.getState().focusedPaneId;
             const el = document.querySelector(
-              `[data-pane-id="${focusedId}"]`,
+              `[data-pane-id="${CSS.escape(focusedId)}"]`,
             );
             if (el) focusedHeaderRef.current = el as HTMLElement;
             useOnboardingStore.getState().show('shortcuts');
