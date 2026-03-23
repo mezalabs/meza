@@ -42,7 +42,9 @@ type User struct {
 	ThemeColorSecondary string
 	SimpleMode          bool
 	AudioPreferences    AudioPreferences
-	DMPrivacy        string // "anyone", "message_requests", "mutual_servers", "nobody"
+	DMPrivacy              string // "anyone", "message_requests", "mutual_servers", "nobody"
+	FriendRequestPrivacy   string // "everyone", "server_co_members", "nobody"
+	ProfilePrivacy         string // "everyone", "server_co_members", "friends", "nobody"
 	SigningPublicKey []byte             // 32-byte Ed25519 verify key for E2EE signature verification
 	Connections     []UserConnection   // Profile social links
 	// Bot fields

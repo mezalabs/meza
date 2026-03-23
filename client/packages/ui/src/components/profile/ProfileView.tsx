@@ -35,11 +35,12 @@ import { PresenceDot } from '../shared/PresenceDot.tsx';
 
 interface ProfileViewProps {
   userId: string;
+  initialEditing?: boolean;
 }
 
 type ViewState = 'loading' | 'error' | 'not-found' | 'ready';
 
-export function ProfileView({ userId }: ProfileViewProps) {
+export function ProfileView({ userId, initialEditing }: ProfileViewProps) {
   const currentUser = useAuthStore((s) => s.user);
   const cachedProfile = useUsersStore((s) => s.profiles[userId]);
   const [profile, setProfile] = useState<StoredUser | null>(
@@ -48,7 +49,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
   const [viewState, setViewState] = useState<ViewState>(
     cachedProfile ? 'ready' : 'loading',
   );
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(initialEditing ?? false);
 
   const isOwnProfile = currentUser?.id === userId;
   const isBlocked = useBlockStore((s) => s.isBlocked(userId));
@@ -364,7 +365,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
                     try {
                       switch (action) {
                         case 'add': {
-                          const res = await sendFriendRequest(userId);
+                          const res = await sendFriendRequest({ userId });
                           if (res.autoAccepted) {
                             if (profile)
                               useFriendStore

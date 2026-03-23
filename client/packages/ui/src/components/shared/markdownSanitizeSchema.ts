@@ -26,6 +26,8 @@ export const MEZA_SANITIZE_SCHEMA = {
     'meza-mention',
     // Spoiler text (from remarkMezaSpoiler plugin)
     'meza-spoiler',
+    // Native Unicode emoji wrapper (from remarkUnicodeEmoji plugin)
+    'meza-unicode-emoji',
   ],
   attributes: {
     ...defaultSchema.attributes,

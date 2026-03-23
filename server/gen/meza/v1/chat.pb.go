@@ -10560,6 +10560,7 @@ func (x *FriendRequestEntry) GetCreatedAt() string {
 type SendFriendRequestRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username      *string                `protobuf:"bytes,2,opt,name=username,proto3,oneof" json:"username,omitempty"` // alternative to user_id — server resolves to user_id
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10597,6 +10598,13 @@ func (*SendFriendRequestRequest) Descriptor() ([]byte, []int) {
 func (x *SendFriendRequestRequest) GetUserId() string {
 	if x != nil {
 		return x.UserId
+	}
+	return ""
+}
+
+func (x *SendFriendRequestRequest) GetUsername() string {
+	if x != nil && x.Username != nil {
+		return *x.Username
 	}
 	return ""
 }
@@ -14394,9 +14402,11 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\r.meza.v1.UserR\x04user\x12\x1c\n" +
 	"\tdirection\x18\x02 \x01(\tR\tdirection\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x03 \x01(\tR\tcreatedAt\"3\n" +
+	"created_at\x18\x03 \x01(\tR\tcreatedAt\"a\n" +
 	"\x18SendFriendRequestRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\"@\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1f\n" +
+	"\busername\x18\x02 \x01(\tH\x00R\busername\x88\x01\x01B\v\n" +
+	"\t_username\"@\n" +
 	"\x19SendFriendRequestResponse\x12#\n" +
 	"\rauto_accepted\x18\x01 \x01(\bR\fautoAccepted\"5\n" +
 	"\x1aAcceptFriendRequestRequest\x12\x17\n" +
@@ -15543,6 +15553,7 @@ func file_meza_v1_chat_proto_init() {
 	file_meza_v1_chat_proto_msgTypes[135].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[147].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[167].OneofWrappers = []any{}
+	file_meza_v1_chat_proto_msgTypes[188].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[202].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[214].OneofWrappers = []any{}
 	file_meza_v1_chat_proto_msgTypes[246].OneofWrappers = []any{}

@@ -87,10 +87,12 @@ function createWindow(): BrowserWindow {
     win.maximize();
   }
 
-  // Dev: load from Vite dev server.
+  // Dev: load from Vite dev server (always localhost unless MEZA_SERVER_URL).
   // Prod (or DESKTOP_PROD=1): load bundled web files via meza:// custom protocol.
-  const serverUrl = store.get('settings').serverUrl;
   const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
+  const serverUrl =
+    process.env.MEZA_SERVER_URL ||
+    (prodMode ? store.get('settings').serverUrl : '');
   if (!prodMode) {
     win.loadURL(serverUrl || 'http://localhost:4080');
   } else if (serverUrl) {
@@ -178,9 +180,13 @@ app.whenReady().then(() => {
     }
   });
 
-  // Bridge the custom meza:// origin to the real server for CORS + WebSocket.
+  // Bridge cross-origin requests to the real server for CORS + WebSocket.
+  // In dev mode the page origin is http://localhost:*, in prod it's meza://app.
   // URL filters ensure these callbacks ONLY fire for server requests, not local assets.
-  const serverUrl = store.get('settings').serverUrl || DEFAULT_SERVER_URL;
+  const serverUrl =
+    process.env.MEZA_SERVER_URL ||
+    store.get('settings').serverUrl ||
+    DEFAULT_SERVER_URL;
   const serverOrigin = new URL(serverUrl).origin;
   const serverHost = new URL(serverUrl).host;
   const serverFilter = {
@@ -190,7 +196,10 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onBeforeSendHeaders(
     serverFilter,
     (details, callback) => {
-      if (details.requestHeaders.Origin?.startsWith('meza://')) {
+      // Rewrite non-server origins (meza:// or http://localhost:*) to the
+      // real server origin so the server's CORS check passes.
+      const origin = details.requestHeaders.Origin;
+      if (origin && origin !== serverOrigin) {
         details.requestHeaders.Origin = serverOrigin;
       }
       callback({ requestHeaders: details.requestHeaders });
@@ -200,8 +209,12 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onHeadersReceived(
     serverFilter,
     (details, callback) => {
+      // Replace the server's ACAO header with the actual page origin so the
+      // browser's CORS check passes on our side.
+      const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
+      const pageOrigin = prodMode ? 'meza://app' : 'http://localhost:4080';
       const headers = details.responseHeaders ?? {};
-      headers['Access-Control-Allow-Origin'] = ['meza://app'];
+      headers['Access-Control-Allow-Origin'] = [pageOrigin];
       callback({ responseHeaders: headers });
     },
   );

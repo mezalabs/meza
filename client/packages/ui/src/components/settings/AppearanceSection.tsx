@@ -1,6 +1,7 @@
 import { updateProfile, useAuthStore } from '@meza/core';
 import { useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
+import { EMOJI_BASE_SIZE_PX } from '../shared/emojiConstants.ts';
 
 export function AppearanceSection() {
   const user = useAuthStore((s) => s.user);
@@ -57,7 +58,7 @@ export function AppearanceSection() {
 
   if (!user) return null;
 
-  const previewSize = 20 * emojiScale;
+  const previewSize = EMOJI_BASE_SIZE_PX * emojiScale;
 
   return (
     <div className="max-w-md space-y-6">
@@ -109,7 +110,7 @@ export function AppearanceSection() {
           <input
             id="settings-emoji-scale"
             type="range"
-            min={1}
+            min={0.5}
             max={5}
             step={0.5}
             value={emojiScale}

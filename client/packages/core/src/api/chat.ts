@@ -22,11 +22,7 @@ import { useBlockStore } from '../store/blocks.ts';
 import { useChannelGroupStore } from '../store/channel-groups.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useDMStore } from '../store/dms.ts';
-import {
-  markPersonalRefreshed,
-  markServerRefreshed,
-  useEmojiStore,
-} from '../store/emojis.ts';
+import { useEmojiStore } from '../store/emojis.ts';
 import { useFriendStore } from '../store/friends.ts';
 import { useInviteStore } from '../store/invite.ts';
 import { useMemberStore } from '../store/members.ts';
@@ -699,7 +695,7 @@ export async function listEmojis(serverId: string) {
       // Only write if still in the same session (prevents stale writes after logout)
       if (useAuthStore.getState().user?.id === sessionUserId) {
         store.setEmojis(serverId, res.emojis);
-        markServerRefreshed(serverId);
+        store.markServerRefreshed(serverId);
       }
       return res.emojis;
     } catch (err) {
@@ -729,7 +725,7 @@ export async function listUserEmojis() {
       const res = await chatClient.listUserEmojis({});
       if (useAuthStore.getState().user?.id === sessionUserId) {
         store.setPersonalEmojis(res.emojis);
-        markPersonalRefreshed();
+        store.markPersonalRefreshed();
       }
       return res.emojis;
     } catch (err) {
@@ -1337,9 +1333,13 @@ export async function listBlocks() {
 
 // --- Friend API ---
 
-export async function sendFriendRequest(userId: string) {
+type FriendRequestParams =
+  | { userId: string; username?: never }
+  | { username: string; userId?: never };
+
+export async function sendFriendRequest(params: FriendRequestParams) {
   try {
-    const res = await chatClient.sendFriendRequest({ userId });
+    const res = await chatClient.sendFriendRequest(params);
     return { autoAccepted: res.autoAccepted };
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });

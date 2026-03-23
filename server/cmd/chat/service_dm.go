@@ -361,6 +361,5 @@ func userToProto(u *models.User) *v1.User {
 		AvatarUrl:   u.AvatarURL,
 		EmojiScale:  u.EmojiScale,
 		CreatedAt:   timestamppb.New(u.CreatedAt),
-		DmPrivacy:   u.DMPrivacy,
 	}
 }

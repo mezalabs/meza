@@ -31,6 +31,10 @@ export function useVoiceChannelParticipants(
       for (const ch of voiceChannels) {
         getVoiceChannelState(ch.id)
           .then((res) => {
+            // Preserve client-side isEncrypted status — the server
+            // doesn't know about LiveKit E2EE state.
+            const existing =
+              useVoiceParticipantsStore.getState().byChannel[ch.id];
             useVoiceParticipantsStore.getState().setParticipants(
               ch.id,
               res.participants.map((p) => ({
@@ -38,6 +42,9 @@ export function useVoiceChannelParticipants(
                 isMuted: p.isMuted,
                 isDeafened: p.isDeafened,
                 isStreamingVideo: p.isStreamingVideo,
+                isEncrypted:
+                  existing?.find((e) => e.userId === p.userId)?.isEncrypted ??
+                  false,
               })),
             );
 

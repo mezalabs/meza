@@ -53,6 +53,8 @@ export function publicUserToStored(user: {
     themeColorSecondary: user.themeColorSecondary,
     simpleMode: false,
     dmPrivacy: '',
+    friendRequestPrivacy: '',
+    profilePrivacy: '',
     connections: [],
     createdAt: '',
     isBot: user.isBot,
@@ -73,6 +75,8 @@ export function toStoredUser(user: User): StoredUser {
     themeColorSecondary: user.themeColorSecondary,
     simpleMode: user.simpleMode,
     dmPrivacy: user.dmPrivacy || 'message_requests',
+    friendRequestPrivacy: user.friendRequestPrivacy || 'everyone',
+    profilePrivacy: user.profilePrivacy || 'everyone',
     connections: user.connections.map((c) => ({
       platform: c.platform as ConnectionPlatform,
       url: c.url,
@@ -204,6 +208,8 @@ export async function updateProfile(params: {
     noiseCancellationMode?: string;
   };
   dmPrivacy?: string;
+  friendRequestPrivacy?: string;
+  profilePrivacy?: string;
   connections?: { platform: ConnectionPlatform; url: string; label: string }[];
   clearConnections?: boolean;
 }) {

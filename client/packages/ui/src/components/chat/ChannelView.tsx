@@ -4,7 +4,6 @@ import {
   addReaction,
   backfillChannel,
   buildMessageContent,
-  cachedServerIds,
   decryptAndUpdateMessages,
   editMessage,
   encryptMessage,
@@ -18,12 +17,13 @@ import {
   hasChannelKey,
   hasPermission,
   hideKeyboard,
-  isPersonalFromCache,
   isSessionReady,
   listEmojis,
   listMembers,
   listRoles,
   listUserEmojis,
+  MessageType,
+  onKeyboardWillShow,
   Permissions,
   pinMessage,
   safeParseMessageText,
@@ -42,14 +42,23 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
-
+import {
+  ArrowBendUpLeftIcon,
+  CopyIcon,
+  LockKeyIcon,
+  PencilSimpleIcon,
+  PushPinIcon,
+  SmileyIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
+import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import {
   Fragment,
-  type KeyboardEvent,
+  lazy,
   memo,
+  Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -72,6 +81,7 @@ import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
 import { ContentWarningInterstitial } from './ContentWarningInterstitial.tsx';
+import type { ComposerEditorHandle } from './composer/schema.ts';
 import { DeleteMessageDialog } from './DeleteMessageDialog.tsx';
 import { EmojiPicker } from './EmojiPicker.tsx';
 import { LinkPreviewCard } from './LinkPreviewCard.tsx';
@@ -79,16 +89,106 @@ import { MemberList } from './MemberList.tsx';
 import { MessageComposer } from './MessageComposer.tsx';
 import { MessageContextMenu } from './MessageContextMenu.tsx';
 import { MobileEmojiPanel } from './MobileEmojiPanel.tsx';
+
+const ComposerEditor = lazy(() =>
+  import('./composer/ComposerEditor.tsx').then((m) => ({
+    default: m.ComposerEditor,
+  })),
+);
+
 import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
-import { SystemMessage } from './SystemMessage.tsx';
+import { GroupedJoinMessage, SystemMessage } from './SystemMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
 type Message = MessageState['byChannel'][string][number];
 
 const EMPTY_MESSAGES: Message[] = [];
+
+/** 30 minutes in seconds — join messages within this window are grouped. */
+const JOIN_GROUP_WINDOW_SECS = 30 * 60;
+
+function parseJoinUserId(raw: Uint8Array): string | null {
+  try {
+    const obj = JSON.parse(new TextDecoder().decode(raw));
+    return typeof obj?.user_id === 'string' ? obj.user_id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Groups consecutive MEMBER_JOIN messages within 30 minutes of each other.
+ * Returns a map from the first message ID in each group to the list of user IDs,
+ * and a set of message IDs that should be hidden (absorbed into a group).
+ */
+function groupJoinMessages(messages: Message[]): {
+  joinGroups: Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >;
+  hiddenIds: Set<string>;
+} {
+  const joinGroups = new Map<
+    string,
+    { userIds: string[]; lastCreatedAt: Message['createdAt'] }
+  >();
+  const hiddenIds = new Set<string>();
+
+  let groupStartIdx = -1;
+
+  for (let i = 0; i <= messages.length; i++) {
+    const msg = messages[i];
+    const isJoin = msg?.type === MessageType.MEMBER_JOIN;
+
+    // Check if this join is within 30 min of the previous message in the group
+    let withinWindow = false;
+    if (isJoin && groupStartIdx >= 0) {
+      const prevMsg = messages[i - 1];
+      const prevSecs = prevMsg?.createdAt
+        ? Number(prevMsg.createdAt.seconds)
+        : 0;
+      const curSecs = msg.createdAt ? Number(msg.createdAt.seconds) : 0;
+      withinWindow = Math.abs(curSecs - prevSecs) <= JOIN_GROUP_WINDOW_SECS;
+    }
+
+    if (isJoin && (groupStartIdx < 0 || withinWindow)) {
+      // Start or continue a group
+      if (groupStartIdx < 0) groupStartIdx = i;
+    } else {
+      // End current group (if any)
+      if (groupStartIdx >= 0) {
+        const groupEnd = i; // exclusive
+        const groupSize = groupEnd - groupStartIdx;
+        if (groupSize >= 2) {
+          const firstMsg = messages[groupStartIdx];
+          const userIds: string[] = [];
+          let lastCreatedAt = firstMsg.createdAt;
+          for (let j = groupStartIdx; j < groupEnd; j++) {
+            const uid = parseJoinUserId(messages[j].encryptedContent);
+            if (uid) userIds.push(uid);
+            if (j > groupStartIdx) {
+              hiddenIds.add(messages[j].id);
+            }
+            lastCreatedAt = messages[j].createdAt;
+          }
+          if (userIds.length >= 2) {
+            joinGroups.set(firstMsg.id, { userIds, lastCreatedAt });
+          }
+        }
+        groupStartIdx = -1;
+      }
+      // If current message is a join (but didn't continue), start new group
+      if (isJoin) {
+        groupStartIdx = i;
+      }
+    }
+  }
+
+  return { joinGroups, hiddenIds };
+}
 
 /** Scroll to a message element and apply a brief highlight animation. */
 function highlightAndScroll(
@@ -157,6 +257,10 @@ export function ChannelView({
   const messages = useMessageStore(
     (s) => s.byChannel[channelId] ?? EMPTY_MESSAGES,
   );
+  const { joinGroups, hiddenIds } = useMemo(
+    () => groupJoinMessages(messages),
+    [messages],
+  );
   const isLoading = useMessageStore((s) => !!s.isLoading[channelId]);
   const error = useMessageStore((s) => s.error[channelId]);
   const viewMode = useMessageStore((s) => s.viewMode[channelId] ?? 'live');
@@ -170,6 +274,9 @@ export function ChannelView({
   const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
   const hasEmojis = useEmojiStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
+  );
+  const isServerEmojiCached = useEmojiStore((s) =>
+    serverId ? !!s.cachedServerIds[serverId] : false,
   );
   const hasMembers = useMemberStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
@@ -185,6 +292,20 @@ export function ChannelView({
   const isMobile = useMobile();
   const [mobileEmojiOpen, setMobileEmojiOpen] = useState(false);
   const keyboardHeightRef = useKeyboardHeight(mobileEmojiOpen);
+  // Height of the spacer kept visible while the keyboard animates in
+  // after closing the emoji panel (prevents layout jump).
+  const [transitionHeight, setTransitionHeight] = useState(0);
+
+  // Clear transition spacer when the keyboard appears (or after timeout)
+  useEffect(() => {
+    if (transitionHeight === 0) return;
+    const unsub = onKeyboardWillShow(() => setTransitionHeight(0));
+    const timeout = setTimeout(() => setTransitionHeight(0), 400);
+    return () => {
+      unsub?.();
+      clearTimeout(timeout);
+    };
+  }, [transitionHeight]);
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
@@ -192,15 +313,23 @@ export function ChannelView({
   const handleMobileEmojiToggle = useCallback(() => {
     setMobileEmojiOpen((prev) => {
       if (!prev) {
-        // Opening picker: dismiss keyboard
+        // Opening picker: dismiss keyboard and blur editor so that
+        // tapping the composer later triggers a fresh focus + keyboard.
+        setTransitionHeight(0);
         hideKeyboard();
-        // Also blur textarea to ensure keyboard hides on web
         const active = document.activeElement;
-        if (active instanceof HTMLTextAreaElement) active.blur();
+        if (active instanceof HTMLElement) active.blur();
       }
       return !prev;
     });
   }, []);
+
+  // Close emoji panel when transitioning to keyboard (e.g. tapping composer).
+  // Keeps a spacer at the panel height until the keyboard animates in.
+  const handleMobileEmojiClose = useCallback(() => {
+    setTransitionHeight(keyboardHeightRef.current);
+    setMobileEmojiOpen(false);
+  }, [keyboardHeightRef]);
 
   const handleMobileEmojiSelect = useCallback((text: string) => {
     insertEmojiRef.current?.(text);
@@ -215,9 +344,10 @@ export function ChannelView({
   }, []);
 
   // Close emoji panel when switching channels
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId is an intentional trigger dependency
   useEffect(() => {
     setMobileEmojiOpen(false);
-  }, []);
+  }, [channelId]);
 
   // Track this channel as "viewed" so notification sounds and unread
   // increments are suppressed while the pane is mounted.
@@ -293,30 +423,38 @@ export function ChannelView({
     lastAckedIdRef.current = null;
   }, [channelId]);
 
-  // Snapshot the last-read message ID when entering a channel so the
-  // "New Activity" divider stays stable until the user navigates away
-  // or presses Escape.
-  const [newActivityAnchor, setNewActivityAnchor] = useState<string | null>(
-    null,
-  );
+  // Snapshot the last-read message ID and unread count when entering a channel
+  // so the "New Activity" divider and floating unread indicator stay stable
+  // until the user navigates away, presses Escape, or clicks the indicator.
+  // Combined into a single object to prevent desync between anchor and count.
+  const [unreadSnapshot, setUnreadSnapshot] = useState<{
+    anchor: string;
+    count: number;
+  } | null>(null);
   useEffect(() => {
     const rs = useReadStateStore.getState().byChannel[channelId];
-    setNewActivityAnchor(
-      rs && rs.unreadCount > 0 ? rs.lastReadMessageId : null,
-    );
+    if (rs && rs.unreadCount > 0 && rs.lastReadMessageId) {
+      setUnreadSnapshot({
+        anchor: rs.lastReadMessageId,
+        count: rs.unreadCount,
+      });
+    } else {
+      setUnreadSnapshot(null);
+    }
   }, [channelId]);
 
-  // Escape clears the "New Activity" divider (when not editing a message)
+  // Escape clears the "New Activity" divider and floating indicator
+  // (when not editing a message)
   useEffect(() => {
-    if (!newActivityAnchor || editingMessageId) return;
+    if (!unreadSnapshot || editingMessageId) return;
     function handleKeyDown(e: globalThis.KeyboardEvent) {
       if (e.key === 'Escape') {
-        setNewActivityAnchor(null);
+        setUnreadSnapshot(null);
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [newActivityAnchor, editingMessageId]);
+  }, [unreadSnapshot, editingMessageId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
@@ -403,19 +541,20 @@ export function ChannelView({
   // If data came from cache, still fetch from API (stale-while-revalidate).
   useEffect(() => {
     if (!isAuthenticated || !serverId) return;
-    if (!hasEmojis || cachedServerIds.has(serverId)) {
+    if (!hasEmojis || isServerEmojiCached) {
       listEmojis(serverId).catch(() => {});
     }
-  }, [serverId, isAuthenticated, hasEmojis]);
+  }, [serverId, isAuthenticated, hasEmojis, isServerEmojiCached]);
 
   // Fetch personal emojis so MarkdownRenderer can resolve personal emoji tags.
   const hasPersonalEmojis = useEmojiStore((s) => s.personal !== null);
+  const isPersonalEmojiCached = useEmojiStore((s) => s.personalFromCache);
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (!hasPersonalEmojis || isPersonalFromCache()) {
+    if (!hasPersonalEmojis || isPersonalEmojiCached) {
       listUserEmojis().catch(() => {});
     }
-  }, [isAuthenticated, hasPersonalEmojis]);
+  }, [isAuthenticated, hasPersonalEmojis, isPersonalEmojiCached]);
 
   // Fetch server members so MessageItem can resolve author display names.
   useEffect(() => {
@@ -497,6 +636,14 @@ export function ChannelView({
       prevChannelRef.current = channelId;
       fetchedParentsRef.current = new Set();
     }
+  }, [channelId]);
+
+  // Reset scroll-to-bottom intent on channel switch.
+  // Must be useLayoutEffect so it fires BEFORE the auto-scroll
+  // useLayoutEffect below which checks wasNearBottomRef.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: channelId triggers reset on channel switch
+  useLayoutEffect(() => {
+    wasNearBottomRef.current = true;
   }, [channelId]);
 
   // Auto-scroll to bottom on new messages or content changes (e.g. decryption
@@ -583,7 +730,26 @@ export function ChannelView({
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
-      <div className="flex flex-1 flex-col min-h-0 min-w-0">
+      <div className="relative flex flex-1 flex-col min-h-0 min-w-0">
+        {/* Floating unread indicator */}
+        <div aria-live="polite">
+          {unreadSnapshot && (
+            <button
+              type="button"
+              className="absolute top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-black shadow-md hover:bg-accent-hover transition-colors animate-slide-down"
+              onClick={() => {
+                const { anchor } = unreadSnapshot;
+                setUnreadSnapshot(null);
+                scrollToMessage(anchor);
+              }}
+              aria-label={`Jump to ${unreadSnapshot.count} new messages`}
+            >
+              &uarr; {unreadSnapshot.count > 99 ? '99+' : unreadSnapshot.count}{' '}
+              new message{unreadSnapshot.count !== 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
+
         {/* Message list */}
         <div
           ref={scrollRef}
@@ -610,36 +776,51 @@ export function ChannelView({
           )}
 
           <div className="mt-auto">
-            {messages.map((msg, idx) => (
-              <Fragment key={msg.id}>
-                {newActivityAnchor &&
-                  idx > 0 &&
-                  messages[idx - 1]?.id === newActivityAnchor && (
-                    <div className="my-2 flex items-center gap-3">
-                      <div className="h-px flex-1 bg-accent" />
-                      <span className="text-xs font-semibold text-accent">
-                        New Activity
-                      </span>
-                      <div className="h-px flex-1 bg-accent" />
-                    </div>
+            {messages.map((msg, idx) => {
+              // Skip messages absorbed into a grouped join
+              if (hiddenIds.has(msg.id)) return null;
+
+              const joinGroup = joinGroups.get(msg.id);
+
+              return (
+                <Fragment key={msg.id}>
+                  {unreadSnapshot &&
+                    idx > 0 &&
+                    messages[idx - 1]?.id === unreadSnapshot.anchor && (
+                      <div className="my-2 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-accent" />
+                        <span className="text-xs font-semibold text-accent">
+                          New Activity
+                        </span>
+                        <div className="h-px flex-1 bg-accent" />
+                      </div>
+                    )}
+                  {joinGroup ? (
+                    <GroupedJoinMessage
+                      userIds={joinGroup.userIds}
+                      createdAt={joinGroup.lastCreatedAt}
+                      serverId={serverId}
+                    />
+                  ) : (
+                    <MessageItem
+                      msg={msg}
+                      channelId={channelId}
+                      currentUserId={currentUser?.id}
+                      serverId={serverId}
+                      needsEncryption={needsEncryption}
+                      timeTick={timeTick}
+                      isEditing={editingMessageId === msg.id}
+                      onStartEdit={() => requestEdit(msg.id)}
+                      onCancelEdit={cancelEdit}
+                      onEditDirtyChange={setEditDirty}
+                      onReply={() => handleReply(msg)}
+                      onJumpToMessage={scrollToMessage}
+                      canManageMessages={canManageMessages}
+                    />
                   )}
-                <MessageItem
-                  msg={msg}
-                  channelId={channelId}
-                  currentUserId={currentUser?.id}
-                  serverId={serverId}
-                  needsEncryption={needsEncryption}
-                  timeTick={timeTick}
-                  isEditing={editingMessageId === msg.id}
-                  onStartEdit={() => requestEdit(msg.id)}
-                  onCancelEdit={cancelEdit}
-                  onEditDirtyChange={setEditDirty}
-                  onReply={() => handleReply(msg)}
-                  onJumpToMessage={scrollToMessage}
-                  canManageMessages={canManageMessages}
-                />
-              </Fragment>
-            ))}
+                </Fragment>
+              );
+            })}
           </div>
         </div>
 
@@ -661,9 +842,11 @@ export function ChannelView({
             <button
               type="button"
               className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-white shadow-md hover:bg-accent-hover transition-colors"
-              onClick={async () => {
+              onClick={() => {
+                wasNearBottomRef.current = true;
+                setUnreadSnapshot(null);
                 useMessageStore.getState().returnToPresent(channelId);
-                await getMessages(channelId);
+                getMessages(channelId).catch(() => {});
               }}
             >
               Return to Present
@@ -695,17 +878,24 @@ export function ChannelView({
             disabled={viewMode === 'historical'}
             mobileEmojiOpen={mobileEmojiOpen}
             onMobileEmojiToggle={handleMobileEmojiToggle}
+            onMobileEmojiClose={handleMobileEmojiClose}
             insertEmojiRef={insertEmojiRef}
           />
         )}
 
-        {/* Mobile emoji picker panel — replaces the keyboard */}
+        {/* Mobile emoji picker panel / transition spacer */}
         {isMobile && mobileEmojiOpen && (
           <MobileEmojiPanel
             serverId={serverId}
             panelHeight={keyboardHeightRef.current}
             onEmojiSelect={handleMobileEmojiSelect}
             onSearchFocusChange={handleMobileSearchFocusChange}
+          />
+        )}
+        {isMobile && !mobileEmojiOpen && transitionHeight > 0 && (
+          <div
+            className="flex-shrink-0 bg-bg-elevated border-t border-border safe-bottom"
+            style={{ height: transitionHeight }}
           />
         )}
       </div>
@@ -1047,7 +1237,6 @@ const MessageItem = memo(function MessageItem({
   }
 
   const isMobile = useMobile();
-  const [editText, setEditText] = useState('');
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1056,18 +1245,16 @@ const MessageItem = memo(function MessageItem({
     useState<DOMRect | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
-  const editRef = useRef<HTMLTextAreaElement>(null);
+  const editEditorRef = useRef<ComposerEditorHandle>(null);
 
   const longPressHandlers = useLongPress(
     useCallback((rect: DOMRect) => setQuickReactionAnchor(rect), []),
   );
 
-  // Initialize edit text when isEditing transitions to true (handles both
-  // direct clicks and discard-dialog switches from ChannelView).
+  // Clear edit error when isEditing transitions to true.
   const prevIsEditingRef = useRef(false);
   useLayoutEffect(() => {
     if (isEditing && !prevIsEditingRef.current) {
-      setEditText(text);
       setEditError('');
     }
     prevIsEditingRef.current = isEditing;
@@ -1076,8 +1263,8 @@ const MessageItem = memo(function MessageItem({
   // Report dirty state to ChannelView so it can decide whether to show
   // the discard dialog on Escape or when switching to another message.
   useEffect(() => {
-    onEditDirtyChange(isEditing && editText !== text);
-  }, [isEditing, editText, text, onEditDirtyChange]);
+    onEditDirtyChange(isEditing && (editEditorRef.current?.isDirty() ?? false));
+  }, [isEditing, onEditDirtyChange]);
 
   const handleReactionSelect = useCallback(
     (emoji: string) => {
@@ -1097,73 +1284,9 @@ const MessageItem = memo(function MessageItem({
   );
 
   function cancelEdit() {
-    setEditText('');
     setEditError('');
     onCancelEdit();
   }
-
-  async function saveEdit() {
-    const trimmed = editText.trim();
-    if (!trimmed || trimmed === text) {
-      cancelEdit();
-      return;
-    }
-    setIsSaving(true);
-    setEditError('');
-    try {
-      // Use V1 JSON format for edited messages (preserves compatibility)
-      const plaintext = buildMessageContent(trimmed);
-      // Encrypt edited content for encrypted channels
-      let content: Uint8Array;
-      let keyVersion: number | undefined;
-      if (needsEncryption) {
-        try {
-          const encrypted = await encryptMessage(channelId, plaintext);
-          content = encrypted.data;
-          keyVersion = encrypted.keyVersion;
-        } catch {
-          setEditError('Encryption failed');
-          setIsSaving(false);
-          return;
-        }
-      } else {
-        content = plaintext;
-      }
-      await editMessage({
-        channelId: msg.channelId,
-        messageId: msg.id,
-        encryptedContent: content,
-        keyVersion,
-      });
-      onCancelEdit();
-    } catch {
-      setEditError('Failed to save edit');
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  function handleEditKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Escape is handled by the document-level listener in ChannelView
-    // so it can check dirty state and show the discard dialog.
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      saveEdit();
-    }
-  }
-
-  useEffect(() => {
-    if (isEditing && editRef.current) {
-      editRef.current.focus();
-      editRef.current.setSelectionRange(
-        editRef.current.value.length,
-        editRef.current.value.length,
-      );
-      // Auto-grow to fit existing content
-      editRef.current.style.height = 'auto';
-      editRef.current.style.height = `${editRef.current.scrollHeight}px`;
-    }
-  }, [isEditing]);
 
   const messageBody = (
     <div
@@ -1188,14 +1311,15 @@ const MessageItem = memo(function MessageItem({
       {!isMobile && (
         <div
           className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          style={{ shapeRendering: 'geometricPrecision' }}
         >
           <button
             type="button"
-            className="p-1 text-xs text-text-muted hover:text-text rounded"
+            className="p-1 text-text-muted hover:text-text rounded"
             onClick={onReply}
             title="Reply"
           >
-            &#x21A9;
+            <ArrowBendUpLeftIcon size={20} weight="fill" aria-hidden="true" />
           </button>
           <Popover.Root
             open={reactionPickerOpen}
@@ -1204,10 +1328,10 @@ const MessageItem = memo(function MessageItem({
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 title="Add reaction"
               >
-                <SmileyIcon size={14} aria-hidden="true" />
+                <SmileyIcon size={20} weight="fill" aria-hidden="true" />
               </button>
             </Popover.Trigger>
             <Popover.Portal>
@@ -1229,41 +1353,41 @@ const MessageItem = memo(function MessageItem({
             <>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 onClick={onStartEdit}
                 title="Edit"
               >
-                &#x270E;
+                <PencilSimpleIcon size={20} weight="fill" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-error rounded"
+                className="p-1 text-text-muted hover:text-error rounded"
                 onClick={() => setDeleteDialogOpen(true)}
                 title="Delete"
               >
-                &#x1F5D1;
+                <TrashIcon size={20} weight="fill" aria-hidden="true" />
               </button>
             </>
           ) : (
             <>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 onClick={() => {
                   navigator.clipboard.writeText(text);
                 }}
                 title="Copy"
               >
-                &#x1F4CB;
+                <CopyIcon size={20} weight="fill" aria-hidden="true" />
               </button>
               {canManageMessages && (
                 <button
                   type="button"
-                  className="p-1 text-xs text-text-muted hover:text-error rounded"
+                  className="p-1 text-text-muted hover:text-error rounded"
                   onClick={() => setDeleteDialogOpen(true)}
                   title="Delete"
                 >
-                  &#x1F5D1;
+                  <TrashIcon size={20} weight="fill" aria-hidden="true" />
                 </button>
               )}
             </>
@@ -1312,21 +1436,63 @@ const MessageItem = memo(function MessageItem({
 
           {isEditing ? (
             <div className="mt-1">
-              <textarea
-                ref={editRef}
-                value={editText}
-                onChange={(e) => {
-                  setEditText(e.target.value);
-                  // Auto-grow textarea
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                }}
-                onKeyDown={handleEditKeyDown}
-                disabled={isSaving}
-                rows={1}
+              <div
+                className="w-full overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus-within:border-accent"
                 style={{ maxHeight: isMobile ? '80px' : '150px' }}
-                className="w-full resize-none overflow-y-auto rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text focus:border-accent focus:outline-none disabled:opacity-50"
-              />
+              >
+                <Suspense fallback={<div className="h-6 animate-pulse" />}>
+                  <ProsemirrorAdapterProvider>
+                    <ComposerEditor
+                      ref={editEditorRef}
+                      initialText={text}
+                      onSend={async (wireText) => {
+                        const trimmed = wireText.trim();
+                        if (!trimmed || trimmed === text) {
+                          cancelEdit();
+                          return;
+                        }
+                        setIsSaving(true);
+                        setEditError('');
+                        try {
+                          const plaintext = buildMessageContent(trimmed);
+                          let content: Uint8Array;
+                          let kv: number | undefined;
+                          if (needsEncryption) {
+                            try {
+                              const encrypted = await encryptMessage(
+                                channelId,
+                                plaintext,
+                              );
+                              content = encrypted.data;
+                              kv = encrypted.keyVersion;
+                            } catch {
+                              setEditError('Encryption failed');
+                              setIsSaving(false);
+                              return;
+                            }
+                          } else {
+                            content = plaintext;
+                          }
+                          await editMessage({
+                            channelId: msg.channelId,
+                            messageId: msg.id,
+                            encryptedContent: content,
+                            keyVersion: kv,
+                          });
+                          onCancelEdit();
+                        } catch {
+                          setEditError('Failed to save edit');
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      onCancel={cancelEdit}
+                      channelId={channelId}
+                      autoFocus
+                    />
+                  </ProsemirrorAdapterProvider>
+                </Suspense>
+              </div>
               {editError && (
                 <p className="text-xs text-error mt-1">{editError}</p>
               )}
@@ -1338,14 +1504,6 @@ const MessageItem = memo(function MessageItem({
                   className="text-xs text-text-muted hover:text-text"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveEdit}
-                  disabled={isSaving}
-                  className="text-xs text-accent hover:text-accent-hover font-medium"
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
                 <span className="text-xs text-text-subtle">
                   escape to cancel &middot; enter to save

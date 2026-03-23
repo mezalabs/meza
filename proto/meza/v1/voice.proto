@@ -6,6 +6,7 @@ service VoiceService {
   rpc LeaveVoiceChannel(LeaveVoiceChannelRequest) returns (LeaveVoiceChannelResponse);
   rpc GetVoiceChannelState(GetVoiceChannelStateRequest) returns (GetVoiceChannelStateResponse);
   rpc GetUserVoiceActivity(GetUserVoiceActivityRequest) returns (GetUserVoiceActivityResponse);
+  rpc GetStreamPreviewToken(GetStreamPreviewTokenRequest) returns (GetStreamPreviewTokenResponse);
 }
 
 message JoinVoiceChannelRequest {
@@ -54,4 +55,14 @@ message UserVoiceActivity {
 
 message GetUserVoiceActivityResponse {
   repeated UserVoiceActivity activities = 1;
+}
+
+message GetStreamPreviewTokenRequest {
+  string channel_id = 1;
+}
+
+message GetStreamPreviewTokenResponse {
+  string livekit_url = 1;
+  string livekit_token = 2;
+  string room_name = 3;
 }

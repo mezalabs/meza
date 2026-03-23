@@ -310,8 +310,8 @@ export function useSimpleMode(): boolean {
 /**
  * Open a user's profile as an overlay on top of all panes.
  */
-export function openProfilePane(userId: string) {
-  useTilingStore.getState().setOverlay({ type: 'profile', userId });
+export function openProfilePane(userId: string, editing?: boolean) {
+  useTilingStore.getState().setOverlay({ type: 'profile', userId, editing });
 }
 
 /**

@@ -24,7 +24,12 @@ import type {
   RemoteTrackPublication,
   TrackPublication,
 } from 'livekit-client';
-import { type DataPacket_Kind, RoomEvent, Track } from 'livekit-client';
+import {
+  type DataPacket_Kind,
+  ExternalE2EEKeyProvider,
+  RoomEvent,
+  Track,
+} from 'livekit-client';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   preloadRnnoiseWorklet,
@@ -34,8 +39,26 @@ import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 import { setVoiceRoom } from '../../utils/voiceControls.ts';
 
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
-const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+
+// --- E2EE setup ---
+
+/** Module-level key provider — survives channel switches, cleared on logout. */
+export const e2eeKeyProvider = new ExternalE2EEKeyProvider({
+  ratchetWindowSize: 0, // disabled — no ratchet coordination protocol
+  failureTolerance: 10,
+});
+
+function createE2EEWorker() {
+  return new Worker(new URL('livekit-client/e2ee-worker', import.meta.url), {
+    type: 'module',
+  });
+}
+
+/** Clear E2EE key material. Call from session teardown alongside clearChannelKeyCache(). */
+export function resetE2EEKeyProvider() {
+  e2eeKeyProvider.setKey(new ArrayBuffer(0));
+}
 
 /** Applies per-user and global output volumes to a remote participant. */
 function applyParticipantVolume(participant: RemoteParticipant) {
@@ -67,6 +90,14 @@ function VoiceEventHandler() {
   useEffect(() => {
     setVoiceRoom(room);
     return () => setVoiceRoom(null);
+  }, [room]);
+
+  // Enable E2EE on the room — setupE2EE() in the Room constructor only
+  // configures the infrastructure (worker, key provider), but the local
+  // participant's encryptionType stays NONE until setE2EEEnabled(true) is
+  // called, which tells the worker to actually encrypt frames.
+  useEffect(() => {
+    room.setE2EEEnabled(true).catch(() => {});
   }, [room]);
 
   useEffect(() => {
@@ -130,34 +161,13 @@ function VoiceEventHandler() {
             publication.setVideoQuality(quality);
           }
         }
-        // Notify the streamer that we started watching
-        room.localParticipant
-          .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
-            reliable: true,
-            topic: STREAM_VIEWER_TOPIC,
-            destinationIdentities: [participant.identity],
-          })
-          .catch(() => {});
       }
     };
 
-    const onTrackUnsubscribed = (
-      track: RemoteTrack,
-      _publication: RemoteTrackPublication,
-      participant: RemoteParticipant,
-    ) => {
-      if (track.source !== Track.Source.ScreenShare) return;
-      // Notify the streamer that we stopped watching
-      room.localParticipant
-        .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
-          reliable: true,
-          topic: STREAM_VIEWER_TOPIC,
-          destinationIdentities: [participant.identity],
-        })
-        .catch(() => {});
-    };
-
     const onParticipantConnected = (participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (participant.identity.startsWith('preview:')) return;
+
       applyParticipantVolume(participant);
       applySoundboardVolume(participant);
       // Play voice-join sound for non-self participants
@@ -174,11 +184,15 @@ function VoiceEventHandler() {
           isMuted: !participant.isMicrophoneEnabled,
           isDeafened: false,
           isStreamingVideo: participant.isScreenShareEnabled,
+          isEncrypted: false,
         });
       }
     };
 
     const onParticipantDisconnected = (_participant: RemoteParticipant) => {
+      // Ignore hidden preview participants — they should be invisible.
+      if (_participant.identity.startsWith('preview:')) return;
+
       const { soundEnabled, enabledSounds } =
         useNotificationSettingsStore.getState();
       if (soundEnabled && enabledSounds['voice-leave']) {
@@ -326,7 +340,6 @@ function VoiceEventHandler() {
     room.on(RoomEvent.Reconnecting, onReconnecting);
     room.on(RoomEvent.Reconnected, onReconnected);
     room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
-    room.on(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
     room.on(RoomEvent.ParticipantConnected, onParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
     room.on(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
@@ -337,26 +350,122 @@ function VoiceEventHandler() {
     room.on(RoomEvent.TrackMuted, onTrackMuted);
     room.on(RoomEvent.TrackUnmuted, onTrackUnmuted);
 
+    // --- E2EE event listeners ---
+
+    let e2eeErrorCount = 0;
+
+    const onEncryptionStatusChanged = (
+      enabled: boolean,
+      participant?: Participant,
+    ) => {
+      const channelId = useVoiceStore.getState().channelId;
+      if (!participant || !channelId) return;
+
+      // Check previous status before updating — only warn when a
+      // previously-encrypted participant loses encryption, not during
+      // the initial handshake (where status starts as false).
+      if (!enabled) {
+        const wasEncrypted = useVoiceParticipantsStore
+          .getState()
+          .byChannel[channelId]?.some(
+            (p) => p.userId === participant.identity && p.isEncrypted,
+          );
+        if (wasEncrypted) {
+          useToastStore
+            .getState()
+            .addToast(
+              `${participant.identity} is no longer using encryption`,
+              'warning',
+            );
+        }
+      }
+
+      // Update the participant's encryption status in the store
+      useVoiceParticipantsStore
+        .getState()
+        .updateParticipant(channelId, participant.identity, {
+          isEncrypted: enabled,
+        });
+    };
+
+    const onEncryptionError = (error: Error) => {
+      e2eeErrorCount++;
+      if (e2eeErrorCount <= 10) {
+        console.error('[E2EE] Encryption error:', error);
+      }
+      if (e2eeErrorCount === 10) {
+        useToastStore
+          .getState()
+          .addToast(
+            'Encryption issue \u2014 please rejoin the voice channel',
+            'error',
+          );
+      }
+    };
+
+    // Sync encryption status from LiveKit participant objects into the store.
+    // Called at mount and on Connected to catch status the event may have
+    // fired before we subscribed (e.g. React Strict Mode double-mount).
+    const syncEncryptionStatus = () => {
+      const channelId = useVoiceStore.getState().channelId;
+      if (!channelId) return;
+      // Local participant
+      if (room.localParticipant.identity) {
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, room.localParticipant.identity, {
+            isEncrypted: room.localParticipant.isEncrypted,
+          });
+      }
+      // Remote participants
+      for (const p of room.remoteParticipants.values()) {
+        if (!p.identity) continue;
+        useVoiceParticipantsStore
+          .getState()
+          .updateParticipant(channelId, p.identity, {
+            isEncrypted: p.isEncrypted,
+          });
+      }
+    };
+
+    // E2EE status isn't available immediately on Connected — the worker
+    // needs time to process the first frames.  Poll briefly after connect
+    // so we catch the status even if the event fired before we subscribed.
+    let encryptionPollTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onConnected = () => {
+      encryptionPollTimer = setTimeout(syncEncryptionStatus, 2000);
+    };
+
+    room.on(
+      RoomEvent.ParticipantEncryptionStatusChanged,
+      onEncryptionStatusChanged,
+    );
+    room.on(RoomEvent.EncryptionError, onEncryptionError);
+    room.on(RoomEvent.Connected, onConnected);
+
     // Seed remote participants from current room state on mount.
     // Local user is already handled optimistically by useVoiceConnection.
     const channelId = useVoiceStore.getState().channelId;
     if (channelId) {
       for (const p of room.remoteParticipants.values()) {
-        if (!p.identity) continue;
+        if (!p.identity || p.identity.startsWith('preview:')) continue;
         useVoiceParticipantsStore.getState().upsertParticipant(channelId, {
           userId: p.identity,
           isMuted: !p.isMicrophoneEnabled,
           isDeafened: false,
           isStreamingVideo: p.isScreenShareEnabled,
+          isEncrypted: p.isEncrypted,
         });
       }
+      // For already-connected rooms, poll after a delay to let E2EE settle
+      encryptionPollTimer = setTimeout(syncEncryptionStatus, 2000);
     }
 
     return () => {
       room.off(RoomEvent.Reconnecting, onReconnecting);
       room.off(RoomEvent.Reconnected, onReconnected);
       room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
-      room.off(RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
       room.off(RoomEvent.ParticipantConnected, onParticipantConnected);
       room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
       room.off(RoomEvent.LocalTrackPublished, onLocalTrackPublished);
@@ -366,6 +475,13 @@ function VoiceEventHandler() {
       room.off(RoomEvent.DataReceived, onDataReceived);
       room.off(RoomEvent.TrackMuted, onTrackMuted);
       room.off(RoomEvent.TrackUnmuted, onTrackUnmuted);
+      room.off(
+        RoomEvent.ParticipantEncryptionStatusChanged,
+        onEncryptionStatusChanged,
+      );
+      room.off(RoomEvent.EncryptionError, onEncryptionError);
+      room.off(RoomEvent.Connected, onConnected);
+      clearTimeout(encryptionPollTimer);
     };
   }, [room]);
 
@@ -593,6 +709,22 @@ export function PersistentVoiceConnection({
     [inputDeviceId, noiseSuppression, echoCancellation, autoGainControl],
   );
 
+  // E2EE worker — created once. LiveKit's Room manages the worker lifecycle
+  // through its E2EEManager; we must NOT terminate it manually because React
+  // Strict Mode re-runs effects with the same memoized (now-dead) worker.
+  const e2eeWorker = useMemo(() => createE2EEWorker(), []);
+
+  const roomOptions = useMemo(
+    () => ({
+      webAudioMix: true,
+      e2ee: {
+        keyProvider: e2eeKeyProvider,
+        worker: e2eeWorker,
+      },
+    }),
+    [e2eeWorker],
+  );
+
   return (
     <LiveKitRoom
       serverUrl={url ?? undefined}
@@ -600,7 +732,7 @@ export function PersistentVoiceConnection({
       audio={audioConstraints}
       video={false}
       connect={isActive}
-      options={{ webAudioMix: true }}
+      options={roomOptions}
       onDisconnected={() => {
         // Don't reset state if we're mid-switch (connecting to a new channel).
         // The old room's disconnect event would otherwise nuke the new connection.

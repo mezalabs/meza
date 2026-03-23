@@ -314,7 +314,7 @@ function ProfileCardContent({
               className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
               onClick={() => {
                 onClose();
-                openProfilePane(userId);
+                openProfilePane(userId, true);
               }}
             >
               Edit Profile
@@ -352,7 +352,7 @@ function ProfileCardContent({
                   className="flex-1 flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
                   onClick={async () => {
                     try {
-                      await sendFriendRequest(userId);
+                      await sendFriendRequest({ userId });
                     } catch {
                       setActionError('Failed to send friend request');
                     }

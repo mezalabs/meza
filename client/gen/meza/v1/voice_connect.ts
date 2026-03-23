@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetUserVoiceActivityRequest, GetUserVoiceActivityResponse, GetVoiceChannelStateRequest, GetVoiceChannelStateResponse, JoinVoiceChannelRequest, JoinVoiceChannelResponse, LeaveVoiceChannelRequest, LeaveVoiceChannelResponse } from "./voice_pb.js";
+import { GetStreamPreviewTokenRequest, GetStreamPreviewTokenResponse, GetUserVoiceActivityRequest, GetUserVoiceActivityResponse, GetVoiceChannelStateRequest, GetVoiceChannelStateResponse, JoinVoiceChannelRequest, JoinVoiceChannelResponse, LeaveVoiceChannelRequest, LeaveVoiceChannelResponse } from "./voice_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -46,6 +46,15 @@ export const VoiceService = {
       name: "GetUserVoiceActivity",
       I: GetUserVoiceActivityRequest,
       O: GetUserVoiceActivityResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc meza.v1.VoiceService.GetStreamPreviewToken
+     */
+    getStreamPreviewToken: {
+      name: "GetStreamPreviewToken",
+      I: GetStreamPreviewTokenRequest,
+      O: GetStreamPreviewTokenResponse,
       kind: MethodKind.Unary,
     },
   }

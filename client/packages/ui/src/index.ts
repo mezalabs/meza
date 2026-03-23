@@ -14,6 +14,7 @@ export { Shell } from './components/shell/Shell.tsx';
 export { Sidebar } from './components/shell/Sidebar.tsx';
 export { TilingRenderer } from './components/shell/TilingRenderer.tsx';
 export { TitleBar } from './components/shell/TitleBar.tsx';
+export { resetE2EEKeyProvider } from './components/voice/PersistentVoiceConnection.tsx';
 export { useMobile } from './hooks/useMobile.ts';
 export type {
   NavigationActions,

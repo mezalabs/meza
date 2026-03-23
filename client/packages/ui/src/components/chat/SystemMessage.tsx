@@ -1,10 +1,20 @@
 import { formatRelativeTime, MessageType, toISO } from '@meza/core';
-import { memo, useMemo } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { openProfilePane } from '../../stores/tiling.ts';
 
 interface SystemMessageProps {
   type: number;
   encryptedContent: Uint8Array;
+  createdAt?: { seconds: bigint };
+  serverId: string | undefined;
+}
+
+export interface GroupedJoinMessageProps {
+  /** All user IDs in this group (first is the "lead" name). */
+  userIds: string[];
+  /** Timestamp of the most recent join in the group. */
   createdAt?: { seconds: bigint };
   serverId: string | undefined;
 }
@@ -38,9 +48,9 @@ interface KeyRotationContent {
 function iconForType(type: number): string {
   switch (type) {
     case MessageType.MEMBER_JOIN:
-      return '\u2192';
+      return '';
     case MessageType.MEMBER_LEAVE:
-      return '\u2190';
+      return '';
     case MessageType.MEMBER_KICK:
       return '\u26D4';
     case MessageType.CHANNEL_UPDATE:
@@ -69,7 +79,15 @@ function UserName({
   serverId: string | undefined;
 }) {
   const name = useDisplayName(userId, serverId);
-  return <span className="font-medium text-text">{name}</span>;
+  return (
+    <button
+      type="button"
+      className="font-medium text-text hover:underline cursor-pointer"
+      onClick={() => openProfilePane(userId)}
+    >
+      {name}
+    </button>
+  );
 }
 
 function useSystemMessageText(
@@ -91,9 +109,9 @@ function useSystemMessageText(
   switch (type) {
     case MessageType.MEMBER_JOIN: {
       const c = content as MemberEventContent | null;
-      if (!c?.user_id) return { icon: '\u2192', node: 'A member joined' };
+      if (!c?.user_id) return { icon: '', node: 'A member joined' };
       return {
-        icon: '\u2192',
+        icon: '',
         node: (
           <>
             <UserName userId={c.user_id} serverId={serverId} /> joined the
@@ -104,9 +122,9 @@ function useSystemMessageText(
     }
     case MessageType.MEMBER_LEAVE: {
       const c = content as MemberEventContent | null;
-      if (!c?.user_id) return { icon: '\u2190', node: 'A member left' };
+      if (!c?.user_id) return { icon: '', node: 'A member left' };
       return {
-        icon: '\u2190',
+        icon: '',
         node: (
           <>
             <UserName userId={c.user_id} serverId={serverId} /> left the
@@ -203,8 +221,102 @@ export const SystemMessage = memo(function SystemMessage({
     <div className="flex items-center justify-center gap-2 py-1 px-4">
       <div className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-1.5 text-xs text-text-muted whitespace-nowrap">
-        <span>{icon}</span>
+        {icon && <span>{icon}</span>}
         <span>{node}</span>
+        {time && (
+          <span className="text-text-subtle" title={toISO(time)}>
+            {formatRelativeTime(time)}
+          </span>
+        )}
+      </span>
+      <div className="h-px flex-1 bg-border" />
+    </div>
+  );
+});
+
+/** Renders a single name in the popover list. */
+function PopoverUserName({
+  userId,
+  serverId,
+}: {
+  userId: string;
+  serverId: string | undefined;
+}) {
+  const name = useDisplayName(userId, serverId);
+  return (
+    <button
+      type="button"
+      className="truncate text-left hover:underline cursor-pointer px-1 py-0.5 rounded hover:bg-surface-hover"
+      onClick={() => openProfilePane(userId)}
+    >
+      {name}
+    </button>
+  );
+}
+
+export const GroupedJoinMessage = memo(function GroupedJoinMessage({
+  userIds,
+  createdAt,
+  serverId,
+}: GroupedJoinMessageProps) {
+  const time = createdAt ? new Date(Number(createdAt.seconds) * 1000) : null;
+  const othersCount = userIds.length - 1;
+  const [open, setOpen] = useState(false);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const openPopover = () => {
+    clearTimeout(hoverTimeout.current);
+    setOpen(true);
+  };
+  const closePopover = () => {
+    hoverTimeout.current = setTimeout(() => setOpen(false), 150);
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 py-1 px-4">
+      <div className="h-px flex-1 bg-border" />
+      <span className="flex items-center gap-1.5 text-xs text-text-muted whitespace-nowrap">
+        <span>
+          <UserName userId={userIds[0]} serverId={serverId} />
+          {othersCount > 0 && (
+            <>
+              {' and '}
+              <Popover.Root open={open} onOpenChange={setOpen}>
+                <Popover.Trigger asChild>
+                  <button
+                    type="button"
+                    className="underline decoration-dotted underline-offset-2 hover:text-text cursor-pointer"
+                    onMouseEnter={openPopover}
+                    onMouseLeave={closePopover}
+                  >
+                    {othersCount} {othersCount === 1 ? 'other' : 'others'}
+                  </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="z-50 rounded-lg border border-border bg-surface-overlay p-2 shadow-lg text-xs text-text data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out"
+                    side="top"
+                    sideOffset={4}
+                    onMouseEnter={openPopover}
+                    onMouseLeave={closePopover}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                  >
+                    <div className="flex flex-col gap-0.5 max-h-48 overflow-y-auto">
+                      {userIds.slice(1).map((uid) => (
+                        <PopoverUserName
+                          key={uid}
+                          userId={uid}
+                          serverId={serverId}
+                        />
+                      ))}
+                    </div>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            </>
+          )}{' '}
+          joined the {serverId ? 'server' : 'group'}
+        </span>
         {time && (
           <span className="text-text-subtle" title={toISO(time)}>
             {formatRelativeTime(time)}

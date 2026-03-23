@@ -1,13 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-const DEFAULT_SERVER_URL = 'https://meza.chat';
-
-// Inject the API base URL so Connect-RPC requests target the server, not file://
+// Inject the API base URL so Connect-RPC requests target the server.
+// In dev mode (empty serverUrl), leave it empty so the web app uses same-origin
+// (http://localhost:4080). In prod, the packaged app sets it via the store or
+// MEZA_SERVER_URL env var; if still empty, the main process loads meza://app
+// which needs an explicit base URL to reach the server.
 const serverUrl: string = ipcRenderer.sendSync('settings:getServerUrlSync');
-contextBridge.exposeInMainWorld(
-  '__MEZA_BASE_URL__',
-  serverUrl || DEFAULT_SERVER_URL,
-);
+contextBridge.exposeInMainWorld('__MEZA_BASE_URL__', serverUrl);
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Window controls ---

@@ -85,7 +85,9 @@ export function SlashCommandAutocomplete({
           }}
           onMouseEnter={() => setSelectedIndex(i)}
         >
-          <span className="font-medium text-text">/{cmd.name}</span>
+          <span className="shrink-0 whitespace-nowrap font-medium text-text">
+            /{cmd.name}
+          </span>
           <span className="truncate text-text-muted">{cmd.description}</span>
         </button>
       ))}

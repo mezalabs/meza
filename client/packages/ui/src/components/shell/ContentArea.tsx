@@ -205,7 +205,9 @@ function renderPaneContent(
     case 'dm':
       return <ChannelView channelId={content.conversationId} />;
     case 'profile':
-      return <ProfileView userId={content.userId} />;
+      return (
+        <ProfileView userId={content.userId} initialEditing={content.editing} />
+      );
     case 'serverOnboarding':
       return <ServerOnboardingView serverId={content.serverId} />;
     case 'getStarted':
@@ -559,7 +561,7 @@ function OverlayPane({
             onClick={onClose}
             aria-label={`Close ${meta.label}`}
           >
-            <XIcon weight="regular" size={14} aria-hidden="true" />
+            <XIcon weight="regular" size={18} aria-hidden="true" />
           </button>
         </div>
         <div className="flex flex-1 flex-col min-h-0 overflow-hidden bg-bg-base">

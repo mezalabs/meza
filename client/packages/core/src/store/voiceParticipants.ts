@@ -6,6 +6,7 @@ export interface VoiceChannelParticipant {
   isMuted: boolean;
   isDeafened: boolean;
   isStreamingVideo: boolean;
+  isEncrypted: boolean;
 }
 
 export interface VoiceParticipantsState {
