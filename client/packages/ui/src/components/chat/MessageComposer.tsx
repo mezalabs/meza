@@ -670,7 +670,20 @@ export function MessageComposer({
           </div>
 
           <EmojiPickerButton
-            onSelect={(emoji) => editorRef.current?.insertText(emoji)}
+            onSelect={(emoji) => {
+              // Custom emojis come as <:name:id> or <a:name:id> — insert as node
+              const match = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
+              if (match) {
+                editorRef.current?.insertCustomEmoji(
+                  match[3],
+                  match[2],
+                  match[1] === 'a',
+                );
+              } else {
+                // Unicode emoji — insert as text
+                editorRef.current?.insertText(emoji);
+              }
+            }}
             onClose={() => editorRef.current?.focus()}
             disabled={sending || disabled}
             serverId={serverId}

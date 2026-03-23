@@ -440,8 +440,9 @@ export const ComposerEditor = forwardRef<
       },
       insertCustomEmoji(id: string, name: string, animated: boolean) {
         const view = viewRef.current;
+        if (!view || view.isDestroyed) return;
         const range = autocompleteRangeRef.current;
-        if (!view || view.isDestroyed || !range) return;
+        const { from, to } = range ?? view.state.selection;
         const node = composerSchema.nodes.customEmoji.create({
           id,
           name,
@@ -449,11 +450,13 @@ export const ComposerEditor = forwardRef<
         });
         const space = composerSchema.text(' ');
         const tr = view.state.tr
-          .replaceWith(range.from, range.to, [node, space])
+          .replaceWith(from, to, [node, space])
           .scrollIntoView();
         view.dispatch(tr);
-        closeAcPlugin(view);
-        autocompleteRangeRef.current = null;
+        if (range) {
+          closeAcPlugin(view);
+          autocompleteRangeRef.current = null;
+        }
         view.focus();
       },
       insertChannelLink(id: string) {
