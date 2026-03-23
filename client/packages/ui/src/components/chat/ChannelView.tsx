@@ -42,7 +42,15 @@ import {
   useServerStore,
   useUsersStore,
 } from '@meza/core';
-import { LockKeyIcon, PushPinIcon, SmileyIcon } from '@phosphor-icons/react';
+import {
+  ArrowBendUpLeftIcon,
+  CopyIcon,
+  LockKeyIcon,
+  PencilSimpleIcon,
+  PushPinIcon,
+  SmileyIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
 import { ProsemirrorAdapterProvider } from '@prosemirror-adapter/react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
@@ -1301,14 +1309,15 @@ const MessageItem = memo(function MessageItem({
       {!isMobile && (
         <div
           className={`absolute -top-2 right-4 flex items-center gap-0.5 rounded-md border border-border bg-bg-elevated px-1 py-0.5 shadow-sm transition-opacity ${reactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+          style={{ shapeRendering: 'geometricPrecision' }}
         >
           <button
             type="button"
-            className="p-1 text-xs text-text-muted hover:text-text rounded"
+            className="p-1 text-text-muted hover:text-text rounded"
             onClick={onReply}
             title="Reply"
           >
-            &#x21A9;
+            <ArrowBendUpLeftIcon size={20} weight="fill" aria-hidden="true" />
           </button>
           <Popover.Root
             open={reactionPickerOpen}
@@ -1317,10 +1326,10 @@ const MessageItem = memo(function MessageItem({
             <Popover.Trigger asChild>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 title="Add reaction"
               >
-                <SmileyIcon size={14} aria-hidden="true" />
+                <SmileyIcon size={20} weight="fill" aria-hidden="true" />
               </button>
             </Popover.Trigger>
             <Popover.Portal>
@@ -1342,41 +1351,41 @@ const MessageItem = memo(function MessageItem({
             <>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 onClick={onStartEdit}
                 title="Edit"
               >
-                &#x270E;
+                <PencilSimpleIcon size={20} weight="fill" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-error rounded"
+                className="p-1 text-text-muted hover:text-error rounded"
                 onClick={() => setDeleteDialogOpen(true)}
                 title="Delete"
               >
-                &#x1F5D1;
+                <TrashIcon size={20} weight="fill" aria-hidden="true" />
               </button>
             </>
           ) : (
             <>
               <button
                 type="button"
-                className="p-1 text-xs text-text-muted hover:text-text rounded"
+                className="p-1 text-text-muted hover:text-text rounded"
                 onClick={() => {
                   navigator.clipboard.writeText(text);
                 }}
                 title="Copy"
               >
-                &#x1F4CB;
+                <CopyIcon size={20} weight="fill" aria-hidden="true" />
               </button>
               {canManageMessages && (
                 <button
                   type="button"
-                  className="p-1 text-xs text-text-muted hover:text-error rounded"
+                  className="p-1 text-text-muted hover:text-error rounded"
                   onClick={() => setDeleteDialogOpen(true)}
                   title="Delete"
                 >
-                  &#x1F5D1;
+                  <TrashIcon size={20} weight="fill" aria-hidden="true" />
                 </button>
               )}
             </>

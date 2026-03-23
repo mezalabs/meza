@@ -1,5 +1,6 @@
 import { getMediaURL, useAuthStore, useEmojiStore } from '@meza/core';
 import { memo, useCallback, useMemo, useState } from 'react';
+import { EMOJI_BASE_SIZE_PX } from '../shared/emojiConstants.ts';
 
 const EMOJI_PATTERN = /<(a?):([a-z0-9_]{2,32}):([a-zA-Z0-9]+)>/g;
 
@@ -54,7 +55,7 @@ export const CustomEmojiRenderer = memo(function CustomEmojiRenderer({
         const emoji = emojis?.find((e) => e.id === part.id);
         if (!emoji || failedIds.has(part.id)) return `:${part.name}:`;
         const attachmentId = emoji.imageUrl.replace('/media/', '');
-        const size = 20 * emojiScale;
+        const size = EMOJI_BASE_SIZE_PX * emojiScale;
         return (
           <img
             // biome-ignore lint/suspicious/noArrayIndexKey: parts are derived from regex splitting, no stable key available

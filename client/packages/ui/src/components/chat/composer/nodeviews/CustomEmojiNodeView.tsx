@@ -39,7 +39,7 @@ const CustomEmojiNodeView = memo(function CustomEmojiNodeView() {
     <img
       src={getMediaURL(attachmentId)}
       alt={`:${name}:`}
-      className="inline-block h-5 w-5 object-contain align-text-bottom"
+      className="inline-block h-6 w-6 object-contain align-text-bottom"
       draggable={false}
       contentEditable={false}
       onError={handleError}

@@ -48,9 +48,9 @@ interface KeyRotationContent {
 function iconForType(type: number): string {
   switch (type) {
     case MessageType.MEMBER_JOIN:
-      return '\u2192';
+      return '';
     case MessageType.MEMBER_LEAVE:
-      return '\u2190';
+      return '';
     case MessageType.MEMBER_KICK:
       return '\u26D4';
     case MessageType.CHANNEL_UPDATE:
@@ -109,9 +109,9 @@ function useSystemMessageText(
   switch (type) {
     case MessageType.MEMBER_JOIN: {
       const c = content as MemberEventContent | null;
-      if (!c?.user_id) return { icon: '\u2192', node: 'A member joined' };
+      if (!c?.user_id) return { icon: '', node: 'A member joined' };
       return {
-        icon: '\u2192',
+        icon: '',
         node: (
           <>
             <UserName userId={c.user_id} serverId={serverId} /> joined the
@@ -122,9 +122,9 @@ function useSystemMessageText(
     }
     case MessageType.MEMBER_LEAVE: {
       const c = content as MemberEventContent | null;
-      if (!c?.user_id) return { icon: '\u2190', node: 'A member left' };
+      if (!c?.user_id) return { icon: '', node: 'A member left' };
       return {
-        icon: '\u2190',
+        icon: '',
         node: (
           <>
             <UserName userId={c.user_id} serverId={serverId} /> left the
@@ -221,7 +221,7 @@ export const SystemMessage = memo(function SystemMessage({
     <div className="flex items-center justify-center gap-2 py-1 px-4">
       <div className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-1.5 text-xs text-text-muted whitespace-nowrap">
-        <span>{icon}</span>
+        {icon && <span>{icon}</span>}
         <span>{node}</span>
         {time && (
           <span className="text-text-subtle" title={toISO(time)}>
@@ -276,7 +276,6 @@ export const GroupedJoinMessage = memo(function GroupedJoinMessage({
     <div className="flex items-center justify-center gap-2 py-1 px-4">
       <div className="h-px flex-1 bg-border" />
       <span className="flex items-center gap-1.5 text-xs text-text-muted whitespace-nowrap">
-        <span>{'\u2192'}</span>
         <span>
           <UserName userId={userIds[0]} serverId={serverId} />
           {othersCount > 0 && (
