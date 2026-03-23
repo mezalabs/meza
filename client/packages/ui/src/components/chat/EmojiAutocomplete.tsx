@@ -140,7 +140,7 @@ export function EmojiAutocomplete({
           >
             {item.type === 'custom' ? (
               <img
-                src={getMediaURL(item.id)}
+                src={getMediaURL(item.imageUrl.replace('/media/', ''))}
                 alt={`:${item.name}:`}
                 className="h-6 w-6 object-contain"
                 loading="lazy"
