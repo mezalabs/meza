@@ -357,19 +357,18 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       (m) => m.userId === currentUserId,
     );
   });
-  // Show sync divergence indicators for users who can manage channels.
-  // Server owners always see them; for others, check role permissions.
+  // Show sync divergence indicators for users who can manage permissions.
+  // Server owners always see them; for others, check ManageRoles permission.
   const showSyncIndicators = useMemo(() => {
     if (!selectedServerId || !currentUserId) return false;
     if (selectedServer?.ownerId === currentUserId) return true;
-    // Check if any of the user's roles have ManageChannels permission
     const member = currentMember;
     if (!member) return false;
     const roles = useRoleStore.getState().byServer[selectedServerId] ?? [];
     for (const role of roles) {
       if (
         member.roleIds.includes(role.id) &&
-        (role.permissions & Permissions.MANAGE_CHANNELS) !== 0n
+        (role.permissions & Permissions.MANAGE_ROLES) !== 0n
       ) {
         return true;
       }
@@ -1387,10 +1386,10 @@ function SidebarChannelItem({
           </span>
           {showDiverged && (
             <span
-              className="shrink-0 text-warning"
+              className="shrink-0 text-text-subtle"
               title="Permissions diverged from category"
             >
-              <LinkBreakIcon size={14} aria-hidden="true" />
+              <LinkBreakIcon size={12} weight="fill" aria-hidden="true" />
             </span>
           )}
           {hasUnread && (
