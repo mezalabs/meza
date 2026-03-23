@@ -602,12 +602,11 @@ export function MessageComposer({
         {autocomplete.trigger === 'slash' && (
           <SlashCommandAutocomplete
             query={autocomplete.query}
-            onSelect={(name) => {
+            onSelect={(cmd) => {
               editorRef.current?.clear();
-              editorRef.current?.insertText(`/${name} `);
+              editorRef.current?.insertText(`/${cmd.name} `);
             }}
             onClose={() => editorRef.current?.focus()}
-            position={{ bottom: 48, left: 0 }}
           />
         )}
 
