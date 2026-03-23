@@ -65,7 +65,10 @@ export function AppearanceSection() {
     try {
       await resetDismissedTips();
       useOnboardingStore.getState().reset();
-      setFeedback({ type: 'success', message: 'Onboarding tips have been reset.' });
+      setFeedback({
+        type: 'success',
+        message: 'Onboarding tips have been reset.',
+      });
     } catch (err) {
       setFeedback({
         type: 'error',
