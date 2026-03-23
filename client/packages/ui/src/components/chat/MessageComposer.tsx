@@ -645,12 +645,12 @@ export function MessageComposer({
           </button>
 
           {/* ProseMirror composer editor */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: click closes emoji panel, editor inside handles keyboard */}
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: editor inside handles keyboard */}
           <div
             className="flex-1 overflow-y-auto"
             style={{ maxHeight: isMobile ? '80px' : '150px' }}
-            onClick={
-              mobileEmojiOpen ? onMobileEmojiClose : undefined
-            }
+            onClick={mobileEmojiOpen ? onMobileEmojiClose : undefined}
           >
             <Suspense
               fallback={
