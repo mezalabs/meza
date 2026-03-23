@@ -8,7 +8,7 @@ export class ChannelPage {
   constructor(page: Page) {
     this.page = page;
     this.messageList = page.locator('[data-testid="message-list"]');
-    this.composer = page.getByPlaceholder(/message #|type a message/i);
+    this.composer = page.locator('main .ProseMirror[role="textbox"]');
     this.sendButton = page.getByRole('button', { name: 'Send' });
   }
 
@@ -121,16 +121,11 @@ export class ChannelPage {
 
   /** Send a text message via the composer (Enter to send). */
   async sendMessage(text: string) {
-    await this.composer.fill(text);
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await this.composer.press('Enter');
-      const cleared = await expect(this.composer)
-        .toHaveValue('', { timeout: 5_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (cleared) return;
-    }
-    await expect(this.composer).toHaveValue('', { timeout: 5_000 });
+    await this.composer.click();
+    await this.composer.pressSequentially(text, { delay: 20 });
+    await this.composer.press('Enter');
+    // Wait for ProseMirror editor to clear after send
+    await expect(this.composer).not.toHaveText(text, { timeout: 5_000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -206,14 +201,16 @@ export class ChannelPage {
   /** Edit a message inline: click edit, clear, type new text, save. */
   async editMessage(oldText: string, newText: string) {
     await this.clickEdit(oldText);
-    // After clicking edit, the message container has a textarea.
-    // Use textarea filter instead of hasText (old text is replaced by new text).
+    // After clicking edit, the message container has a ProseMirror editor.
     const editContainer = this.messageList
       .locator('[data-message-id]')
-      .filter({ has: this.page.locator('textarea') });
-    const editArea = editContainer.locator('textarea');
-    await editArea.fill(newText);
-    await editContainer.getByRole('button', { name: 'Save' }).click();
+      .filter({ has: this.page.locator('.ProseMirror[role="textbox"]') });
+    const editArea = editContainer.locator('.ProseMirror[role="textbox"]');
+    await editArea.click();
+    await editArea.press('Control+a');
+    await editArea.pressSequentially(newText, { delay: 20 });
+    // Press Enter to save (UI: "escape to cancel · enter to save")
+    await editArea.press('Enter');
   }
 
   // ---------------------------------------------------------------------------
@@ -237,13 +234,12 @@ export class ChannelPage {
   /** Reply to a message. */
   async replyToMessage(messageText: string, replyText: string) {
     await this.clickReply(messageText);
-    // Composer placeholder changes to "Type a reply…"
-    const replyComposer = this.page.getByPlaceholder(/type a reply/i);
-    await expect(replyComposer).toBeVisible();
-    await replyComposer.fill(replyText);
-    await replyComposer.press('Enter');
+    // Wait for reply mode to activate (composer gains focus)
+    await this.composer.click();
+    await this.composer.pressSequentially(replyText, { delay: 20 });
+    await this.composer.press('Enter');
     // Wait for composer to clear
-    await expect(this.composer).toBeVisible({ timeout: 10_000 });
+    await expect(this.composer).not.toHaveText(replyText, { timeout: 10_000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -298,10 +294,8 @@ export class ChannelPage {
 
   /** Wait for encryption to initialize (composer placeholder stops saying "Setting up encryption"). */
   async waitForEncryption() {
-    await expect(this.composer).not.toHaveAttribute(
-      'placeholder',
-      /Setting up encryption/,
-      { timeout: 15_000 },
-    );
+    await expect(this.composer).not.toContainText('Setting up encryption', {
+      timeout: 15_000,
+    });
   }
 }

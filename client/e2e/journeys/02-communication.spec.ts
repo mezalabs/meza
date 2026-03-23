@@ -154,7 +154,8 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     await alicePage.waitForTimeout(3_000);
     await alice.composer.pressSequentially('typing test...', { delay: 30 });
     await bob.expectTypingIndicator();
-    await alice.composer.fill('');
+    await alice.composer.press('Control+a');
+    await alice.composer.press('Backspace');
   });
 
   // ---- Chapter: Search ----

@@ -55,7 +55,9 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(txtPath);
 
-    await alice.composer.fill(`file upload ${ts()}`);
+    const uploadMsg = `file upload ${ts()}`;
+    await alice.composer.click();
+    await alice.composer.pressSequentially(uploadMsg, { delay: 20 });
     await alice.composer.press('Enter');
 
     // Verify file appears in message list

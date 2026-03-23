@@ -115,24 +115,25 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await alicePage.getByText('e2e_bob').last().click({ button: 'right' });
     await alicePage.getByRole('menuitem', { name: 'Message' }).click();
 
-    // Wait for DM view to load (placeholder changes from "Message #general" to a DM placeholder)
-    const dmComposer = alicePage.locator('main textarea');
-    await expect(dmComposer.first()).toHaveAttribute(
-      'placeholder',
-      /Type a message|Setting up encryption|Encryption unavailable/,
-      { timeout: 15_000 },
-    );
+    // Wait for DM view to load (ProseMirror composer appears)
+    const dmComposer = alicePage.locator('main .ProseMirror[role="textbox"]');
+    await expect(dmComposer.first()).toBeVisible({ timeout: 15_000 });
 
-    // Wait for encryption to finish initializing (pending → ready)
-    await expect(dmComposer.first()).not.toHaveAttribute(
-      'placeholder',
-      /Setting up encryption|Encryption unavailable/,
-      { timeout: 15_000 },
+    // Wait for encryption to finish initializing (pending → ready).
+    // DM E2EE session bootstrap can be slow (key exchange + device verification).
+    await expect(dmComposer.first()).not.toContainText(
+      'Setting up encryption',
+      { timeout: 30_000 },
+    );
+    await expect(dmComposer.first()).not.toContainText(
+      'Encryption unavailable',
+      { timeout: 5_000 },
     );
 
     // Alice sends a DM
     const dmMsg = `DM from alice ${ts()}`;
-    await dmComposer.first().fill(dmMsg);
+    await dmComposer.first().click();
+    await dmComposer.first().pressSequentially(dmMsg, { delay: 20 });
     await dmComposer.first().press('Enter');
 
     // Verify alice sees her own message (confirms send succeeded)
@@ -159,12 +160,15 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await sidebar.getByText(/alice/i).first().click();
 
     // Wait for Bob's E2EE session to bootstrap and decrypt DM messages
-    const bobDmComposer = bobPage.locator('main textarea');
+    const bobDmComposer = bobPage.locator('main .ProseMirror[role="textbox"]');
     await expect(bobDmComposer.first()).toBeVisible({ timeout: 15_000 });
-    await expect(bobDmComposer.first()).not.toHaveAttribute(
-      'placeholder',
-      /Setting up encryption|Encryption unavailable/,
-      { timeout: 15_000 },
+    await expect(bobDmComposer.first()).not.toContainText(
+      'Setting up encryption',
+      { timeout: 30_000 },
+    );
+    await expect(bobDmComposer.first()).not.toContainText(
+      'Encryption unavailable',
+      { timeout: 5_000 },
     );
 
     await expect(bobPage.getByText(dmMsg)).toBeVisible({ timeout: 15_000 });
@@ -196,15 +200,24 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
       await searchInput.fill('e2e_alice');
       await charliePage.getByText('e2e_alice').first().click();
 
-      const composer = charliePage.locator('main textarea');
+      const composer = charliePage.locator('main .ProseMirror[role="textbox"]');
       await expect(composer.first()).toBeVisible({ timeout: 10_000 });
       // Wait until encryption is set up
-      await expect(composer.first()).not.toHaveAttribute(
-        'placeholder',
-        /Setting up encryption|Encryption unavailable/,
-        { timeout: 15_000 },
+      await expect(composer.first()).not.toContainText(
+        'Setting up encryption',
+        {
+          timeout: 30_000,
+        },
       );
-      await composer.first().fill(`Request from charlie ${ts()}`);
+      await expect(composer.first()).not.toContainText(
+        'Encryption unavailable',
+        {
+          timeout: 5_000,
+        },
+      );
+      const charlieMsg = `Request from charlie ${ts()}`;
+      await composer.first().click();
+      await composer.first().pressSequentially(charlieMsg, { delay: 20 });
       await composer.first().press('Enter');
     }
 
