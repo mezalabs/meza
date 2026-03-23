@@ -289,11 +289,11 @@ export function ChannelView({
   const handleMobileEmojiToggle = useCallback(() => {
     setMobileEmojiOpen((prev) => {
       if (!prev) {
-        // Opening picker: dismiss keyboard
+        // Opening picker: dismiss keyboard and blur editor so that
+        // tapping the composer later triggers a fresh focus + keyboard.
         hideKeyboard();
-        // Also blur textarea to ensure keyboard hides on web
         const active = document.activeElement;
-        if (active instanceof HTMLTextAreaElement) active.blur();
+        if (active instanceof HTMLElement) active.blur();
       }
       return !prev;
     });

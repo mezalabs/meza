@@ -645,6 +645,9 @@ export function MessageComposer({
           <div
             className="flex-1 overflow-y-auto"
             style={{ maxHeight: isMobile ? '80px' : '150px' }}
+            onClick={
+              mobileEmojiOpen ? onMobileEmojiToggle : undefined
+            }
           >
             <Suspense
               fallback={
@@ -696,6 +699,9 @@ export function MessageComposer({
           {isMobile && (
             <button
               type="button"
+              // Prevent the button from stealing focus so the keyboard
+              // doesn't briefly dismiss and reopen after sending.
+              onPointerDown={(e) => e.preventDefault()}
               onClick={() => editorRef.current?.send()}
               disabled={sending || disabled}
               className="flex-shrink-0 self-start mt-5 mr-5 text-accent disabled:text-text-subtle transition-colors"
