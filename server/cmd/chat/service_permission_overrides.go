@@ -139,21 +139,9 @@ func (s *chatService) SetPermissionOverride(ctx context.Context, req *connect.Re
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot set overrides for the server owner"))
 		}
 		// Hierarchy check: caller's max role position must exceed target user's max role position.
-		targetMember, err := s.chatStore.GetMember(ctx, req.Msg.UserId, serverID)
+		targetMaxPos, err := s.getUserMaxRolePosition(ctx, req.Msg.UserId, serverID)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		targetMaxPos := 0
-		if len(targetMember.RoleIDs) > 0 {
-			targetRoles, err := s.roleStore.GetRolesByIDs(ctx, targetMember.RoleIDs, serverID)
-			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			for _, r := range targetRoles {
-				if r.Position > targetMaxPos {
-					targetMaxPos = r.Position
-				}
-			}
 		}
 		if callerPos <= targetMaxPos && userID != srv.OwnerID {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot set overrides for a user at or above your role position"))
@@ -318,28 +306,14 @@ func (s *chatService) DeletePermissionOverride(ctx context.Context, req *connect
 		if req.Msg.UserId == srv.OwnerID {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot delete overrides for the server owner"))
 		}
-		targetMember, err := s.chatStore.GetMember(ctx, req.Msg.UserId, serverID)
+		targetMaxPos, err := s.getUserMaxRolePosition(ctx, req.Msg.UserId, serverID)
 		if err != nil {
 			// Member may have left — tolerate and allow deletion.
 			if !errors.Is(err, store.ErrNotFound) {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 			}
-		} else {
-			targetMaxPos := 0
-			if len(targetMember.RoleIDs) > 0 {
-				targetRoles, err := s.roleStore.GetRolesByIDs(ctx, targetMember.RoleIDs, serverID)
-				if err != nil {
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				for _, r := range targetRoles {
-					if r.Position > targetMaxPos {
-						targetMaxPos = r.Position
-					}
-				}
-			}
-			if callerPos <= targetMaxPos && userID != srv.OwnerID {
-				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot delete overrides for a user at or above your role position"))
-			}
+		} else if callerPos <= targetMaxPos && userID != srv.OwnerID {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot delete overrides for a user at or above your role position"))
 		}
 
 		if err := s.permissionOverrideStore.DeleteOverrideByUser(ctx, req.Msg.TargetId, req.Msg.UserId); err != nil {
@@ -443,25 +417,13 @@ func (s *chatService) SyncChannelPermissions(ctx context.Context, req *connect.R
 			}
 		}
 		if o.UserID != "" {
-			targetMember, err := s.chatStore.GetMember(ctx, o.UserID, ch.ServerID)
+			targetMaxPos, err := s.getUserMaxRolePosition(ctx, o.UserID, ch.ServerID)
 			if err != nil {
 				if !errors.Is(err, store.ErrNotFound) {
 					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 				}
 				// Member left — tolerate.
 				continue
-			}
-			targetMaxPos := 0
-			if len(targetMember.RoleIDs) > 0 {
-				targetRoles, err := s.roleStore.GetRolesByIDs(ctx, targetMember.RoleIDs, ch.ServerID)
-				if err != nil {
-					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-				}
-				for _, r := range targetRoles {
-					if r.Position > targetMaxPos {
-						targetMaxPos = r.Position
-					}
-				}
 			}
 			if callerPos <= targetMaxPos && userID != srv.OwnerID {
 				return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot sync: channel has overrides for a user at or above your role position"))
@@ -522,6 +484,28 @@ func (s *chatService) SyncChannelPermissions(ctx context.Context, req *connect.R
 	return connect.NewResponse(&v1.SyncChannelPermissionsResponse{
 		Channel: channelToProto(updated),
 	}), nil
+}
+
+// getUserMaxRolePosition returns the maximum role position for the given user in the given server.
+// If the user is not a member (e.g. left), it returns 0, store.ErrNotFound.
+func (s *chatService) getUserMaxRolePosition(ctx context.Context, userID, serverID string) (int, error) {
+	member, err := s.chatStore.GetMember(ctx, userID, serverID)
+	if err != nil {
+		return 0, err
+	}
+	maxPos := 0
+	if len(member.RoleIDs) > 0 {
+		roles, err := s.roleStore.GetRolesByIDs(ctx, member.RoleIDs, serverID)
+		if err != nil {
+			return 0, err
+		}
+		for _, r := range roles {
+			if r.Position > maxPos {
+				maxPos = r.Position
+			}
+		}
+	}
+	return maxPos, nil
 }
 
 func (s *chatService) ListPermissionOverrides(ctx context.Context, req *connect.Request[v1.ListPermissionOverridesRequest]) (*connect.Response[v1.ListPermissionOverridesResponse], error) {

@@ -5,7 +5,6 @@ import {
 } from '@phosphor-icons/react';
 
 interface SyncStatusBannerProps {
-  channelId: string;
   channelGroupId?: string;
   permissionsSynced?: boolean;
   categoryName?: string;

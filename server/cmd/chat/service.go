@@ -2085,11 +2085,17 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 		if oldGroup != "" && newGroup == "" {
 			// Moving OUT of category: if synced, snapshot category overrides.
 			if ch.PermissionsSynced {
+				// Snapshot creates new override rows — require ManageRoles.
+				if _, _, _, permErr := s.requirePermission(ctx, userID, ch.ServerID, permissions.ManageRoles); permErr != nil {
+					return nil, permErr
+				}
 				if err := s.permissionOverrideStore.CopyCategoryOverridesToChannel(ctx, oldGroup, req.Msg.ChannelId); err != nil {
 					slog.Error("copying category overrides on group removal", "err", err, "channel", req.Msg.ChannelId)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 				}
 				if err := s.chatStore.SetPermissionsSynced(ctx, req.Msg.ChannelId, false); err != nil {
 					slog.Error("unsyncing channel on group removal", "err", err, "channel", req.Msg.ChannelId)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 				}
 				updated.PermissionsSynced = false
 			}
@@ -2097,6 +2103,7 @@ func (s *chatService) UpdateChannel(ctx context.Context, req *connect.Request[v1
 			// Moving IN to a (new) category: mark as unsynced.
 			if err := s.chatStore.SetPermissionsSynced(ctx, req.Msg.ChannelId, false); err != nil {
 				slog.Error("unsyncing channel on group change", "err", err, "channel", req.Msg.ChannelId)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 			}
 			updated.PermissionsSynced = false
 		}

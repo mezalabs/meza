@@ -1014,9 +1014,6 @@ func (m *mockPermissionOverrideStore) DeleteOverride(_ context.Context, _, _ str
 func (m *mockPermissionOverrideStore) ListOverridesByTarget(_ context.Context, _ string) ([]*models.PermissionOverride, error) {
 	return nil, nil
 }
-func (m *mockPermissionOverrideStore) GetEffectiveOverrides(_ context.Context, _ string, _ []string) (int64, int64, int64, int64, error) {
-	return 0, 0, 0, 0, nil
-}
 func (m *mockPermissionOverrideStore) GetAllOverridesForChannel(_ context.Context, _ string, _ []string, _ string) (*store.ChannelOverrides, error) {
 	return &store.ChannelOverrides{}, nil
 }

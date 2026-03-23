@@ -785,7 +785,6 @@ export function ChannelOverrideEditor({
       </div>
 
       <SyncStatusBanner
-        channelId={channelId}
         channelGroupId={channel?.channelGroupId}
         permissionsSynced={channel?.permissionsSynced}
         categoryName={categoryName}

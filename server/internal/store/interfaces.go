@@ -349,7 +349,6 @@ type PermissionOverrideStorer interface {
 	DeleteOverride(ctx context.Context, targetID, roleID string) error
 	DeleteOverrideByUser(ctx context.Context, targetID, userID string) error
 	ListOverridesByTarget(ctx context.Context, targetID string) ([]*models.PermissionOverride, error)
-	GetEffectiveOverrides(ctx context.Context, channelID string, roleIDs []string) (groupAllow, groupDeny, channelAllow, channelDeny int64, err error)
 	DeleteAllChannelOverrides(ctx context.Context, channelID string) error
 	CopyCategoryOverridesToChannel(ctx context.Context, channelGroupID, channelID string) error
 	// GetAllOverridesForChannel returns all overrides for a channel (split by group/channel,
