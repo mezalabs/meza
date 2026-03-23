@@ -138,9 +138,7 @@ export async function acceptBotInvite(
   }
 }
 
-export async function listBotInvites(
-  botId: string,
-): Promise<BotInvite[]> {
+export async function listBotInvites(botId: string): Promise<BotInvite[]> {
   try {
     const res = await chatClient.listBotInvites({ botId });
     return res.invites;
@@ -174,9 +172,7 @@ export async function createIncomingWebhook(
   }
 }
 
-export async function deleteIncomingWebhook(
-  webhookId: string,
-): Promise<void> {
+export async function deleteIncomingWebhook(webhookId: string): Promise<void> {
   try {
     await chatClient.deleteIncomingWebhook({ webhookId });
   } catch (err) {

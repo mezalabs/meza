@@ -97,7 +97,8 @@ export function IncomingWebhookManagement({
         newChannelId,
       );
       if (result?.webhook) {
-        setWebhooks((prev) => [...prev, result.webhook!]);
+        const wh = result.webhook;
+        setWebhooks((prev) => [...prev, wh]);
         setCreatedWebhook({
           id: result.webhook.id,
           url: buildWebhookUrl(result.webhook.id),
@@ -249,9 +250,7 @@ export function IncomingWebhookManagement({
                 ))}
               </select>
             </div>
-            {createError && (
-              <p className="text-xs text-error">{createError}</p>
-            )}
+            {createError && <p className="text-xs text-error">{createError}</p>}
             <div className="flex justify-end gap-2">
               <button
                 type="button"

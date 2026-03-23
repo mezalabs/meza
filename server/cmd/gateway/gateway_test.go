@@ -253,7 +253,7 @@ func setupGatewayTest(t *testing.T, userID string, channelIDs []string) (*httpte
 	// Dummy chat client (won't be used in most tests)
 	chatClient := mezav1connect.NewChatServiceClient(http.DefaultClient, "http://localhost:1")
 
-	gw := NewGateway(chatStore, &mockReadStateStoreGW{}, &mockMessageStoreGW{}, chatClient, nc, "*", nil)
+	gw := NewGateway(chatStore, &mockReadStateStoreGW{}, &mockMessageStoreGW{}, chatClient, nc, "*", nil, nil)
 	gw.ed25519Keys = testutil.TestEd25519Keys
 	gw.verificationCache = auth.NewVerificationCache()
 	ctx, cancel := context.WithCancel(context.Background())

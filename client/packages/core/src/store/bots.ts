@@ -16,9 +16,7 @@ export interface BotActions {
     displayName: string,
   ) => Promise<Awaited<ReturnType<typeof botsApi.createBot>>>;
   deleteBot: (botId: string) => Promise<void>;
-  regenerateToken: (
-    botId: string,
-  ) => Promise<{ token: string } | undefined>;
+  regenerateToken: (botId: string) => Promise<{ token: string } | undefined>;
   updateBot: (
     botId: string,
     fields: { displayName?: string; description?: string; avatarUrl?: string },
@@ -27,7 +25,7 @@ export interface BotActions {
 }
 
 export const useBotStore = create<BotState & BotActions>()(
-  immer((set, get) => ({
+  immer((set) => ({
     bots: [],
     loading: false,
     error: null,
@@ -59,8 +57,9 @@ export const useBotStore = create<BotState & BotActions>()(
       try {
         const result = await botsApi.createBot(username, displayName);
         if (result?.bot) {
+          const bot = result.bot;
           set((state) => {
-            state.bots.push(result.bot!);
+            state.bots.push(bot);
           });
         }
         return result;
