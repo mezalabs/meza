@@ -41,7 +41,17 @@ export function WebLandingPage() {
           </div>
 
           {/* Footer */}
-          <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
+          <div className="flex flex-col items-center gap-2">
+            <a
+              href="https://meza.chat/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-text-muted transition-colors hover:text-text"
+            >
+              Privacy Policy
+            </a>
+            <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
+          </div>
         </div>
       </div>
     </IconContext.Provider>
