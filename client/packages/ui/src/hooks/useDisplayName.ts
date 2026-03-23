@@ -1,4 +1,10 @@
-import { useAuthStore, useMemberStore, useUsersStore } from '@meza/core';
+import { useEffect } from 'react';
+import {
+  getProfile,
+  useAuthStore,
+  useMemberStore,
+  useUsersStore,
+} from '@meza/core';
 
 /**
  * Resolve a user ID to a human-readable display name (non-hook version).
@@ -29,8 +35,14 @@ export function resolveDisplayName(userId: string, serverId?: string): string {
   return userId.slice(0, 8);
 }
 
+/** Track in-flight fetches so we don't fire duplicate requests. */
+const fetchingProfiles = new Set<string>();
+
 /**
  * React hook version of resolveDisplayName — subscribes to store changes.
+ *
+ * When no cached profile exists, triggers a background fetch so the
+ * component re-renders with the real display name once it arrives.
  */
 export function useDisplayName(userId: string, serverId?: string): string {
   const memberNickname = useMemberStore((s) => {
@@ -50,5 +62,16 @@ export function useDisplayName(userId: string, serverId?: string): string {
     return profile.displayName || profile.username;
   });
 
-  return memberNickname || authName || cachedName || userId.slice(0, 8);
+  const resolved = memberNickname || authName || cachedName;
+
+  // Lazily fetch the profile when it's not in any store yet.
+  useEffect(() => {
+    if (resolved || !userId || fetchingProfiles.has(userId)) return;
+    fetchingProfiles.add(userId);
+    getProfile(userId)
+      .catch(() => {})
+      .finally(() => fetchingProfiles.delete(userId));
+  }, [userId, resolved]);
+
+  return resolved || userId.slice(0, 8);
 }
