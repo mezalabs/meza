@@ -1,7 +1,7 @@
 import {
   ArrowsClockwiseIcon,
-  InfoIcon,
-  WarningIcon,
+  LinkBreakIcon,
+  LinkIcon,
 } from '@phosphor-icons/react';
 
 interface SyncStatusBannerProps {
@@ -10,6 +10,7 @@ interface SyncStatusBannerProps {
   categoryName?: string;
   onSync: () => void;
   isSyncing?: boolean;
+  channelOverrideCount?: number;
 }
 
 export function SyncStatusBanner({
@@ -18,6 +19,7 @@ export function SyncStatusBanner({
   categoryName,
   onSync,
   isSyncing,
+  channelOverrideCount,
 }: SyncStatusBannerProps) {
   // No category assigned — nothing to show
   if (!channelGroupId) return null;
@@ -26,43 +28,60 @@ export function SyncStatusBanner({
 
   if (permissionsSynced) {
     return (
-      <div className="mb-4 flex items-center gap-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2">
-        <InfoIcon
-          size={18}
-          className="shrink-0 text-accent"
+      <div className="mb-4 flex items-start gap-3 rounded-md border border-accent/20 bg-accent/5 px-3.5 py-2.5">
+        <LinkIcon
+          size={16}
+          weight="bold"
+          className="mt-0.5 shrink-0 text-accent-muted"
           aria-hidden="true"
         />
-        <span className="text-sm text-text">
-          Permissions synced with <strong>{displayName}</strong>
-        </span>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-text">
+            Synced with {displayName}
+          </p>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Permission changes to the category automatically apply to this
+            channel. Add an override below to diverge.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <WarningIcon
-          size={18}
-          className="shrink-0 text-warning"
+    <div className="mb-4 flex items-start justify-between gap-3 rounded-md border border-warning/20 bg-warning/5 px-3.5 py-2.5">
+      <div className="flex items-start gap-3">
+        <LinkBreakIcon
+          size={16}
+          weight="bold"
+          className="mt-0.5 shrink-0 text-warning"
           aria-hidden="true"
         />
-        <span className="text-sm text-warning">
-          Permissions diverged from <strong>{displayName}</strong>
-        </span>
+        <div>
+          <p className="text-sm font-medium text-text">
+            Diverged from {displayName}
+          </p>
+          <p className="mt-0.5 text-xs text-text-muted">
+            This channel has{' '}
+            {channelOverrideCount !== undefined && channelOverrideCount > 0
+              ? `${channelOverrideCount} custom ${channelOverrideCount === 1 ? 'override' : 'overrides'}`
+              : 'custom overrides'}{' '}
+            that differ from the category.
+          </p>
+        </div>
       </div>
       <button
         type="button"
         disabled={isSyncing}
         onClick={onSync}
-        className="flex items-center gap-1.5 rounded-md bg-warning/10 px-3 py-1.5 text-sm font-medium text-warning hover:bg-warning/20 disabled:opacity-50"
+        className="mt-0.5 flex shrink-0 items-center gap-1.5 rounded-md border border-warning/30 px-2.5 py-1 text-xs font-medium text-warning transition-colors hover:bg-warning/10 disabled:opacity-50"
       >
         <ArrowsClockwiseIcon
-          size={14}
+          size={12}
           className={isSyncing ? 'animate-spin' : ''}
           aria-hidden="true"
         />
-        {isSyncing ? 'Syncing...' : 'Sync Permissions'}
+        {isSyncing ? 'Syncing...' : 'Sync'}
       </button>
     </div>
   );

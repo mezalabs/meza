@@ -828,6 +828,7 @@ export function ChannelOverrideEditor({
           categoryName={categoryName}
           onSync={() => setSyncDialogOpen(true)}
           isSyncing={isSyncing}
+          channelOverrideCount={overrides.length}
         />
       )}
 
@@ -848,22 +849,43 @@ export function ChannelOverrideEditor({
         channel?.permissionsSynced &&
         channel?.channelGroupId &&
         categoryOverrides.length > 0 && (
-          <div className="mb-4 rounded-md border border-border/50 bg-bg-surface/50 p-3">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-subtle">
+          <div className="mb-4 rounded-md border border-border/50 bg-bg-surface/30 p-4">
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-subtle">
               Inherited from {categoryName ?? 'Category'}
             </h3>
-            <div className="flex flex-col gap-1.5">
-              {categoryOverrides
-                .filter((o) => o.roleId !== '')
-                .map((o) => {
-                  const role = roles.find((r) => r.id === o.roleId);
-                  const name =
-                    o.roleId === serverId
-                      ? '@everyone'
-                      : (role?.name ?? o.roleId);
-                  return (
-                    <div key={o.id} className="flex items-center gap-2 text-sm">
-                      {role && o.roleId !== serverId && (
+            <div className="flex flex-col gap-3">
+              {categoryOverrides.map((o) => {
+                const isRole = o.roleId !== '';
+                const role = isRole
+                  ? roles.find((r) => r.id === o.roleId)
+                  : undefined;
+                const member = !isRole
+                  ? members?.find((m) => m.userId === o.userId)
+                  : undefined;
+                const displayName = isRole
+                  ? o.roleId === serverId
+                    ? '@everyone'
+                    : (role?.name ?? o.roleId)
+                  : member?.nickname || member?.userId || o.userId;
+
+                // Extract permission names from bitfields
+                const permKeys = Object.keys(Permissions) as Array<
+                  keyof typeof Permissions
+                >;
+                const allowed = permKeys.filter(
+                  (k) => (o.allow & Permissions[k]) !== 0n,
+                );
+                const denied = permKeys.filter(
+                  (k) => (o.deny & Permissions[k]) !== 0n,
+                );
+
+                return (
+                  <div
+                    key={o.id}
+                    className="rounded-md border border-border/30 bg-bg-base/50 px-3 py-2.5"
+                  >
+                    <div className="mb-1.5 flex items-center gap-2">
+                      {isRole && role && o.roleId !== serverId && (
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{
@@ -871,45 +893,41 @@ export function ChannelOverrideEditor({
                           }}
                         />
                       )}
-                      <span className="font-medium text-text">{name}</span>
-                      <span className="text-text-subtle">
-                        {o.allow !== 0n && o.deny !== 0n
-                          ? 'allow + deny'
-                          : o.allow !== 0n
-                            ? 'allow'
-                            : o.deny !== 0n
-                              ? 'deny'
-                              : 'neutral'}
+                      <span className="text-sm font-medium text-text">
+                        {displayName}
                       </span>
                     </div>
-                  );
-                })}
-              {categoryOverrides
-                .filter((o) => o.userId !== '')
-                .map((o) => {
-                  const member = members?.find((m) => m.userId === o.userId);
-                  return (
-                    <div key={o.id} className="flex items-center gap-2 text-sm">
-                      <span className="font-medium text-text">
-                        {member?.nickname || member?.userId || o.userId}
-                      </span>
-                      <span className="text-text-subtle">
-                        {o.allow !== 0n && o.deny !== 0n
-                          ? 'allow + deny'
-                          : o.allow !== 0n
-                            ? 'allow'
-                            : o.deny !== 0n
-                              ? 'deny'
-                              : 'neutral'}
-                      </span>
-                    </div>
-                  );
-                })}
+                    {allowed.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {allowed.map((k) => (
+                          <span
+                            key={k}
+                            className="rounded bg-success/10 px-1.5 py-0.5 text-xs text-success"
+                          >
+                            {PERMISSION_INFO[k]?.name ?? k}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {denied.length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {denied.map((k) => (
+                          <span
+                            key={k}
+                            className="rounded bg-error/10 px-1.5 py-0.5 text-xs text-error"
+                          >
+                            {PERMISSION_INFO[k]?.name ?? k}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <p className="mt-2 text-xs text-text-muted">
-              These overrides are inherited from the category. Edit the category
-              to change them, or add channel-specific overrides below to
-              diverge.
+            <p className="mt-3 text-xs text-text-muted">
+              These are inherited from the category. Add channel-specific
+              overrides below to diverge.
             </p>
           </div>
         )}
