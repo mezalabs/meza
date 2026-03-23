@@ -423,9 +423,12 @@ export const ComposerEditor = forwardRef<
         const range = autocompleteRangeRef.current;
         if (!view || view.isDestroyed || !range) return;
         const node = composerSchema.nodes.mention.create({ id, type });
-        const tr = view.state.tr.replaceWith(range.from, range.to, node);
-        view.dispatch(tr.scrollIntoView());
-        closeAcPlugin(view); // Tell the plugin to deactivate its decoration
+        const space = composerSchema.text(' ');
+        const tr = view.state.tr
+          .replaceWith(range.from, range.to, [node, space])
+          .scrollIntoView();
+        view.dispatch(tr);
+        closeAcPlugin(view);
         autocompleteRangeRef.current = null;
         view.focus();
       },
@@ -438,8 +441,11 @@ export const ComposerEditor = forwardRef<
           name,
           animated,
         });
-        const tr = view.state.tr.replaceWith(range.from, range.to, node);
-        view.dispatch(tr.scrollIntoView());
+        const space = composerSchema.text(' ');
+        const tr = view.state.tr
+          .replaceWith(range.from, range.to, [node, space])
+          .scrollIntoView();
+        view.dispatch(tr);
         closeAcPlugin(view);
         autocompleteRangeRef.current = null;
         view.focus();
@@ -449,8 +455,11 @@ export const ComposerEditor = forwardRef<
         const range = autocompleteRangeRef.current;
         if (!view || view.isDestroyed || !range) return;
         const node = composerSchema.nodes.channelLink.create({ id });
-        const tr = view.state.tr.replaceWith(range.from, range.to, node);
-        view.dispatch(tr.scrollIntoView());
+        const space = composerSchema.text(' ');
+        const tr = view.state.tr
+          .replaceWith(range.from, range.to, [node, space])
+          .scrollIntoView();
+        view.dispatch(tr);
         closeAcPlugin(view);
         autocompleteRangeRef.current = null;
         view.focus();
