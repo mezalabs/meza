@@ -93,10 +93,10 @@ func (s *ChatStore) GetServer(ctx context.Context, serverID string) (*models.Ser
 
 	var srv models.Server
 	err := s.pool.QueryRow(ctx,
-		`SELECT id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy
+		`SELECT id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy, banner_url
 		 FROM servers WHERE id = $1`, serverID,
 	).Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
-		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy)
+		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy, &srv.BannerURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("server not found")
@@ -112,7 +112,7 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 
 	rows, err := s.pool.Query(ctx,
 		`SELECT s.id, s.name, s.icon_url, s.owner_id, s.created_at,
-		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy
+		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy, s.banner_url
 		 FROM servers s JOIN members m ON m.server_id = s.id
 		 WHERE m.user_id = $1
 		 ORDER BY s.created_at`, userID,
@@ -126,7 +126,7 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 	for rows.Next() {
 		var srv models.Server
 		if err := rows.Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
-			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy); err != nil {
+			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy, &srv.BannerURL); err != nil {
 			return nil, fmt.Errorf("scan server: %w", err)
 		}
 		servers = append(servers, &srv)
@@ -1418,7 +1418,7 @@ func scanDMChannelsWithParticipants(rows pgx.Rows) ([]*models.DMChannelWithParti
 	return result, rows.Err()
 }
 
-func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool) (*models.Server, error) {
+func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, bannerURL *string) (*models.Server, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
@@ -1461,13 +1461,18 @@ func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, ico
 		args = append(args, *defaultChannelPrivacy)
 		argIdx++
 	}
+	if bannerURL != nil {
+		setClauses = append(setClauses, fmt.Sprintf("banner_url = $%d", argIdx))
+		args = append(args, *bannerURL)
+		argIdx++
+	}
 
 	if len(setClauses) == 0 {
 		return s.GetServer(ctx, serverID)
 	}
 
 	query := fmt.Sprintf(
-		"UPDATE servers SET %s WHERE id = $%d RETURNING id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy",
+		"UPDATE servers SET %s WHERE id = $%d RETURNING id, name, icon_url, owner_id, created_at, welcome_message, rules, onboarding_enabled, rules_required, default_channel_privacy, banner_url",
 		strings.Join(setClauses, ", "),
 		argIdx,
 	)
@@ -1476,7 +1481,7 @@ func (s *ChatStore) UpdateServer(ctx context.Context, serverID string, name, ico
 	var srv models.Server
 	err := s.pool.QueryRow(ctx, query, args...).Scan(
 		&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
-		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy,
+		&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy, &srv.BannerURL,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

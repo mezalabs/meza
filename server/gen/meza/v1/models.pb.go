@@ -390,6 +390,7 @@ type Server struct {
 	OnboardingEnabled     bool                   `protobuf:"varint,8,opt,name=onboarding_enabled,json=onboardingEnabled,proto3" json:"onboarding_enabled,omitempty"`
 	RulesRequired         bool                   `protobuf:"varint,9,opt,name=rules_required,json=rulesRequired,proto3" json:"rules_required,omitempty"`
 	DefaultChannelPrivacy bool                   `protobuf:"varint,10,opt,name=default_channel_privacy,json=defaultChannelPrivacy,proto3" json:"default_channel_privacy,omitempty"`
+	BannerUrl             string                 `protobuf:"bytes,11,opt,name=banner_url,json=bannerUrl,proto3" json:"banner_url,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -492,6 +493,13 @@ func (x *Server) GetDefaultChannelPrivacy() bool {
 		return x.DefaultChannelPrivacy
 	}
 	return false
+}
+
+func (x *Server) GetBannerUrl() string {
+	if x != nil {
+		return x.BannerUrl
+	}
+	return ""
 }
 
 type Channel struct {
@@ -2538,7 +2546,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x0eUserConnection\x12\x1a\n" +
 	"\bplatform\x18\x01 \x01(\tR\bplatform\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x14\n" +
-	"\x05label\x18\x03 \x01(\tR\x05label\"\xea\x02\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\"\x89\x03\n" +
 	"\x06Server\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x19\n" +
@@ -2551,7 +2559,9 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x12onboarding_enabled\x18\b \x01(\bR\x11onboardingEnabled\x12%\n" +
 	"\x0erules_required\x18\t \x01(\bR\rrulesRequired\x126\n" +
 	"\x17default_channel_privacy\x18\n" +
-	" \x01(\bR\x15defaultChannelPrivacy\"\xde\x05\n" +
+	" \x01(\bR\x15defaultChannelPrivacy\x12\x1d\n" +
+	"\n" +
+	"banner_url\x18\v \x01(\tR\tbannerUrl\"\xde\x05\n" +
 	"\aChannel\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tserver_id\x18\x02 \x01(\tR\bserverId\x12\x12\n" +

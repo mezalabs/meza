@@ -7,6 +7,7 @@ import {
   getBaseUrl,
   getBulkPresence,
   getDMDisplayName,
+  getMediaURL,
   isGroupDM,
   listChannelGroups,
   listChannels,
@@ -55,6 +56,7 @@ import {
   VideoCameraIcon,
   WrenchIcon,
 } from '@phosphor-icons/react';
+import * as Popover from '@radix-ui/react-popover';
 import { ParticipantEvent } from 'livekit-client';
 import {
   type ReactNode,
@@ -580,68 +582,112 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             </>
           ) : (
             <>
-              {/* Server name + settings */}
-              {selectedServerId && servers[selectedServerId] && (
-                <div className="mb-3 flex items-center justify-between gap-3 pl-2">
-                  <h2 className="text-base font-semibold text-text truncate">
-                    {servers[selectedServerId].name}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPaneContent(focusedPaneId, {
-                        type: 'serverSettings',
-                        serverId: selectedServerId,
-                      })
-                    }
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Server settings"
-                    title="Server settings"
-                  >
-                    <WrenchIcon size={22} aria-hidden="true" />
-                  </button>
-                </div>
-              )}
-
-              {/* Action buttons row */}
-              {selectedServerId && (
-                <div className="mb-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openSearchPane()}
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Search messages"
-                    title="Search messages (Ctrl+K)"
-                  >
-                    <MagnifyingGlassIcon size={22} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInviteOpen(true)}
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Invite people"
-                    title="Invite people"
-                  >
-                    <UserPlusIcon size={22} aria-hidden="true" />
-                  </button>
-                  {servers[selectedServerId]?.onboardingEnabled && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPaneContent(focusedPaneId, {
-                          type: 'serverOnboarding',
-                          serverId: selectedServerId,
-                        })
-                      }
-                      className="p-1 text-sm text-text-subtle hover:text-accent transition-colors"
-                      aria-label="About this server"
-                      title="About this server"
-                    >
-                      <BookOpenIcon size={14} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              )}
+              {/* Server banner + header dropdown */}
+              {selectedServerId && servers[selectedServerId] && (() => {
+                const srv = servers[selectedServerId];
+                const bannerAttachmentId = srv.bannerUrl?.match(/^\/media\/([^/?]+)/)?.[1];
+                const bannerSrc = bannerAttachmentId
+                  ? getMediaURL(bannerAttachmentId, true)
+                  : undefined;
+                return (
+                  <>
+                    {bannerSrc && (
+                      <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
+                        <img
+                          src={bannerSrc}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-bg-base to-transparent" />
+                      </div>
+                    )}
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between px-2 py-2 rounded-md hover:bg-bg-surface-hover transition-colors"
+                        >
+                          <h2 className="text-base font-semibold text-text truncate">
+                            {srv.name}
+                          </h2>
+                          <CaretDownIcon
+                            size={14}
+                            className="flex-shrink-0 text-text-muted"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          className="w-[220px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in z-50"
+                          sideOffset={4}
+                          align="start"
+                        >
+                          <Popover.Close asChild>
+                            <button
+                              type="button"
+                              onClick={() => setInviteOpen(true)}
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-text hover:bg-accent-subtle transition-colors"
+                            >
+                              <UserPlusIcon size={16} aria-hidden="true" />
+                              Invite People
+                            </button>
+                          </Popover.Close>
+                          <Popover.Close asChild>
+                            <button
+                              type="button"
+                              onClick={() => openSearchPane()}
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-text hover:bg-accent-subtle transition-colors"
+                            >
+                              <MagnifyingGlassIcon
+                                size={16}
+                                aria-hidden="true"
+                              />
+                              Search
+                            </button>
+                          </Popover.Close>
+                          {srv.onboardingEnabled && (
+                            <Popover.Close asChild>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPaneContent(focusedPaneId, {
+                                    type: 'serverOnboarding',
+                                    serverId: selectedServerId,
+                                  })
+                                }
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-text hover:bg-accent-subtle transition-colors"
+                              >
+                                <BookOpenIcon
+                                  size={16}
+                                  aria-hidden="true"
+                                />
+                                About This Server
+                              </button>
+                            </Popover.Close>
+                          )}
+                          <div className="my-1 h-px bg-border" />
+                          <Popover.Close asChild>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPaneContent(focusedPaneId, {
+                                  type: 'serverSettings',
+                                  serverId: selectedServerId,
+                                })
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm text-text hover:bg-accent-subtle transition-colors"
+                            >
+                              <WrenchIcon size={16} aria-hidden="true" />
+                              Server Settings
+                            </button>
+                          </Popover.Close>
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </>
+                );
+              })()}
 
               {rulesBlocked ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">

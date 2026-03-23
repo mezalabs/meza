@@ -139,6 +139,8 @@ func purposeToString(p v1.UploadPurpose) string {
 		return "profile_banner"
 	case v1.UploadPurpose_UPLOAD_PURPOSE_SERVER_ICON:
 		return "server_icon"
+	case v1.UploadPurpose_UPLOAD_PURPOSE_SERVER_BANNER:
+		return "server_banner"
 	case v1.UploadPurpose_UPLOAD_PURPOSE_SERVER_EMOJI:
 		return "server_emoji"
 	case v1.UploadPurpose_UPLOAD_PURPOSE_SOUNDBOARD:

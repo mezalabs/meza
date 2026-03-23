@@ -396,7 +396,7 @@ func (m *mockChatStore) ListMemberUserIDs(_ context.Context, serverID string) ([
 	}
 	return nil, nil
 }
-func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool) (*models.Server, error) {
+func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, bannerURL *string) (*models.Server, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -424,6 +424,9 @@ func (m *mockChatStore) UpdateServer(_ context.Context, serverID string, name, i
 	}
 	if defaultChannelPrivacy != nil {
 		srv.DefaultChannelPrivacy = *defaultChannelPrivacy
+	}
+	if bannerURL != nil {
+		srv.BannerURL = bannerURL
 	}
 	return srv, nil
 }

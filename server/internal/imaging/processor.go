@@ -21,7 +21,7 @@ func MaxDimension(purpose string) int {
 		return 128
 	case "profile_avatar", "server_icon":
 		return 512
-	case "profile_banner":
+	case "profile_banner", "server_banner":
 		return 1920
 	default: // chat_attachment
 		return 2048

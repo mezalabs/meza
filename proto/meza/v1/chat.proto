@@ -231,6 +231,7 @@ message UpdateServerRequest {
   optional bool onboarding_enabled = 6;
   optional bool rules_required = 7;
   optional bool default_channel_privacy = 8;
+  optional string banner_url = 9;
 }
 
 message UpdateServerResponse {

@@ -2381,6 +2381,14 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
+	// Validate banner URL.
+	if req.Msg.BannerUrl != nil {
+		v := *req.Msg.BannerUrl
+		if v != "" && !strings.HasPrefix(v, "/media/") {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("banner_url must start with /media/"))
+		}
+	}
+
 	// Validate server name.
 	if req.Msg.Name != nil {
 		trimmed := strings.TrimSpace(*req.Msg.Name)
@@ -2397,6 +2405,7 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		req.Msg.WelcomeMessage, req.Msg.Rules,
 		req.Msg.OnboardingEnabled, req.Msg.RulesRequired,
 		req.Msg.DefaultChannelPrivacy,
+		req.Msg.BannerUrl,
 	)
 	if err != nil {
 		slog.Error("updating server", "err", err, "user", userID, "server", req.Msg.ServerId)
@@ -3110,6 +3119,9 @@ func serverToProto(s *models.Server) *v1.Server {
 	}
 	if s.IconURL != nil {
 		srv.IconUrl = *s.IconURL
+	}
+	if s.BannerURL != nil {
+		srv.BannerUrl = *s.BannerURL
 	}
 	if s.WelcomeMessage != nil {
 		srv.WelcomeMessage = *s.WelcomeMessage
