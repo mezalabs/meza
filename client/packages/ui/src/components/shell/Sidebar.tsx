@@ -1389,7 +1389,7 @@ function SidebarChannelItem({
               className="shrink-0 text-text-subtle"
               title="Permissions diverged from category"
             >
-              <LinkBreakIcon size={12} weight="fill" aria-hidden="true" />
+              <LinkBreakIcon size={12} weight="bold" aria-hidden="true" />
             </span>
           )}
           {hasUnread && (
