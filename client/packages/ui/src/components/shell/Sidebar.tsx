@@ -359,12 +359,15 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   });
   // Show sync divergence indicators for users who can manage permissions.
   // Server owners always see them; for others, check ManageRoles permission.
+  const serverRoles = useRoleStore((s) =>
+    selectedServerId ? s.byServer[selectedServerId] : undefined,
+  );
   const showSyncIndicators = useMemo(() => {
     if (!selectedServerId || !currentUserId) return false;
     if (selectedServer?.ownerId === currentUserId) return true;
     const member = currentMember;
     if (!member) return false;
-    const roles = useRoleStore.getState().byServer[selectedServerId] ?? [];
+    const roles = serverRoles ?? [];
     for (const role of roles) {
       if (
         member.roleIds.includes(role.id) &&
@@ -374,7 +377,13 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
       }
     }
     return false;
-  }, [selectedServerId, currentUserId, selectedServer?.ownerId, currentMember]);
+  }, [
+    selectedServerId,
+    currentUserId,
+    selectedServer?.ownerId,
+    currentMember,
+    serverRoles,
+  ]);
 
   // Block until we have member data confirming rules were acknowledged.
   // When currentMember is undefined (not loaded yet), stay blocked to

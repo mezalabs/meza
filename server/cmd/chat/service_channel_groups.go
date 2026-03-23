@@ -190,6 +190,10 @@ func (s *chatService) DeleteChannelGroup(ctx context.Context, req *connect.Reque
 		s.nc.Publish(subjects.ServerChannelGroup(group.ServerID), eventData)
 	}
 
+	// Snapshot materialized new override rows — invalidate permission cache and notify clients.
+	s.permCache.InvalidateServer(ctx, group.ServerID)
+	s.publishPermissionsUpdated(ctx, group.ServerID, "")
+
 	return connect.NewResponse(&v1.DeleteChannelGroupResponse{}), nil
 }
 

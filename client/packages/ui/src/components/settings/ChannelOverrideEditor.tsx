@@ -560,9 +560,13 @@ export function ChannelOverrideEditor({
       isAuthenticated
     ) {
       const groupId = channel.channelGroupId;
-      listPermissionOverrides(groupId).then((result) => {
-        usePermissionOverrideStore.getState().setOverrides(groupId, result);
-      });
+      listPermissionOverrides(groupId)
+        .then((result) => {
+          usePermissionOverrideStore.getState().setOverrides(groupId, result);
+        })
+        .catch(() => {
+          setFetchError('Failed to load category overrides');
+        });
     }
   }, [
     isCategory,
