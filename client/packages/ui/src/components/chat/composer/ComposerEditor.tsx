@@ -55,7 +55,7 @@ function maxLengthPlugin(): Plugin {
 // ---------------------------------------------------------------------------
 // Placeholder decoration plugin
 // ---------------------------------------------------------------------------
-function placeholderPlugin(text: string): Plugin {
+function placeholderPlugin(textRef: { current: string }): Plugin {
   const emptyDoc = (state: EditorState) => {
     const { doc } = state;
     return (
@@ -74,7 +74,7 @@ function placeholderPlugin(text: string): Plugin {
               const span = document.createElement('span');
               span.className =
                 'pointer-events-none text-text-subtle select-none';
-              span.textContent = text;
+              span.textContent = textRef.current;
               span.style.position = 'absolute';
               return span;
             }),
@@ -138,6 +138,8 @@ export const ComposerEditor = forwardRef<
   const containerRef = useRef<HTMLDivElement>(null);
   const originalTextRef = useRef(initialText ?? '');
   const sendingRef = useRef(false);
+  const placeholderRef = useRef(placeholder);
+  placeholderRef.current = placeholder;
 
   // Stable refs for callbacks to avoid stale closures in EditorView
   const onTypingRef = useRef(onTyping);
@@ -238,10 +240,10 @@ export const ComposerEditor = forwardRef<
       keymap(baseKeymap),
       history(),
       maxLengthPlugin(),
-      placeholderPlugin(placeholder),
+      placeholderPlugin(placeholderRef),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [placeholder]);
+  }, []);
 
   // Stable send handler ref
   const handleSendRef = useRef<(wireText: string) => void>(() => {});
