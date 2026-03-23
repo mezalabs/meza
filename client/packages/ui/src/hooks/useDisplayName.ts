@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
 import {
   getProfile,
   useAuthStore,
   useMemberStore,
   useUsersStore,
 } from '@meza/core';
+import { useEffect } from 'react';
 
 /**
  * Resolve a user ID to a human-readable display name (non-hook version).
