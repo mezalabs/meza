@@ -22,7 +22,7 @@ import { chapter, createContext, reportFailures } from './helpers';
 const ts = () => `${Date.now()}`;
 
 test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
-  test.setTimeout(300_000);
+  test.setTimeout(120_000);
 
   const consoleErrors: string[] = [];
 
@@ -108,8 +108,6 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
     // Simulate going offline by disconnecting the gateway WebSocket.
     // We do this by setting the browser to offline mode.
     await alicePage.context().setOffline(true);
-    // Wait a moment for the gateway to detect disconnection
-    await alicePage.waitForTimeout(2_000);
   });
 
   // ---- Chapter 3: Bob joins while Alice is offline ----
@@ -177,10 +175,9 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       await alicePage.context().setOffline(false);
 
       // Wait for Alice's gateway to reconnect and redistribute keys.
-      // Bob's slow poll (every 10s) should pick them up.
-      // Give it up to 30s to account for reconnect + redistribution + poll.
+      // Cooldown is 5s, so keys should arrive quickly after reconnect.
       const composer = bobPage.getByRole('textbox', { name: /message #/i });
-      await expect(composer).toBeVisible({ timeout: 30_000 });
+      await expect(composer).toBeVisible({ timeout: 15_000 });
 
       // The "You're almost there" bar should be gone
       await expect(bobPage.getByText("You're almost there!")).not.toBeVisible();
