@@ -28,25 +28,6 @@ export default defineConfig(async () => {
     resolve: {
       dedupe: ['@phosphor-icons/react', 'react', 'react-dom'],
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            prosemirror: [
-              'prosemirror-model',
-              'prosemirror-state',
-              'prosemirror-view',
-              'prosemirror-keymap',
-              'prosemirror-commands',
-              'prosemirror-history',
-              'prosemirror-inputrules',
-              'prosemirror-autocomplete',
-              '@prosemirror-adapter/react',
-            ],
-          },
-        },
-      },
-    },
     worker: {
       format: 'es',
     },
