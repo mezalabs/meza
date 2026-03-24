@@ -1,5 +1,5 @@
 import {
-  getMediaURL,
+  resolveIconUrl,
   UploadPurpose,
   updateServer,
   useServerStore,
@@ -58,21 +58,8 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
 
   if (!server) return null;
 
-  // Get the icon display URL
-  const iconSrc = server.iconUrl
-    ? (() => {
-        const match = server.iconUrl.match(/^\/media\/([^/?]+)/);
-        return match ? getMediaURL(match[1], true) : undefined;
-      })()
-    : undefined;
-
-  // Get the banner display URL
-  const bannerSrc = server.bannerUrl
-    ? (() => {
-        const match = server.bannerUrl.match(/^\/media\/([^/?]+)/);
-        return match ? getMediaURL(match[1], true) : undefined;
-      })()
-    : undefined;
+  const iconSrc = server.iconUrl ? resolveIconUrl(server.iconUrl) : undefined;
+  const bannerSrc = server.bannerUrl ? resolveIconUrl(server.bannerUrl) : undefined;
 
   return (
     <div className="space-y-6">
@@ -82,7 +69,7 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
         </h3>
 
         {/* Server banner */}
-        <div className="mb-6">
+        <div className="mb-6 max-w-sm">
           <button
             type="button"
             onClick={() => bannerUpload.openFileDialog()}

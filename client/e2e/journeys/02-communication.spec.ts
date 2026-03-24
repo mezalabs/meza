@@ -161,7 +161,7 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
   // Search is metadata-only (E2EE — no plaintext on server). Verify the
   // search pane opens, accepts a query, and displays results or the empty state.
   await chapter(alicePage, testInfo, 'Search', async () => {
-    await alicePage.getByLabel('Search messages').click();
+    await alicePage.keyboard.press('ControlOrMeta+k');
     const searchInput = alicePage.getByPlaceholder(/search/i);
     await expect(searchInput).toBeVisible();
     await searchInput.fill('test');

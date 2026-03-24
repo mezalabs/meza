@@ -2373,19 +2373,25 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
-	// Validate icon URL – must be a /media/ path (same check the auth service does for avatars/banners).
-	if req.Msg.IconUrl != nil {
-		v := *req.Msg.IconUrl
-		if v != "" && !strings.HasPrefix(v, "/media/") {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("icon_url must start with /media/"))
+	// Validate media URLs – must be a /media/ path with reasonable length.
+	for _, urlField := range []struct {
+		name string
+		val  *string
+	}{
+		{"icon_url", req.Msg.IconUrl},
+		{"banner_url", req.Msg.BannerUrl},
+	} {
+		if urlField.val == nil {
+			continue
 		}
-	}
-
-	// Validate banner URL.
-	if req.Msg.BannerUrl != nil {
-		v := *req.Msg.BannerUrl
-		if v != "" && !strings.HasPrefix(v, "/media/") {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("banner_url must start with /media/"))
+		v := *urlField.val
+		if v != "" {
+			if !strings.HasPrefix(v, "/media/") {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s must start with /media/", urlField.name))
+			}
+			if len(v) > 256 {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s too long", urlField.name))
+			}
 		}
 	}
 
