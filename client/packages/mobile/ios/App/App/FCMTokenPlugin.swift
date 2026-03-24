@@ -1,5 +1,4 @@
 import Capacitor
-import FirebaseCore
 import FirebaseMessaging
 
 /// Capacitor plugin that exposes the Firebase Cloud Messaging token to JS.
