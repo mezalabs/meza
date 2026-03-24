@@ -591,32 +591,48 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                   : undefined;
                 return (
                   <>
-                    {bannerSrc && (
-                      <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
-                        <img
-                          src={bannerSrc}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-bg-base to-transparent" />
-                      </div>
-                    )}
                     <Popover.Root>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between px-2 py-2 rounded-md hover:bg-bg-surface-hover transition-colors"
-                        >
-                          <h2 className="text-base font-semibold text-text truncate">
-                            {srv.name}
-                          </h2>
-                          <CaretDownIcon
-                            size={14}
-                            className="flex-shrink-0 text-text-muted"
-                            aria-hidden="true"
+                      {bannerSrc ? (
+                        <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
+                          <img
+                            src={bannerSrc}
+                            alt=""
+                            className="h-full w-full object-cover"
                           />
-                        </button>
-                      </Popover.Trigger>
+                          <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/60 to-transparent" />
+                          <Popover.Trigger asChild>
+                            <button
+                              type="button"
+                              className="absolute inset-x-0 top-0 flex items-center justify-between px-2 py-2 text-white hover:bg-black/20 transition-colors"
+                            >
+                              <h2 className="text-sm font-semibold truncate drop-shadow-sm">
+                                {srv.name}
+                              </h2>
+                              <CaretDownIcon
+                                size={14}
+                                className="flex-shrink-0 opacity-80"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          </Popover.Trigger>
+                        </div>
+                      ) : (
+                        <Popover.Trigger asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between px-2 py-2 rounded-md hover:bg-bg-surface-hover transition-colors"
+                          >
+                            <h2 className="text-base font-semibold text-text truncate">
+                              {srv.name}
+                            </h2>
+                            <CaretDownIcon
+                              size={14}
+                              className="flex-shrink-0 text-text-muted"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </Popover.Trigger>
+                      )}
                       <Popover.Portal>
                         <Popover.Content
                           className="w-[220px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in z-50"
