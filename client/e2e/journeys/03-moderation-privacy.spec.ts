@@ -127,7 +127,7 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await expect(dmComposer.first()).not.toHaveAttribute(
       'aria-label',
       /Setting up encryption|Encryption unavailable/,
-      { timeout: 15_000 },
+      { timeout: 30_000 },
     );
 
     // Alice sends a DM

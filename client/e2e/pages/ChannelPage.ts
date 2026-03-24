@@ -128,13 +128,15 @@ export class ChannelPage {
     await this.composer.fill(text);
     for (let attempt = 0; attempt < 3; attempt++) {
       await this.composer.press('Enter');
+      // ProseMirror's empty state still has placeholder decoration in textContent,
+      // so check that the user's typed text is gone rather than checking for empty.
       const cleared = await expect(this.composer)
-        .toHaveText('', { timeout: 5_000 })
+        .not.toContainText(text, { timeout: 5_000 })
         .then(() => true)
         .catch(() => false);
       if (cleared) return;
     }
-    await expect(this.composer).toHaveText('', { timeout: 5_000 });
+    await expect(this.composer).not.toContainText(text, { timeout: 5_000 });
   }
 
   // ---------------------------------------------------------------------------
