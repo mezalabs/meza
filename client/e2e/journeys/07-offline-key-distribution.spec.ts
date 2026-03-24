@@ -67,24 +67,12 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
         await alicePage.getByRole('button', { name: 'Done' }).click();
       }
 
-      // Navigate to general channel
-      await alicePage
-        .getByLabel('Servers')
-        .locator(`button[title="${serverName}"]`)
-        .first()
-        .click();
-      await alicePage
-        .locator('nav[aria-label="Channels"]')
-        .getByText('general')
-        .first()
-        .click();
-
-      // Wait for composer
-      const composer = alicePage.getByRole('textbox', { name: /message #/i });
-      await expect(composer).toBeVisible({ timeout: 15_000 });
+      // Navigate to general channel using ChannelPage helpers (handles channel load retries)
+      const alice = new ChannelPage(alicePage);
+      await alice.selectServer(serverName);
+      await alice.selectChannel('general');
 
       // Send a test message
-      const alice = new ChannelPage(alicePage);
       const msg = `Alice says hello ${ts()}`;
       await alice.sendMessage(msg);
       await alice.expectMessage(msg);
@@ -143,16 +131,16 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       await bobPage.getByRole('button', { name: 'Join Server' }).click();
 
       // Navigate to general channel
-      await bobPage
-        .getByLabel('Servers')
-        .locator(`button[title="${serverName}"]`)
-        .first()
-        .click({ timeout: 10_000 });
+      const bobChannel = new ChannelPage(bobPage);
+      await bobChannel.selectServer(serverName);
+      // Click channel but DON'T use selectChannel (it expects a composer).
+      // Bob has no keys yet so the composer won't appear.
+      await bobChannel.ensureChannelsLoaded();
       await bobPage
         .locator('nav[aria-label="Channels"]')
-        .getByText('general')
-        .first()
-        .click();
+        .locator('[data-channel-type]')
+        .filter({ hasText: 'general' })
+        .click({ timeout: 10_000 });
 
       // Bob should see the "You're almost there" status bar instead of the composer
       await expect(bobPage.getByText("You're almost there!")).toBeVisible({

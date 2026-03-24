@@ -101,7 +101,7 @@ export class ChannelPage {
       expect(
         this.page
           .locator('main')
-          .getByText(/connected|join voice/i)
+          .getByText(/encrypted|connecting|join voice/i)
           .first(),
       ).toBeVisible({ timeout: 10_000 }),
     ]);
