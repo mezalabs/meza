@@ -404,6 +404,7 @@ export const ComposerEditor = forwardRef<
         spellcheck: 'true',
         role: 'textbox',
         'aria-multiline': 'true',
+        'aria-label': placeholder,
       },
     });
 

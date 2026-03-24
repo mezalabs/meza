@@ -80,7 +80,7 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
         .click();
 
       // Wait for composer
-      const composer = alicePage.getByPlaceholder(/message #/i);
+      const composer = alicePage.getByRole('textbox', { name: /message #/i });
       await expect(composer).toBeVisible({ timeout: 15_000 });
 
       // Send a test message
@@ -162,7 +162,7 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       });
 
       // Composer should NOT be visible (no keys yet)
-      const composer = bobPage.getByPlaceholder(/message #/i);
+      const composer = bobPage.getByRole('textbox', { name: /message #/i });
       await expect(composer).not.toBeVisible({ timeout: 5_000 });
     },
   );
@@ -179,7 +179,7 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       // Wait for Alice's gateway to reconnect and redistribute keys.
       // Bob's slow poll (every 10s) should pick them up.
       // Give it up to 30s to account for reconnect + redistribution + poll.
-      const composer = bobPage.getByPlaceholder(/message #/i);
+      const composer = bobPage.getByRole('textbox', { name: /message #/i });
       await expect(composer).toBeVisible({ timeout: 30_000 });
 
       // The "You're almost there" bar should be gone

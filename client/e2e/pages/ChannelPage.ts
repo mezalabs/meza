@@ -8,7 +8,11 @@ export class ChannelPage {
   constructor(page: Page) {
     this.page = page;
     this.messageList = page.locator('[data-testid="message-list"]');
-    this.composer = page.getByPlaceholder(/message #|type a message/i);
+    // ProseMirror editor uses role="textbox" with an aria-label containing
+    // the placeholder text (e.g. "Message #general", "Type a message…").
+    this.composer = page.getByRole('textbox', {
+      name: /message #|type a message|type a reply|setting up encryption|encryption unavailable/i,
+    });
     this.sendButton = page.getByRole('button', { name: 'Send' });
   }
 
@@ -125,12 +129,12 @@ export class ChannelPage {
     for (let attempt = 0; attempt < 3; attempt++) {
       await this.composer.press('Enter');
       const cleared = await expect(this.composer)
-        .toHaveValue('', { timeout: 5_000 })
+        .toHaveText('', { timeout: 5_000 })
         .then(() => true)
         .catch(() => false);
       if (cleared) return;
     }
-    await expect(this.composer).toHaveValue('', { timeout: 5_000 });
+    await expect(this.composer).toHaveText('', { timeout: 5_000 });
   }
 
   // ---------------------------------------------------------------------------
@@ -206,12 +210,11 @@ export class ChannelPage {
   /** Edit a message inline: click edit, clear, type new text, save. */
   async editMessage(oldText: string, newText: string) {
     await this.clickEdit(oldText);
-    // After clicking edit, the message container has a textarea.
-    // Use textarea filter instead of hasText (old text is replaced by new text).
+    // After clicking edit, the message container has a ProseMirror editor (role="textbox").
     const editContainer = this.messageList
       .locator('[data-message-id]')
-      .filter({ has: this.page.locator('textarea') });
-    const editArea = editContainer.locator('textarea');
+      .filter({ has: this.page.getByRole('textbox') });
+    const editArea = editContainer.getByRole('textbox');
     await editArea.fill(newText);
     await editContainer.getByRole('button', { name: 'Save' }).click();
   }
@@ -237,8 +240,10 @@ export class ChannelPage {
   /** Reply to a message. */
   async replyToMessage(messageText: string, replyText: string) {
     await this.clickReply(messageText);
-    // Composer placeholder changes to "Type a reply…"
-    const replyComposer = this.page.getByPlaceholder(/type a reply/i);
+    // Composer aria-label changes to "Type a reply…"
+    const replyComposer = this.page.getByRole('textbox', {
+      name: /type a reply/i,
+    });
     await expect(replyComposer).toBeVisible();
     await replyComposer.fill(replyText);
     await replyComposer.press('Enter');
@@ -296,10 +301,10 @@ export class ChannelPage {
     });
   }
 
-  /** Wait for encryption to initialize (composer placeholder stops saying "Setting up encryption"). */
+  /** Wait for encryption to initialize (composer aria-label stops saying "Setting up encryption"). */
   async waitForEncryption() {
     await expect(this.composer).not.toHaveAttribute(
-      'placeholder',
+      'aria-label',
       /Setting up encryption/,
       { timeout: 15_000 },
     );

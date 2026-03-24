@@ -115,17 +115,17 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await alicePage.getByText('e2e_bob').last().click({ button: 'right' });
     await alicePage.getByRole('menuitem', { name: 'Message' }).click();
 
-    // Wait for DM view to load (placeholder changes from "Message #general" to a DM placeholder)
-    const dmComposer = alicePage.locator('main textarea');
+    // Wait for DM view to load (aria-label changes from channel to DM placeholder)
+    const dmComposer = alicePage.locator('main').getByRole('textbox');
     await expect(dmComposer.first()).toHaveAttribute(
-      'placeholder',
+      'aria-label',
       /Type a message|Setting up encryption|Encryption unavailable/,
       { timeout: 15_000 },
     );
 
     // Wait for encryption to finish initializing (pending → ready)
     await expect(dmComposer.first()).not.toHaveAttribute(
-      'placeholder',
+      'aria-label',
       /Setting up encryption|Encryption unavailable/,
       { timeout: 15_000 },
     );
@@ -159,10 +159,10 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
     await sidebar.getByText(/alice/i).first().click();
 
     // Wait for Bob's E2EE session to bootstrap and decrypt DM messages
-    const bobDmComposer = bobPage.locator('main textarea');
+    const bobDmComposer = bobPage.locator('main').getByRole('textbox');
     await expect(bobDmComposer.first()).toBeVisible({ timeout: 15_000 });
     await expect(bobDmComposer.first()).not.toHaveAttribute(
-      'placeholder',
+      'aria-label',
       /Setting up encryption|Encryption unavailable/,
       { timeout: 15_000 },
     );
@@ -196,11 +196,11 @@ test('Journey 3: Moderation & Privacy', async ({ browser }, testInfo) => {
       await searchInput.fill('e2e_alice');
       await charliePage.getByText('e2e_alice').first().click();
 
-      const composer = charliePage.locator('main textarea');
+      const composer = charliePage.locator('main').getByRole('textbox');
       await expect(composer.first()).toBeVisible({ timeout: 10_000 });
       // Wait until encryption is set up
       await expect(composer.first()).not.toHaveAttribute(
-        'placeholder',
+        'aria-label',
         /Setting up encryption|Encryption unavailable/,
         { timeout: 15_000 },
       );
