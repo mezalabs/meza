@@ -212,12 +212,16 @@ export class ChannelPage {
   /** Edit a message inline: click edit, clear, type new text, save. */
   async editMessage(oldText: string, newText: string) {
     await this.clickEdit(oldText);
-    // After clicking edit, the message container has a ProseMirror editor (role="textbox").
+    // The edit composer has aria-label="Edit message" to distinguish it from the main composer.
+    const editArea = this.messageList.getByRole('textbox', {
+      name: /edit message/i,
+    });
+    await expect(editArea).toBeVisible({ timeout: 10_000 });
+    await editArea.fill(newText);
+    // Save button is in the same message container as the edit textbox.
     const editContainer = this.messageList
       .locator('[data-message-id]')
-      .filter({ has: this.page.getByRole('textbox') });
-    const editArea = editContainer.getByRole('textbox');
-    await editArea.fill(newText);
+      .filter({ has: editArea });
     await editContainer.getByRole('button', { name: 'Save' }).click();
   }
 

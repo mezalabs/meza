@@ -1442,6 +1442,7 @@ const MessageItem = memo(function MessageItem({
                     <ComposerEditor
                       ref={editEditorRef}
                       initialText={text}
+                      placeholder="Edit message"
                       onSend={async (wireText) => {
                         const trimmed = wireText.trim();
                         if (!trimmed || trimmed === text) {
