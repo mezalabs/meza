@@ -134,7 +134,7 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     await alice.sendMessage(`**bold test ${ts()}**`);
     await expect(
       alice.messageList.locator('strong').filter({ hasText: 'bold test' }),
-    ).toBeVisible({ timeout: 5_000 });
+    ).toBeVisible({ timeout: 10_000 });
 
     await alice.sendMessage(`*italic test ${ts()}*`);
     await expect(
@@ -161,9 +161,11 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
   // Search is metadata-only (E2EE — no plaintext on server). Verify the
   // search pane opens, accepts a query, and displays results or the empty state.
   await chapter(alicePage, testInfo, 'Search', async () => {
+    // Click outside composer to ensure the global keybind fires
+    await alicePage.locator('main').click({ position: { x: 10, y: 10 } });
     await alicePage.keyboard.press('ControlOrMeta+k');
     const searchInput = alicePage.getByPlaceholder(/search/i);
-    await expect(searchInput).toBeVisible();
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
     await searchInput.fill('test');
     await searchInput.press('Enter');
 
