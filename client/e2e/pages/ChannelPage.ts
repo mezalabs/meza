@@ -209,7 +209,7 @@ export class ChannelPage {
   // Edit flow
   // ---------------------------------------------------------------------------
 
-  /** Edit a message inline: click edit, clear, type new text, save. */
+  /** Edit a message inline: click edit, clear, type new text, press Enter to save. */
   async editMessage(oldText: string, newText: string) {
     await this.clickEdit(oldText);
     // The edit composer has aria-label="Edit message" to distinguish it from the main composer.
@@ -218,11 +218,7 @@ export class ChannelPage {
     });
     await expect(editArea).toBeVisible({ timeout: 10_000 });
     await editArea.fill(newText);
-    // Save button is in the same message container as the edit textbox.
-    const editContainer = this.messageList
-      .locator('[data-message-id]')
-      .filter({ has: editArea });
-    await editContainer.getByRole('button', { name: 'Save' }).click();
+    await editArea.press('Enter');
   }
 
   // ---------------------------------------------------------------------------
