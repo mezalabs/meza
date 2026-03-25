@@ -29,6 +29,7 @@ import {
   useGatewayStore,
   useInviteStore,
   useMemberStore,
+  useNotificationSettingsStore,
   useReadStateStore,
   useRoleStore,
   useServerStore,
