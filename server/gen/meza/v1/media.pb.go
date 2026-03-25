@@ -31,6 +31,7 @@ const (
 	UploadPurpose_UPLOAD_PURPOSE_SERVER_ICON     UploadPurpose = 4
 	UploadPurpose_UPLOAD_PURPOSE_SERVER_EMOJI    UploadPurpose = 5
 	UploadPurpose_UPLOAD_PURPOSE_SOUNDBOARD      UploadPurpose = 6
+	UploadPurpose_UPLOAD_PURPOSE_SERVER_BANNER   UploadPurpose = 7
 )
 
 // Enum value maps for UploadPurpose.
@@ -43,6 +44,7 @@ var (
 		4: "UPLOAD_PURPOSE_SERVER_ICON",
 		5: "UPLOAD_PURPOSE_SERVER_EMOJI",
 		6: "UPLOAD_PURPOSE_SOUNDBOARD",
+		7: "UPLOAD_PURPOSE_SERVER_BANNER",
 	}
 	UploadPurpose_value = map[string]int32{
 		"UPLOAD_PURPOSE_UNSPECIFIED":     0,
@@ -52,6 +54,7 @@ var (
 		"UPLOAD_PURPOSE_SERVER_ICON":     4,
 		"UPLOAD_PURPOSE_SERVER_EMOJI":    5,
 		"UPLOAD_PURPOSE_SOUNDBOARD":      6,
+		"UPLOAD_PURPOSE_SERVER_BANNER":   7,
 	}
 )
 
@@ -509,7 +512,7 @@ const file_meza_v1_media_proto_rawDesc = "" +
 	"\rattachment_id\x18\x01 \x01(\tR\fattachmentId\x12\x1c\n" +
 	"\tthumbnail\x18\x02 \x01(\bR\tthumbnail\"*\n" +
 	"\x16GetDownloadURLResponse\x12\x10\n" +
-	"\x03url\x18\x01 \x01(\tR\x03url*\xf9\x01\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url*\x9b\x02\n" +
 	"\rUploadPurpose\x12\x1e\n" +
 	"\x1aUPLOAD_PURPOSE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eUPLOAD_PURPOSE_CHAT_ATTACHMENT\x10\x01\x12!\n" +
@@ -517,7 +520,8 @@ const file_meza_v1_media_proto_rawDesc = "" +
 	"\x1dUPLOAD_PURPOSE_PROFILE_BANNER\x10\x03\x12\x1e\n" +
 	"\x1aUPLOAD_PURPOSE_SERVER_ICON\x10\x04\x12\x1f\n" +
 	"\x1bUPLOAD_PURPOSE_SERVER_EMOJI\x10\x05\x12\x1d\n" +
-	"\x19UPLOAD_PURPOSE_SOUNDBOARD\x10\x062\x81\x02\n" +
+	"\x19UPLOAD_PURPOSE_SOUNDBOARD\x10\x06\x12 \n" +
+	"\x1cUPLOAD_PURPOSE_SERVER_BANNER\x10\a2\x81\x02\n" +
 	"\fMediaService\x12K\n" +
 	"\fCreateUpload\x12\x1c.meza.v1.CreateUploadRequest\x1a\x1d.meza.v1.CreateUploadResponse\x12Q\n" +
 	"\x0eCompleteUpload\x12\x1e.meza.v1.CompleteUploadRequest\x1a\x1f.meza.v1.CompleteUploadResponse\x12Q\n" +

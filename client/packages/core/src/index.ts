@@ -145,7 +145,11 @@ export {
   uploadFile,
 } from './api/media.ts';
 // API — notification
-export { getVAPIDPublicKey } from './api/notification.ts';
+export {
+  getNotificationPreferences,
+  getVAPIDPublicKey,
+  updateNotificationPreference,
+} from './api/notification.ts';
 // API — presence
 export {
   clearStatusOverride,

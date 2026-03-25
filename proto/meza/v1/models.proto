@@ -45,6 +45,7 @@ message Server {
   bool onboarding_enabled = 8;
   bool rules_required = 9;
   bool default_channel_privacy = 10;
+  string banner_url = 11;
 }
 
 message Channel {

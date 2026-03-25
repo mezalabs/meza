@@ -1,5 +1,5 @@
 import {
-  getMediaURL,
+  resolveIconUrl,
   UploadPurpose,
   updateServer,
   useServerStore,
@@ -29,6 +29,15 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
     },
   });
 
+  const bannerUpload = useImageCropUpload({
+    purpose: UploadPurpose.SERVER_BANNER,
+    aspectRatio: 16 / 9,
+    cropShape: 'rect',
+    onUploadComplete: async (url) => {
+      await updateServer(serverId, { bannerUrl: url });
+    },
+  });
+
   const handleSave = useCallback(async () => {
     if (saving || !isDirty) return;
     setSaving(true);
@@ -49,13 +58,8 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
 
   if (!server) return null;
 
-  // Get the icon display URL
-  const iconSrc = server.iconUrl
-    ? (() => {
-        const match = server.iconUrl.match(/^\/media\/([^/?]+)/);
-        return match ? getMediaURL(match[1], true) : undefined;
-      })()
-    : undefined;
+  const iconSrc = server.iconUrl ? resolveIconUrl(server.iconUrl) : undefined;
+  const bannerSrc = server.bannerUrl ? resolveIconUrl(server.bannerUrl) : undefined;
 
   return (
     <div className="space-y-6">
@@ -63,6 +67,58 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
         <h3 className="text-sm font-semibold uppercase tracking-wider text-text-subtle mb-4">
           Server Overview
         </h3>
+
+        {/* Server banner */}
+        <div className="mb-6 max-w-sm">
+          <button
+            type="button"
+            onClick={() => bannerUpload.openFileDialog()}
+            disabled={bannerUpload.state !== 'idle'}
+            className="group relative w-full overflow-hidden rounded-lg bg-bg-surface transition-colors hover:ring-2 hover:ring-accent"
+          >
+            {bannerSrc ? (
+              <img
+                src={bannerSrc}
+                alt="Server banner"
+                className="aspect-video w-full object-cover"
+              />
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center border-2 border-dashed border-border rounded-lg">
+                <span className="text-sm text-text-muted">Upload Banner</span>
+              </div>
+            )}
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+              <span className="text-sm font-medium text-white">
+                {bannerSrc ? 'Change Banner' : 'Upload Banner'}
+              </span>
+            </div>
+            {bannerUpload.uploadProgress !== null && (
+              <div className="absolute inset-0 flex items-center justify-center bg-bg-base/80 rounded-lg">
+                <span className="text-sm text-text-muted">
+                  {bannerUpload.uploadProgress}%
+                </span>
+              </div>
+            )}
+          </button>
+          <input
+            ref={bannerUpload.fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={bannerUpload.onFileChange}
+          />
+          {bannerSrc && (
+            <button
+              type="button"
+              className="mt-2 text-xs text-text-muted hover:text-error transition-colors"
+              onClick={async () => {
+                await updateServer(serverId, { bannerUrl: '' });
+              }}
+            >
+              Remove banner
+            </button>
+          )}
+        </div>
 
         {/* Server icon */}
         <div className="flex items-center gap-4 mb-6">
@@ -127,8 +183,10 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
       </div>
 
       {/* Errors */}
-      {(error || iconUpload.error) && (
-        <p className="text-sm text-error">{error || iconUpload.error}</p>
+      {(error || iconUpload.error || bannerUpload.error) && (
+        <p className="text-sm text-error">
+          {error || iconUpload.error || bannerUpload.error}
+        </p>
       )}
 
       {/* Actions */}
@@ -152,12 +210,20 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
         </div>
       )}
 
-      {/* Cropper dialog */}
+      {/* Cropper dialogs */}
       {iconUpload.cropperProps && (
         <ImageCropper
           {...iconUpload.cropperProps}
           onOpenChange={(open) => {
             if (!open) iconUpload.cropperProps?.onCancel();
+          }}
+        />
+      )}
+      {bannerUpload.cropperProps && (
+        <ImageCropper
+          {...bannerUpload.cropperProps}
+          onOpenChange={(open) => {
+            if (!open) bannerUpload.cropperProps?.onCancel();
           }}
         />
       )}

@@ -130,6 +130,18 @@ func (s *notificationService) UpdateNotificationPreference(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid level %q", msg.Level))
 	}
 
+	// Verify membership for server/channel scopes.
+	if msg.ScopeType == "server" && msg.ScopeId != "" {
+		if _, err := s.chatStore.GetMember(ctx, userID, msg.ScopeId); err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("not a member of this server"))
+		}
+	}
+	if msg.ScopeType == "channel" && msg.ScopeId != "" {
+		if _, _, err := s.chatStore.GetChannelAndCheckMembership(ctx, msg.ScopeId, userID); err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("channel not found"))
+		}
+	}
+
 	// "all" at global scope is the default — delete the preference instead of storing it.
 	if msg.ScopeType == "global" && msg.Level == "all" {
 		if err := s.prefStore.DeletePreference(ctx, userID, msg.ScopeType, msg.ScopeId); err != nil {

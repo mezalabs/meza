@@ -2373,11 +2373,25 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		}
 	}
 
-	// Validate icon URL – must be a /media/ path (same check the auth service does for avatars/banners).
-	if req.Msg.IconUrl != nil {
-		v := *req.Msg.IconUrl
-		if v != "" && !strings.HasPrefix(v, "/media/") {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("icon_url must start with /media/"))
+	// Validate media URLs – must be a /media/ path with reasonable length.
+	for _, urlField := range []struct {
+		name string
+		val  *string
+	}{
+		{"icon_url", req.Msg.IconUrl},
+		{"banner_url", req.Msg.BannerUrl},
+	} {
+		if urlField.val == nil {
+			continue
+		}
+		v := *urlField.val
+		if v != "" {
+			if !strings.HasPrefix(v, "/media/") {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s must start with /media/", urlField.name))
+			}
+			if len(v) > 256 {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s too long", urlField.name))
+			}
 		}
 	}
 
@@ -2397,6 +2411,7 @@ func (s *chatService) UpdateServer(ctx context.Context, req *connect.Request[v1.
 		req.Msg.WelcomeMessage, req.Msg.Rules,
 		req.Msg.OnboardingEnabled, req.Msg.RulesRequired,
 		req.Msg.DefaultChannelPrivacy,
+		req.Msg.BannerUrl,
 	)
 	if err != nil {
 		slog.Error("updating server", "err", err, "user", userID, "server", req.Msg.ServerId)
@@ -3110,6 +3125,9 @@ func serverToProto(s *models.Server) *v1.Server {
 	}
 	if s.IconURL != nil {
 		srv.IconUrl = *s.IconURL
+	}
+	if s.BannerURL != nil {
+		srv.BannerUrl = *s.BannerURL
 	}
 	if s.WelcomeMessage != nil {
 		srv.WelcomeMessage = *s.WelcomeMessage

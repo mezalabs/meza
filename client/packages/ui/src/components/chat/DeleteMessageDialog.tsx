@@ -41,7 +41,7 @@ export function DeleteMessageDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 animate-fade-in" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg-elevated p-6 shadow-lg animate-scale-in"
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg-elevated p-6 shadow-lg animate-scale-in"
           onEscapeKeyDown={(e) => {
             if (isDeleting) e.preventDefault();
           }}

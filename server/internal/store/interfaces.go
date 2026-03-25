@@ -63,7 +63,7 @@ type AuthStorer interface {
 type ChatStorer interface {
 	CreateServer(ctx context.Context, name, ownerID string, iconURL *string, defaultChannelPrivacy bool) (*models.Server, error)
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
-	UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool) (*models.Server, error)
+	UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, bannerURL *string) (*models.Server, error)
 	ListServers(ctx context.Context, userID string) ([]*models.Server, error)
 	CreateChannel(ctx context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error)
 	GetChannel(ctx context.Context, channelID string) (*models.Channel, error)

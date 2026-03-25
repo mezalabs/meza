@@ -7,6 +7,7 @@ import {
   getBaseUrl,
   getBulkPresence,
   getDMDisplayName,
+  getNotificationPreferences,
   isGroupDM,
   listChannelGroups,
   listChannels,
@@ -17,7 +18,9 @@ import {
   listMessageRequests,
   listServers,
   Permissions,
+  resolveIconUrl,
   soundManager,
+  updateNotificationPreference,
   useAuthStore,
   useChannelGroupStore,
   useChannelStore,
@@ -26,7 +29,6 @@ import {
   useGatewayStore,
   useInviteStore,
   useMemberStore,
-  useNotificationSettingsStore,
   useReadStateStore,
   useRoleStore,
   useServerStore,
@@ -36,7 +38,8 @@ import {
 } from '@meza/core';
 import {
   ArrowRightIcon,
-  BookOpenIcon,
+  BellSimpleIcon,
+  BellSimpleSlashIcon,
   CaretDownIcon,
   CaretRightIcon,
   EarSlashIcon,
@@ -44,7 +47,6 @@ import {
   HashIcon,
   LinkBreakIcon,
   LockSimpleIcon,
-  MagnifyingGlassIcon,
   MicrophoneIcon,
   MicrophoneSlashIcon,
   PlusIcon,
@@ -53,8 +55,8 @@ import {
   UserPlusIcon,
   UsersThreeIcon,
   VideoCameraIcon,
-  WrenchIcon,
 } from '@phosphor-icons/react';
+import * as Popover from '@radix-ui/react-popover';
 import { ParticipantEvent } from 'livekit-client';
 import {
   type ReactNode,
@@ -74,7 +76,6 @@ import {
   openCategoryPermissionsPane,
   openChannelSettingsPane,
   openProfilePane,
-  openSearchPane,
   useTilingStore,
 } from '../../stores/tiling.ts';
 import { CreateGroupDMDialog } from '../dm/CreateGroupDMDialog.tsx';
@@ -343,8 +344,44 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [createGroupDMOpen, setCreateGroupDMOpen] = useState(false);
 
-  const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
-  const setPaneContent = useTilingStore((s) => s.setPaneContent);
+  const focusedPaneId = sidebarFocusedPaneId;
+  const setPaneContent = sidebarSetPaneContent;
+
+  const [serverNotifyLevel, setServerNotifyLevel] = useState<string | null>(null);
+
+  // Reset and reload notification preference when server changes
+  useEffect(() => {
+    setServerNotifyLevel(null);
+    if (!selectedServerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const prefs = await getNotificationPreferences();
+        if (cancelled) return;
+        const serverPref = prefs.find(
+          (p) => p.scopeType === 'server' && p.scopeId === selectedServerId,
+        );
+        setServerNotifyLevel(serverPref?.level ?? 'all');
+      } catch {
+        if (!cancelled) setServerNotifyLevel('all');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedServerId]);
+
+  const handleSetNotifyLevel = useCallback(
+    async (level: string) => {
+      if (!selectedServerId) return;
+      const prev = serverNotifyLevel;
+      setServerNotifyLevel(level);
+      try {
+        await updateNotificationPreference('server', selectedServerId, level);
+      } catch {
+        setServerNotifyLevel(prev);
+      }
+    },
+    [selectedServerId, serverNotifyLevel],
+  );
 
   // Check if current user is blocked by rules requirement
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -580,68 +617,122 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
             </>
           ) : (
             <>
-              {/* Server name + settings */}
-              {selectedServerId && servers[selectedServerId] && (
-                <div className="mb-3 flex items-center justify-between gap-3 pl-2">
-                  <h2 className="text-base font-semibold text-text truncate">
-                    {servers[selectedServerId].name}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPaneContent(focusedPaneId, {
-                        type: 'serverSettings',
-                        serverId: selectedServerId,
-                      })
-                    }
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Server settings"
-                    title="Server settings"
-                  >
-                    <WrenchIcon size={22} aria-hidden="true" />
-                  </button>
-                </div>
-              )}
+              {/* Server banner + header with hover tray */}
+              {selectedServerId && servers[selectedServerId] && (() => {
+                const srv = servers[selectedServerId];
+                const bannerSrc = srv.bannerUrl ? resolveIconUrl(srv.bannerUrl) : undefined;
+                const onBanner = !!bannerSrc;
+                const colorClass = onBanner
+                  ? 'text-white/60 hover:text-white hover:bg-white/10'
+                  : 'text-text-muted hover:text-text hover:bg-bg-surface-hover';
+                const btnClass = `rounded-md ${colorClass} transition-all duration-150 ${isMobile ? 'p-1.5' : 'p-0.5 scale-90 group-hover/header:scale-100 group-hover/header:p-1'}`;
+                const iconSize = isMobile ? 20 : 16;
 
-              {/* Action buttons row */}
-              {selectedServerId && (
-                <div className="mb-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => openSearchPane()}
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Search messages"
-                    title="Search messages (Ctrl+K)"
-                  >
-                    <MagnifyingGlassIcon size={22} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInviteOpen(true)}
-                    className="p-1 text-text-muted hover:text-text transition-colors"
-                    aria-label="Invite people"
-                    title="Invite people"
-                  >
-                    <UserPlusIcon size={22} aria-hidden="true" />
-                  </button>
-                  {servers[selectedServerId]?.onboardingEnabled && (
+                const actionButtons = (
+                  <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-0.5'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setInviteOpen(true)}
+                      className={btnClass}
+                      aria-label="Invite people"
+                      title="Invite people"
+                    >
+                      <UserPlusIcon size={iconSize} aria-hidden="true" />
+                    </button>
+                    {!isMobile && (
+                      <Popover.Root>
+                        <Popover.Trigger asChild>
+                          <button
+                            type="button"
+                            className={btnClass}
+                            aria-label="Notification preferences"
+                            title="Notification preferences"
+                          >
+                            {serverNotifyLevel === 'nothing' ? (
+                              <BellSimpleSlashIcon size={iconSize} aria-hidden="true" />
+                            ) : (
+                              <BellSimpleIcon size={iconSize} aria-hidden="true" />
+                            )}
+                          </button>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                          <Popover.Content
+                            className="w-[200px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in z-50"
+                            sideOffset={6}
+                            align="end"
+                          >
+                            <p className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                              Notify for…
+                            </p>
+                            {([
+                              ['all', 'All messages'],
+                              ['mentions_only', 'Mentions only'],
+                              ['nothing', 'Nothing'],
+                            ] as const).map(([value, label]) => (
+                              <Popover.Close asChild key={value}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetNotifyLevel(value)}
+                                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                                    serverNotifyLevel === value
+                                      ? 'text-accent bg-accent-subtle'
+                                      : 'text-text hover:bg-bg-surface-hover'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              </Popover.Close>
+                            ))}
+                          </Popover.Content>
+                        </Popover.Portal>
+                      </Popover.Root>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
                         setPaneContent(focusedPaneId, {
-                          type: 'serverOnboarding',
+                          type: 'serverSettings',
                           serverId: selectedServerId,
                         })
                       }
-                      className="p-1 text-sm text-text-subtle hover:text-accent transition-colors"
-                      aria-label="About this server"
-                      title="About this server"
+                      className={btnClass}
+                      aria-label="Server settings"
+                      title="Server settings"
                     >
-                      <BookOpenIcon size={14} aria-hidden="true" />
+                      <GearIcon size={iconSize} aria-hidden="true" />
                     </button>
-                  )}
-                </div>
-              )}
+                  </div>
+                );
+
+                return (
+                  <div className="group/header">
+                    {bannerSrc ? (
+                      <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
+                        <img
+                          src={bannerSrc}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/90 via-black/60 to-transparent">
+                          <div className="flex items-center gap-1 px-2 py-2">
+                            <h2 className="min-w-0 flex-1 text-sm font-semibold text-white truncate drop-shadow-sm">
+                              {srv.name}
+                            </h2>
+                            {actionButtons}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 px-2 py-2">
+                        <h2 className="min-w-0 flex-1 text-base font-semibold text-text truncate">
+                          {srv.name}
+                        </h2>
+                        {actionButtons}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {rulesBlocked ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">

@@ -929,7 +929,7 @@ export function ChannelView({
       >
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 animate-fade-in" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg-elevated p-6 shadow-lg animate-scale-in">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-bg-elevated p-6 shadow-lg animate-scale-in">
             <Dialog.Title className="text-lg font-semibold text-text">
               Discard Changes
             </Dialog.Title>
@@ -1442,6 +1442,7 @@ const MessageItem = memo(function MessageItem({
                     <ComposerEditor
                       ref={editEditorRef}
                       initialText={text}
+                      placeholder="Edit message"
                       onSend={async (wireText) => {
                         const trimmed = wireText.trim();
                         if (!trimmed || trimmed === text) {

@@ -22,7 +22,7 @@ import { chapter, createContext, reportFailures } from './helpers';
 const ts = () => `${Date.now()}`;
 
 test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
-  test.setTimeout(300_000);
+  test.setTimeout(120_000);
 
   const consoleErrors: string[] = [];
 
@@ -67,24 +67,12 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
         await alicePage.getByRole('button', { name: 'Done' }).click();
       }
 
-      // Navigate to general channel
-      await alicePage
-        .getByLabel('Servers')
-        .locator(`button[title="${serverName}"]`)
-        .first()
-        .click();
-      await alicePage
-        .locator('nav[aria-label="Channels"]')
-        .getByText('general')
-        .first()
-        .click();
-
-      // Wait for composer
-      const composer = alicePage.getByPlaceholder(/message #/i);
-      await expect(composer).toBeVisible({ timeout: 15_000 });
+      // Navigate to general channel using ChannelPage helpers (handles channel load retries)
+      const alice = new ChannelPage(alicePage);
+      await alice.selectServer(serverName);
+      await alice.selectChannel('general');
 
       // Send a test message
-      const alice = new ChannelPage(alicePage);
       const msg = `Alice says hello ${ts()}`;
       await alice.sendMessage(msg);
       await alice.expectMessage(msg);
@@ -108,8 +96,6 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
     // Simulate going offline by disconnecting the gateway WebSocket.
     // We do this by setting the browser to offline mode.
     await alicePage.context().setOffline(true);
-    // Wait a moment for the gateway to detect disconnection
-    await alicePage.waitForTimeout(2_000);
   });
 
   // ---- Chapter 3: Bob joins while Alice is offline ----
@@ -145,16 +131,16 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       await bobPage.getByRole('button', { name: 'Join Server' }).click();
 
       // Navigate to general channel
-      await bobPage
-        .getByLabel('Servers')
-        .locator(`button[title="${serverName}"]`)
-        .first()
-        .click({ timeout: 10_000 });
+      const bobChannel = new ChannelPage(bobPage);
+      await bobChannel.selectServer(serverName);
+      // Click channel but DON'T use selectChannel (it expects a composer).
+      // Bob has no keys yet so the composer won't appear.
+      await bobChannel.ensureChannelsLoaded();
       await bobPage
         .locator('nav[aria-label="Channels"]')
-        .getByText('general')
-        .first()
-        .click();
+        .locator('[data-channel-type]')
+        .filter({ hasText: 'general' })
+        .click({ timeout: 10_000 });
 
       // Bob should see the "You're almost there" status bar instead of the composer
       await expect(bobPage.getByText("You're almost there!")).toBeVisible({
@@ -162,7 +148,7 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       });
 
       // Composer should NOT be visible (no keys yet)
-      const composer = bobPage.getByPlaceholder(/message #/i);
+      const composer = bobPage.getByRole('textbox', { name: /message #/i });
       await expect(composer).not.toBeVisible({ timeout: 5_000 });
     },
   );
@@ -177,10 +163,9 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
       await alicePage.context().setOffline(false);
 
       // Wait for Alice's gateway to reconnect and redistribute keys.
-      // Bob's slow poll (every 10s) should pick them up.
-      // Give it up to 30s to account for reconnect + redistribution + poll.
-      const composer = bobPage.getByPlaceholder(/message #/i);
-      await expect(composer).toBeVisible({ timeout: 30_000 });
+      // Cooldown is 5s, so keys should arrive quickly after reconnect.
+      const composer = bobPage.getByRole('textbox', { name: /message #/i });
+      await expect(composer).toBeVisible({ timeout: 15_000 });
 
       // The "You're almost there" bar should be gone
       await expect(bobPage.getByText("You're almost there!")).not.toBeVisible();

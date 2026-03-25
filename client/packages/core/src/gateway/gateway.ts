@@ -114,7 +114,7 @@ let generation = 0;
 let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
 let lastRedistributeTime = 0;
-const REDISTRIBUTE_COOLDOWN_MS = 60_000; // 1 minute between reconnect redistributions
+const REDISTRIBUTE_COOLDOWN_MS = 5_000; // debounce flapping connections; UPSERT makes dupes safe
 let isOnline =
   typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
 

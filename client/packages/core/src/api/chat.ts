@@ -1077,6 +1077,7 @@ export async function updateServer(
     onboardingEnabled?: boolean;
     rulesRequired?: boolean;
     defaultChannelPrivacy?: boolean;
+    bannerUrl?: string;
   },
 ) {
   try {

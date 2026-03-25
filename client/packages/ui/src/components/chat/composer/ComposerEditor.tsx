@@ -404,6 +404,7 @@ export const ComposerEditor = forwardRef<
         spellcheck: 'true',
         role: 'textbox',
         'aria-multiline': 'true',
+        'aria-label': placeholder,
       },
     });
 
@@ -429,6 +430,14 @@ export const ComposerEditor = forwardRef<
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId]); // Re-create view on channel switch
+
+  // Keep aria-label in sync with placeholder prop (e.g., reply mode)
+  useEffect(() => {
+    const view = viewRef.current;
+    if (view && !view.isDestroyed) {
+      view.dom.setAttribute('aria-label', placeholder);
+    }
+  }, [placeholder]);
 
   // Imperative handle for parent components
   useImperativeHandle(

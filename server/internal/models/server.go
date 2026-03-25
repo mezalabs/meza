@@ -14,4 +14,5 @@ type Server struct {
 	OnboardingEnabled      bool
 	RulesRequired          bool
 	DefaultChannelPrivacy  bool
+	BannerURL              *string
 }

@@ -1439,6 +1439,7 @@ type UpdateServerRequest struct {
 	OnboardingEnabled     *bool                  `protobuf:"varint,6,opt,name=onboarding_enabled,json=onboardingEnabled,proto3,oneof" json:"onboarding_enabled,omitempty"`
 	RulesRequired         *bool                  `protobuf:"varint,7,opt,name=rules_required,json=rulesRequired,proto3,oneof" json:"rules_required,omitempty"`
 	DefaultChannelPrivacy *bool                  `protobuf:"varint,8,opt,name=default_channel_privacy,json=defaultChannelPrivacy,proto3,oneof" json:"default_channel_privacy,omitempty"`
+	BannerUrl             *string                `protobuf:"bytes,9,opt,name=banner_url,json=bannerUrl,proto3,oneof" json:"banner_url,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -1527,6 +1528,13 @@ func (x *UpdateServerRequest) GetDefaultChannelPrivacy() bool {
 		return *x.DefaultChannelPrivacy
 	}
 	return false
+}
+
+func (x *UpdateServerRequest) GetBannerUrl() string {
+	if x != nil && x.BannerUrl != nil {
+		return *x.BannerUrl
+	}
+	return ""
 }
 
 type UpdateServerResponse struct {
@@ -12155,7 +12163,7 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x17default_channel_privacy\x18\x03 \x01(\bR\x15defaultChannelPrivacyB\v\n" +
 	"\t_icon_url\"?\n" +
 	"\x14CreateServerResponse\x12'\n" +
-	"\x06server\x18\x01 \x01(\v2\x0f.meza.v1.ServerR\x06server\"\xcb\x03\n" +
+	"\x06server\x18\x01 \x01(\v2\x0f.meza.v1.ServerR\x06server\"\xfe\x03\n" +
 	"\x13UpdateServerRequest\x12\x1b\n" +
 	"\tserver_id\x18\x01 \x01(\tR\bserverId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1e\n" +
@@ -12164,14 +12172,17 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\x05rules\x18\x05 \x01(\tH\x03R\x05rules\x88\x01\x01\x122\n" +
 	"\x12onboarding_enabled\x18\x06 \x01(\bH\x04R\x11onboardingEnabled\x88\x01\x01\x12*\n" +
 	"\x0erules_required\x18\a \x01(\bH\x05R\rrulesRequired\x88\x01\x01\x12;\n" +
-	"\x17default_channel_privacy\x18\b \x01(\bH\x06R\x15defaultChannelPrivacy\x88\x01\x01B\a\n" +
+	"\x17default_channel_privacy\x18\b \x01(\bH\x06R\x15defaultChannelPrivacy\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"banner_url\x18\t \x01(\tH\aR\tbannerUrl\x88\x01\x01B\a\n" +
 	"\x05_nameB\v\n" +
 	"\t_icon_urlB\x12\n" +
 	"\x10_welcome_messageB\b\n" +
 	"\x06_rulesB\x15\n" +
 	"\x13_onboarding_enabledB\x11\n" +
 	"\x0f_rules_requiredB\x1a\n" +
-	"\x18_default_channel_privacy\"?\n" +
+	"\x18_default_channel_privacyB\r\n" +
+	"\v_banner_url\"?\n" +
 	"\x14UpdateServerResponse\x12'\n" +
 	"\x06server\x18\x01 \x01(\v2\x0f.meza.v1.ServerR\x06server\"2\n" +
 	"\x13DeleteServerRequest\x12\x1b\n" +

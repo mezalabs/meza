@@ -174,7 +174,7 @@ func (m *mockChatStore) GetDMOtherParticipantID(context.Context, string, string)
 func (m *mockChatStore) ListMemberUserIDs(context.Context, string) ([]string, error) {
 	return nil, nil
 }
-func (m *mockChatStore) UpdateServer(context.Context, string, *string, *string, *string, *string, *bool, *bool, *bool) (*models.Server, error) {
+func (m *mockChatStore) UpdateServer(context.Context, string, *string, *string, *string, *string, *bool, *bool, *bool, *string) (*models.Server, error) {
 	panic("not implemented")
 }
 func (m *mockChatStore) AcknowledgeRules(context.Context, string, string) (time.Time, error) {
