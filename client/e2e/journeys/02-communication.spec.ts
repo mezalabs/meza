@@ -170,7 +170,9 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
   // Search is metadata-only (E2EE — no plaintext on server). Verify the
   // search pane opens, accepts a query, and displays results or the empty state.
   await chapter(alicePage, testInfo, 'Search', async () => {
-    await alicePage.keyboard.press('ControlOrMeta+k');
+    // Desktop Chrome device in Playwright has a Linux user-agent, so mod+k
+    // resolves to Ctrl+K (not Cmd+K). Use Control explicitly.
+    await alicePage.keyboard.press('Control+k');
     const searchInput = alicePage.getByPlaceholder(/search/i);
     await expect(searchInput).toBeVisible({ timeout: 10_000 });
     await searchInput.fill('test');
