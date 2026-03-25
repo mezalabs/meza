@@ -92,7 +92,7 @@ export const KEYBINDS = {
     keys: 'mod+k',
     label: 'Search messages',
     category: 'navigation',
-    hotkeyOptions: { preventDefault: true, enableOnFormTags: true, enableOnContentEditable: true },
+    hotkeyOptions: { preventDefault: true, enableOnFormTags: true },
   },
   'show-shortcuts': {
     keys: 'shift+/',

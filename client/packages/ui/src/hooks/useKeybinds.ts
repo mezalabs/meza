@@ -138,8 +138,6 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
     const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
 
     function keydownHandler(e: KeyboardEvent) {
-      if (e.defaultPrevented) return;
-
       for (const [id, def] of entries) {
         const effectiveKeys = useKeybindOverridesStore
           .getState()
@@ -201,11 +199,11 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
       activeHolds.current.clear();
     }
 
-    document.addEventListener('keydown', keydownHandler);
+    document.addEventListener('keydown', keydownHandler, true);
     document.addEventListener('keyup', keyupHandler);
     window.addEventListener('blur', blurHandler);
     return () => {
-      document.removeEventListener('keydown', keydownHandler);
+      document.removeEventListener('keydown', keydownHandler, true);
       document.removeEventListener('keyup', keyupHandler);
       window.removeEventListener('blur', blurHandler);
       // Release any active holds on cleanup
