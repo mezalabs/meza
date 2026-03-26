@@ -74,14 +74,22 @@ test('Journey 4: Media & Voice', async ({ browser }, testInfo) => {
     await alice.selectChannel('voice');
 
     // Alice auto-joins voice via sidebar click
-    await expect(alicePage.locator('main').getByText(/encrypted|connecting/i).first()).toBeVisible(
-      { timeout: 15_000 },
-    );
+    await expect(
+      alicePage
+        .locator('main')
+        .getByText(/encrypted|connecting/i)
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
 
     // Bob joins voice
     await bob.goto(SERVER, 'general');
     await bob.selectChannel('voice');
-    await expect(bobPage.locator('main').getByText(/encrypted|connecting/i).first()).toBeVisible({
+    await expect(
+      bobPage
+        .locator('main')
+        .getByText(/encrypted|connecting/i)
+        .first(),
+    ).toBeVisible({
       timeout: 15_000,
     });
 

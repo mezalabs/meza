@@ -59,7 +59,9 @@ export function OverviewSection({ serverId }: OverviewSectionProps) {
   if (!server) return null;
 
   const iconSrc = server.iconUrl ? resolveIconUrl(server.iconUrl) : undefined;
-  const bannerSrc = server.bannerUrl ? resolveIconUrl(server.bannerUrl) : undefined;
+  const bannerSrc = server.bannerUrl
+    ? resolveIconUrl(server.bannerUrl)
+    : undefined;
 
   return (
     <div className="space-y-6">
