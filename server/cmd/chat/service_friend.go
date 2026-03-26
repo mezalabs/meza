@@ -108,6 +108,16 @@ func (s *chatService) SendFriendRequest(ctx context.Context, req *connect.Reques
 		}
 	}
 
+	// Check if already friends — prevents duplicate requests and noisy events.
+	alreadyFriends, err := s.friendStore.AreFriends(ctx, userID, targetID)
+	if err != nil {
+		slog.Error("checking existing friendship", "err", err, "user", userID, "target", targetID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	if alreadyFriends {
+		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("already friends with this user"))
+	}
+
 	// Friend request privacy check.
 	if err := s.checkFriendRequestPrivacy(ctx, userID, targetUser); err != nil {
 		return nil, err
@@ -147,20 +157,13 @@ func (s *chatService) checkFriendRequestPrivacy(ctx context.Context, callerID st
 	case "nobody":
 		return connect.NewError(connect.CodeNotFound, errors.New("user not found"))
 	case "server_co_members":
-		areFriends, err := s.friendStore.AreFriends(ctx, callerID, target.ID)
+		mutual, err := s.chatStore.ShareAnyServer(ctx, callerID, target.ID)
 		if err != nil {
-			slog.Error("checking friendship for friend request privacy", "err", err)
+			slog.Error("checking mutual servers", "err", err)
 			return connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
-		if !areFriends {
-			mutual, err := s.chatStore.ShareAnyServer(ctx, callerID, target.ID)
-			if err != nil {
-				slog.Error("checking mutual servers", "err", err)
-				return connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			if !mutual {
-				return connect.NewError(connect.CodeNotFound, errors.New("user not found"))
-			}
+		if !mutual {
+			return connect.NewError(connect.CodeNotFound, errors.New("user not found"))
 		}
 	case "everyone", "":
 		// allow

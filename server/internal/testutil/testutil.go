@@ -35,7 +35,7 @@ func init() {
 // registers cleanup for both. The server listens on a random port.
 func StartTestNATS(t *testing.T) *nats.Conn {
 	t.Helper()
-	opts := &natsserver.Options{Port: -1}
+	opts := &natsserver.Options{Host: "127.0.0.1", Port: -1}
 	ns, err := natsserver.NewServer(opts)
 	if err != nil {
 		t.Fatalf("start nats: %v", err)
