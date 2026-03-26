@@ -1,5 +1,7 @@
 export { MEZA_VERSION } from '@meza/core';
 export { ChannelView } from './components/chat/ChannelView.tsx';
+export { AuthForm } from './components/lobby/AuthForm.tsx';
+export { DownloadButton } from './components/lobby/DownloadButton.tsx';
 export { InviteLanding } from './components/lobby/InviteLanding.tsx';
 export { LandingPage } from './components/lobby/LandingPage.tsx';
 export { WebLandingPage } from './components/lobby/WebLandingPage.tsx';

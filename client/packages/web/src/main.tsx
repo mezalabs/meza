@@ -20,15 +20,18 @@ import {
 import {
   InviteLanding,
   resetE2EEKeyProvider,
-  Shell,
   TitleBar,
   useNavigationStore,
   useTilingStore,
-  WebLandingPage,
 } from '@meza/ui';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { navigateToChannel } from './navigate.ts';
+
+const Shell = lazy(() =>
+  import('@meza/ui').then((m) => ({ default: m.Shell })),
+);
+const DemoShell = lazy(() => import('./demo/DemoShell.tsx'));
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -172,22 +175,32 @@ function App() {
     return () => clearTimeout(timer);
   }, [sessionReady, isAuthenticated]);
 
+  const loadingSpinner = (
+    <div className="flex flex-1 items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent text-text-muted" />
+        <span className="text-sm text-text-muted">Setting up encryption…</span>
+      </div>
+    </div>
+  );
+
   let content: React.ReactNode;
-  if (isAuthenticated && sessionReady) content = <Shell />;
+  if (isAuthenticated && sessionReady)
+    content = (
+      <Suspense fallback={loadingSpinner}>
+        <Shell />
+      </Suspense>
+    );
   else if (hasPendingInvite) content = <InviteLanding />;
-  else if (!isAuthenticated) content = <WebLandingPage />;
+  else if (!isAuthenticated)
+    content = (
+      <Suspense fallback={loadingSpinner}>
+        <DemoShell />
+      </Suspense>
+    );
   else {
     // Authenticated but session not ready yet — show a loading state
-    content = (
-      <div className="flex flex-1 items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent text-text-muted" />
-          <span className="text-sm text-text-muted">
-            Setting up encryption…
-          </span>
-        </div>
-      </div>
-    );
+    content = loadingSpinner;
   }
 
   return (

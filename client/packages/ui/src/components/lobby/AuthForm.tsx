@@ -85,11 +85,12 @@ export function AuthForm() {
       <div className="flex">
         <button
           type="button"
+          disabled={isLoading}
           className={`relative flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
             mode === 'register'
               ? 'text-text'
               : 'text-text-muted hover:text-text'
-          }`}
+          } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
           onClick={() => switchMode('register')}
         >
           Sign Up
@@ -99,9 +100,10 @@ export function AuthForm() {
         </button>
         <button
           type="button"
+          disabled={isLoading}
           className={`relative flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
             mode === 'login' ? 'text-text' : 'text-text-muted hover:text-text'
-          }`}
+          } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
           onClick={() => switchMode('login')}
         >
           Sign In

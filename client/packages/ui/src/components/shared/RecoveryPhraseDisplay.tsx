@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface RecoveryPhraseDisplayProps {
   phrase: string;
@@ -15,13 +15,24 @@ export function RecoveryPhraseDisplay({
   const words = phrase.split(' ');
   const [confirmed, setConfirmed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const clipboardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clipboardTimerRef.current) clearTimeout(clipboardTimerRef.current);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(phrase);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      setTimeout(
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
+      if (clipboardTimerRef.current) clearTimeout(clipboardTimerRef.current);
+      clipboardTimerRef.current = setTimeout(
         () => navigator.clipboard.writeText('').catch(() => {}),
         30000,
       );
