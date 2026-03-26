@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 
 	"github.com/mezalabs/meza/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -61,8 +62,22 @@ func scanUserFromRows(rows pgx.Rows) (*models.User, error) {
 	return &u, nil
 }
 
+// friendPairLockKey returns a deterministic int64 advisory-lock key for a pair
+// of user IDs, regardless of order. Used to serialize concurrent friend
+// operations between the same two users.
+func friendPairLockKey(a, b string) int64 {
+	if a > b {
+		a, b = b, a
+	}
+	h := fnv.New64a()
+	h.Write([]byte(a))
+	h.Write([]byte{0})
+	h.Write([]byte(b))
+	return int64(h.Sum64())
+}
+
 // SendFriendRequest creates a pending friendship or auto-accepts if a reverse pending request exists.
-// Uses a transaction with row locking to prevent TOCTOU races on concurrent mutual requests.
+// Uses advisory locking on the user pair to serialize concurrent mutual requests and prevent duplicates.
 func (s *FriendStore) SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -73,13 +88,41 @@ func (s *FriendStore) SendFriendRequest(ctx context.Context, requesterID, addres
 	}
 	defer tx.Rollback(ctx)
 
-	// Lock any existing reverse row to prevent concurrent mutual requests from both auto-accepting.
+	// Acquire an advisory lock on the sorted user pair to serialize concurrent
+	// mutual friend requests. Without this, two concurrent requests between the
+	// same pair can both miss each other's pending row and create duplicate
+	// friendship rows (one in each direction).
+	_, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", friendPairLockKey(requesterID, addresseeID))
+	if err != nil {
+		return false, fmt.Errorf("acquire advisory lock: %w", err)
+	}
+
+	// Check if already friends in either direction.
+	var alreadyFriends bool
+	err = tx.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM friendships
+			WHERE ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))
+			  AND status = 'accepted'
+		)`,
+		requesterID, addresseeID,
+	).Scan(&alreadyFriends)
+	if err != nil {
+		return false, fmt.Errorf("check existing friendship: %w", err)
+	}
+	if alreadyFriends {
+		if err := tx.Commit(ctx); err != nil {
+			return false, fmt.Errorf("commit already-friends: %w", err)
+		}
+		return true, nil
+	}
+
+	// Check for a reverse pending request.
 	var reverseExists bool
 	err = tx.QueryRow(ctx,
 		`SELECT EXISTS(
 			SELECT 1 FROM friendships
 			WHERE requester_id = $1 AND addressee_id = $2 AND status = 'pending'
-			FOR UPDATE
 		)`,
 		addresseeID, requesterID,
 	).Scan(&reverseExists)
@@ -238,11 +281,16 @@ func (s *FriendStore) ListFriendsWithUsers(ctx context.Context, userID string) (
 	defer rows.Close()
 
 	var users []*models.User
+	seen := make(map[string]bool)
 	for rows.Next() {
 		u, err := scanUserFromRows(rows)
 		if err != nil {
 			return nil, fmt.Errorf("scan friend: %w", err)
 		}
+		if seen[u.ID] {
+			continue
+		}
+		seen[u.ID] = true
 		users = append(users, u)
 	}
 	return users, rows.Err()
