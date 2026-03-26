@@ -347,7 +347,9 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const focusedPaneId = sidebarFocusedPaneId;
   const setPaneContent = sidebarSetPaneContent;
 
-  const [serverNotifyLevel, setServerNotifyLevel] = useState<string | null>(null);
+  const [serverNotifyLevel, setServerNotifyLevel] = useState<string | null>(
+    null,
+  );
 
   // Reset and reload notification preference when server changes
   useEffect(() => {
@@ -366,7 +368,9 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
         if (!cancelled) setServerNotifyLevel('all');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [selectedServerId]);
 
   const handleSetNotifyLevel = useCallback(
@@ -618,121 +622,135 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
           ) : (
             <>
               {/* Server banner + header with hover tray */}
-              {selectedServerId && servers[selectedServerId] && (() => {
-                const srv = servers[selectedServerId];
-                const bannerSrc = srv.bannerUrl ? resolveIconUrl(srv.bannerUrl) : undefined;
-                const onBanner = !!bannerSrc;
-                const colorClass = onBanner
-                  ? 'text-white/60 hover:text-white hover:bg-white/10'
-                  : 'text-text-muted hover:text-text hover:bg-bg-surface-hover';
-                const btnClass = `rounded-md ${colorClass} transition-all duration-150 ${isMobile ? 'p-1.5' : 'p-0.5 scale-90 group-hover/header:scale-100 group-hover/header:p-1'}`;
-                const iconSize = isMobile ? 20 : 16;
+              {selectedServerId &&
+                servers[selectedServerId] &&
+                (() => {
+                  const srv = servers[selectedServerId];
+                  const bannerSrc = srv.bannerUrl
+                    ? resolveIconUrl(srv.bannerUrl)
+                    : undefined;
+                  const onBanner = !!bannerSrc;
+                  const colorClass = onBanner
+                    ? 'text-white/60 hover:text-white hover:bg-white/10'
+                    : 'text-text-muted hover:text-text hover:bg-bg-surface-hover';
+                  const btnClass = `rounded-md ${colorClass} transition-all duration-150 ${isMobile ? 'p-1.5' : 'p-0.5 scale-90 group-hover/header:scale-100 group-hover/header:p-1'}`;
+                  const iconSize = isMobile ? 20 : 16;
 
-                const actionButtons = (
-                  <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-0.5'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setInviteOpen(true)}
-                      className={btnClass}
-                      aria-label="Invite people"
-                      title="Invite people"
+                  const actionButtons = (
+                    <div
+                      className={`flex items-center ${isMobile ? 'gap-2' : 'gap-0.5'}`}
                     >
-                      <UserPlusIcon size={iconSize} aria-hidden="true" />
-                    </button>
-                    {!isMobile && (
-                      <Popover.Root>
-                        <Popover.Trigger asChild>
-                          <button
-                            type="button"
-                            className={btnClass}
-                            aria-label="Notification preferences"
-                            title="Notification preferences"
-                          >
-                            {serverNotifyLevel === 'nothing' ? (
-                              <BellSimpleSlashIcon size={iconSize} aria-hidden="true" />
-                            ) : (
-                              <BellSimpleIcon size={iconSize} aria-hidden="true" />
-                            )}
-                          </button>
-                        </Popover.Trigger>
-                        <Popover.Portal>
-                          <Popover.Content
-                            className="w-[200px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in z-50"
-                            sideOffset={6}
-                            align="end"
-                          >
-                            <p className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
-                              Notify for…
-                            </p>
-                            {([
-                              ['all', 'All messages'],
-                              ['mentions_only', 'Mentions only'],
-                              ['nothing', 'Nothing'],
-                            ] as const).map(([value, label]) => (
-                              <Popover.Close asChild key={value}>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetNotifyLevel(value)}
-                                  className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-                                    serverNotifyLevel === value
-                                      ? 'text-accent bg-accent-subtle'
-                                      : 'text-text hover:bg-bg-surface-hover'
-                                  }`}
-                                >
-                                  {label}
-                                </button>
-                              </Popover.Close>
-                            ))}
-                          </Popover.Content>
-                        </Popover.Portal>
-                      </Popover.Root>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPaneContent(focusedPaneId, {
-                          type: 'serverSettings',
-                          serverId: selectedServerId,
-                        })
-                      }
-                      className={btnClass}
-                      aria-label="Server settings"
-                      title="Server settings"
-                    >
-                      <GearIcon size={iconSize} aria-hidden="true" />
-                    </button>
-                  </div>
-                );
+                      <button
+                        type="button"
+                        onClick={() => setInviteOpen(true)}
+                        className={btnClass}
+                        aria-label="Invite people"
+                        title="Invite people"
+                      >
+                        <UserPlusIcon size={iconSize} aria-hidden="true" />
+                      </button>
+                      {!isMobile && (
+                        <Popover.Root>
+                          <Popover.Trigger asChild>
+                            <button
+                              type="button"
+                              className={btnClass}
+                              aria-label="Notification preferences"
+                              title="Notification preferences"
+                            >
+                              {serverNotifyLevel === 'nothing' ? (
+                                <BellSimpleSlashIcon
+                                  size={iconSize}
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <BellSimpleIcon
+                                  size={iconSize}
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </button>
+                          </Popover.Trigger>
+                          <Popover.Portal>
+                            <Popover.Content
+                              className="w-[200px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in z-50"
+                              sideOffset={6}
+                              align="end"
+                            >
+                              <p className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-text-subtle">
+                                Notify for…
+                              </p>
+                              {(
+                                [
+                                  ['all', 'All messages'],
+                                  ['mentions_only', 'Mentions only'],
+                                  ['nothing', 'Nothing'],
+                                ] as const
+                              ).map(([value, label]) => (
+                                <Popover.Close asChild key={value}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetNotifyLevel(value)}
+                                    className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                                      serverNotifyLevel === value
+                                        ? 'text-accent bg-accent-subtle'
+                                        : 'text-text hover:bg-bg-surface-hover'
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                </Popover.Close>
+                              ))}
+                            </Popover.Content>
+                          </Popover.Portal>
+                        </Popover.Root>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPaneContent(focusedPaneId, {
+                            type: 'serverSettings',
+                            serverId: selectedServerId,
+                          })
+                        }
+                        className={btnClass}
+                        aria-label="Server settings"
+                        title="Server settings"
+                      >
+                        <GearIcon size={iconSize} aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
 
-                return (
-                  <div className="group/header">
-                    {bannerSrc ? (
-                      <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
-                        <img
-                          src={bannerSrc}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                        <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/90 via-black/60 to-transparent">
-                          <div className="flex items-center gap-1 px-2 py-2">
-                            <h2 className="min-w-0 flex-1 text-sm font-semibold text-white truncate drop-shadow-sm">
-                              {srv.name}
-                            </h2>
-                            {actionButtons}
+                  return (
+                    <div className="group/header">
+                      {bannerSrc ? (
+                        <div className="relative w-full h-[120px] overflow-hidden rounded-t-md -mt-1">
+                          <img
+                            src={bannerSrc}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                          <div className="absolute inset-x-0 top-0 bg-gradient-to-b from-black/90 via-black/60 to-transparent">
+                            <div className="flex items-center gap-1 px-2 py-2">
+                              <h2 className="min-w-0 flex-1 text-sm font-semibold text-white truncate drop-shadow-sm">
+                                {srv.name}
+                              </h2>
+                              {actionButtons}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 px-2 py-2">
-                        <h2 className="min-w-0 flex-1 text-base font-semibold text-text truncate">
-                          {srv.name}
-                        </h2>
-                        {actionButtons}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+                      ) : (
+                        <div className="flex items-center gap-1 px-2 py-2">
+                          <h2 className="min-w-0 flex-1 text-base font-semibold text-text truncate">
+                            {srv.name}
+                          </h2>
+                          {actionButtons}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               {rulesBlocked ? (
                 <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 text-center">
