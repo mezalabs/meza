@@ -1,8 +1,9 @@
+import { useDraggable } from '@dnd-kit/core';
 import { DownloadButton } from '@meza/ui';
 import { Hash, RocketLaunch } from '@phosphor-icons/react';
 
 import type { DemoPaneId } from './types.ts';
-import { DEMO_CHANNELS } from './types.ts';
+import { DEMO_CHANNELS, demoPaneContent } from './types.ts';
 
 interface DemoSidebarProps {
   activeChannel: DemoPaneId;
@@ -14,6 +15,43 @@ function ChannelIcon({ channelId }: { channelId: DemoPaneId }) {
     return <RocketLaunch size={16} weight="regular" />;
   }
   return <Hash size={16} weight="regular" />;
+}
+
+function DraggableChannel({
+  channel,
+  isActive,
+  onSelect,
+}: {
+  channel: (typeof DEMO_CHANNELS)[number];
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `sidebar-${channel.id}`,
+    data: {
+      type: 'sidebar' as const,
+      content: demoPaneContent(channel.id),
+      label: channel.name,
+    },
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      onClick={onSelect}
+      className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
+        isActive
+          ? 'bg-bg-elevated text-text'
+          : 'text-text-muted hover:bg-bg-elevated/50 hover:text-text'
+      } ${isDragging ? 'opacity-40' : ''}`}
+      {...attributes}
+      {...listeners}
+    >
+      <ChannelIcon channelId={channel.id} />
+      <span className="truncate">#{channel.name}</span>
+    </button>
+  );
 }
 
 export function DemoSidebar({
@@ -52,24 +90,14 @@ export function DemoSidebar({
           </div>
 
           {/* Channel entries */}
-          {DEMO_CHANNELS.map((channel) => {
-            const isActive = activeChannel === channel.id;
-            return (
-              <button
-                key={channel.id}
-                type="button"
-                onClick={() => onChannelSelect(channel.id)}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${
-                  isActive
-                    ? 'bg-bg-elevated text-text'
-                    : 'text-text-muted hover:bg-bg-elevated/50 hover:text-text'
-                }`}
-              >
-                <ChannelIcon channelId={channel.id} />
-                <span className="truncate">#{channel.name}</span>
-              </button>
-            );
-          })}
+          {DEMO_CHANNELS.map((channel) => (
+            <DraggableChannel
+              key={channel.id}
+              channel={channel}
+              isActive={activeChannel === channel.id}
+              onSelect={() => onChannelSelect(channel.id)}
+            />
+          ))}
         </nav>
       </div>
 
