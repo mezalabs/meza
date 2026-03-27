@@ -19,6 +19,13 @@ export interface MessageState {
 
 export interface MessageActions {
   setMessages: (channelId: string, messages: Message[]) => void;
+  /**
+   * Replace messages with a fetched batch, but preserve any real-time messages
+   * (from WebSocket) that have IDs newer than the last fetched message. This
+   * prevents the race where setMessages overwrites messages that arrived via
+   * gateway while the HTTP fetch was in flight.
+   */
+  hydrateMessages: (channelId: string, messages: Message[]) => void;
   prependMessages: (channelId: string, messages: Message[]) => void;
   addMessage: (channelId: string, message: Message) => void;
   updateMessage: (channelId: string, message: Message) => void;
@@ -63,6 +70,56 @@ export const useMessageStore = create<MessageState & MessageActions>()(
       set((state) => {
         state.byChannel[channelId] = messages;
         state.byId[channelId] = buildByIdIndex(messages);
+        delete state.isLoading[channelId];
+      });
+    },
+
+    hydrateMessages: (channelId, fetched) => {
+      set((state) => {
+        const existing = state.byChannel[channelId];
+        const pending = state.pendingMessages[channelId];
+
+        if (
+          (!existing || existing.length === 0) &&
+          (!pending || pending.length === 0)
+        ) {
+          state.byChannel[channelId] = fetched;
+          state.byId[channelId] = buildByIdIndex(fetched);
+          delete state.isLoading[channelId];
+          return;
+        }
+
+        // Messages use ULIDs (chronologically sortable). Any existing message
+        // with an ID greater than the last fetched message was delivered in
+        // real-time while the HTTP request was in flight. Pending messages are
+        // those buffered during historical-view mode.
+        const fetchedIndex = buildByIdIndex(fetched);
+        const lastFetchedId =
+          fetched.length > 0 ? fetched[fetched.length - 1].id : '';
+
+        const trailing: Message[] = [];
+        if (existing) {
+          for (const m of existing) {
+            if (m.id > lastFetchedId && !fetchedIndex[m.id]) {
+              trailing.push(m);
+            }
+          }
+        }
+        if (pending) {
+          for (const m of pending) {
+            if (!fetchedIndex[m.id] && !trailing.some((t) => t.id === m.id)) {
+              trailing.push(m);
+            }
+          }
+          // Sort pending into chronological order (ULIDs sort lexicographically)
+          trailing.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+          delete state.pendingMessages[channelId];
+        }
+
+        const merged =
+          trailing.length > 0 ? [...fetched, ...trailing] : fetched;
+        state.byChannel[channelId] = merged;
+        state.byId[channelId] = buildByIdIndex(merged);
         delete state.isLoading[channelId];
       });
     },

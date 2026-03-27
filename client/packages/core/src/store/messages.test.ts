@@ -91,4 +91,54 @@ describe('message store', () => {
     useMessageStore.getState().setError('c1', null);
     expect(useMessageStore.getState().error.c1).toBeUndefined();
   });
+
+  describe('hydrateMessages', () => {
+    it('replaces messages when no existing messages', () => {
+      useMessageStore.getState().hydrateMessages('c1', [msg1, msg2]);
+      expect(useMessageStore.getState().byChannel.c1).toEqual([msg1, msg2]);
+    });
+
+    it('preserves real-time messages newer than fetched batch', () => {
+      // Simulate: msg1,msg2 fetched initially, then msg3 arrives via WebSocket
+      useMessageStore.getState().setMessages('c1', [msg1, msg2]);
+      useMessageStore.getState().addMessage('c1', msg3);
+
+      // HTTP re-fetch returns [msg1, msg2] (msg3 not yet visible to read replica)
+      useMessageStore.getState().hydrateMessages('c1', [msg1, msg2]);
+
+      const messages = useMessageStore.getState().byChannel.c1;
+      expect(messages).toHaveLength(3);
+      expect(messages[2]).toEqual(msg3);
+    });
+
+    it('does not duplicate messages already in fetched set', () => {
+      useMessageStore.getState().setMessages('c1', [msg1, msg2, msg3]);
+      // Re-fetch includes all three
+      useMessageStore.getState().hydrateMessages('c1', [msg1, msg2, msg3]);
+      expect(useMessageStore.getState().byChannel.c1).toHaveLength(3);
+    });
+
+    it('merges pending messages from historical mode', () => {
+      // Simulate: viewing old messages, msg3 arrives and is buffered
+      useMessageStore.getState().setMessages('c1', [msg1]);
+      useMessageStore.getState().setViewMode('c1', 'historical');
+      useMessageStore.getState().addMessage('c1', msg3);
+
+      expect(useMessageStore.getState().pendingMessages.c1).toHaveLength(1);
+
+      // Return to present triggers hydrate with fresh fetch
+      useMessageStore.getState().hydrateMessages('c1', [msg1, msg2]);
+
+      const messages = useMessageStore.getState().byChannel.c1;
+      expect(messages).toHaveLength(3);
+      expect(messages[2]).toEqual(msg3);
+      expect(useMessageStore.getState().pendingMessages.c1).toBeUndefined();
+    });
+
+    it('clears loading state', () => {
+      useMessageStore.getState().setLoading('c1', true);
+      useMessageStore.getState().hydrateMessages('c1', [msg1]);
+      expect(useMessageStore.getState().isLoading.c1).toBeUndefined();
+    });
+  });
 });
