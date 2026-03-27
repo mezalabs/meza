@@ -209,7 +209,8 @@ export async function getMessages(
     } else if (opts?.before) {
       store.prependMessages(channelId, res.messages);
     } else {
-      store.setMessages(channelId, res.messages);
+      // Hydrate: merge with any real-time messages that arrived during fetch
+      store.hydrateMessages(channelId, res.messages);
     }
     // Use server-provided hasMore instead of length heuristic
     store.setHasMore(channelId, res.hasMore);
