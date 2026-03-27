@@ -22,7 +22,7 @@ import {
 } from '@meza/ui';
 import {
   Hash as HashIcon,
-  RocketLaunch as RocketLaunchIcon,
+  SignIn as SignInIcon,
   Star as StarIcon,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -43,16 +43,19 @@ function getDemoPaneMeta(content: PaneContent | undefined) {
       return {
         label: 'welcome',
         icon: <HashIcon size={14} weight="regular" />,
+        serverName: 'Meza',
       };
     case 'features':
       return {
         label: 'features',
         icon: <StarIcon size={14} weight="fill" />,
+        serverName: 'Meza',
       };
     case 'getStarted':
       return {
-        label: 'get-started',
-        icon: <RocketLaunchIcon size={14} weight="regular" />,
+        label: 'Sign in',
+        icon: <SignInIcon size={14} weight="regular" />,
+        serverName: undefined,
       };
   }
 }
@@ -234,6 +237,7 @@ function DemoDesktopShell() {
   // Resolve the active sidebar channel from focused pane's content
   const focusedContent = panes[focusedPaneId];
   const activeSidebarChannel = demoPaneIdFromContent(focusedContent);
+  const isDMActive = activeSidebarChannel === 'getStarted';
 
   // Sidebar channel click: set focused pane content
   const handleChannelSelect = useCallback(
@@ -242,6 +246,11 @@ function DemoDesktopShell() {
     },
     [focusedPaneId, setPaneContent],
   );
+
+  // DM icon click: open sign-in pane
+  const handleDMClick = useCallback(() => {
+    setPaneContent(focusedPaneId, demoPaneContent('getStarted'));
+  }, [focusedPaneId, setPaneContent]);
 
   const renderPane = useCallback(
     (paneId: string) => {
@@ -257,6 +266,7 @@ function DemoDesktopShell() {
           <Pane
             label={meta.label}
             icon={meta.icon}
+            serverName={meta.serverName}
             focused={paneId === focusedPaneId}
             showClose={showClose}
             onClose={() => closePane(paneId)}
@@ -295,6 +305,8 @@ function DemoDesktopShell() {
         <DemoSidebar
           activeChannel={activeSidebarChannel}
           onChannelSelect={handleChannelSelect}
+          isDMActive={isDMActive}
+          onDMClick={handleDMClick}
         />
         <div className="relative flex flex-1 min-h-0 min-w-0">
           <TilingRenderer node={root} renderPane={renderPane} />
@@ -319,6 +331,12 @@ function DemoMobileShell() {
   );
 
   const activeSidebarChannel = demoPaneIdFromContent(panes[focusedPaneId]);
+  const isDMActive = activeSidebarChannel === 'getStarted';
+
+  const handleDMClick = useCallback(() => {
+    setPaneContent(focusedPaneId, demoPaneContent('getStarted'));
+    setShowContent(true);
+  }, [focusedPaneId, setPaneContent]);
 
   if (showContent) {
     return (
@@ -342,6 +360,8 @@ function DemoMobileShell() {
       <DemoSidebar
         activeChannel={activeSidebarChannel}
         onChannelSelect={handleChannelSelect}
+        isDMActive={isDMActive}
+        onDMClick={handleDMClick}
       />
     </div>
   );

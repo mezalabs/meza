@@ -4,7 +4,6 @@ import {
   GitBranch,
   LockKey,
   SquaresFour,
-  Star,
   VideoCamera,
 } from '@phosphor-icons/react';
 
@@ -45,19 +44,14 @@ const features = [
 export function LandingFeatures() {
   return (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-bg-base">
-      <div className="h-10 border-b border-border bg-bg-surface flex items-center px-3 shrink-0">
-        <Star size={14} weight="fill" className="text-text-muted mr-1.5" />
-        <span className="text-sm font-medium text-text">features</span>
-      </div>
-
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-md mx-auto py-8 px-4 flex flex-col gap-6">
+        <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
           {features.map((feature) => (
             <div key={feature.title} className="flex items-start gap-4">
               <feature.icon
                 size={24}
                 weight="fill"
-                className="text-accent shrink-0 mt-0.5"
+                className="mt-0.5 shrink-0 text-accent"
               />
               <div>
                 <p className="font-bold text-text">{feature.title}</p>
