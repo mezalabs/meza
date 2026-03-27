@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core';
 import { DownloadButton } from '@meza/ui';
-import { Hash } from '@phosphor-icons/react';
+import { Hash, RocketLaunch } from '@phosphor-icons/react';
 
 import type { DemoPaneId } from './types.ts';
 import { DEMO_CHANNELS, demoPaneContent } from './types.ts';
@@ -58,7 +58,11 @@ function DraggableChannel({
       {...attributes}
       {...listeners}
     >
-      <Hash size={16} weight="regular" />
+      {channel.id === 'getStarted' ? (
+        <RocketLaunch size={16} weight="regular" />
+      ) : (
+        <Hash size={16} weight="regular" />
+      )}
       <span className="truncate">{channel.name}</span>
     </button>
   );

@@ -2,10 +2,11 @@ import type { PaneContent } from '@meza/core';
 
 export type DemoPaneId = 'welcome' | 'features' | 'getStarted';
 
-/** Channels shown in the server's channel list (not DMs). */
+/** Channels shown in the server's channel list. */
 export const DEMO_CHANNELS: { id: DemoPaneId; name: string }[] = [
   { id: 'welcome', name: 'welcome' },
   { id: 'features', name: 'features' },
+  { id: 'getStarted', name: 'get-started' },
 ];
 
 /** Map demo channel IDs to PaneContent values for the tiling store. */
