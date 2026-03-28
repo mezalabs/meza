@@ -3,7 +3,6 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
-  desktopCapturer,
   nativeImage,
   protocol,
   screen,
@@ -15,6 +14,7 @@ import {
   setupDeepLinks,
 } from './deeplink.js';
 import { registerIpcHandlers } from './ipc.js';
+import { showScreenPicker } from './screenPicker.js';
 import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
@@ -243,24 +243,30 @@ app.whenReady().then(() => {
         });
       },
     );
+  } else if (process.platform === 'win32') {
+    // Windows: no native system picker — show a custom picker window so the
+    // user can choose which screen or window to share.
+    session.defaultSession.setDisplayMediaRequestHandler(
+      async (_request, callback) => {
+        if (!mainWindow) {
+          callback({});
+          return;
+        }
+        const selected = await showScreenPicker(mainWindow);
+        if (selected) {
+          callback({ video: selected, audio: 'loopback' });
+        } else {
+          callback({});
+        }
+      },
+    );
   } else {
-    // macOS: native system picker; Windows: desktopCapturer fallback.
+    // macOS: native system picker.
     session.defaultSession.setDisplayMediaRequestHandler(
       (_request, callback) => {
-        desktopCapturer
-          .getSources({ types: ['screen', 'window'] })
-          .then((sources) => {
-            if (sources.length > 0) {
-              callback({ video: sources[0], audio: 'loopback' });
-            } else {
-              callback({});
-            }
-          })
-          .catch(() => {
-            callback({});
-          });
+        callback({});
       },
-      { useSystemPicker: process.platform === 'darwin' },
+      { useSystemPicker: true },
     );
   }
 
