@@ -99,6 +99,7 @@ import { MobileMessageActions } from './MobileMessageActions.tsx';
 import { PinnedMessagesPanel } from './PinnedMessagesPanel.tsx';
 import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
+import { ReactionsDialog } from './ReactionsDialog.tsx';
 import { GroupedJoinMessage, SystemMessage } from './SystemMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
@@ -1190,6 +1191,9 @@ const MessageItem = memo(function MessageItem({
     }
     return '';
   }, [msg.encryptedContent, isStillEncrypted]);
+  const hasReactions = useReactionStore(
+    (s) => (s.byMessage[msg.id]?.length ?? 0) > 0,
+  );
   const memberName = useAuthorName(msg.authorId, serverId);
   const authorAvatar = useAuthorAvatar(msg.authorId);
   const authorLabel = memberName;
@@ -1238,6 +1242,7 @@ const MessageItem = memo(function MessageItem({
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reactionsDialogOpen, setReactionsDialogOpen] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [quickReactionAnchor, setQuickReactionAnchor] =
     useState<DOMRect | null>(null);
@@ -1606,12 +1611,14 @@ const MessageItem = memo(function MessageItem({
           isOwn={isOwn}
           isPinned={isPinned}
           canPin
+          hasReactions={hasReactions}
           onReply={onReply}
           onEdit={onStartEdit}
           onDelete={() => setDeleteDialogOpen(true)}
           onPin={() => pinMessage(msg.channelId, msg.id)}
           onUnpin={() => unpinMessage(msg.channelId, msg.id)}
           onViewProfile={() => openProfilePane(msg.authorId)}
+          onViewReactions={() => setReactionsDialogOpen(true)}
         >
           {messageBody}
         </MessageContextMenu>
@@ -1636,6 +1643,7 @@ const MessageItem = memo(function MessageItem({
           isPinned={isPinned}
           canPin
           canManageMessages={canManageMessages}
+          hasReactions={hasReactions}
           encryptedContent={msg.encryptedContent}
           onClose={() => setMobileActionsOpen(false)}
           onReply={onReply}
@@ -1644,6 +1652,7 @@ const MessageItem = memo(function MessageItem({
           onPin={() => pinMessage(msg.channelId, msg.id)}
           onUnpin={() => unpinMessage(msg.channelId, msg.id)}
           onViewProfile={() => openProfilePane(msg.authorId)}
+          onViewReactions={() => setReactionsDialogOpen(true)}
         />
       )}
 
@@ -1678,6 +1687,13 @@ const MessageItem = memo(function MessageItem({
         messageId={msg.id}
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
+      />
+
+      <ReactionsDialog
+        messageId={msg.id}
+        serverId={serverId}
+        open={reactionsDialogOpen}
+        onOpenChange={setReactionsDialogOpen}
       />
     </>
   );

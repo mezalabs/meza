@@ -6,6 +6,7 @@ interface MessageContextMenuProps {
   isOwn: boolean;
   isPinned: boolean;
   canPin: boolean;
+  hasReactions: boolean;
   children: ReactNode;
   onReply: () => void;
   onEdit: () => void;
@@ -13,6 +14,7 @@ interface MessageContextMenuProps {
   onPin: () => void;
   onUnpin: () => void;
   onViewProfile?: () => void;
+  onViewReactions?: () => void;
 }
 
 const decoder = new TextDecoder();
@@ -22,6 +24,7 @@ export function MessageContextMenu({
   isOwn,
   isPinned,
   canPin,
+  hasReactions,
   children,
   onReply,
   onEdit,
@@ -29,6 +32,7 @@ export function MessageContextMenu({
   onPin,
   onUnpin,
   onViewProfile,
+  onViewReactions,
 }: MessageContextMenuProps) {
   return (
     <ContextMenu.Root>
@@ -52,6 +56,14 @@ export function MessageContextMenu({
           >
             Reply
           </ContextMenu.Item>
+          {hasReactions && onViewReactions && (
+            <ContextMenu.Item
+              className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
+              onSelect={onViewReactions}
+            >
+              View Reactions
+            </ContextMenu.Item>
+          )}
           <ContextMenu.Separator className="my-1 h-px bg-border" />
           <ContextMenu.Item
             className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
