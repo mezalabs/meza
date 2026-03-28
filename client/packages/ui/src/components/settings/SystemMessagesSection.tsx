@@ -111,10 +111,9 @@ export function SystemMessagesSection({
     return config[field] ?? '';
   }
 
-  const hasOverLimitTemplate = [
-    ...WELCOME_EVENTS,
-    ...MOD_LOG_EVENTS,
-  ].some((evt) => getTemplate(evt.templateField).length > TEMPLATE_MAX_LEN);
+  const hasOverLimitTemplate = [...WELCOME_EVENTS, ...MOD_LOG_EVENTS].some(
+    (evt) => getTemplate(evt.templateField).length > TEMPLATE_MAX_LEN,
+  );
 
   // Fetch config + channels on mount
   useEffect(() => {
@@ -274,7 +273,7 @@ function ChannelCard({
           key={evt.key}
           event={evt}
           enabled={config[evt.enabledField] !== false}
-          template={getTemplate(evt.templateField)}
+          template={config[evt.templateField] ?? ''}
           onEnabledChange={(v) =>
             onConfigChange((prev) => ({ ...prev, [evt.enabledField]: v }))
           }
