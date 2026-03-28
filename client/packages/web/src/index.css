@@ -52,7 +52,9 @@
   --color-current: currentColor;
 
   /* ── Typography ── */
-  --font-sans: "Geist Variable", "Geist", system-ui, -apple-system, sans-serif;
+  --font-sans:
+    "Geist Variable", "Geist", system-ui, -apple-system, "Apple Color Emoji",
+    "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
   --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
 
   /* ── Text scale (compact: 14px base) ── */

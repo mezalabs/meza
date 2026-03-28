@@ -146,10 +146,17 @@ function App() {
   // This prevents a brief flash of the chat UI that immediately vanishes
   // when bootstrap fails (e.g. new tab with no peer to share session key).
   const [sessionReady, setSessionReady] = useState(isSessionReady());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthenticated is intentionally included to re-register the listener after a teardown/re-auth cycle clears readyListeners
   useEffect(() => {
     if (sessionReady) return;
+    // Check synchronously — the global flag may already be true if bootstrap
+    // completed while a teardown/re-auth cycle cleared the previous listener.
+    if (isSessionReady()) {
+      setSessionReady(true);
+      return;
+    }
     return onSessionReady(() => setSessionReady(true));
-  }, [sessionReady]);
+  }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,
   // something went wrong (e.g. crypto bootstrap failed silently). Force

@@ -8,6 +8,7 @@
  * Usage: pnpm exec tsx helpers/nuke.ts
  */
 
+import fs from 'node:fs';
 import net from 'node:net';
 import pg from 'pg';
 
@@ -214,6 +215,12 @@ async function nukeRedis() {
     });
   });
 }
+
+// Clean stale Playwright auth/crypto state files from previous runs.
+// These contain localStorage snapshots (including auth tokens) that become
+// invalid after the DB nuke, causing a race where the app loads stale
+// credentials, fails bootstrap, and tears down the E2EE session.
+fs.rmSync('.auth', { recursive: true, force: true });
 
 nuke().catch((err) => {
   console.error('Nuke failed:', err);
