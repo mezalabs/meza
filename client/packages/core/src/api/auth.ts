@@ -13,15 +13,29 @@ import {
   useAuthStore,
 } from '../store/auth.ts';
 import { useBlockStore } from '../store/blocks.ts';
+import { useChannelGroupStore } from '../store/channel-groups.ts';
 import { useChannelStore } from '../store/channels.ts';
+import { useDMStore } from '../store/dms.ts';
+import { useEmojiStore } from '../store/emojis.ts';
 import { useFriendStore } from '../store/friends.ts';
+import { useGatewayStore } from '../store/gateway.ts';
+import { useKeybindOverridesStore } from '../store/keybindOverrides.ts';
+import { useMemberStore } from '../store/members.ts';
 import { useMessageStore } from '../store/messages.ts';
+import { useNotificationSettingsStore } from '../store/notificationSettings.ts';
+import { usePermissionOverrideStore } from '../store/permission-overrides.ts';
+import { usePinStore } from '../store/pins.ts';
 import { usePresenceStore } from '../store/presence.ts';
+import { useReactionStore } from '../store/reactions.ts';
+import { useReadStateStore } from '../store/read-state.ts';
+import { useRoleStore } from '../store/roles.ts';
 import { useServerStore } from '../store/servers.ts';
+import { useSoundStore } from '../store/sounds.ts';
 import { useStreamSettingsStore } from '../store/streamSettings.ts';
 import { useTypingStore } from '../store/typing.ts';
 import { useUsersStore } from '../store/users.ts';
 import { useVoiceStore } from '../store/voice.ts';
+import { useVoiceParticipantsStore } from '../store/voiceParticipants.ts';
 import { getBaseUrl } from '../utils/platform.ts';
 import { transport } from './client.ts';
 
@@ -363,13 +377,27 @@ export async function logout() {
 
   disconnect();
   useVoiceStore.getState().disconnect();
+  useVoiceParticipantsStore.getState().clearAll();
   useServerStore.getState().reset();
   useChannelStore.getState().reset();
+  useChannelGroupStore.getState().reset();
   useMessageStore.getState().reset();
   usePresenceStore.getState().reset();
   useTypingStore.getState().reset();
+  useRoleStore.getState().reset();
+  useMemberStore.getState().reset();
+  useEmojiStore.getState().reset();
+  usePermissionOverrideStore.getState().reset();
+  usePinStore.getState().reset();
+  useReactionStore.getState().reset();
+  useReadStateStore.getState().reset();
+  useDMStore.getState().reset();
+  useGatewayStore.getState().reset();
   useAudioSettingsStore.getState().reset();
   useStreamSettingsStore.getState().reset();
+  useNotificationSettingsStore.getState().reset();
+  useKeybindOverridesStore.getState().resetAll();
+  useSoundStore.getState().reset();
   useBlockStore.getState().reset();
   useFriendStore.getState().reset();
   resetSearchState();

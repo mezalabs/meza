@@ -30,6 +30,7 @@ export function SoundsSection({ serverId }: SoundsSectionProps) {
   const [uploadError, setUploadError] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editError, setEditError] = useState('');
@@ -77,12 +78,13 @@ export function SoundsSection({ serverId }: SoundsSectionProps) {
 
   async function handleDelete(soundId: string) {
     setIsDeleting(true);
+    setDeleteError('');
     try {
       await deleteSound(soundId);
       useSoundStore.getState().removeSound(soundId, serverId);
       setDeleteConfirmId(null);
     } catch {
-      // Error handled
+      setDeleteError('Failed to delete sound');
     } finally {
       setIsDeleting(false);
     }
@@ -137,6 +139,7 @@ export function SoundsSection({ serverId }: SoundsSectionProps) {
       </div>
 
       {uploadError && <p className="mb-3 text-xs text-error">{uploadError}</p>}
+      {deleteError && <p className="mb-3 text-xs text-error">{deleteError}</p>}
 
       {sounds.length === 0 && (
         <p className="text-sm text-text-muted">

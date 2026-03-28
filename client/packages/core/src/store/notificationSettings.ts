@@ -131,6 +131,7 @@ export const useNotificationSettingsStore = create<
     },
 
     reset: () => {
+      clearTimeout(saveTimer);
       try {
         localStorage.removeItem(NOTIFICATION_SETTINGS_KEY);
       } catch {

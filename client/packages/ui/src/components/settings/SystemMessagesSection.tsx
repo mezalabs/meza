@@ -107,6 +107,14 @@ export function SystemMessagesSection({
     [channels],
   );
 
+  function getTemplate(field: EventConfig['templateField']): string {
+    return config[field] ?? '';
+  }
+
+  const hasOverLimitTemplate = [...WELCOME_EVENTS, ...MOD_LOG_EVENTS].some(
+    (evt) => getTemplate(evt.templateField).length > TEMPLATE_MAX_LEN,
+  );
+
   // Fetch config + channels on mount
   useEffect(() => {
     if (!isAuthenticated || !serverId) return;
@@ -197,7 +205,7 @@ export function SystemMessagesSection({
       <button
         type="button"
         onClick={handleSave}
-        disabled={saving}
+        disabled={saving || hasOverLimitTemplate}
         className="rounded-md bg-accent px-6 py-2 text-sm font-medium text-black hover:bg-accent-hover disabled:opacity-50"
       >
         {saving ? 'Saving...' : 'Save Changes'}
@@ -265,7 +273,7 @@ function ChannelCard({
           key={evt.key}
           event={evt}
           enabled={config[evt.enabledField] !== false}
-          template={(config[evt.templateField] as string) ?? ''}
+          template={config[evt.templateField] ?? ''}
           onEnabledChange={(v) =>
             onConfigChange((prev) => ({ ...prev, [evt.enabledField]: v }))
           }

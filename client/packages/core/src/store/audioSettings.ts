@@ -254,6 +254,7 @@ export const useAudioSettingsStore = create<
     },
 
     reset: () => {
+      clearTimeout(saveTimer);
       try {
         localStorage.removeItem(AUDIO_SETTINGS_KEY);
       } catch {
