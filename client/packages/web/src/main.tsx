@@ -146,6 +146,7 @@ function App() {
   // This prevents a brief flash of the chat UI that immediately vanishes
   // when bootstrap fails (e.g. new tab with no peer to share session key).
   const [sessionReady, setSessionReady] = useState(isSessionReady());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isAuthenticated is intentionally included to re-register the listener after a teardown/re-auth cycle clears readyListeners
   useEffect(() => {
     if (sessionReady) return;
     // Check synchronously — the global flag may already be true if bootstrap
