@@ -1,9 +1,9 @@
 import path from 'node:path';
 import {
   BrowserWindow,
+  type DesktopCapturerSource,
   desktopCapturer,
   ipcMain,
-  type DesktopCapturerSource,
 } from 'electron';
 
 let pickerOpen = false;
