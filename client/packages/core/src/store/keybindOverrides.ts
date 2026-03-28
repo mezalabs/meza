@@ -77,6 +77,7 @@ export const useKeybindOverridesStore = create<
     },
 
     resetAll: () => {
+      clearTimeout(saveTimer);
       set((state) => {
         state.overrides = {};
       });

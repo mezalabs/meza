@@ -32,6 +32,7 @@ export function EmojisSection({ serverId }: EmojisSectionProps) {
   const [uploadError, setUploadError] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editError, setEditError] = useState('');
@@ -85,12 +86,13 @@ export function EmojisSection({ serverId }: EmojisSectionProps) {
 
   async function handleDelete(emojiId: string) {
     setIsDeleting(true);
+    setDeleteError('');
     try {
       await deleteEmoji(emojiId);
       useEmojiStore.getState().removeEmoji(serverId ?? '', emojiId);
       setDeleteConfirmId(null);
     } catch {
-      // Error handled
+      setDeleteError('Failed to delete emoji');
     } finally {
       setIsDeleting(false);
     }
@@ -145,6 +147,7 @@ export function EmojisSection({ serverId }: EmojisSectionProps) {
       </div>
 
       {uploadError && <p className="mb-3 text-xs text-error">{uploadError}</p>}
+      {deleteError && <p className="mb-3 text-xs text-error">{deleteError}</p>}
 
       {emojis.length === 0 && (
         <p className="text-sm text-text-muted">
