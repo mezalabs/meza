@@ -116,6 +116,10 @@ export function MemberContextMenu({
     !isOwner &&
     hasPermission(myPermissions, Permissions.BAN_MEMBERS);
   const canManageRoles = hasPermission(myPermissions, Permissions.MANAGE_ROLES);
+  const canAssignRolesToTarget =
+    canManageRoles &&
+    assignableRoles.length > 0 &&
+    (isSelf ? currentUserId === ownerId : !isOwner);
 
   async function handleRoleToggle(roleId: string) {
     if (isSubmitting) return;
@@ -184,10 +188,7 @@ export function MemberContextMenu({
               </ContextMenu.Item>
             )}
 
-            {canManageRoles &&
-              !isSelf &&
-              !isOwner &&
-              assignableRoles.length > 0 && (
+            {canAssignRolesToTarget && (
                 <>
                   <ContextMenu.Separator className="my-1 h-px bg-border" />
                   <ContextMenu.Sub>
