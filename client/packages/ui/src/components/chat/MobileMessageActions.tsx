@@ -5,6 +5,7 @@ interface MobileMessageActionsProps {
   isPinned: boolean;
   canPin: boolean;
   canManageMessages: boolean;
+  hasReactions: boolean;
   encryptedContent: Uint8Array;
   onClose: () => void;
   onReply: () => void;
@@ -13,6 +14,7 @@ interface MobileMessageActionsProps {
   onPin: () => void;
   onUnpin: () => void;
   onViewProfile?: () => void;
+  onViewReactions?: () => void;
 }
 
 const decoder = new TextDecoder();
@@ -26,6 +28,7 @@ export const MobileMessageActions = memo(function MobileMessageActions({
   isPinned,
   canPin,
   canManageMessages,
+  hasReactions,
   encryptedContent,
   onClose,
   onReply,
@@ -34,6 +37,7 @@ export const MobileMessageActions = memo(function MobileMessageActions({
   onPin,
   onUnpin,
   onViewProfile,
+  onViewReactions,
 }: MobileMessageActionsProps) {
   // Dismiss on outside tap
   useEffect(() => {
@@ -88,6 +92,9 @@ export const MobileMessageActions = memo(function MobileMessageActions({
         <div className="flex flex-col py-1">
           {onViewProfile && action('View Profile', onViewProfile)}
           {action('Reply', onReply)}
+          {hasReactions &&
+            onViewReactions &&
+            action('View Reactions', onViewReactions)}
           {action('Copy Text', () => {
             const text = decoder.decode(encryptedContent);
             navigator.clipboard.writeText(text);
