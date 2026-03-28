@@ -116,6 +116,10 @@ export function MemberContextMenu({
     !isOwner &&
     hasPermission(myPermissions, Permissions.BAN_MEMBERS);
   const canManageRoles = hasPermission(myPermissions, Permissions.MANAGE_ROLES);
+  const canAssignRolesToTarget =
+    canManageRoles &&
+    assignableRoles.length > 0 &&
+    (isSelf ? currentUserId === ownerId : !isOwner);
 
   async function handleRoleToggle(roleId: string) {
     if (isSubmitting) return;
@@ -184,42 +188,39 @@ export function MemberContextMenu({
               </ContextMenu.Item>
             )}
 
-            {canManageRoles &&
-              !isSelf &&
-              !isOwner &&
-              assignableRoles.length > 0 && (
-                <>
-                  <ContextMenu.Separator className="my-1 h-px bg-border" />
-                  <ContextMenu.Sub>
-                    <ContextMenu.SubTrigger className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle data-[state=open]:bg-accent-subtle">
-                      Manage Roles
-                    </ContextMenu.SubTrigger>
-                    <ContextMenu.Portal>
-                      <ContextMenu.SubContent className="min-w-[180px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in">
-                        {assignableRoles.map((role) => (
-                          <ContextMenu.CheckboxItem
-                            key={role.id}
-                            className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
-                            checked={displayedRoleIds.has(role.id)}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => handleRoleToggle(role.id)}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="inline-block h-3 w-3 shrink-0 rounded-full"
-                                style={{
-                                  backgroundColor: roleColorHex(role.color),
-                                }}
-                              />
-                              <span className="truncate">{role.name}</span>
-                            </div>
-                          </ContextMenu.CheckboxItem>
-                        ))}
-                      </ContextMenu.SubContent>
-                    </ContextMenu.Portal>
-                  </ContextMenu.Sub>
-                </>
-              )}
+            {canAssignRolesToTarget && (
+              <>
+                <ContextMenu.Separator className="my-1 h-px bg-border" />
+                <ContextMenu.Sub>
+                  <ContextMenu.SubTrigger className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle data-[state=open]:bg-accent-subtle">
+                    Manage Roles
+                  </ContextMenu.SubTrigger>
+                  <ContextMenu.Portal>
+                    <ContextMenu.SubContent className="min-w-[180px] rounded-lg bg-bg-elevated p-1 shadow-lg animate-scale-in">
+                      {assignableRoles.map((role) => (
+                        <ContextMenu.CheckboxItem
+                          key={role.id}
+                          className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
+                          checked={displayedRoleIds.has(role.id)}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={() => handleRoleToggle(role.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-3 w-3 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor: roleColorHex(role.color),
+                              }}
+                            />
+                            <span className="truncate">{role.name}</span>
+                          </div>
+                        </ContextMenu.CheckboxItem>
+                      ))}
+                    </ContextMenu.SubContent>
+                  </ContextMenu.Portal>
+                </ContextMenu.Sub>
+              </>
+            )}
 
             {(canKick || canBan) && (
               <>
