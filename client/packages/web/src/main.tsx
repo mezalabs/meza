@@ -148,8 +148,14 @@ function App() {
   const [sessionReady, setSessionReady] = useState(isSessionReady());
   useEffect(() => {
     if (sessionReady) return;
+    // Check synchronously — the global flag may already be true if bootstrap
+    // completed while a teardown/re-auth cycle cleared the previous listener.
+    if (isSessionReady()) {
+      setSessionReady(true);
+      return;
+    }
     return onSessionReady(() => setSessionReady(true));
-  }, [sessionReady]);
+  }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,
   // something went wrong (e.g. crypto bootstrap failed silently). Force
