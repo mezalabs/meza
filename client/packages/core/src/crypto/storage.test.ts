@@ -123,7 +123,7 @@ describe('clearCryptoStorage', () => {
 });
 
 describe('database version', () => {
-  it('opens with version 4 and creates expected stores', async () => {
+  it('opens with version 5 and creates expected stores', async () => {
     // Trigger DB creation by performing any operation
     await storeKeyBundle(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -134,9 +134,11 @@ describe('database version', () => {
       req.onerror = () => reject(req.error);
     });
 
-    expect(db.version).toBe(4);
+    expect(db.version).toBe(5);
     expect(db.objectStoreNames.contains('key-bundle')).toBe(true);
     expect(db.objectStoreNames.contains('channel-keys')).toBe(true);
+    expect(db.objectStoreNames.contains('cached-keys')).toBe(true);
+    expect(db.objectStoreNames.contains('verification')).toBe(true);
     db.close();
   });
 });

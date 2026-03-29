@@ -19,6 +19,10 @@ import {
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
 import {
+  cachePublicKey,
+  clearVerification,
+} from '../crypto/key-monitor.ts';
+import {
   clearStatusOverride,
   getMyPresence,
   updatePresence,
@@ -191,6 +195,14 @@ async function getOrFetchPublicKey(userId: string): Promise<Uint8Array | null> {
     const pk = keys[userId];
     if (pk) {
       signingKeyCache.set(userId, { key: pk, fetchedAt: Date.now() });
+
+      // Key change detection: compare against persistent cache
+      const result = await cachePublicKey(userId, pk);
+      if (result === 'changed') {
+        console.warn(`[E2EE] identity key changed for user ${userId}`);
+        await clearVerification(userId);
+      }
+
       return pk;
     }
   } catch (err) {

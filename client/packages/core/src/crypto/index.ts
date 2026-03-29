@@ -58,6 +58,14 @@ export {
   importInviteKeyBundle,
 } from './invite-keys.ts';
 export {
+  cachePublicKey,
+  clearVerification,
+  getVerificationStatus,
+  isVerificationValid,
+  type KeyCacheResult,
+  markVerified,
+} from './key-monitor.ts';
+export {
   aesGcmDecrypt,
   aesGcmEncrypt,
   type DerivedKeys,
@@ -114,11 +122,14 @@ export {
   teardownSession,
 } from './session.ts';
 export {
+  type CachedKeyRecord,
   clearCryptoStorage,
+  loadAllVerifications,
   loadChannelKeys,
   loadKeyBundle,
   storeChannelKeys,
   storeKeyBundle,
+  type VerificationRecord,
 } from './storage.ts';
 export {
   generateImageThumbnail,
