@@ -50,9 +50,9 @@ import Footer from '../components/Footer.astro';
       <section>
         <h2 class="mb-3 text-lg font-semibold text-text">End-to-End Encryption</h2>
         <p>
-          All messages in Meza are encrypted using the MLS (Messaging Layer Security) protocol.
-          Encryption keys are generated on your device and never leave it. The server processes
-          encrypted data it cannot decrypt. Only intended recipients can read messages.
+          All messages in Meza are encrypted with AES-256-GCM. Keys are distributed using
+          ECIES (X25519 key agreement) and never leave your device unencrypted. The server
+          processes encrypted data it cannot decrypt. Only intended recipients can read messages.
         </p>
       </section>
 

@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!**/dist",
+      "!**/out",
       "!**/.astro",
       "!gen",
       "!vendor",

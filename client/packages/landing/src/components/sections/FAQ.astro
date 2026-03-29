@@ -8,12 +8,12 @@ const faqs = [
   {
     question: 'How does end-to-end encryption work?',
     answer:
-      'Meza uses the MLS (Messaging Layer Security) protocol for group encryption. Each device has its own encryption keys, and messages are encrypted so that only the intended recipients can decrypt them. The server never has access to your message content.',
+      'Every channel in Meza is encrypted with AES-256-GCM. Keys are distributed using ECIES (X25519 + HKDF + AES-256-GCM) and messages are signed with Ed25519 for authenticity. There is no plaintext mode — the server never sees your message content.',
   },
   {
     question: 'Can I self-host Meza?',
     answer:
-      'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes 8 Go microservices, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all orchestrated with a single command.',
+      'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes Go services, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all started with a single command.',
   },
   {
     question: 'What platforms does Meza support?',
