@@ -29,8 +29,9 @@ jobs:
 
       - name: Detect platforms from branch name
         id: detect
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
           echo "Branch: $BRANCH"
 
           # Parse branch name: release/desktop-X.Y.Z, release/mobile-X.Y.Z,
@@ -55,10 +56,10 @@ jobs:
           fi
 
       - name: Validate versions match package.json
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
         run: |
-          DESKTOP_VER="${{ steps.detect.outputs.desktop_version }}"
-          MOBILE_VER="${{ steps.detect.outputs.mobile_version }}"
-
           if [ -n "$DESKTOP_VER" ]; then
             PKG_VER=$(node -p "require('./client/packages/desktop/package.json').version")
             if [ "$DESKTOP_VER" != "$PKG_VER" ]; then
@@ -78,10 +79,10 @@ jobs:
           fi
 
       - name: Check tags do not already exist
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
         run: |
-          DESKTOP_VER="${{ steps.detect.outputs.desktop_version }}"
-          MOBILE_VER="${{ steps.detect.outputs.mobile_version }}"
-
           if [ -n "$DESKTOP_VER" ] && git rev-parse "desktop-v${DESKTOP_VER}" >/dev/null 2>&1; then
             echo "::warning::Tag desktop-v${DESKTOP_VER} already exists, skipping desktop"
             echo "SKIP_DESKTOP=true" >> "$GITHUB_ENV"
@@ -93,11 +94,11 @@ jobs:
           fi
 
       - name: Create and push tags
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
-          DESKTOP_VER="${{ steps.detect.outputs.desktop_version }}"
-          MOBILE_VER="${{ steps.detect.outputs.mobile_version }}"
-          SHA="${{ github.event.pull_request.merge_commit_sha }}"
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -113,13 +114,16 @@ jobs:
             echo "Created tag mobile-v${MOBILE_VER} at $SHA"
           fi
 
+      # Tags pushed with GITHUB_TOKEN do not trigger on:push:tags workflows
+      # (GitHub anti-recursion). We dispatch explicitly with --ref <tag> so the
+      # downstream workflow sees github.ref = refs/tags/<tag>, which is required
+      # for validation and the AUR update-packaging job condition.
       - name: Dispatch release workflows
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
         run: |
-          DESKTOP_VER="${{ steps.detect.outputs.desktop_version }}"
-          MOBILE_VER="${{ steps.detect.outputs.mobile_version }}"
-
           if [ -n "$DESKTOP_VER" ] && [ "$SKIP_DESKTOP" != "true" ]; then
             echo "Dispatching desktop-release.yml with --ref desktop-v${DESKTOP_VER}"
             gh workflow run desktop-release.yml --ref "desktop-v${DESKTOP_VER}"
@@ -131,10 +135,10 @@ jobs:
           fi
 
       - name: Post summary
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
         run: |
-          DESKTOP_VER="${{ steps.detect.outputs.desktop_version }}"
-          MOBILE_VER="${{ steps.detect.outputs.mobile_version }}"
-
           {
             echo "## Release Tags Created"
             echo ""

@@ -21,10 +21,10 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Validate inputs
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           if [ -z "$DESKTOP" ] && [ -z "$MOBILE" ]; then
             echo "::error::At least one version (desktop or mobile) must be provided"
             exit 1
@@ -52,16 +52,16 @@ jobs:
           node-version: 22
 
       - name: Validate versions against current
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           version_gt() {
             node -e "
-              const [a, b] = ['$1', '$2'].map(v => v.split('.').map(Number));
+              const [a, b] = [process.argv[1], process.argv[2]].map(v => v.split('.').map(Number));
               const gt = b[0] > a[0] || (b[0] === a[0] && b[1] > a[1]) || (b[0] === a[0] && b[1] === a[1] && b[2] > a[2]);
-              if (!gt) { console.error('Version $2 must be greater than current $1'); process.exit(1); }
-            "
+              if (!gt) { console.error('Version ' + process.argv[2] + ' must be greater than current ' + process.argv[1]); process.exit(1); }
+            " "$1" "$2"
           }
 
           if [ -n "$DESKTOP" ]; then
@@ -77,10 +77,10 @@ jobs:
           fi
 
       - name: Check tags do not already exist
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           if [ -n "$DESKTOP" ] && git rev-parse "desktop-v${DESKTOP}" >/dev/null 2>&1; then
             echo "::error::Tag desktop-v${DESKTOP} already exists"
             exit 1
@@ -103,10 +103,10 @@ jobs:
 
       - name: Determine branch name and commit message
         id: meta
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           if [ -n "$DESKTOP" ] && [ -n "$MOBILE" ]; then
             echo "branch=release/desktop-${DESKTOP}-mobile-${MOBILE}" >> "$GITHUB_OUTPUT"
             echo "message=chore: bump desktop to ${DESKTOP}, mobile to ${MOBILE}" >> "$GITHUB_OUTPUT"
@@ -122,10 +122,10 @@ jobs:
           fi
 
       - name: Bump version files
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           if [ -n "$DESKTOP" ]; then
             jq --arg v "$DESKTOP" '.version = $v' client/packages/desktop/package.json > tmp.json
             mv tmp.json client/packages/desktop/package.json
@@ -146,25 +146,29 @@ jobs:
           fi
 
       - name: Create branch, commit, and push
+        env:
+          BRANCH: ${{ steps.meta.outputs.branch }}
+          MESSAGE: ${{ steps.meta.outputs.message }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "${{ steps.meta.outputs.branch }}"
-          git add -A
-          git commit -m "${{ steps.meta.outputs.message }}"
-          git push -u origin "${{ steps.meta.outputs.branch }}"
+          git checkout -b "$BRANCH"
+          git add client/packages/desktop/package.json \
+                  client/packages/mobile/package.json \
+                  client/packages/mobile/android/app/build.gradle \
+                  client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
+          git commit -m "$MESSAGE"
+          git push -u origin "$BRANCH"
 
       - name: Build PR body
-        id: body
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
-          DESKTOP="${{ inputs.desktop_version }}"
-          MOBILE="${{ inputs.mobile_version }}"
-
           {
             echo "## Release"
             echo ""
-
-            REPO_URL="https://github.com/${{ github.repository }}"
 
             if [ -n "$DESKTOP" ]; then
               PREV_TAG=$(git tag -l 'desktop-v*' --sort=-v:refname | head -1)
@@ -191,11 +195,12 @@ jobs:
       - name: Create PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ steps.meta.outputs.title }}
         run: |
           gh label create release --description "Automated release PR" --color "0e8a16" 2>/dev/null || true
 
           gh pr create \
-            --title "${{ steps.meta.outputs.title }}" \
+            --title "$PR_TITLE" \
             --body-file pr_body.md \
             --base main \
             --label release
