@@ -64,6 +64,7 @@ export {
   isVerificationValid,
   type KeyCacheResult,
   markVerified,
+  onKeyChanged,
 } from './key-monitor.ts';
 export {
   aesGcmDecrypt,

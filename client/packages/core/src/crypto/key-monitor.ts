@@ -19,6 +19,19 @@ import {
 
 export type KeyCacheResult = 'first-seen' | 'unchanged' | 'changed';
 
+/** Callback invoked when a key change is detected. Set by the UI layer. */
+let onKeyChangedCallback: ((userId: string) => void) | null = null;
+
+/**
+ * Register a callback for key change events. Called from the UI layer
+ * to bridge core → UI notifications without a direct import.
+ */
+export function onKeyChanged(
+  callback: ((userId: string) => void) | null,
+): void {
+  onKeyChangedCallback = callback;
+}
+
 /**
  * Compare a fetched public key against the IndexedDB cache for a user.
  *
@@ -52,6 +65,7 @@ export async function cachePublicKey(
     publicKey,
     firstSeenAt: cached.firstSeenAt,
   });
+  onKeyChangedCallback?.(userId);
   return 'changed';
 }
 

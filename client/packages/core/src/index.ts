@@ -243,6 +243,7 @@ export {
   loadCachedChannelKeys,
   loadKeyBundle,
   markVerified,
+  onKeyChanged,
   onCrossTabTeardown,
   onSessionReady,
   type ParsedMessageContent,

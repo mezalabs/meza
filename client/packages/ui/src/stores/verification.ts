@@ -8,10 +8,10 @@
 import {
   type VerificationRecord,
   getVerificationStatus,
-  isVerificationValid,
   loadAllVerifications,
   markVerified as persistVerified,
   clearVerification as persistClearVerification,
+  onKeyChanged,
 } from '@meza/core';
 import { create } from 'zustand';
 
@@ -49,6 +49,11 @@ export const useVerificationStore = create<VerificationState>()(
         map[r.userId] = r;
       }
       set({ records: map });
+
+      // Register key change callback so core → UI notifications work
+      onKeyChanged((userId) => {
+        get().onKeyChanged(userId);
+      });
     },
 
     setVerified: async (userId, publicKey) => {

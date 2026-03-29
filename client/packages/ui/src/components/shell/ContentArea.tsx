@@ -34,6 +34,7 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
+import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
 import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import {
   openChannelSettingsPane,
@@ -491,6 +492,9 @@ export function ContentArea({
               ) : undefined
             }
           >
+            {dmOtherUserId && (
+              <KeyChangeNotice userId={dmOtherUserId} />
+            )}
             {children}
           </Pane>
         </PaneSlot>
