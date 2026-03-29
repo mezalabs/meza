@@ -4,5 +4,9 @@
     "jsx": "react-jsx"
   },
   "include": ["packages/*/src", "gen/meza"],
-  "exclude": ["packages/desktop/src/main", "packages/desktop/src/preload"]
+  "exclude": [
+    "packages/desktop/src/main",
+    "packages/desktop/src/preload",
+    "packages/landing"
+  ]
 }
