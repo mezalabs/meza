@@ -1,12 +1,14 @@
-import { isCapacitor, isElectron, MEZA_VERSION } from '@meza/core';
+import { isCapacitor, isElectron } from '@meza/core';
 import { IconContext } from '@phosphor-icons/react';
 import { useState } from 'react';
+import { useAppVersion } from '../../hooks/useAppVersion.ts';
 import { DownloadButton } from './DownloadButton.tsx';
 import { LandingPage } from './LandingPage.tsx';
 import { MezaLogo } from './MezaLogo.tsx';
 
 export function WebLandingPage() {
   const [showAuth, setShowAuth] = useState(false);
+  const version = useAppVersion();
 
   // Native apps should see the simple auth form, not the marketing page
   if (isElectron() || isCapacitor() || showAuth) {
@@ -50,7 +52,7 @@ export function WebLandingPage() {
             >
               Privacy Policy
             </a>
-            <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
+            <p className="text-xs text-text-subtle">v{version}</p>
           </div>
         </div>
       </div>

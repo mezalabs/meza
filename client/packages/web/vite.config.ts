@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,9 +22,22 @@ export default defineConfig(async () => {
     };
   }
 
+  let gitHash = 'dev';
+  try {
+    gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    // Not in a git repo (e.g. source archive) — fall back to 'dev'.
+  }
+
   return {
     // Desktop (Electron) loads via meza:// custom protocol — assets must use relative paths.
     base: desktopBuild ? './' : '/',
+    define: {
+      __APP_VERSION__: JSON.stringify(gitHash),
+      __APP_BUILD_DATE__: JSON.stringify(
+        new Date().toISOString().split('T')[0],
+      ),
+    },
     plugins: [tailwindcss(), react()],
     resolve: {
       dedupe: ['@phosphor-icons/react', 'react', 'react-dom'],

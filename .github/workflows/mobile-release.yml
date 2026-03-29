@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           package_json_file: client/package.json
 
@@ -65,7 +65,7 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           package_json_file: client/package.json
 
@@ -75,7 +75,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: client/pnpm-lock.yaml
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.4
 
       - name: Install dependencies
         working-directory: client
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           package_json_file: client/package.json
 
@@ -253,6 +253,8 @@ jobs:
     needs: [build-android, build-ios]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -294,7 +296,7 @@ jobs:
           path: artifacts
 
       - name: Upload AAB to Play Store
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@935ef9c68bb393a8e6116b1575626a7f5be3a7fb # v1.1.3
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
           packageName: chat.meza.app
@@ -333,3 +335,7 @@ jobs:
             --apiIssuer "$APPLE_API_ISSUER"
 
           rm -rf "$KEY_DIR"
+
+      - name: Cleanup API key
+        if: always()
+        run: rm -rf ~/private_keys
