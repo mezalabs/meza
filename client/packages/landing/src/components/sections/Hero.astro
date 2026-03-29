@@ -36,11 +36,11 @@ try {
 ---
 
 <section class="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
-  <div class="mx-auto max-w-3xl">
-    <MezaLogo class="mx-auto mb-8 h-14 text-accent sm:h-16" />
+  <div class="mx-auto">
+    <MezaLogo class="mx-auto mb-8 h-14 translate-x-2 text-accent sm:h-16" />
 
-    <h1 class="text-3xl font-bold leading-tight tracking-tight text-text sm:text-5xl">
-      Private conversations,<br />zero compromises
+    <h1 class="text-3xl font-bold leading-tight tracking-tight text-text sm:text-4xl lg:text-5xl">
+      Private conversations, zero compromises
     </h1>
 
     <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl">
@@ -48,55 +48,107 @@ try {
       Open source and self-hostable. No tracking, no ads, ever.
     </p>
 
-    <!-- Download buttons -->
-    <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-      {platforms.map((p) => {
-        const href = version
-          ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
-          : RELEASES_URL;
-        return (
-          <a
-            href={href}
-            data-os={p.os}
-            class="download-btn inline-flex w-full items-center justify-center rounded-lg border border-border bg-bg-surface px-6 py-3.5 text-sm font-medium text-text transition-colors hover:border-border-hover hover:bg-bg-elevated sm:w-auto"
-          >
-            Download for {p.label}
-          </a>
-        );
-      })}
-    </div>
+    <!-- CTAs -->
+    <div class="mt-10 flex flex-col items-center gap-4">
+      <div class="relative inline-flex w-full max-w-xs" id="download-group">
+        {platforms.map((p) => {
+          const href = version
+            ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
+            : RELEASES_URL;
+          return (
+            <a
+              href={href}
+              data-os={p.os}
+              class="download-btn hidden"
+            >
+              Download for {p.label}
+            </a>
+          );
+        })}
 
-    <div class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-      <a
-        href="https://app.meza.chat"
-        class="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
-      >
-        Open in browser &rarr;
-      </a>
-      <span class="hidden text-text-subtle sm:inline">&middot;</span>
-      <a
-        href={RELEASES_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        class="text-sm text-text-muted transition-colors hover:text-text"
-      >
-        View all downloads
-      </a>
+        <!-- Primary button (filled by JS with detected OS) -->
+        <a
+          id="download-primary"
+          href={RELEASES_URL}
+          class="inline-flex flex-1 items-center justify-center rounded-l-lg bg-accent px-6 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
+        >
+          Download Meza
+        </a>
+
+        <!-- Dropdown toggle -->
+        <button
+          type="button"
+          id="download-toggle"
+          class="inline-flex items-center rounded-r-lg border-l border-black/10 bg-accent px-3 py-3.5 text-black transition-colors hover:bg-accent-hover"
+          aria-label="More download options"
+          aria-expanded="false"
+        >
+          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        <!-- Dropdown menu -->
+        <div
+          id="download-dropdown"
+          class="absolute top-full right-0 left-0 z-10 mt-2 hidden overflow-hidden rounded-lg border border-border bg-bg-surface shadow-lg"
+        >
+          {platforms.map((p) => {
+            const href = version
+              ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
+              : RELEASES_URL;
+            return (
+              <a
+                href={href}
+                data-os={p.os}
+                class="dropdown-item flex items-center px-4 py-3 text-sm text-text transition-colors hover:bg-bg-elevated"
+              >
+                Download for {p.label}
+              </a>
+            );
+          })}
+          <a
+            href={RELEASES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center border-t border-border px-4 py-3 text-sm text-text-muted transition-colors hover:bg-bg-elevated"
+          >
+            View all downloads
+          </a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- OS detection: highlight the matching download button -->
 <script>
   const ua = navigator.userAgent.toLowerCase();
   let os = 'linux';
   if (ua.includes('mac')) os = 'macos';
   else if (ua.includes('win')) os = 'windows';
 
-  document.querySelectorAll('.download-btn').forEach((btn) => {
-    if (btn instanceof HTMLElement && btn.dataset.os === os) {
-      btn.classList.remove('border-border', 'bg-bg-surface', 'text-text', 'hover:border-border-hover', 'hover:bg-bg-elevated');
-      btn.classList.add('bg-accent', 'text-black', 'hover:bg-accent-hover', 'border-transparent');
-    }
-  });
+  // Set primary button to detected OS
+  const match = document.querySelector(`.download-btn[data-os="${os}"]`);
+  const primary = document.getElementById('download-primary');
+  if (match instanceof HTMLAnchorElement && primary instanceof HTMLAnchorElement) {
+    primary.href = match.href;
+    primary.textContent = match.textContent;
+  }
+
+  // Toggle dropdown
+  const toggle = document.getElementById('download-toggle');
+  const dropdown = document.getElementById('download-dropdown');
+  if (toggle && dropdown) {
+    toggle.addEventListener('click', () => {
+      const open = !dropdown.classList.contains('hidden');
+      dropdown.classList.toggle('hidden');
+      toggle.setAttribute('aria-expanded', String(!open));
+    });
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('download-group')?.contains(e.target as Node)) {
+        dropdown.classList.add('hidden');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 </script>
