@@ -24,11 +24,11 @@ export function getBaseUrl(): string {
     return window.__MEZA_BASE_URL__;
   }
 
-  // Capacitor: set via VITE_API_URL at build time
-  if (isCapacitor() && import.meta.env.VITE_API_URL) {
+  // Capacitor / subdomain deploy: set via VITE_API_URL at build time
+  if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
 
-  // Web: uses relative URLs (same origin)
+  // Web (same-origin): uses relative URLs
   return '';
 }
