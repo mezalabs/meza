@@ -1,5 +1,5 @@
-import { MEZA_VERSION } from '@meza/core';
 import { IconContext } from '@phosphor-icons/react';
+import { useAppVersion } from '../../hooks/useAppVersion.ts';
 import { AuthForm } from './AuthForm.tsx';
 import { MezaLogo } from './MezaLogo.tsx';
 
@@ -8,6 +8,8 @@ export function LandingPage({
 }: {
   showDownloads?: boolean;
 } = {}) {
+  const version = useAppVersion();
+
   return (
     <IconContext.Provider value={{ weight: 'fill' }}>
       <div className="flex min-h-0 w-full flex-1 items-start justify-center bg-bg-base pt-[20vh]">
@@ -43,7 +45,7 @@ export function LandingPage({
             >
               Privacy Policy
             </a>
-            <p className="text-xs text-text-subtle">v{MEZA_VERSION}</p>
+            <p className="text-xs text-text-subtle">v{version}</p>
           </div>
         </div>
       </div>

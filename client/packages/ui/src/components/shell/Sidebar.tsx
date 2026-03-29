@@ -1443,16 +1443,32 @@ function SidebarChannelItem({
     data: { type: 'sidebar' as const, content, label: channelName },
   });
 
-  const icon = isVoice ? (
+  const baseIcon = isVoice ? (
     <SpeakerHighIcon
       size={18}
       className={voiceParticipants.length > 0 ? 'text-success' : undefined}
       aria-hidden="true"
     />
-  ) : isPrivate ? (
-    <LockSimpleIcon size={18} aria-hidden="true" />
   ) : (
     <HashIcon weight="regular" size={18} aria-hidden="true" />
+  );
+
+  const icon = isPrivate ? (
+    <span className="relative" role="img" aria-label="Private channel">
+      {baseIcon}
+      <span
+        className={`absolute -bottom-1 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full transition-colors group-hover:bg-bg-surface ${active ? 'bg-bg-surface' : 'bg-bg-overlay'}`}
+      >
+        <LockSimpleIcon
+          size={10}
+          weight="fill"
+          className={active ? 'text-accent' : 'text-text-subtle'}
+          aria-hidden="true"
+        />
+      </span>
+    </span>
+  ) : (
+    baseIcon
   );
 
   return (

@@ -97,6 +97,8 @@ interface ComposerEditorProps {
   placeholder?: string;
   channelId: string;
   autoFocus?: boolean;
+  /** Whether the composer has pending file attachments (allows sending with empty text). */
+  hasFiles?: boolean;
   onAutocompleteChange?: (state: AutocompleteState) => void;
   /** Called when the user presses arrow keys while autocomplete is open. */
   onAutocompleteArrow?: (direction: 'up' | 'down') => void;
@@ -130,12 +132,15 @@ export const ComposerEditor = forwardRef<
     autoFocus,
     onAutocompleteChange,
     onAutocompleteArrow,
+    hasFiles,
     onAutocompleteSelect,
   },
   ref,
 ) {
   const viewRef = useRef<EditorView | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasFilesRef = useRef(hasFiles);
+  hasFilesRef.current = hasFiles;
   const originalTextRef = useRef(initialText ?? '');
   const sendingRef = useRef(false);
   const placeholderRef = useRef(placeholder);
@@ -216,7 +221,7 @@ export const ComposerEditor = forwardRef<
         Enter: (_state, _dispatch, view) => {
           if (!view || sendingRef.current) return true;
           const wireText = serializeDoc(view.state.doc);
-          if (wireText.trim() || false /* hasFiles checked by parent */) {
+          if (wireText.trim() || hasFilesRef.current) {
             handleSendRef.current(wireText);
           }
           return true;
@@ -398,7 +403,7 @@ export const ComposerEditor = forwardRef<
       },
       attributes: {
         class:
-          'flex-1 resize-none rounded-none border-none bg-transparent text-text focus:outline-none overflow-y-auto px-3 py-4',
+          'flex-1 resize-none rounded-none border-none bg-transparent text-text leading-[22px] focus:outline-none overflow-y-auto px-3 py-[18px]',
         autocapitalize: 'sentences',
         autocorrect: 'on',
         spellcheck: 'true',
@@ -532,7 +537,7 @@ export const ComposerEditor = forwardRef<
         const view = viewRef.current;
         if (!view || view.isDestroyed || sendingRef.current) return;
         const wireText = serializeDoc(view.state.doc);
-        if (wireText.trim()) {
+        if (wireText.trim() || hasFilesRef.current) {
           handleSendRef.current(wireText);
         }
       },

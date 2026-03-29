@@ -79,6 +79,8 @@ interface MessageComposerProps {
   channelId: string;
   serverId?: string;
   disabled?: boolean;
+  /** Channel encryption state — passed from ChannelView to avoid a duplicate hook. */
+  encryption?: import('../../hooks/useChannelEncryption.ts').ChannelEncryption;
   /** Mobile-only: whether the emoji panel is open below the composer. */
   mobileEmojiOpen?: boolean;
   /** Mobile-only: toggle the emoji panel. */
@@ -93,6 +95,7 @@ export function MessageComposer({
   channelId,
   serverId,
   disabled,
+  encryption: encryptionProp,
   mobileEmojiOpen,
   onMobileEmojiToggle,
   onMobileEmojiClose,
@@ -123,13 +126,14 @@ export function MessageComposer({
   );
   const channelName = channel?.name;
   const isMobile = useMobile();
+  const ownEncryption = useChannelEncryption(encryptionProp ? '' : channelId);
   const {
     encrypt,
     ready: encryptionReady,
     isEncrypted,
     retry: retryEncryption,
     unavailableReason,
-  } = useChannelEncryption(channelId);
+  } = encryptionProp ?? ownEncryption;
 
   const replyingTo = useMessageStore((s) => s.replyingTo[channelId] ?? null);
   const replyAuthorName = useDisplayName(replyingTo?.authorId ?? '', serverId);
@@ -214,8 +218,8 @@ export function MessageComposer({
     async (overrideText?: string) => {
       let text = overrideText ?? '';
 
-      // If no override, get text from the editor
-      if (!overrideText) {
+      // If no override was provided at all, nothing to do
+      if (overrideText === undefined) {
         return;
       }
 
@@ -627,7 +631,7 @@ export function MessageComposer({
           onChange={handleFileChange}
         />
 
-        <div className="flex min-h-[60px] rounded-lg border border-border/50 bg-bg-surface transition-colors">
+        <div className="flex items-center min-h-[58px] rounded-lg border border-border/50 bg-bg-surface transition-colors">
           {/* Attachment button */}
           <button
             type="button"
@@ -638,7 +642,7 @@ export function MessageComposer({
               encryptionPending ||
               pendingFiles.length >= MAX_FILES
             }
-            className="flex-shrink-0 self-start mt-5 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
+            className="flex-shrink-0 ml-5 text-text-muted hover:text-text transition-colors disabled:opacity-50"
             title="Attach files"
           >
             <PaperclipIcon weight="regular" size={22} aria-hidden="true" />
@@ -668,6 +672,7 @@ export function MessageComposer({
                   onTyping={handleTyping}
                   placeholder={placeholderText}
                   autoFocus={!isMobile}
+                  hasFiles={pendingFiles.length > 0}
                   onAutocompleteChange={handleAutocompleteChange}
                   onAutocompleteArrow={handleAutocompleteArrow}
                   onAutocompleteSelect={handleAutocompleteSelect}
@@ -707,7 +712,7 @@ export function MessageComposer({
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => editorRef.current?.send()}
               disabled={sending || disabled}
-              className="flex-shrink-0 self-start mt-5 mr-5 text-accent disabled:text-text-subtle transition-colors"
+              className="flex-shrink-0 mr-5 text-accent disabled:text-text-subtle transition-colors"
               aria-label="Send message"
             >
               <PaperPlaneRightIcon size={22} aria-hidden="true" />

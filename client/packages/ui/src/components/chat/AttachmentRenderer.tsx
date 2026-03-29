@@ -672,7 +672,7 @@ export function AttachmentRenderer({
   }
 
   return (
-    <div className="mt-1 flex flex-col gap-2">
+    <div className="mt-1 flex flex-col items-start gap-2">
       {imageAttachments.length > 0 && (
         <ImageGrid
           images={imageAttachments}
