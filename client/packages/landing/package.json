@@ -11,8 +11,11 @@
   },
   "dependencies": {
     "astro": "^5.18.1",
+    "@astrojs/react": "^4.2.0",
     "@astrojs/sitemap": "^3.2.1",
     "@astrojs/check": "^0.9.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tailwindcss": "^4.2.2",
     "@tailwindcss/vite": "^4.2.2",
     "@fontsource-variable/geist": "^5.2.8",
