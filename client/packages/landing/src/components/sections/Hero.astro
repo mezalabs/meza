@@ -1,5 +1,7 @@
 ---
 import MezaLogo from '../MezaLogo.astro';
+import { Image } from 'astro:assets';
+import screenshot from '../../assets/images/app-screenshot.png';
 
 const GITHUB_REPO = 'mezalabs/meza';
 const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
@@ -10,7 +12,6 @@ const platforms = [
   { os: 'linux', label: 'Linux', suffix: 'linux-x86_64.AppImage' },
 ];
 
-// Fetch latest desktop release version at build time
 let version: string | null = null;
 try {
   const res = await fetch(
@@ -35,99 +36,134 @@ try {
 }
 ---
 
-<section class="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
-  <div class="mx-auto">
-    <MezaLogo class="mx-auto mb-8 h-14 translate-x-2 text-accent sm:h-16" />
+<!-- Extra height on lg creates a scroll runway that drives the animation -->
+<section class="relative lg:h-[200vh]" id="hero-scroll">
+  <div
+    class="relative flex min-h-screen items-center px-6 pt-20 pb-16 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
+    id="hero-sticky"
+  >
+    <div class="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
+      <!-- Left: copy + CTA -->
+      <div id="hero-text" class="text-center lg:text-left">
+        <MezaLogo class="mx-auto mb-8 h-14 translate-x-2 text-accent sm:h-16 lg:mx-0" />
 
-    <h1 class="text-3xl font-bold leading-tight tracking-tight text-text sm:text-4xl lg:text-5xl">
-      Private conversations, zero compromises
-    </h1>
+        <h1 class="text-3xl font-bold leading-tight tracking-tight text-text sm:text-4xl lg:text-5xl">
+          Private conversations, zero compromises
+        </h1>
 
-    <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl">
-      End-to-end encrypted group chat with voice, video, and text.
-      Open source and self-hostable. No tracking, no ads, ever.
-    </p>
+        <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl lg:mx-0">
+          End-to-end encrypted group chat with voice, video, and text.
+          Open source and self-hostable. No tracking, no ads, ever.
+        </p>
 
-    <!-- CTAs -->
-    <div class="mt-10 flex flex-col items-center gap-4">
-      <div class="relative inline-flex w-full max-w-xs" id="download-group">
-        {platforms.map((p) => {
-          const href = version
-            ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
-            : RELEASES_URL;
-          return (
+        <!-- CTAs -->
+        <div class="mt-10 flex flex-col items-center gap-4 lg:items-start">
+          <div class="relative inline-flex w-full max-w-xs" id="download-group">
+            {platforms.map((p) => {
+              const href = version
+                ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
+                : RELEASES_URL;
+              return (
+                <a
+                  href={href}
+                  data-os={p.os}
+                  class="download-btn hidden"
+                >
+                  Download for {p.label}
+                </a>
+              );
+            })}
+
             <a
-              href={href}
-              data-os={p.os}
-              class="download-btn hidden"
+              id="download-primary"
+              href={RELEASES_URL}
+              class="inline-flex flex-1 items-center justify-center rounded-l-lg bg-accent px-6 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
             >
-              Download for {p.label}
+              Download Meza
             </a>
-          );
-        })}
 
-        <!-- Primary button (filled by JS with detected OS) -->
-        <a
-          id="download-primary"
-          href={RELEASES_URL}
-          class="inline-flex flex-1 items-center justify-center rounded-l-lg bg-accent px-6 py-3.5 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
-        >
-          Download Meza
-        </a>
+            <button
+              type="button"
+              id="download-toggle"
+              class="inline-flex items-center rounded-r-lg border-l border-black/10 bg-accent px-3 py-3.5 text-black transition-colors hover:bg-accent-hover"
+              aria-label="More download options"
+              aria-expanded="false"
+            >
+              <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-        <!-- Dropdown toggle -->
-        <button
-          type="button"
-          id="download-toggle"
-          class="inline-flex items-center rounded-r-lg border-l border-black/10 bg-accent px-3 py-3.5 text-black transition-colors hover:bg-accent-hover"
-          aria-label="More download options"
-          aria-expanded="false"
-        >
-          <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        <!-- Dropdown menu -->
-        <div
-          id="download-dropdown"
-          class="absolute top-full right-0 left-0 z-10 mt-2 hidden overflow-hidden rounded-lg border border-border bg-bg-surface shadow-lg"
-        >
-          {platforms.map((p) => {
-            const href = version
-              ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
-              : RELEASES_URL;
-            return (
+            <div
+              id="download-dropdown"
+              class="absolute top-full right-0 left-0 z-10 mt-2 hidden overflow-hidden rounded-lg border border-border bg-bg-surface shadow-lg"
+            >
+              {platforms.map((p) => {
+                const href = version
+                  ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
+                  : RELEASES_URL;
+                return (
+                  <a
+                    href={href}
+                    data-os={p.os}
+                    class="dropdown-item flex items-center px-4 py-3 text-sm text-text transition-colors hover:bg-bg-elevated"
+                  >
+                    Download for {p.label}
+                  </a>
+                );
+              })}
               <a
-                href={href}
-                data-os={p.os}
-                class="dropdown-item flex items-center px-4 py-3 text-sm text-text transition-colors hover:bg-bg-elevated"
+                href={RELEASES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center border-t border-border px-4 py-3 text-sm text-text-muted transition-colors hover:bg-bg-elevated"
               >
-                Download for {p.label}
+                View all downloads
               </a>
-            );
-          })}
-          <a
-            href={RELEASES_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center border-t border-border px-4 py-3 text-sm text-text-muted transition-colors hover:bg-bg-elevated"
-          >
-            View all downloads
-          </a>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Right: app screenshot -->
+      <div
+        id="hero-image"
+        class="overflow-hidden rounded-xl border border-border shadow-2xl will-change-transform"
+      >
+        <Image
+          src={screenshot}
+          alt="Meza desktop app showing a chat conversation with voice channels"
+          widths={[800, 1280, 1920]}
+          sizes="(max-width: 1023px) 100vw, 55vw"
+          format="png"
+          quality={95}
+          loading="eager"
+        />
+      </div>
+    </div>
+
+    <!-- Caption that fades in above the image (lg only) -->
+    <div
+      id="hero-caption"
+      class="pointer-events-none absolute inset-x-0 top-[12%] hidden text-center opacity-0 lg:block"
+    >
+      <h2 class="text-2xl font-bold text-text sm:text-3xl">
+        Everything you need, nothing you don't
+      </h2>
+      <p class="mx-auto mt-3 max-w-2xl text-lg text-text-muted">
+        Tiling panes to multitask, voice and video that just work, encryption that doesn't break — no ads, no upsells, no tracking.
+      </p>
     </div>
   </div>
 </section>
 
 <script>
+  // --- OS detection + download button logic ---
   const ua = navigator.userAgent.toLowerCase();
   let os = 'linux';
   if (ua.includes('mac')) os = 'macos';
   else if (ua.includes('win')) os = 'windows';
 
-  // Set primary button to detected OS
   const match = document.querySelector(`.download-btn[data-os="${os}"]`);
   const primary = document.getElementById('download-primary');
   if (match instanceof HTMLAnchorElement && primary instanceof HTMLAnchorElement) {
@@ -135,7 +171,6 @@ try {
     primary.textContent = match.textContent;
   }
 
-  // Toggle dropdown
   const toggle = document.getElementById('download-toggle');
   const dropdown = document.getElementById('download-dropdown');
   if (toggle && dropdown) {
@@ -151,4 +186,115 @@ try {
       }
     });
   }
+
+  // --- Scroll-driven image expansion (lg+ only, respects reduced motion) ---
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const isLg = window.matchMedia('(min-width: 1024px)');
+
+  function setupScrollAnimation() {
+    const scroller = document.getElementById('hero-scroll');
+    const text = document.getElementById('hero-text');
+    const image = document.getElementById('hero-image');
+    const caption = document.getElementById('hero-caption');
+    if (!scroller || !text || !image) return;
+
+    let initialRect: DOMRect;
+    let rafId = 0;
+    let active = false;
+
+    function cacheLayout() {
+      // Reset all transforms so we can measure the natural grid position
+      image.style.transform = 'none';
+      text.style.transform = 'none';
+      text.style.opacity = '1';
+      if (caption) { caption.style.transform = 'none'; caption.style.opacity = '0'; }
+      // Force synchronous reflow so the grid settles before measuring
+      void image.offsetHeight;
+      initialRect = image.getBoundingClientRect();
+    }
+
+    function update() {
+      if (!active || !initialRect) return;
+
+      const scrollerTop = scroller.getBoundingClientRect().top;
+      const maxScroll = scroller.offsetHeight - window.innerHeight;
+      const progress = Math.max(0, Math.min(1, -scrollerTop / maxScroll));
+
+      // Cubic ease-out for smooth deceleration
+      const e = 1 - Math.pow(1 - progress, 3);
+
+      // Fade and slide the text column out to the left
+      text.style.opacity = String(Math.max(0, 1 - progress * 2.5));
+      text.style.transform = `translateX(${-e * 120}px)`;
+
+      // Fade caption in during the second half of the animation
+      if (caption) {
+        const captionProgress = Math.max(0, (progress - 0.4) / 0.6);
+        caption.style.opacity = String(captionProgress);
+      }
+
+      // Scale image to ~70% viewport width, positioned in upper portion
+      // so there's breathing room and space for copy below
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const targetW = Math.min(vw * 0.7, 1100);
+      const targetH = vh * 0.65;
+      const fitScale = Math.min(targetW / initialRect.width, targetH / initialRect.height);
+      const scale = 1 + (fitScale - 1) * e;
+
+      const cx = initialRect.left + initialRect.width / 2;
+      const cy = initialRect.top + initialRect.height / 2;
+      const tx = (vw / 2 - cx) * e;
+      // Position below the caption area
+      const ty = (vh * 0.58 - cy) * e;
+
+      image.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    }
+
+    function onScroll() {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(update);
+    }
+
+    function activate() {
+      if (active) return;
+      active = true;
+      cacheLayout();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      update();
+    }
+
+    function deactivate() {
+      if (!active) return;
+      active = false;
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', onScroll);
+      image.style.transform = '';
+      text.style.transform = '';
+      text.style.opacity = '';
+      if (caption) caption.style.opacity = '0';
+    }
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      if (!active) return;
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        cacheLayout();
+        update();
+      }, 100);
+    });
+
+    // Activate/deactivate based on screen size + motion preference
+    function check() {
+      if (isLg.matches && !prefersReduced.matches) activate();
+      else deactivate();
+    }
+
+    check();
+    isLg.addEventListener('change', check);
+    prefersReduced.addEventListener('change', check);
+  }
+
+  setupScrollAnimation();
 </script>

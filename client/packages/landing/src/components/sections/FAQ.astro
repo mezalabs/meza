@@ -3,48 +3,48 @@ const faqs = [
   {
     question: 'Is Meza free?',
     answer:
-      'Yes! Meza is free and open source under the AGPLv3 license. You can use it, inspect it, modify it, and self-host it at no cost.',
+      'Yes. Meza is free and open source under AGPLv3. Use it, inspect it, modify it, self-host it — no cost, no catch.',
   },
   {
-    question: 'How does end-to-end encryption work?',
+    question: 'How is Meza different from Discord?',
     answer:
-      'Every channel in Meza is encrypted with AES-256-GCM. Keys are distributed using ECIES (X25519 + HKDF + AES-256-GCM) and messages are signed with Ed25519 for authenticity. There is no plaintext mode — the server never sees your message content.',
+      'Discord has no end-to-end encryption — they can read every message, every call, everything. They also broke their "no ads" promise, added Nitro upsell spam, and collect extensive behavioral data. Meza encrypts everything by default, has zero ads, zero tracking, and is fully open source so you can verify all of that yourself.',
+  },
+  {
+    question: 'How is Meza different from Matrix / Element?',
+    answer:
+      'Matrix has the right idea but the execution is rough. "Unable to decrypt" errors are a running joke in the community, onboarding is confusing, and Element has pivoted to selling to governments and enterprises. Meza uses a simpler key model that doesn\'t break, has a clean UI that doesn\'t require protocol knowledge, and is built for regular people — not procurement teams.',
+  },
+  {
+    question: 'How does the encryption work?',
+    answer:
+      'Every channel is encrypted with AES-256-GCM. Keys are distributed using ECIES (X25519 + HKDF + AES-256-GCM) and messages are signed with Ed25519. There is no plaintext mode — the server never sees your content.',
   },
   {
     question: 'Can I self-host Meza?',
     answer:
-      'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes Go services, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all started with a single command.',
+      'Yes. One docker compose up gets you the full stack: Go services, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit.',
   },
   {
     question: 'What platforms does Meza support?',
     answer:
-      'Meza runs everywhere: web browser, desktop (macOS, Windows, Linux via Electron), and mobile (iOS and Android via Capacitor). All platforms share the same encrypted protocol.',
-  },
-  {
-    question: 'How is Meza different from Signal?',
-    answer:
-      "Signal is great for private messaging but lacks community features. Meza adds servers, channels, threads, roles, voice channels, and rich text — all with the same level of end-to-end encryption. Think of it as Signal's privacy with Discord's community features.",
+      'Web, macOS, Windows, Linux, iOS, and Android. All platforms use the same encrypted protocol.',
   },
   {
     question: 'Is my data collected or tracked?',
     answer:
-      "No. Meza has zero analytics, zero ads, and zero data collection. We don't track your usage, read your messages, or sell your data. When you self-host, you have complete control over all data.",
-  },
-  {
-    question: 'Can I migrate from Discord or Slack?',
-    answer:
-      'Migration tools are on our roadmap. In the meantime, you can manually recreate your server structure in Meza. The community is working on import tools — check our GitHub for progress.',
+      'No. Zero analytics, zero ads, zero data collection. We don\'t track usage, read messages, or sell data. When you self-host, every byte is yours.',
   },
 ];
 ---
 
-<section id="faq" class="px-6 py-24">
+<section id="faq" class="px-6 py-16">
   <div class="mx-auto max-w-3xl">
     <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
-      Frequently asked questions
+      FAQ
     </h2>
     <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
-      Everything you need to know about Meza.
+      The stuff you actually want to know.
     </p>
 
     <div class="divide-y divide-border rounded-xl border border-border">

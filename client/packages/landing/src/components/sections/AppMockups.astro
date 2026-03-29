@@ -1,31 +1,10 @@
 ---
-import { Image } from 'astro:assets';
-import screenshot from '../../assets/images/app-screenshot.png';
 ---
 
 <section class="px-6 py-24">
-  <div class="mx-auto max-w-[88rem]">
-    <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
-      A chat experience you'll love
-    </h2>
-    <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
-      Rich text, threads, voice channels, file sharing, and more — all end-to-end encrypted.
-    </p>
-
-    <div class="mx-auto overflow-hidden rounded-xl border border-border shadow-lg">
-      <Image
-        src={screenshot}
-        alt="Meza desktop app showing a chat conversation with voice channels and screen sharing"
-        widths={[1280, 1920]}
-        sizes="(max-width: 1024px) 100vw, 1024px"
-        format="png"
-        quality={95}
-        loading="lazy"
-      />
-    </div>
-
+  <div class="mx-auto max-w-7xl">
     <!-- Platform badges -->
-    <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-text-muted">
+    <div class="flex flex-wrap items-center justify-center gap-4 text-sm text-text-muted">
       <span class="rounded-full border border-border px-4 py-1.5">Web</span>
       <span class="rounded-full border border-border px-4 py-1.5">macOS</span>
       <span class="rounded-full border border-border px-4 py-1.5">Windows</span>
