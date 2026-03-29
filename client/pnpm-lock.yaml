@@ -264,6 +264,9 @@ importers:
         specifier: ^5.0.11
         version: 5.0.11(@types/react@19.2.14)(immer@11.1.4)(react@19.2.4)
     devDependencies:
+      '@capacitor/app':
+        specifier: ^7
+        version: 7.1.2(@capacitor/core@7.5.0)
       '@jitsi/rnnoise-wasm':
         specifier: ^0.2.1
         version: 0.2.1

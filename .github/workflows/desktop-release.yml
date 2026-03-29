@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           package_json_file: client/package.json
 
@@ -75,7 +75,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           package_json_file: client/package.json
 
@@ -161,6 +161,10 @@ jobs:
 
           rm -rf "$KEY_DIR"
 
+      - name: Cleanup notarization key
+        if: always() && matrix.platform == 'mac'
+        run: rm -rf ~/private_keys
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -183,6 +187,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -216,3 +222,65 @@ jobs:
             --title "Desktop v${VERSION}" \
             --draft \
             --generate-notes
+
+  update-packaging:
+    name: Update AUR Packaging
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Download Linux build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-linux
+          path: artifacts
+
+      - name: Update PKGBUILD and .SRCINFO
+        run: |
+          VERSION="${GITHUB_REF_NAME#desktop-v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: ${VERSION}"
+            exit 1
+          fi
+
+          APPIMAGE="artifacts/Meza-${VERSION}-linux-x86_64.AppImage"
+          if [ ! -f "$APPIMAGE" ]; then
+            echo "::error::AppImage not found at ${APPIMAGE}"
+            exit 1
+          fi
+
+          HASH=$(sha256sum "$APPIMAGE" | cut -d' ' -f1)
+          echo "Updating AUR packaging to v${VERSION} (sha256: ${HASH})"
+
+          # Update PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" packaging/aur/PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${HASH}')/" packaging/aur/PKGBUILD
+
+          # Update .SRCINFO (tab-indented fields)
+          sed -i "s/pkgver = .*/pkgver = ${VERSION}/" packaging/aur/.SRCINFO
+          sed -i "s/pkgrel = .*/pkgrel = 1/" packaging/aur/.SRCINFO
+          sed -i "s|source = .*|source = meza-desktop-bin-${VERSION}.AppImage::https://github.com/mezalabs/meza/releases/download/desktop-v${VERSION}/Meza-${VERSION}-linux-x86_64.AppImage|" packaging/aur/.SRCINFO
+          sed -i "s/sha256sums = .*/sha256sums = ${HASH}/" packaging/aur/.SRCINFO
+
+      - name: Commit and push to main
+        run: |
+          VERSION="${GITHUB_REF_NAME#desktop-v}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packaging/aur/PKGBUILD packaging/aur/.SRCINFO
+
+          if git diff --cached --quiet; then
+            echo "Packaging already up to date"
+          else
+            git commit -m "chore(packaging): update AUR PKGBUILD to ${VERSION}"
+            git pull --rebase origin main
+            git push origin main
+          fi

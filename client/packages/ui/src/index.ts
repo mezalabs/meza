@@ -1,4 +1,3 @@
-export { MEZA_VERSION } from '@meza/core';
 export { ChannelView } from './components/chat/ChannelView.tsx';
 export { InviteLanding } from './components/lobby/InviteLanding.tsx';
 export { LandingPage } from './components/lobby/LandingPage.tsx';

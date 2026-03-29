@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MEZA_VERSION } from './index.ts';
+import { LOBBY_SERVER_ID } from './index.ts';
 
 describe('core', () => {
-  it('exports MEZA_VERSION as a string', () => {
-    expect(typeof MEZA_VERSION).toBe('string');
-    expect(MEZA_VERSION.length).toBeGreaterThan(0);
+  it('exports LOBBY_SERVER_ID as a string', () => {
+    expect(typeof LOBBY_SERVER_ID).toBe('string');
+    expect(LOBBY_SERVER_ID.length).toBeGreaterThan(0);
   });
 });
