@@ -93,6 +93,11 @@ export {
   wrapChannelKey,
 } from './primitives.ts';
 export {
+  computeFingerprint,
+  computeSafetyNumber,
+  formatSafetyNumber,
+} from './safety-number.ts';
+export {
   decryptRecoveryBundle,
   deriveRecoveryKey,
   deriveRecoveryVerifier,
