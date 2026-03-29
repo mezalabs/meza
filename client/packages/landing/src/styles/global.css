@@ -5,17 +5,14 @@
   --color-*: initial;
   --font-*: initial;
 
-  /* ── Background layers (neutral dark, ascending lightness) ── */
+  /* ── Background layers ── */
   --color-bg-base: #121212;
   --color-bg-surface: #1b1b1b;
   --color-bg-elevated: #242424;
-  --color-bg-overlay: #0f0f0f;
 
-  /* ── Mint accent scale ── */
+  /* ── Mint accent ── */
   --color-accent: #6affb0;
   --color-accent-hover: #92ffc2;
-  --color-accent-muted: #4ea374;
-  --color-accent-subtle: #234230;
 
   /* ── Text ── */
   --color-text: #e8e8e8;
@@ -25,15 +22,6 @@
   /* ── Borders ── */
   --color-border: #2e2e2e;
   --color-border-hover: #484848;
-
-  /* ── Focus ring ── */
-  --color-focus: #6affb0;
-
-  /* ── Semantic ── */
-  --color-success: #33b978;
-  --color-warning: #d9a514;
-  --color-error: #f14d4c;
-  --color-info: #3bacda;
 
   /* ── Essentials ── */
   --color-white: #fff;
@@ -45,7 +33,6 @@
   --font-sans:
     "Geist Variable", "Geist", system-ui, -apple-system, "Apple Color Emoji",
     "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
 
   /* ── Text scale ── */
   --text-xs: 0.75rem;
@@ -57,23 +44,6 @@
   --text-3xl: 2rem;
   --text-4xl: 2.5rem;
   --text-5xl: 3rem;
-
-  /* ── Border radius ── */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-full: 9999px;
-
-  /* ── Shadows ── */
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 4px 16px rgb(0 0 0 / 0.5);
-
-  /* ── Easing ── */
-  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Base layer ── */
