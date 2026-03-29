@@ -88,7 +88,11 @@ export function ChannelsStep({
               >
                 <span className="text-text-muted">
                   {ch.isPrivate ? (
-                    <span className="relative" aria-label="Private channel">
+                    <span
+                      className="relative"
+                      role="img"
+                      aria-label="Private channel"
+                    >
                       <HashIcon weight="regular" size={14} aria-hidden="true" />
                       <span className="absolute -bottom-1 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-bg-surface">
                         <LockSimpleIcon

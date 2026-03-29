@@ -1518,7 +1518,6 @@ const MessageItem = memo(function MessageItem({
             messageId={msg.id}
             serverId={serverId}
           />
-
         </div>
         {/* end content column */}
       </div>
@@ -1689,4 +1688,3 @@ function ReplyPreviewBar({
     </button>
   );
 }
-

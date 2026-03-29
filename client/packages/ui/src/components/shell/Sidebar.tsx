@@ -1454,9 +1454,11 @@ function SidebarChannelItem({
   );
 
   const icon = isPrivate ? (
-    <span className="relative" aria-label="Private channel">
+    <span className="relative" role="img" aria-label="Private channel">
       {baseIcon}
-      <span className={`absolute -bottom-1 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full transition-colors group-hover:bg-bg-surface ${active ? 'bg-bg-surface' : 'bg-bg-overlay'}`}>
+      <span
+        className={`absolute -bottom-1 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full transition-colors group-hover:bg-bg-surface ${active ? 'bg-bg-surface' : 'bg-bg-overlay'}`}
+      >
         <LockSimpleIcon
           size={10}
           weight="fill"
