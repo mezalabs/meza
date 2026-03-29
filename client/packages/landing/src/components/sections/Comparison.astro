@@ -1,0 +1,118 @@
+---
+const features = [
+  {
+    name: 'E2E Encrypted',
+    meza: 'All messages',
+    signal: 'All messages',
+    discord: 'DMs only',
+    element: 'Opt-in per room',
+  },
+  {
+    name: 'Open Source',
+    meza: 'Full stack',
+    signal: 'Client + server',
+    discord: 'No',
+    element: 'Full stack',
+  },
+  {
+    name: 'Self-Hostable',
+    meza: 'Yes',
+    signal: 'No',
+    discord: 'No',
+    element: 'Yes',
+  },
+  {
+    name: 'No Tracking / Ads',
+    meza: 'Zero',
+    signal: 'Zero',
+    discord: 'Ads + tracking',
+    element: 'Zero',
+  },
+  {
+    name: 'Voice & Video',
+    meza: 'Yes',
+    signal: 'Yes',
+    discord: 'Yes',
+    element: 'Yes',
+  },
+  {
+    name: 'File Sharing',
+    meza: 'Yes',
+    signal: 'Limited',
+    discord: 'Yes',
+    element: 'Yes',
+  },
+  {
+    name: 'Rich Text',
+    meza: 'Yes',
+    signal: 'No',
+    discord: 'Limited',
+    element: 'Yes',
+  },
+  {
+    name: 'Threads',
+    meza: 'Yes',
+    signal: 'No',
+    discord: 'Yes',
+    element: 'Yes',
+  },
+  {
+    name: 'Roles & Permissions',
+    meza: 'Yes',
+    signal: 'No',
+    discord: 'Yes',
+    element: 'Yes',
+  },
+  {
+    name: 'Data Ownership',
+    meza: 'Full (self-host)',
+    signal: 'Signal Foundation',
+    discord: 'Discord Inc.',
+    element: 'Full (self-host)',
+  },
+];
+
+function cellClass(value: string): string {
+  const positive = ['Yes', 'All messages', 'Full stack', 'Zero', 'Full (self-host)'];
+  const negative = ['No', 'DMs only', 'Ads + tracking', 'Discord Inc.', 'Signal Foundation'];
+  if (positive.includes(value)) return 'text-success';
+  if (negative.includes(value)) return 'text-error';
+  return 'text-warning';
+}
+---
+
+<section id="comparison" class="px-6 py-24">
+  <div class="mx-auto max-w-5xl">
+    <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
+      How Meza compares
+    </h2>
+    <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
+      Privacy and community features shouldn't be mutually exclusive.
+    </p>
+
+    <div class="overflow-x-auto rounded-xl border border-border">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-border bg-bg-surface">
+            <th class="px-4 py-3 font-medium text-text-muted">Feature</th>
+            <th class="px-4 py-3 font-semibold text-accent">Meza</th>
+            <th class="px-4 py-3 font-medium text-text-muted">Signal</th>
+            <th class="px-4 py-3 font-medium text-text-muted">Discord</th>
+            <th class="px-4 py-3 font-medium text-text-muted">Element</th>
+          </tr>
+        </thead>
+        <tbody>
+          {features.map((f, i) => (
+            <tr class:list={['border-b border-border last:border-b-0', i % 2 === 0 ? 'bg-bg-base' : 'bg-bg-surface/50']}>
+              <td class="px-4 py-3 font-medium text-text">{f.name}</td>
+              <td class:list={['px-4 py-3 font-medium', cellClass(f.meza)]}>{f.meza}</td>
+              <td class:list={['px-4 py-3', cellClass(f.signal)]}>{f.signal}</td>
+              <td class:list={['px-4 py-3', cellClass(f.discord)]}>{f.discord}</td>
+              <td class:list={['px-4 py-3', cellClass(f.element)]}>{f.element}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,112 @@
+@import 'tailwindcss';
+
+@theme {
+  /* ── Reset defaults, build from scratch ── */
+  --color-*: initial;
+  --font-*: initial;
+
+  /* ── Background layers (neutral dark, ascending lightness) ── */
+  --color-bg-base: #121212;
+  --color-bg-surface: #1b1b1b;
+  --color-bg-elevated: #242424;
+  --color-bg-overlay: #0f0f0f;
+
+  /* ── Mint accent scale ── */
+  --color-accent: #6affb0;
+  --color-accent-hover: #92ffc2;
+  --color-accent-muted: #4ea374;
+  --color-accent-subtle: #234230;
+
+  /* ── Text ── */
+  --color-text: #e8e8e8;
+  --color-text-muted: #8f8f8f;
+  --color-text-subtle: #555555;
+
+  /* ── Borders ── */
+  --color-border: #2e2e2e;
+  --color-border-hover: #484848;
+
+  /* ── Focus ring ── */
+  --color-focus: #6affb0;
+
+  /* ── Semantic ── */
+  --color-success: #33b978;
+  --color-warning: #d9a514;
+  --color-error: #f14d4c;
+  --color-info: #3bacda;
+
+  /* ── Essentials ── */
+  --color-white: #fff;
+  --color-black: #000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* ── Typography ── */
+  --font-sans:
+    'Geist Variable', 'Geist', system-ui, -apple-system, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace;
+
+  /* ── Text scale ── */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3rem;
+
+  /* ── Border radius ── */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 2px 8px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 4px 16px rgb(0 0 0 / 0.5);
+
+  /* ── Easing ── */
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Base layer ── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

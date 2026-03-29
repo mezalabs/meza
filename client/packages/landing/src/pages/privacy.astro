@@ -1,0 +1,116 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Privacy Policy — Meza"
+  description="Meza's privacy policy. We collect no data, track nothing, and serve no ads."
+>
+  <Header />
+
+  <main class="mx-auto max-w-3xl px-6 pt-28 pb-16">
+    <h1 class="mb-8 text-3xl font-bold text-text">Privacy Policy</h1>
+    <p class="mb-6 text-sm text-text-subtle">Last updated: March 2026</p>
+
+    <div class="prose space-y-6 text-sm leading-relaxed text-text-muted">
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Overview</h2>
+        <p>
+          Meza is an open-source, end-to-end encrypted chat platform. We are committed to
+          protecting your privacy. This policy explains what data we collect (very little),
+          how we use it, and your rights.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Data We Collect</h2>
+        <p>
+          <strong class="text-text">When you use the hosted service (meza.chat):</strong>
+        </p>
+        <ul class="ml-4 mt-2 list-disc space-y-1">
+          <li>Account information: username and email address (required to create an account)</li>
+          <li>Server membership: which servers you belong to (required for message delivery)</li>
+          <li>Encrypted message content: stored in encrypted form that we cannot read</li>
+          <li>Files you upload: stored encrypted in object storage</li>
+        </ul>
+        <p class="mt-4">
+          <strong class="text-text">What we do NOT collect:</strong>
+        </p>
+        <ul class="ml-4 mt-2 list-disc space-y-1">
+          <li>Analytics or usage tracking of any kind</li>
+          <li>IP address logs (beyond what is necessary for rate limiting)</li>
+          <li>Device fingerprints</li>
+          <li>Third-party cookies or tracking pixels</li>
+          <li>Your message content (it is end-to-end encrypted)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">End-to-End Encryption</h2>
+        <p>
+          All messages in Meza are encrypted using the MLS (Messaging Layer Security) protocol.
+          Encryption keys are generated on your device and never leave it. The server processes
+          encrypted data it cannot decrypt. Only intended recipients can read messages.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Self-Hosting</h2>
+        <p>
+          If you self-host Meza, you have full control over all data. No data is sent to
+          Meza Labs or any third party. The software makes no external calls except those
+          you explicitly configure (e.g., push notification services).
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Data Retention</h2>
+        <p>
+          You can delete your account at any time. When you delete your account, all associated
+          data is permanently removed from our servers. Encrypted messages that have already been
+          delivered to recipients remain on their devices.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Third Parties</h2>
+        <p>
+          We do not sell, share, or provide your data to any third party. We do not use
+          third-party analytics, advertising, or tracking services. The only external service
+          used is push notification delivery (APNs for iOS, FCM for Android) which receives
+          only an opaque notification token.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">This Website</h2>
+        <p>
+          This marketing website (meza.chat) is a static site hosted on Cloudflare Pages.
+          It contains no analytics, no tracking scripts, and no cookies. Cloudflare may
+          collect standard server logs (IP address, user agent) as part of their CDN
+          infrastructure.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Open Source</h2>
+        <p>
+          Meza is fully open source. You can audit the code yourself to verify these claims
+          at <a href="https://github.com/mezalabs/meza" target="_blank" rel="noopener noreferrer" class="text-accent hover:text-accent-hover">github.com/mezalabs/meza</a>.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-3 text-lg font-semibold text-text">Contact</h2>
+        <p>
+          For privacy-related questions, open an issue on our
+          <a href="https://github.com/mezalabs/meza" target="_blank" rel="noopener noreferrer" class="text-accent hover:text-accent-hover">GitHub repository</a>.
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

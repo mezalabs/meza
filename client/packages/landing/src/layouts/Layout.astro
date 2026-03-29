@@ -1,0 +1,24 @@
+---
+import '../styles/global.css';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
+import BaseHead from '../components/BaseHead.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+}
+
+const { title, description, image } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <BaseHead title={title} description={description} image={image} />
+  </head>
+  <body class="min-h-screen bg-bg-base text-text">
+    <slot />
+  </body>
+</html>

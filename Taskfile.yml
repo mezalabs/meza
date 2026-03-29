@@ -468,6 +468,20 @@ tasks:
         echo ""
         echo "All Meza Docker resources removed."
 
+  dev:landing:
+    desc: Start Astro landing page in development mode
+    dir: client
+    cmds:
+      - pnpm install --frozen-lockfile --silent
+      - pnpm --filter @meza/landing dev
+
+  build:landing:
+    desc: Build Astro landing page for production
+    dir: client
+    cmds:
+      - pnpm install --frozen-lockfile --silent
+      - pnpm --filter @meza/landing build
+
   dev:desktop:
     desc: Start Electron desktop app in development mode
     dir: client

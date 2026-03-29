@@ -1,0 +1,98 @@
+---
+import MezaLogo from '../MezaLogo.astro';
+
+const GITHUB_REPO = 'mezalabs/meza';
+const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
+
+const platforms = [
+  { os: 'macos', label: 'macOS', suffix: 'mac-arm64.dmg' },
+  { os: 'windows', label: 'Windows', suffix: 'win-x64.exe' },
+  { os: 'linux', label: 'Linux', suffix: 'linux-x86_64.AppImage' },
+];
+
+// Fetch latest desktop release version at build time
+let version: string | null = null;
+try {
+  const res = await fetch(
+    `https://api.github.com/repos/${GITHUB_REPO}/releases`,
+    { headers: { Accept: 'application/vnd.github.v3+json' } }
+  );
+  if (res.ok) {
+    const releases: Array<{ tag_name: string; draft: boolean; prerelease: boolean }> = await res.json();
+    const desktop = releases.find(
+      (r) => r.tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease
+    );
+    if (desktop) {
+      version = desktop.tag_name.replace('desktop-v', '');
+    }
+  }
+} catch {
+  // Build-time fetch failed — fall back to generic download link
+}
+---
+
+<section class="relative flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-16 text-center">
+  <div class="mx-auto max-w-3xl">
+    <MezaLogo class="mx-auto mb-8 h-14 text-accent sm:h-16" />
+
+    <h1 class="text-3xl font-bold leading-tight tracking-tight text-text sm:text-5xl">
+      Private conversations,<br />zero compromises
+    </h1>
+
+    <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl">
+      End-to-end encrypted group chat with voice, video, and text.
+      Open source and self-hostable. No tracking, no ads, ever.
+    </p>
+
+    <!-- Download buttons -->
+    <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      {platforms.map((p) => {
+        const href = version
+          ? `https://github.com/${GITHUB_REPO}/releases/download/desktop-v${version}/Meza-${version}-${p.suffix}`
+          : RELEASES_URL;
+        return (
+          <a
+            href={href}
+            data-os={p.os}
+            class="download-btn inline-flex w-full items-center justify-center rounded-lg border border-border bg-bg-surface px-6 py-3.5 text-sm font-medium text-text transition-colors hover:border-border-hover hover:bg-bg-elevated sm:w-auto"
+          >
+            Download for {p.label}
+          </a>
+        );
+      })}
+    </div>
+
+    <div class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+      <a
+        href="https://app.meza.chat"
+        class="text-sm font-medium text-accent transition-colors hover:text-accent-hover"
+      >
+        Open in browser &rarr;
+      </a>
+      <span class="hidden text-text-subtle sm:inline">&middot;</span>
+      <a
+        href={RELEASES_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-sm text-text-muted transition-colors hover:text-text"
+      >
+        View all downloads
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- OS detection: highlight the matching download button -->
+<script>
+  const ua = navigator.userAgent.toLowerCase();
+  let os = 'linux';
+  if (ua.includes('mac')) os = 'macos';
+  else if (ua.includes('win')) os = 'windows';
+
+  document.querySelectorAll('.download-btn').forEach((btn) => {
+    if (btn instanceof HTMLElement && btn.dataset.os === os) {
+      btn.classList.remove('border-border', 'bg-bg-surface', 'text-text', 'hover:border-border-hover', 'hover:bg-bg-elevated');
+      btn.classList.add('bg-accent', 'text-black', 'hover:bg-accent-hover', 'border-transparent');
+    }
+  });
+</script>

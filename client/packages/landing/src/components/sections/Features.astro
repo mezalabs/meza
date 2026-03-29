@@ -1,0 +1,45 @@
+---
+const features = [
+  {
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Zm-68-56a12,12,0,1,1-12-12A12,12,0,0,1,140,152Z"/></svg>`,
+    title: 'End-to-End Encrypted',
+    description: 'Every message is encrypted so only you and your recipients can read it. Not even the server can see your conversations.',
+  },
+  {
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M234.42,111.07l-46.52-30.15A8,8,0,0,0,176,87.72V128a8,8,0,0,0,11.9,6.93l46.52-30.15A4,4,0,0,0,234.42,111.07ZM213.65,124,184,105.34v37.32ZM128,56C81.07,56,28.15,80.68,28.15,128S81.07,200,128,200c17.77,0,34.53-4.67,48.42-13.5a8,8,0,1,0-8.84-13.33C156,180.39,142.23,184,128,184c-39.42,0-83.85-20.59-83.85-56S88.58,72,128,72s83.85,20.59,83.85,56a55.84,55.84,0,0,1-3.34,18.88,8,8,0,1,0,15,5.56A71.85,71.85,0,0,0,227.85,128C227.85,80.68,174.93,56,128,56Zm0,112a40,40,0,0,0,10.77-1.47,8,8,0,0,0-4.32-15.4A24,24,0,1,1,128,104a23.76,23.76,0,0,1,17,7.05,8,8,0,1,0,11.31-11.31A39.8,39.8,0,0,0,128,88,40,40,0,0,0,128,168Z"/></svg>`,
+    title: 'No Tracking',
+    description: 'Zero analytics, zero ads, zero data collection. Your conversations are yours alone.',
+  },
+  {
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,144H32V64H224V192ZM48,136a8,8,0,0,1,8-8H200a8,8,0,0,1,0,16H56A8,8,0,0,1,48,136Zm0,32a8,8,0,0,1,8-8H200a8,8,0,0,1,0,16H56A8,8,0,0,1,48,168Zm0-68V84a8,8,0,0,1,8-8h60a8,8,0,0,1,8,8v16a8,8,0,0,1-8,8H56A8,8,0,0,1,48,100Z"/></svg>`,
+    title: 'Open Source',
+    description: 'Fully auditable code you can inspect and verify. Transparency builds trust.',
+  },
+  {
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M247.42,117l-14-35A15.93,15.93,0,0,0,218.58,72H196V64a8,8,0,0,0-8-8H32A16,16,0,0,0,16,72V184a16,16,0,0,0,16,16H49a32,32,0,0,0,62,0h34a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V120A7.94,7.94,0,0,0,247.42,117ZM196,88h22.58l9.6,24H196ZM32,72H180v64H32ZM80,208a16,16,0,1,1,16-16A16,16,0,0,1,80,208Zm96,0a16,16,0,1,1,16-16A16,16,0,0,1,176,208Zm48-24H207a32,32,0,0,0-62,0H111a32,32,0,0,0-62,0H32V152H224Z"/></svg>`,
+    title: 'Self-Hostable',
+    description: 'Run your own server with full control over your data. Docker Compose makes it simple.',
+  },
+];
+---
+
+<section id="features" class="px-6 py-24">
+  <div class="mx-auto max-w-6xl">
+    <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
+      Built for privacy-first communities
+    </h2>
+    <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
+      Meza combines the privacy of Signal with the community features of Discord — without the trade-offs.
+    </p>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {features.map((feature) => (
+        <div class="rounded-xl border border-border bg-bg-surface p-6 transition-colors hover:border-border-hover">
+          <div class="mb-4 text-accent" set:html={feature.icon} />
+          <h3 class="mb-2 text-lg font-semibold text-text">{feature.title}</h3>
+          <p class="text-sm leading-relaxed text-text-muted">{feature.description}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

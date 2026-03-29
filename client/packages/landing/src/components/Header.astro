@@ -1,0 +1,38 @@
+---
+import MezaLogo from './MezaLogo.astro';
+---
+
+<header class="fixed top-0 z-50 w-full border-b border-border/50 bg-bg-base/80 backdrop-blur-lg">
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <a href="/" class="flex items-center gap-2" aria-label="Meza home">
+      <MezaLogo class="h-6 text-accent" />
+    </a>
+
+    <div class="flex items-center gap-6">
+      <a
+        href="#features"
+        class="hidden text-sm text-text-muted transition-colors hover:text-text sm:block"
+      >
+        Features
+      </a>
+      <a
+        href="#comparison"
+        class="hidden text-sm text-text-muted transition-colors hover:text-text sm:block"
+      >
+        Compare
+      </a>
+      <a
+        href="#faq"
+        class="hidden text-sm text-text-muted transition-colors hover:text-text sm:block"
+      >
+        FAQ
+      </a>
+      <a
+        href="https://app.meza.chat"
+        class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
+      >
+        Open App
+      </a>
+    </div>
+  </nav>
+</header>

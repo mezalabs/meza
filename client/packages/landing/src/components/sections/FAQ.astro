@@ -1,0 +1,66 @@
+---
+const faqs = [
+  {
+    question: 'Is Meza free?',
+    answer: 'Yes! Meza is free and open source under the AGPLv3 license. You can use it, inspect it, modify it, and self-host it at no cost.',
+  },
+  {
+    question: 'How does end-to-end encryption work?',
+    answer: 'Meza uses the MLS (Messaging Layer Security) protocol for group encryption. Each device has its own encryption keys, and messages are encrypted so that only the intended recipients can decrypt them. The server never has access to your message content.',
+  },
+  {
+    question: 'Can I self-host Meza?',
+    answer: 'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes 8 Go microservices, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all orchestrated with a single command.',
+  },
+  {
+    question: 'What platforms does Meza support?',
+    answer: 'Meza runs everywhere: web browser, desktop (macOS, Windows, Linux via Electron), and mobile (iOS and Android via Capacitor). All platforms share the same encrypted protocol.',
+  },
+  {
+    question: 'How is Meza different from Signal?',
+    answer: 'Signal is great for private messaging but lacks community features. Meza adds servers, channels, threads, roles, voice channels, and rich text — all with the same level of end-to-end encryption. Think of it as Signal\'s privacy with Discord\'s community features.',
+  },
+  {
+    question: 'Is my data collected or tracked?',
+    answer: 'No. Meza has zero analytics, zero ads, and zero data collection. We don\'t track your usage, read your messages, or sell your data. When you self-host, you have complete control over all data.',
+  },
+  {
+    question: 'Can I migrate from Discord or Slack?',
+    answer: 'Migration tools are on our roadmap. In the meantime, you can manually recreate your server structure in Meza. The community is working on import tools — check our GitHub for progress.',
+  },
+];
+---
+
+<section id="faq" class="px-6 py-24">
+  <div class="mx-auto max-w-3xl">
+    <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
+      Frequently asked questions
+    </h2>
+    <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
+      Everything you need to know about Meza.
+    </p>
+
+    <div class="divide-y divide-border rounded-xl border border-border">
+      {faqs.map((faq) => (
+        <details class="group">
+          <summary class="flex cursor-pointer items-center justify-between px-6 py-5 text-left text-base font-medium text-text transition-colors hover:text-accent">
+            {faq.question}
+            <svg
+              class="ml-4 h-5 w-5 flex-shrink-0 text-text-subtle transition-transform group-open:rotate-180"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-5 text-sm leading-relaxed text-text-muted">
+            {faq.answer}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
