@@ -19,6 +19,9 @@ COPY client/packages/ packages/
 COPY client/gen/ gen/
 COPY client/tsconfig.json client/tsconfig.base.json ./
 
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @meza/web... build
 
