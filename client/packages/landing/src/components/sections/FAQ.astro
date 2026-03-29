@@ -1,0 +1,73 @@
+---
+const faqs = [
+  {
+    question: 'Is Meza free?',
+    answer:
+      'Yes. Meza is free and open source under AGPLv3. Use it, inspect it, modify it, self-host it — no cost, no catch.',
+  },
+  {
+    question: 'How is Meza different from Discord?',
+    answer:
+      "Discord has no end-to-end encryption, collects extensive behavioral data, and has progressively added ads and upsells as their business model demands it. That's not a moral failing — it's what happens when a platform's incentives diverge from its users'. Meza encrypts everything by default, has zero ads, zero tracking, and is fully open source so you don't have to take our word for any of it.",
+  },
+  {
+    question: 'How is Meza different from Matrix / Element?',
+    answer:
+      "Matrix shares a lot of our values, but we've found the day-to-day experience frustrating — \"unable to decrypt\" errors, confusing onboarding, and a client ecosystem that's increasingly enterprise-focused. Meza uses a simpler key model, has a clean UI that doesn't require protocol knowledge, and is built for communities — not procurement teams.",
+  },
+  {
+    question: 'How does the encryption work?',
+    answer:
+      'Every channel is encrypted with AES-256-GCM. Keys are distributed using ECIES (X25519 + HKDF + AES-256-GCM) and messages are signed with Ed25519. There is no plaintext mode — the server never sees your content.',
+  },
+  {
+    question: 'Can I self-host Meza?',
+    answer:
+      'Yes. One docker compose up gets you the full stack: Go services, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit.',
+  },
+  {
+    question: 'What platforms does Meza support?',
+    answer:
+      'Web, macOS, Windows, Linux, iOS, and Android. All platforms use the same encrypted protocol.',
+  },
+  {
+    question: 'Is my data collected or tracked?',
+    answer:
+      "No. Zero analytics, zero ads, zero data collection. We don't track usage, read messages, or sell data. When you self-host, every byte is yours.",
+  },
+];
+---
+
+<section id="faq" class="px-6 py-16">
+  <div class="mx-auto max-w-3xl">
+    <h2 class="mb-4 text-center text-2xl font-bold text-text sm:text-3xl">
+      FAQ
+    </h2>
+    <p class="mx-auto mb-16 max-w-2xl text-center text-lg text-text-muted">
+      The stuff you actually want to know.
+    </p>
+
+    <div class="divide-y divide-border rounded-xl border border-border">
+      {faqs.map((faq) => (
+        <details class="group">
+          <summary class="flex cursor-pointer items-center justify-between px-6 py-5 text-left text-base font-medium text-text transition-colors hover:text-accent">
+            {faq.question}
+            <svg
+              class="ml-4 h-5 w-5 flex-shrink-0 text-text-subtle transition-transform group-open:rotate-180"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-5 text-sm leading-relaxed text-text-muted">
+            {faq.answer}
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

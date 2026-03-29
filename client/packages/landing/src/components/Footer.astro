@@ -1,0 +1,37 @@
+---
+import MezaLogo from './MezaLogo.astro';
+---
+
+<footer class="border-t border-border px-6 py-12">
+  <div class="mx-auto max-w-6xl">
+    <div class="flex flex-col items-center gap-8 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex flex-col items-center gap-3 sm:items-start">
+        <MezaLogo class="h-6 text-accent" />
+        <p class="text-sm text-text-muted">
+          End-to-end encrypted chat for everyone.
+        </p>
+      </div>
+
+      <div class="flex gap-12 text-sm">
+        <div class="flex flex-col gap-3">
+          <span class="font-semibold text-text">Product</span>
+          <a href="https://app.meza.chat" class="text-text-muted transition-colors hover:text-text">
+            Web App
+          </a>
+          <a href="https://github.com/mezalabs/meza/releases" target="_blank" rel="noopener noreferrer" class="text-text-muted transition-colors hover:text-text">
+            Downloads
+          </a>
+        </div>
+        <div class="flex flex-col gap-3">
+          <span class="font-semibold text-text">Resources</span>
+          <a href="https://github.com/mezalabs/meza" target="_blank" rel="noopener noreferrer" class="text-text-muted transition-colors hover:text-text">
+            GitHub
+          </a>
+          <a href="/privacy" class="text-text-muted transition-colors hover:text-text">
+            Privacy Policy
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

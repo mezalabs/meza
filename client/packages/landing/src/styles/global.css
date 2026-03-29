@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Reset defaults, build from scratch ── */
+  --color-*: initial;
+  --font-*: initial;
+
+  /* ── Background layers ── */
+  --color-bg-base: #121212;
+  --color-bg-surface: #1b1b1b;
+  --color-bg-elevated: #242424;
+
+  /* ── Mint accent ── */
+  --color-accent: #6affb0;
+  --color-accent-hover: #92ffc2;
+
+  /* ── Text ── */
+  --color-text: #e8e8e8;
+  --color-text-muted: #8f8f8f;
+  --color-text-subtle: #737373;
+
+  /* ── Borders ── */
+  --color-border: #2e2e2e;
+  --color-border-hover: #484848;
+
+  /* ── Essentials ── */
+  --color-white: #fff;
+  --color-black: #000;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* ── Typography ── */
+  --font-sans:
+    "Geist Variable", "Geist", system-ui, -apple-system, "Apple Color Emoji",
+    "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+
+  /* ── Text scale ── */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+  --text-5xl: 3rem;
+}
+
+/* ── Base layer ── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg-base);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    /* biome-ignore lint/complexity/noImportantStyles: !important is required here to override inline styles and animation libraries for reduced-motion accessibility */
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

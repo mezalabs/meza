@@ -5,6 +5,7 @@
       "**",
       "!**/dist",
       "!**/out",
+      "!**/.astro",
       "!gen",
       "!vendor",
       "!e2e/.auth",
@@ -40,5 +41,25 @@
       "quoteStyle": "single",
       "trailingCommas": "all"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
+        }
+      },
+      "assist": {
+        "actions": {
+          "source": {
+            "organizeImports": "off"
+          }
+        }
+      }
+    }
+  ]
 }

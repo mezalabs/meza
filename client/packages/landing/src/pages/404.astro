@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import MezaLogo from '../components/MezaLogo.astro';
+---
+
+<Layout
+  title="Page Not Found — Meza"
+  description="The page you're looking for doesn't exist."
+>
+  <Header />
+
+  <main class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <MezaLogo class="mb-8 h-10 text-accent" />
+    <h1 class="text-5xl font-bold text-text">404</h1>
+    <p class="mt-4 text-lg text-text-muted">
+      This page doesn't exist.
+    </p>
+    <a
+      href="/"
+      class="mt-8 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-black transition-colors hover:bg-accent-hover"
+    >
+      Back to home
+    </a>
+  </main>
+
+  <Footer />
+</Layout>
