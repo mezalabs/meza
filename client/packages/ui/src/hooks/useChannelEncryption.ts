@@ -116,6 +116,15 @@ export function useChannelEncryption(channelId: string): ChannelEncryption {
   useEffect(() => {
     if (!channelId) return;
 
+    // If keys are already cached in memory, resolve synchronously to avoid
+    // an unnecessary "Setting up encryption" flash on channel switch.
+    if (sessionReady && hasChannelKey(channelId)) {
+      setReady(true);
+      setIsEncrypted(true);
+      setUnavailableReason(null);
+      return;
+    }
+
     setReady(false);
     setIsEncrypted(false);
     setUnavailableReason(null);

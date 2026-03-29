@@ -1,4 +1,4 @@
-import type { Attachment, MessageState, ReplyEntry } from '@meza/core';
+import type { Attachment, MessageState } from '@meza/core';
 import {
   ackMessage,
   addReaction,
@@ -13,7 +13,6 @@ import {
   getMessagesByIDs,
   getPublicKeys,
   getReactions,
-  getReplies,
   hasChannelKey,
   hasPermission,
   hideKeyboard,
@@ -271,7 +270,8 @@ export function ChannelView({
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const needsEncryption = true; // Universal E2EE: all channels encrypted
-  const { isEncrypted: keysAvailable } = useChannelEncryption(channelId);
+  const channelEncryption = useChannelEncryption(channelId);
+  const keysAvailable = channelEncryption.isEncrypted;
   const hasEmojis = useEmojiStore((s) =>
     serverId ? !!s.byServer[serverId] : true,
   );
@@ -876,6 +876,7 @@ export function ChannelView({
             channelId={channelId}
             serverId={serverId}
             disabled={viewMode === 'historical'}
+            encryption={channelEncryption}
             mobileEmojiOpen={mobileEmojiOpen}
             onMobileEmojiToggle={handleMobileEmojiToggle}
             onMobileEmojiClose={handleMobileEmojiClose}
@@ -1211,33 +1212,6 @@ const MessageItem = memo(function MessageItem({
     serverId,
   );
 
-  // Replies accordion state
-  const [accordionOpen, setAccordionOpen] = useState(false);
-  const [replyEntries, setReplyEntries] = useState<ReplyEntry[] | null>(null);
-  const [replyTotalCount, setReplyTotalCount] = useState(0);
-  // Detect local replies: any loaded message with replyToId === this msg's id
-  const hasLocalReplies = useMessageStore((s) => {
-    const channelMsgs = s.byChannel[channelId];
-    if (!channelMsgs) return false;
-    return channelMsgs.some((m) => m.replyToId === msg.id);
-  });
-
-  function handleAccordionToggle() {
-    if (accordionOpen) {
-      setAccordionOpen(false);
-      return;
-    }
-    setAccordionOpen(true);
-    if (!replyEntries) {
-      getReplies({ channelId, messageId: msg.id })
-        .then((res) => {
-          setReplyEntries(res.replies);
-          setReplyTotalCount(res.totalCount);
-        })
-        .catch(() => {});
-    }
-  }
-
   const isMobile = useMobile();
   const [editError, setEditError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -1545,43 +1519,6 @@ const MessageItem = memo(function MessageItem({
             serverId={serverId}
           />
 
-          {/* Replies accordion */}
-          {hasLocalReplies && (
-            <div className="mt-1">
-              <button
-                type="button"
-                className="text-xs text-accent hover:text-accent-hover font-medium"
-                onClick={handleAccordionToggle}
-              >
-                {accordionOpen
-                  ? `Hide replies${replyTotalCount ? ` (${replyTotalCount})` : ''}`
-                  : 'Replies'}
-              </button>
-              {accordionOpen && (
-                <div className="mt-1 ml-2 border-l-2 border-border pl-2 space-y-0.5">
-                  {replyEntries ? (
-                    <>
-                      <div className="text-xs text-text-muted mb-1">
-                        {replyTotalCount}{' '}
-                        {replyTotalCount === 1 ? 'reply' : 'replies'}
-                      </div>
-                      {replyEntries.map((entry) => (
-                        <ReplyAccordionEntry
-                          key={entry.messageId}
-                          entry={entry}
-                          channelId={channelId}
-                          serverId={serverId}
-                          onJump={() => onJumpToMessage(entry.messageId)}
-                        />
-                      ))}
-                    </>
-                  ) : (
-                    <span className="text-xs text-text-subtle">Loading…</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
         {/* end content column */}
       </div>
@@ -1743,61 +1680,13 @@ function ReplyPreviewBar({
       >
         {parentLabel}
       </span>
-      <span className="truncate text-text-subtle">
-        {snippet || 'Original message was deleted'}
+      <span className={`truncate text-text-subtle${snippet ? '' : ' italic'}`}>
+        {snippet ||
+          (parentMessage.attachments.length > 0
+            ? 'Click to see attachment'
+            : 'Original message was deleted')}
       </span>
     </button>
   );
 }
 
-/** A single entry in the replies accordion. */
-function ReplyAccordionEntry({
-  entry,
-  channelId,
-  serverId,
-  onJump,
-}: {
-  entry: ReplyEntry;
-  channelId: string;
-  serverId: string | undefined;
-  onJump: () => void;
-}) {
-  const authorName = useAuthorName(entry.authorId, serverId);
-  const authorColor = useDisplayColor(entry.authorId, serverId);
-  const label = authorName;
-  const time = entry.createdAt
-    ? new Date(Number(entry.createdAt.seconds) * 1000)
-    : null;
-
-  // Check if this message is in the local store for jump capability
-  const isLocal = useMessageStore(
-    (s) => !!s.byId[channelId]?.[entry.messageId],
-  );
-
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span
-        className="font-medium text-text"
-        style={authorColor ? { color: authorColor } : undefined}
-      >
-        {label}
-      </span>
-      {time && (
-        <span className="text-text-subtle">{formatRelativeTime(time)}</span>
-      )}
-      {isLocal ? (
-        <button
-          type="button"
-          className="text-accent hover:text-accent-hover"
-          onClick={onJump}
-        >
-          Jump
-        </button>
-      ) : (
-        <span className="text-text-subtle" title="Message not in view">
-          —
-        </span>
-      )}
-    </div>
-  );
-}

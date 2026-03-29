@@ -32,7 +32,7 @@ export const EmojiPickerButton = memo(function EmojiPickerButton({
       <button
         type="button"
         aria-label="Insert emoji"
-        className={`flex-shrink-0 self-start mt-5 mr-5 transition-colors disabled:opacity-50 ${
+        className={`flex-shrink-0 mr-5 transition-colors disabled:opacity-50 ${
           mobileEmojiOpen ? 'text-accent' : 'text-text-muted hover:text-text'
         }`}
         disabled={disabled}
@@ -56,7 +56,7 @@ export const EmojiPickerButton = memo(function EmojiPickerButton({
         <button
           type="button"
           aria-label="Insert emoji"
-          className="flex-shrink-0 self-start mt-5 mr-5 text-text-muted transition-colors hover:text-text disabled:opacity-50 data-[state=open]:text-accent"
+          className="flex-shrink-0 mr-5 text-text-muted transition-colors hover:text-text disabled:opacity-50 data-[state=open]:text-accent"
           disabled={disabled}
         >
           <SmileyIcon size={22} aria-hidden="true" />
