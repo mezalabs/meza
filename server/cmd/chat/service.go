@@ -1646,20 +1646,12 @@ func (s *chatService) ListChannels(ctx context.Context, req *connect.Request[v1.
 		return nil, permErr
 	}
 
-	// Build set of companion text channel IDs to exclude from the response.
-	// Clients discover companions via the voice channel's voice_text_channel_id field.
-	companionIDs := make(map[string]bool)
-	for _, ch := range channels {
-		if ch.VoiceTextChannelID != "" {
-			companionIDs[ch.VoiceTextChannelID] = true
-		}
-	}
-
+	// Include all channels the user can view — companion text channels are
+	// included so the client can resolve their name/topic in the voice panel.
+	// The client sidebar already hides companions via the voice channel's
+	// voice_text_channel_id field.
 	var protoChannels []*v1.Channel
 	for _, ch := range channels {
-		if companionIDs[ch.ID] {
-			continue // Skip companion text channels from the list.
-		}
 		if chPerms, ok := permsMap[ch.ID]; ok && permissions.Has(chPerms, permissions.ViewChannel) {
 			protoChannels = append(protoChannels, channelToProto(ch))
 		}

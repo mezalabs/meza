@@ -4,6 +4,7 @@
     "includes": [
       "**",
       "!**/dist",
+      "!**/out",
       "!gen",
       "!vendor",
       "!e2e/.auth",
