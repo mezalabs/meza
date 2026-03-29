@@ -101,6 +101,7 @@
       scroll-behavior: auto;
     }
 
+    /* biome-ignore lint/complexity/noImportantStyles: !important is required here to override inline styles and animation libraries for reduced-motion accessibility */
     *,
     *::before,
     *::after {
