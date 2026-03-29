@@ -2,31 +2,38 @@
 const faqs = [
   {
     question: 'Is Meza free?',
-    answer: 'Yes! Meza is free and open source under the AGPLv3 license. You can use it, inspect it, modify it, and self-host it at no cost.',
+    answer:
+      'Yes! Meza is free and open source under the AGPLv3 license. You can use it, inspect it, modify it, and self-host it at no cost.',
   },
   {
     question: 'How does end-to-end encryption work?',
-    answer: 'Meza uses the MLS (Messaging Layer Security) protocol for group encryption. Each device has its own encryption keys, and messages are encrypted so that only the intended recipients can decrypt them. The server never has access to your message content.',
+    answer:
+      'Meza uses the MLS (Messaging Layer Security) protocol for group encryption. Each device has its own encryption keys, and messages are encrypted so that only the intended recipients can decrypt them. The server never has access to your message content.',
   },
   {
     question: 'Can I self-host Meza?',
-    answer: 'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes 8 Go microservices, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all orchestrated with a single command.',
+    answer:
+      'Absolutely. Meza is designed to be self-hosted with Docker Compose. The stack includes 8 Go microservices, PostgreSQL, ScyllaDB, Redis, NATS, MinIO, and LiveKit — all orchestrated with a single command.',
   },
   {
     question: 'What platforms does Meza support?',
-    answer: 'Meza runs everywhere: web browser, desktop (macOS, Windows, Linux via Electron), and mobile (iOS and Android via Capacitor). All platforms share the same encrypted protocol.',
+    answer:
+      'Meza runs everywhere: web browser, desktop (macOS, Windows, Linux via Electron), and mobile (iOS and Android via Capacitor). All platforms share the same encrypted protocol.',
   },
   {
     question: 'How is Meza different from Signal?',
-    answer: 'Signal is great for private messaging but lacks community features. Meza adds servers, channels, threads, roles, voice channels, and rich text — all with the same level of end-to-end encryption. Think of it as Signal\'s privacy with Discord\'s community features.',
+    answer:
+      "Signal is great for private messaging but lacks community features. Meza adds servers, channels, threads, roles, voice channels, and rich text — all with the same level of end-to-end encryption. Think of it as Signal's privacy with Discord's community features.",
   },
   {
     question: 'Is my data collected or tracked?',
-    answer: 'No. Meza has zero analytics, zero ads, and zero data collection. We don\'t track your usage, read your messages, or sell your data. When you self-host, you have complete control over all data.',
+    answer:
+      "No. Meza has zero analytics, zero ads, and zero data collection. We don't track your usage, read your messages, or sell your data. When you self-host, you have complete control over all data.",
   },
   {
     question: 'Can I migrate from Discord or Slack?',
-    answer: 'Migration tools are on our roadmap. In the meantime, you can manually recreate your server structure in Meza. The community is working on import tools — check our GitHub for progress.',
+    answer:
+      'Migration tools are on our roadmap. In the meantime, you can manually recreate your server structure in Meza. The community is working on import tools — check our GitHub for progress.',
   },
 ];
 ---

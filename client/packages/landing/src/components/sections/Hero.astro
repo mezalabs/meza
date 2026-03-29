@@ -15,12 +15,16 @@ let version: string | null = null;
 try {
   const res = await fetch(
     `https://api.github.com/repos/${GITHUB_REPO}/releases`,
-    { headers: { Accept: 'application/vnd.github.v3+json' } }
+    { headers: { Accept: 'application/vnd.github.v3+json' } },
   );
   if (res.ok) {
-    const releases: Array<{ tag_name: string; draft: boolean; prerelease: boolean }> = await res.json();
+    const releases: Array<{
+      tag_name: string;
+      draft: boolean;
+      prerelease: boolean;
+    }> = await res.json();
     const desktop = releases.find(
-      (r) => r.tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease
+      (r) => r.tag_name.startsWith('desktop-v') && !r.draft && !r.prerelease,
     );
     if (desktop) {
       version = desktop.tag_name.replace('desktop-v', '');

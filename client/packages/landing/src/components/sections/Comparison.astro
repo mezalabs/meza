@@ -73,8 +73,20 @@ const features = [
 ];
 
 function cellClass(value: string): string {
-  const positive = ['Yes', 'All messages', 'Full stack', 'Zero', 'Full (self-host)'];
-  const negative = ['No', 'DMs only', 'Ads + tracking', 'Discord Inc.', 'Signal Foundation'];
+  const positive = [
+    'Yes',
+    'All messages',
+    'Full stack',
+    'Zero',
+    'Full (self-host)',
+  ];
+  const negative = [
+    'No',
+    'DMs only',
+    'Ads + tracking',
+    'Discord Inc.',
+    'Signal Foundation',
+  ];
   if (positive.includes(value)) return 'text-success';
   if (negative.includes(value)) return 'text-error';
   return 'text-warning';
