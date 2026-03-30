@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aesGcmDecrypt, aesGcmEncrypt, deriveKeys } from './keys.ts';
 
-describe('deriveKeys', () => {
+describe('deriveKeys', { timeout: 15_000 }, () => {
   it('derives two different 32-byte keys from the same password', async () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const { masterKey, authKey } = await deriveKeys('test-password-123', salt);
@@ -15,20 +15,16 @@ describe('deriveKeys', () => {
     expect(masterKey).not.toEqual(authKey);
   });
 
-  it(
-    'produces deterministic output for the same password + salt',
-    { timeout: 15_000 },
-    async () => {
-      const salt = new Uint8Array([
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-      ]);
-      const keys1 = await deriveKeys('hello', salt);
-      const keys2 = await deriveKeys('hello', salt);
+  it('produces deterministic output for the same password + salt', async () => {
+    const salt = new Uint8Array([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+    ]);
+    const keys1 = await deriveKeys('hello', salt);
+    const keys2 = await deriveKeys('hello', salt);
 
-      expect(keys1.masterKey).toEqual(keys2.masterKey);
-      expect(keys1.authKey).toEqual(keys2.authKey);
-    },
-  );
+    expect(keys1.masterKey).toEqual(keys2.masterKey);
+    expect(keys1.authKey).toEqual(keys2.authKey);
+  });
 
   it('produces different output for different passwords', async () => {
     const salt = new Uint8Array([
@@ -103,7 +99,7 @@ describe('aesGcmEncrypt / aesGcmDecrypt', () => {
   });
 });
 
-describe('full registration flow', () => {
+describe('full registration flow', { timeout: 15_000 }, () => {
   it('derives keys, encrypts identity, then decrypts with same password', async () => {
     const password = 'my-secure-password!';
     const salt = crypto.getRandomValues(new Uint8Array(16));

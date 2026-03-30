@@ -194,7 +194,7 @@ jobs:
 
       - name: Create PR
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_TITLE: ${{ steps.meta.outputs.title }}
         run: |
           gh label create release --description "Automated release PR" --color "0e8a16" 2>/dev/null || true
