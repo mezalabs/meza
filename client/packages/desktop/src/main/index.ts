@@ -211,9 +211,16 @@ app.whenReady().then(() => {
     (details, callback) => {
       // Replace the server's ACAO header with the actual page origin so the
       // browser's CORS check passes on our side.
+      // Delete any existing ACAO headers first (keys are case-sensitive in
+      // Electron's responseHeaders, but HTTP headers are case-insensitive).
       const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
       const pageOrigin = prodMode ? 'meza://app' : 'http://localhost:4080';
       const headers = details.responseHeaders ?? {};
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === 'access-control-allow-origin') {
+          delete headers[key];
+        }
+      }
       headers['Access-Control-Allow-Origin'] = [pageOrigin];
       callback({ responseHeaders: headers });
     },
