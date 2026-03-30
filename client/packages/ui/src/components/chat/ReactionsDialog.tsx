@@ -1,8 +1,4 @@
-import {
-  useAuthStore,
-  useReactionStore,
-  useUsersStore,
-} from '@meza/core';
+import { useAuthStore, useReactionStore, useUsersStore } from '@meza/core';
 import * as Dialog from '@radix-ui/react-dialog';
 import { memo, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';

@@ -71,7 +71,11 @@ export function loadEmojiCache(userId: string): {
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
-    return { byServer: cache.byServer, personal: cache.personal, byId: cache.byId ?? {} };
+    return {
+      byServer: cache.byServer,
+      personal: cache.personal,
+      byId: cache.byId ?? {},
+    };
   } catch {
     // Corrupt data — discard
     try {
