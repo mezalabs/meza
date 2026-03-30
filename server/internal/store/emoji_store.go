@@ -129,6 +129,25 @@ func (s *EmojiStore) ListEmojisByUser(ctx context.Context, userID string) ([]*mo
 	return scanEmojis(rows)
 }
 
+func (s *EmojiStore) GetEmojisByIDs(ctx context.Context, emojiIDs []string) ([]*models.Emoji, error) {
+	if len(emojiIDs) == 0 {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, server_id, user_id, name, attachment_id, animated, creator_id, created_at
+		 FROM server_emojis WHERE id = ANY($1)`, emojiIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query emojis by ids: %w", err)
+	}
+	defer rows.Close()
+
+	return scanEmojis(rows)
+}
+
 func (s *EmojiStore) UpdateEmoji(ctx context.Context, emojiID string, name *string) (*models.Emoji, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

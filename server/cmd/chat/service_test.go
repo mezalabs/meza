@@ -1083,6 +1083,9 @@ func (s *mockEmojiStore) CountEmojisByUser(context.Context, string) (int, error)
 func (s *mockEmojiStore) ListEmojisByUser(context.Context, string) ([]*models.Emoji, error) {
 	return nil, nil
 }
+func (s *mockEmojiStore) GetEmojisByIDs(_ context.Context, _ []string) ([]*models.Emoji, error) {
+	return nil, nil
+}
 
 type mockMediaStore struct {
 	mu          sync.Mutex

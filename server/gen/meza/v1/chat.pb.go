@@ -7396,6 +7396,7 @@ func (x *GetReactionsRequest) GetMessageIds() []string {
 type GetReactionsResponse struct {
 	state         protoimpl.MessageState        `protogen:"open.v1"`
 	Reactions     map[string]*ReactionGroupList `protobuf:"bytes,1,rep,name=reactions,proto3" json:"reactions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CustomEmojis  map[string]*CustomEmoji       `protobuf:"bytes,2,rep,name=custom_emojis,json=customEmojis,proto3" json:"custom_emojis,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7433,6 +7434,13 @@ func (*GetReactionsResponse) Descriptor() ([]byte, []int) {
 func (x *GetReactionsResponse) GetReactions() map[string]*ReactionGroupList {
 	if x != nil {
 		return x.Reactions
+	}
+	return nil
+}
+
+func (x *GetReactionsResponse) GetCustomEmojis() map[string]*CustomEmoji {
+	if x != nil {
+		return x.CustomEmojis
 	}
 	return nil
 }
@@ -12543,12 +12551,16 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1f\n" +
 	"\vmessage_ids\x18\x02 \x03(\tR\n" +
-	"messageIds\"\xbc\x01\n" +
+	"messageIds\"\xe9\x02\n" +
 	"\x14GetReactionsResponse\x12J\n" +
-	"\treactions\x18\x01 \x03(\v2,.meza.v1.GetReactionsResponse.ReactionsEntryR\treactions\x1aX\n" +
+	"\treactions\x18\x01 \x03(\v2,.meza.v1.GetReactionsResponse.ReactionsEntryR\treactions\x12T\n" +
+	"\rcustom_emojis\x18\x02 \x03(\v2/.meza.v1.GetReactionsResponse.CustomEmojisEntryR\fcustomEmojis\x1aX\n" +
 	"\x0eReactionsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.meza.v1.ReactionGroupListR\x05value:\x028\x01\"C\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.meza.v1.ReactionGroupListR\x05value:\x028\x01\x1aU\n" +
+	"\x11CustomEmojisEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12*\n" +
+	"\x05value\x18\x02 \x01(\v2\x14.meza.v1.CustomEmojiR\x05value:\x028\x01\"C\n" +
 	"\x11ReactionGroupList\x12.\n" +
 	"\x06groups\x18\x01 \x03(\v2\x16.meza.v1.ReactionGroupR\x06groups\"Q\n" +
 	"\x11AckMessageRequest\x12\x1d\n" +
@@ -13063,7 +13075,7 @@ func file_meza_v1_chat_proto_rawDescGZIP() []byte {
 }
 
 var file_meza_v1_chat_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_meza_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 219)
+var file_meza_v1_chat_proto_msgTypes = make([]protoimpl.MessageInfo, 220)
 var file_meza_v1_chat_proto_goTypes = []any{
 	(EventType)(0),                            // 0: meza.v1.EventType
 	(PermissionSourceType)(0),                 // 1: meza.v1.PermissionSourceType
@@ -13286,96 +13298,97 @@ var file_meza_v1_chat_proto_goTypes = []any{
 	(*UpdateSystemMessageConfigRequest)(nil),  // 218: meza.v1.UpdateSystemMessageConfigRequest
 	(*UpdateSystemMessageConfigResponse)(nil), // 219: meza.v1.UpdateSystemMessageConfigResponse
 	nil,                               // 220: meza.v1.GetReactionsResponse.ReactionsEntry
-	(*timestamppb.Timestamp)(nil),     // 221: google.protobuf.Timestamp
-	(*Message)(nil),                   // 222: meza.v1.Message
-	(ChannelType)(0),                  // 223: meza.v1.ChannelType
-	(*Channel)(nil),                   // 224: meza.v1.Channel
-	(*Server)(nil),                    // 225: meza.v1.Server
-	(*Member)(nil),                    // 226: meza.v1.Member
-	(*PublicUser)(nil),                // 227: meza.v1.PublicUser
-	(*Role)(nil),                      // 228: meza.v1.Role
-	(*Invite)(nil),                    // 229: meza.v1.Invite
-	(*CustomEmoji)(nil),               // 230: meza.v1.CustomEmoji
-	(*PinnedMessage)(nil),             // 231: meza.v1.PinnedMessage
-	(*SoundboardSound)(nil),           // 232: meza.v1.SoundboardSound
-	(*Reaction)(nil),                  // 233: meza.v1.Reaction
-	(*ReadState)(nil),                 // 234: meza.v1.ReadState
-	(*ChannelGroup)(nil),              // 235: meza.v1.ChannelGroup
-	(*DMChannel)(nil),                 // 236: meza.v1.DMChannel
-	(*GetPresenceResponse)(nil),       // 237: meza.v1.GetPresenceResponse
-	(*Ban)(nil),                       // 238: meza.v1.Ban
-	(*AuditLogEntry)(nil),             // 239: meza.v1.AuditLogEntry
-	(*ReactionGroup)(nil),             // 240: meza.v1.ReactionGroup
-	(*LinkEmbed)(nil),                 // 241: meza.v1.LinkEmbed
-	(*PermissionOverride)(nil),        // 242: meza.v1.PermissionOverride
-	(*User)(nil),                      // 243: meza.v1.User
-	(MessageType)(0),                  // 244: meza.v1.MessageType
-	(*ServerSystemMessageConfig)(nil), // 245: meza.v1.ServerSystemMessageConfig
+	nil,                               // 221: meza.v1.GetReactionsResponse.CustomEmojisEntry
+	(*timestamppb.Timestamp)(nil),     // 222: google.protobuf.Timestamp
+	(*Message)(nil),                   // 223: meza.v1.Message
+	(ChannelType)(0),                  // 224: meza.v1.ChannelType
+	(*Channel)(nil),                   // 225: meza.v1.Channel
+	(*Server)(nil),                    // 226: meza.v1.Server
+	(*Member)(nil),                    // 227: meza.v1.Member
+	(*PublicUser)(nil),                // 228: meza.v1.PublicUser
+	(*Role)(nil),                      // 229: meza.v1.Role
+	(*Invite)(nil),                    // 230: meza.v1.Invite
+	(*CustomEmoji)(nil),               // 231: meza.v1.CustomEmoji
+	(*PinnedMessage)(nil),             // 232: meza.v1.PinnedMessage
+	(*SoundboardSound)(nil),           // 233: meza.v1.SoundboardSound
+	(*Reaction)(nil),                  // 234: meza.v1.Reaction
+	(*ReadState)(nil),                 // 235: meza.v1.ReadState
+	(*ChannelGroup)(nil),              // 236: meza.v1.ChannelGroup
+	(*DMChannel)(nil),                 // 237: meza.v1.DMChannel
+	(*GetPresenceResponse)(nil),       // 238: meza.v1.GetPresenceResponse
+	(*Ban)(nil),                       // 239: meza.v1.Ban
+	(*AuditLogEntry)(nil),             // 240: meza.v1.AuditLogEntry
+	(*ReactionGroup)(nil),             // 241: meza.v1.ReactionGroup
+	(*LinkEmbed)(nil),                 // 242: meza.v1.LinkEmbed
+	(*PermissionOverride)(nil),        // 243: meza.v1.PermissionOverride
+	(*User)(nil),                      // 244: meza.v1.User
+	(MessageType)(0),                  // 245: meza.v1.MessageType
+	(*ServerSystemMessageConfig)(nil), // 246: meza.v1.ServerSystemMessageConfig
 }
 var file_meza_v1_chat_proto_depIdxs = []int32{
-	221, // 0: meza.v1.SendMessageResponse.created_at:type_name -> google.protobuf.Timestamp
-	221, // 1: meza.v1.EditMessageResponse.edited_at:type_name -> google.protobuf.Timestamp
-	222, // 2: meza.v1.GetMessagesResponse.messages:type_name -> meza.v1.Message
-	223, // 3: meza.v1.CreateChannelRequest.type:type_name -> meza.v1.ChannelType
-	224, // 4: meza.v1.CreateChannelResponse.channel:type_name -> meza.v1.Channel
-	224, // 5: meza.v1.UpdateChannelResponse.channel:type_name -> meza.v1.Channel
-	224, // 6: meza.v1.GetChannelResponse.channel:type_name -> meza.v1.Channel
-	224, // 7: meza.v1.ListChannelsResponse.channels:type_name -> meza.v1.Channel
-	225, // 8: meza.v1.CreateServerResponse.server:type_name -> meza.v1.Server
-	225, // 9: meza.v1.UpdateServerResponse.server:type_name -> meza.v1.Server
-	225, // 10: meza.v1.GetServerResponse.server:type_name -> meza.v1.Server
-	225, // 11: meza.v1.ListServersResponse.servers:type_name -> meza.v1.Server
-	225, // 12: meza.v1.JoinServerResponse.server:type_name -> meza.v1.Server
-	226, // 13: meza.v1.ListMembersResponse.members:type_name -> meza.v1.Member
-	227, // 14: meza.v1.ListMembersResponse.users:type_name -> meza.v1.PublicUser
-	226, // 15: meza.v1.UpdateMemberResponse.member:type_name -> meza.v1.Member
-	226, // 16: meza.v1.SetMemberRolesResponse.member:type_name -> meza.v1.Member
-	228, // 17: meza.v1.CreateRoleResponse.role:type_name -> meza.v1.Role
-	228, // 18: meza.v1.UpdateRoleResponse.role:type_name -> meza.v1.Role
-	229, // 19: meza.v1.CreateInviteResponse.invite:type_name -> meza.v1.Invite
-	225, // 20: meza.v1.ResolveInviteResponse.server:type_name -> meza.v1.Server
-	229, // 21: meza.v1.ResolveInviteResponse.invite:type_name -> meza.v1.Invite
-	229, // 22: meza.v1.ListInvitesResponse.invites:type_name -> meza.v1.Invite
-	226, // 23: meza.v1.ListChannelMembersResponse.members:type_name -> meza.v1.Member
+	222, // 0: meza.v1.SendMessageResponse.created_at:type_name -> google.protobuf.Timestamp
+	222, // 1: meza.v1.EditMessageResponse.edited_at:type_name -> google.protobuf.Timestamp
+	223, // 2: meza.v1.GetMessagesResponse.messages:type_name -> meza.v1.Message
+	224, // 3: meza.v1.CreateChannelRequest.type:type_name -> meza.v1.ChannelType
+	225, // 4: meza.v1.CreateChannelResponse.channel:type_name -> meza.v1.Channel
+	225, // 5: meza.v1.UpdateChannelResponse.channel:type_name -> meza.v1.Channel
+	225, // 6: meza.v1.GetChannelResponse.channel:type_name -> meza.v1.Channel
+	225, // 7: meza.v1.ListChannelsResponse.channels:type_name -> meza.v1.Channel
+	226, // 8: meza.v1.CreateServerResponse.server:type_name -> meza.v1.Server
+	226, // 9: meza.v1.UpdateServerResponse.server:type_name -> meza.v1.Server
+	226, // 10: meza.v1.GetServerResponse.server:type_name -> meza.v1.Server
+	226, // 11: meza.v1.ListServersResponse.servers:type_name -> meza.v1.Server
+	226, // 12: meza.v1.JoinServerResponse.server:type_name -> meza.v1.Server
+	227, // 13: meza.v1.ListMembersResponse.members:type_name -> meza.v1.Member
+	228, // 14: meza.v1.ListMembersResponse.users:type_name -> meza.v1.PublicUser
+	227, // 15: meza.v1.UpdateMemberResponse.member:type_name -> meza.v1.Member
+	227, // 16: meza.v1.SetMemberRolesResponse.member:type_name -> meza.v1.Member
+	229, // 17: meza.v1.CreateRoleResponse.role:type_name -> meza.v1.Role
+	229, // 18: meza.v1.UpdateRoleResponse.role:type_name -> meza.v1.Role
+	230, // 19: meza.v1.CreateInviteResponse.invite:type_name -> meza.v1.Invite
+	226, // 20: meza.v1.ResolveInviteResponse.server:type_name -> meza.v1.Server
+	230, // 21: meza.v1.ResolveInviteResponse.invite:type_name -> meza.v1.Invite
+	230, // 22: meza.v1.ListInvitesResponse.invites:type_name -> meza.v1.Invite
+	227, // 23: meza.v1.ListChannelMembersResponse.members:type_name -> meza.v1.Member
 	0,   // 24: meza.v1.Event.type:type_name -> meza.v1.EventType
-	221, // 25: meza.v1.Event.timestamp:type_name -> google.protobuf.Timestamp
-	222, // 26: meza.v1.Event.message_create:type_name -> meza.v1.Message
-	222, // 27: meza.v1.Event.message_update:type_name -> meza.v1.Message
+	222, // 25: meza.v1.Event.timestamp:type_name -> google.protobuf.Timestamp
+	223, // 26: meza.v1.Event.message_create:type_name -> meza.v1.Message
+	223, // 27: meza.v1.Event.message_update:type_name -> meza.v1.Message
 	68,  // 28: meza.v1.Event.message_delete:type_name -> meza.v1.MessageDeleteEvent
-	224, // 29: meza.v1.Event.channel_create:type_name -> meza.v1.Channel
-	224, // 30: meza.v1.Event.channel_update:type_name -> meza.v1.Channel
+	225, // 29: meza.v1.Event.channel_create:type_name -> meza.v1.Channel
+	225, // 30: meza.v1.Event.channel_update:type_name -> meza.v1.Channel
 	69,  // 31: meza.v1.Event.channel_delete:type_name -> meza.v1.ChannelDeleteEvent
-	226, // 32: meza.v1.Event.member_join:type_name -> meza.v1.Member
-	226, // 33: meza.v1.Event.member_update:type_name -> meza.v1.Member
+	227, // 32: meza.v1.Event.member_join:type_name -> meza.v1.Member
+	227, // 33: meza.v1.Event.member_update:type_name -> meza.v1.Member
 	71,  // 34: meza.v1.Event.member_remove:type_name -> meza.v1.MemberRemoveEvent
 	72,  // 35: meza.v1.Event.typing_start:type_name -> meza.v1.TypingEvent
-	228, // 36: meza.v1.Event.role_create:type_name -> meza.v1.Role
-	228, // 37: meza.v1.Event.role_update:type_name -> meza.v1.Role
+	229, // 36: meza.v1.Event.role_create:type_name -> meza.v1.Role
+	229, // 37: meza.v1.Event.role_update:type_name -> meza.v1.Role
 	75,  // 38: meza.v1.Event.role_delete:type_name -> meza.v1.RoleDeleteEvent
-	230, // 39: meza.v1.Event.emoji_create:type_name -> meza.v1.CustomEmoji
-	230, // 40: meza.v1.Event.emoji_update:type_name -> meza.v1.CustomEmoji
+	231, // 39: meza.v1.Event.emoji_create:type_name -> meza.v1.CustomEmoji
+	231, // 40: meza.v1.Event.emoji_update:type_name -> meza.v1.CustomEmoji
 	101, // 41: meza.v1.Event.emoji_delete:type_name -> meza.v1.EmojiDeleteEvent
 	77,  // 42: meza.v1.Event.channel_member_add:type_name -> meza.v1.ChannelMemberEvent
 	77,  // 43: meza.v1.Event.channel_member_remove:type_name -> meza.v1.ChannelMemberEvent
-	231, // 44: meza.v1.Event.pin_add:type_name -> meza.v1.PinnedMessage
+	232, // 44: meza.v1.Event.pin_add:type_name -> meza.v1.PinnedMessage
 	90,  // 45: meza.v1.Event.pin_remove:type_name -> meza.v1.PinRemoveEvent
 	104, // 46: meza.v1.Event.message_bulk_delete:type_name -> meza.v1.MessageBulkDeleteEvent
-	232, // 47: meza.v1.Event.sound_create:type_name -> meza.v1.SoundboardSound
-	232, // 48: meza.v1.Event.sound_update:type_name -> meza.v1.SoundboardSound
+	233, // 47: meza.v1.Event.sound_create:type_name -> meza.v1.SoundboardSound
+	233, // 48: meza.v1.Event.sound_update:type_name -> meza.v1.SoundboardSound
 	121, // 49: meza.v1.Event.sound_delete:type_name -> meza.v1.SoundDeleteEvent
-	233, // 50: meza.v1.Event.reaction_add:type_name -> meza.v1.Reaction
-	233, // 51: meza.v1.Event.reaction_remove:type_name -> meza.v1.Reaction
-	234, // 52: meza.v1.Event.read_state_update:type_name -> meza.v1.ReadState
+	234, // 50: meza.v1.Event.reaction_add:type_name -> meza.v1.Reaction
+	234, // 51: meza.v1.Event.reaction_remove:type_name -> meza.v1.Reaction
+	235, // 52: meza.v1.Event.read_state_update:type_name -> meza.v1.ReadState
 	146, // 53: meza.v1.Event.embeds_update:type_name -> meza.v1.EmbedsUpdateEvent
-	235, // 54: meza.v1.Event.channel_group_create:type_name -> meza.v1.ChannelGroup
-	235, // 55: meza.v1.Event.channel_group_update:type_name -> meza.v1.ChannelGroup
+	236, // 54: meza.v1.Event.channel_group_create:type_name -> meza.v1.ChannelGroup
+	236, // 55: meza.v1.Event.channel_group_update:type_name -> meza.v1.ChannelGroup
 	70,  // 56: meza.v1.Event.channel_group_delete:type_name -> meza.v1.ChannelGroupDeleteEvent
 	173, // 57: meza.v1.Event.federation_removed:type_name -> meza.v1.FederationRemovedEvent
 	166, // 58: meza.v1.Event.permission_override_update:type_name -> meza.v1.PermissionOverrideUpdateEvent
 	167, // 59: meza.v1.Event.permission_override_delete:type_name -> meza.v1.PermissionOverrideDeleteEvent
 	168, // 60: meza.v1.Event.permissions_updated:type_name -> meza.v1.PermissionsUpdatedEvent
-	236, // 61: meza.v1.Event.dm_request_received:type_name -> meza.v1.DMChannel
-	236, // 62: meza.v1.Event.dm_request_accepted:type_name -> meza.v1.DMChannel
+	237, // 61: meza.v1.Event.dm_request_received:type_name -> meza.v1.DMChannel
+	237, // 62: meza.v1.Event.dm_request_accepted:type_name -> meza.v1.DMChannel
 	182, // 63: meza.v1.Event.dm_request_declined:type_name -> meza.v1.DMRequestDeclinedEvent
 	189, // 64: meza.v1.Event.user_blocked:type_name -> meza.v1.UserBlockEvent
 	189, // 65: meza.v1.Event.user_unblocked:type_name -> meza.v1.UserBlockEvent
@@ -13384,266 +13397,268 @@ var file_meza_v1_chat_proto_depIdxs = []int32{
 	190, // 68: meza.v1.Event.friend_request_declined:type_name -> meza.v1.FriendEvent
 	190, // 69: meza.v1.Event.friend_removed:type_name -> meza.v1.FriendEvent
 	190, // 70: meza.v1.Event.friend_request_cancelled:type_name -> meza.v1.FriendEvent
-	237, // 71: meza.v1.Event.presence_update:type_name -> meza.v1.GetPresenceResponse
+	238, // 71: meza.v1.Event.presence_update:type_name -> meza.v1.GetPresenceResponse
 	76,  // 72: meza.v1.Event.roles_reordered:type_name -> meza.v1.RolesReorderedEvent
 	73,  // 73: meza.v1.Event.key_request:type_name -> meza.v1.KeyRequestEvent
 	74,  // 74: meza.v1.Event.device_recovery_request:type_name -> meza.v1.DeviceRecoveryRequestEvent
 	208, // 75: meza.v1.Event.server_update:type_name -> meza.v1.ServerUpdateEvent
 	209, // 76: meza.v1.Event.user_update:type_name -> meza.v1.UserUpdateEvent
-	228, // 77: meza.v1.RolesReorderedEvent.roles:type_name -> meza.v1.Role
-	238, // 78: meza.v1.ListBansResponse.bans:type_name -> meza.v1.Ban
-	228, // 79: meza.v1.ListRolesResponse.roles:type_name -> meza.v1.Role
-	231, // 80: meza.v1.PinMessageResponse.pinned_message:type_name -> meza.v1.PinnedMessage
-	231, // 81: meza.v1.GetPinnedMessagesResponse.pinned_messages:type_name -> meza.v1.PinnedMessage
-	230, // 82: meza.v1.CreateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
-	230, // 83: meza.v1.UpdateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
-	230, // 84: meza.v1.ListEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
-	230, // 85: meza.v1.ListUserEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
-	221, // 86: meza.v1.TimeoutMemberRequest.timed_out_until:type_name -> google.protobuf.Timestamp
-	226, // 87: meza.v1.TimeoutMemberResponse.member:type_name -> meza.v1.Member
-	226, // 88: meza.v1.RemoveTimeoutResponse.member:type_name -> meza.v1.Member
-	239, // 89: meza.v1.ListAuditLogResponse.entries:type_name -> meza.v1.AuditLogEntry
-	232, // 90: meza.v1.CreateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
-	232, // 91: meza.v1.UpdateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
-	232, // 92: meza.v1.ListUserSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
-	232, // 93: meza.v1.ListServerSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
+	229, // 77: meza.v1.RolesReorderedEvent.roles:type_name -> meza.v1.Role
+	239, // 78: meza.v1.ListBansResponse.bans:type_name -> meza.v1.Ban
+	229, // 79: meza.v1.ListRolesResponse.roles:type_name -> meza.v1.Role
+	232, // 80: meza.v1.PinMessageResponse.pinned_message:type_name -> meza.v1.PinnedMessage
+	232, // 81: meza.v1.GetPinnedMessagesResponse.pinned_messages:type_name -> meza.v1.PinnedMessage
+	231, // 82: meza.v1.CreateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
+	231, // 83: meza.v1.UpdateEmojiResponse.emoji:type_name -> meza.v1.CustomEmoji
+	231, // 84: meza.v1.ListEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
+	231, // 85: meza.v1.ListUserEmojisResponse.emojis:type_name -> meza.v1.CustomEmoji
+	222, // 86: meza.v1.TimeoutMemberRequest.timed_out_until:type_name -> google.protobuf.Timestamp
+	227, // 87: meza.v1.TimeoutMemberResponse.member:type_name -> meza.v1.Member
+	227, // 88: meza.v1.RemoveTimeoutResponse.member:type_name -> meza.v1.Member
+	240, // 89: meza.v1.ListAuditLogResponse.entries:type_name -> meza.v1.AuditLogEntry
+	233, // 90: meza.v1.CreateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
+	233, // 91: meza.v1.UpdateSoundResponse.sound:type_name -> meza.v1.SoundboardSound
+	233, // 92: meza.v1.ListUserSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
+	233, // 93: meza.v1.ListServerSoundsResponse.sounds:type_name -> meza.v1.SoundboardSound
 	220, // 94: meza.v1.GetReactionsResponse.reactions:type_name -> meza.v1.GetReactionsResponse.ReactionsEntry
-	240, // 95: meza.v1.ReactionGroupList.groups:type_name -> meza.v1.ReactionGroup
-	234, // 96: meza.v1.AckMessageResponse.read_state:type_name -> meza.v1.ReadState
-	236, // 97: meza.v1.CreateOrGetDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
-	236, // 98: meza.v1.CreateGroupDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
-	236, // 99: meza.v1.ListDMChannelsResponse.dm_channels:type_name -> meza.v1.DMChannel
-	221, // 100: meza.v1.ReplyEntry.created_at:type_name -> google.protobuf.Timestamp
-	138, // 101: meza.v1.GetRepliesResponse.replies:type_name -> meza.v1.ReplyEntry
-	222, // 102: meza.v1.GetMessagesByIDsResponse.messages:type_name -> meza.v1.Message
-	221, // 103: meza.v1.AcknowledgeRulesResponse.acknowledged_at:type_name -> google.protobuf.Timestamp
-	221, // 104: meza.v1.CompleteOnboardingResponse.completed_at:type_name -> google.protobuf.Timestamp
-	241, // 105: meza.v1.EmbedsUpdateEvent.embeds:type_name -> meza.v1.LinkEmbed
-	235, // 106: meza.v1.CreateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
-	235, // 107: meza.v1.UpdateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
-	235, // 108: meza.v1.ListChannelGroupsResponse.channel_groups:type_name -> meza.v1.ChannelGroup
-	242, // 109: meza.v1.SetPermissionOverrideResponse.permission_override:type_name -> meza.v1.PermissionOverride
-	242, // 110: meza.v1.ListPermissionOverridesResponse.permission_overrides:type_name -> meza.v1.PermissionOverride
-	224, // 111: meza.v1.SyncChannelPermissionsResponse.channel:type_name -> meza.v1.Channel
-	165, // 112: meza.v1.GetEffectivePermissionsResponse.sources:type_name -> meza.v1.PermissionSource
-	1,   // 113: meza.v1.PermissionSource.source_type:type_name -> meza.v1.PermissionSourceType
-	242, // 114: meza.v1.PermissionOverrideUpdateEvent.override:type_name -> meza.v1.PermissionOverride
-	223, // 115: meza.v1.ChannelSpec.type:type_name -> meza.v1.ChannelType
-	169, // 116: meza.v1.CreateServerFromTemplateRequest.channels:type_name -> meza.v1.ChannelSpec
-	170, // 117: meza.v1.CreateServerFromTemplateRequest.roles:type_name -> meza.v1.RoleSpec
-	225, // 118: meza.v1.CreateServerFromTemplateResponse.server:type_name -> meza.v1.Server
-	224, // 119: meza.v1.CreateServerFromTemplateResponse.channels:type_name -> meza.v1.Channel
-	228, // 120: meza.v1.CreateServerFromTemplateResponse.roles:type_name -> meza.v1.Role
-	229, // 121: meza.v1.CreateServerFromTemplateResponse.invite:type_name -> meza.v1.Invite
-	236, // 122: meza.v1.AcceptMessageRequestRes.dm_channel:type_name -> meza.v1.DMChannel
-	236, // 123: meza.v1.ReverseDeclineResponse.dm_channel:type_name -> meza.v1.DMChannel
-	236, // 124: meza.v1.ListMessageRequestsResponse.dm_channels:type_name -> meza.v1.DMChannel
-	243, // 125: meza.v1.ListBlocksResponse.blocked_users:type_name -> meza.v1.User
-	243, // 126: meza.v1.FriendEvent.user:type_name -> meza.v1.User
-	243, // 127: meza.v1.FriendRequestEntry.user:type_name -> meza.v1.User
-	243, // 128: meza.v1.ListFriendsResponse.friends:type_name -> meza.v1.User
-	191, // 129: meza.v1.ListFriendRequestsResponse.incoming:type_name -> meza.v1.FriendRequestEntry
-	191, // 130: meza.v1.ListFriendRequestsResponse.outgoing:type_name -> meza.v1.FriendRequestEntry
-	244, // 131: meza.v1.SearchMessagesRequest.message_types:type_name -> meza.v1.MessageType
-	222, // 132: meza.v1.SearchMessagesResponse.messages:type_name -> meza.v1.Message
-	225, // 133: meza.v1.ServerUpdateEvent.server:type_name -> meza.v1.Server
-	227, // 134: meza.v1.UserUpdateEvent.user:type_name -> meza.v1.PublicUser
-	225, // 135: meza.v1.GetMutualServersResponse.servers:type_name -> meza.v1.Server
-	243, // 136: meza.v1.GetMutualFriendsResponse.users:type_name -> meza.v1.User
-	245, // 137: meza.v1.GetSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
-	245, // 138: meza.v1.UpdateSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
-	128, // 139: meza.v1.GetReactionsResponse.ReactionsEntry.value:type_name -> meza.v1.ReactionGroupList
-	2,   // 140: meza.v1.ChatService.SendMessage:input_type -> meza.v1.SendMessageRequest
-	4,   // 141: meza.v1.ChatService.EditMessage:input_type -> meza.v1.EditMessageRequest
-	6,   // 142: meza.v1.ChatService.DeleteMessage:input_type -> meza.v1.DeleteMessageRequest
-	8,   // 143: meza.v1.ChatService.GetMessages:input_type -> meza.v1.GetMessagesRequest
-	10,  // 144: meza.v1.ChatService.CreateChannel:input_type -> meza.v1.CreateChannelRequest
-	12,  // 145: meza.v1.ChatService.UpdateChannel:input_type -> meza.v1.UpdateChannelRequest
-	14,  // 146: meza.v1.ChatService.DeleteChannel:input_type -> meza.v1.DeleteChannelRequest
-	16,  // 147: meza.v1.ChatService.GetChannel:input_type -> meza.v1.GetChannelRequest
-	18,  // 148: meza.v1.ChatService.ListChannels:input_type -> meza.v1.ListChannelsRequest
-	20,  // 149: meza.v1.ChatService.CreateServer:input_type -> meza.v1.CreateServerRequest
-	22,  // 150: meza.v1.ChatService.UpdateServer:input_type -> meza.v1.UpdateServerRequest
-	24,  // 151: meza.v1.ChatService.DeleteServer:input_type -> meza.v1.DeleteServerRequest
-	26,  // 152: meza.v1.ChatService.GetServer:input_type -> meza.v1.GetServerRequest
-	28,  // 153: meza.v1.ChatService.ListServers:input_type -> meza.v1.ListServersRequest
-	30,  // 154: meza.v1.ChatService.JoinServer:input_type -> meza.v1.JoinServerRequest
-	32,  // 155: meza.v1.ChatService.LeaveServer:input_type -> meza.v1.LeaveServerRequest
-	34,  // 156: meza.v1.ChatService.ListMembers:input_type -> meza.v1.ListMembersRequest
-	36,  // 157: meza.v1.ChatService.UpdateMember:input_type -> meza.v1.UpdateMemberRequest
-	38,  // 158: meza.v1.ChatService.SetMemberRoles:input_type -> meza.v1.SetMemberRolesRequest
-	40,  // 159: meza.v1.ChatService.KickMember:input_type -> meza.v1.KickMemberRequest
-	42,  // 160: meza.v1.ChatService.BanMember:input_type -> meza.v1.BanMemberRequest
-	44,  // 161: meza.v1.ChatService.CreateRole:input_type -> meza.v1.CreateRoleRequest
-	46,  // 162: meza.v1.ChatService.UpdateRole:input_type -> meza.v1.UpdateRoleRequest
-	48,  // 163: meza.v1.ChatService.DeleteRole:input_type -> meza.v1.DeleteRoleRequest
-	78,  // 164: meza.v1.ChatService.UnbanMember:input_type -> meza.v1.UnbanMemberRequest
-	80,  // 165: meza.v1.ChatService.ListBans:input_type -> meza.v1.ListBansRequest
-	82,  // 166: meza.v1.ChatService.ListRoles:input_type -> meza.v1.ListRolesRequest
-	50,  // 167: meza.v1.ChatService.ReorderRoles:input_type -> meza.v1.ReorderRolesRequest
-	91,  // 168: meza.v1.ChatService.CreateEmoji:input_type -> meza.v1.CreateEmojiRequest
-	93,  // 169: meza.v1.ChatService.DeleteEmoji:input_type -> meza.v1.DeleteEmojiRequest
-	95,  // 170: meza.v1.ChatService.UpdateEmoji:input_type -> meza.v1.UpdateEmojiRequest
-	97,  // 171: meza.v1.ChatService.ListEmojis:input_type -> meza.v1.ListEmojisRequest
-	99,  // 172: meza.v1.ChatService.ListUserEmojis:input_type -> meza.v1.ListUserEmojisRequest
-	52,  // 173: meza.v1.ChatService.CreateInvite:input_type -> meza.v1.CreateInviteRequest
-	54,  // 174: meza.v1.ChatService.ResolveInvite:input_type -> meza.v1.ResolveInviteRequest
-	56,  // 175: meza.v1.ChatService.RevokeInvite:input_type -> meza.v1.RevokeInviteRequest
-	58,  // 176: meza.v1.ChatService.ListInvites:input_type -> meza.v1.ListInvitesRequest
-	84,  // 177: meza.v1.ChatService.PinMessage:input_type -> meza.v1.PinMessageRequest
-	86,  // 178: meza.v1.ChatService.UnpinMessage:input_type -> meza.v1.UnpinMessageRequest
-	88,  // 179: meza.v1.ChatService.GetPinnedMessages:input_type -> meza.v1.GetPinnedMessagesRequest
-	60,  // 180: meza.v1.ChatService.AddChannelMember:input_type -> meza.v1.AddChannelMemberRequest
-	62,  // 181: meza.v1.ChatService.RemoveChannelMember:input_type -> meza.v1.RemoveChannelMemberRequest
-	64,  // 182: meza.v1.ChatService.ListChannelMembers:input_type -> meza.v1.ListChannelMembersRequest
-	111, // 183: meza.v1.ChatService.CreateSound:input_type -> meza.v1.CreateSoundRequest
-	113, // 184: meza.v1.ChatService.DeleteSound:input_type -> meza.v1.DeleteSoundRequest
-	115, // 185: meza.v1.ChatService.UpdateSound:input_type -> meza.v1.UpdateSoundRequest
-	117, // 186: meza.v1.ChatService.ListUserSounds:input_type -> meza.v1.ListUserSoundsRequest
-	119, // 187: meza.v1.ChatService.ListServerSounds:input_type -> meza.v1.ListServerSoundsRequest
-	102, // 188: meza.v1.ChatService.BulkDeleteMessages:input_type -> meza.v1.BulkDeleteMessagesRequest
-	105, // 189: meza.v1.ChatService.TimeoutMember:input_type -> meza.v1.TimeoutMemberRequest
-	107, // 190: meza.v1.ChatService.RemoveTimeout:input_type -> meza.v1.RemoveTimeoutRequest
-	109, // 191: meza.v1.ChatService.ListAuditLog:input_type -> meza.v1.ListAuditLogRequest
-	122, // 192: meza.v1.ChatService.AddReaction:input_type -> meza.v1.AddReactionRequest
-	124, // 193: meza.v1.ChatService.RemoveReaction:input_type -> meza.v1.RemoveReactionRequest
-	126, // 194: meza.v1.ChatService.GetReactions:input_type -> meza.v1.GetReactionsRequest
-	129, // 195: meza.v1.ChatService.AckMessage:input_type -> meza.v1.AckMessageRequest
-	131, // 196: meza.v1.ChatService.CreateOrGetDMChannel:input_type -> meza.v1.CreateOrGetDMChannelRequest
-	135, // 197: meza.v1.ChatService.ListDMChannels:input_type -> meza.v1.ListDMChannelsRequest
-	133, // 198: meza.v1.ChatService.CreateGroupDMChannel:input_type -> meza.v1.CreateGroupDMChannelRequest
-	137, // 199: meza.v1.ChatService.GetReplies:input_type -> meza.v1.GetRepliesRequest
-	140, // 200: meza.v1.ChatService.GetMessagesByIDs:input_type -> meza.v1.GetMessagesByIDsRequest
-	142, // 201: meza.v1.ChatService.AcknowledgeRules:input_type -> meza.v1.AcknowledgeRulesRequest
-	144, // 202: meza.v1.ChatService.CompleteOnboarding:input_type -> meza.v1.CompleteOnboardingRequest
-	147, // 203: meza.v1.ChatService.CreateChannelGroup:input_type -> meza.v1.CreateChannelGroupRequest
-	149, // 204: meza.v1.ChatService.UpdateChannelGroup:input_type -> meza.v1.UpdateChannelGroupRequest
-	151, // 205: meza.v1.ChatService.DeleteChannelGroup:input_type -> meza.v1.DeleteChannelGroupRequest
-	153, // 206: meza.v1.ChatService.ListChannelGroups:input_type -> meza.v1.ListChannelGroupsRequest
-	155, // 207: meza.v1.ChatService.SetPermissionOverride:input_type -> meza.v1.SetPermissionOverrideRequest
-	157, // 208: meza.v1.ChatService.DeletePermissionOverride:input_type -> meza.v1.DeletePermissionOverrideRequest
-	159, // 209: meza.v1.ChatService.ListPermissionOverrides:input_type -> meza.v1.ListPermissionOverridesRequest
-	161, // 210: meza.v1.ChatService.SyncChannelPermissions:input_type -> meza.v1.SyncChannelPermissionsRequest
-	163, // 211: meza.v1.ChatService.GetEffectivePermissions:input_type -> meza.v1.GetEffectivePermissionsRequest
-	174, // 212: meza.v1.ChatService.AcceptMessageRequest:input_type -> meza.v1.AcceptMessageRequestReq
-	176, // 213: meza.v1.ChatService.DeclineMessageRequest:input_type -> meza.v1.DeclineMessageRequestReq
-	178, // 214: meza.v1.ChatService.ReverseDecline:input_type -> meza.v1.ReverseDeclineRequest
-	180, // 215: meza.v1.ChatService.ListMessageRequests:input_type -> meza.v1.ListMessageRequestsRequest
-	183, // 216: meza.v1.ChatService.BlockUser:input_type -> meza.v1.BlockUserRequest
-	185, // 217: meza.v1.ChatService.UnblockUser:input_type -> meza.v1.UnblockUserRequest
-	187, // 218: meza.v1.ChatService.ListBlocks:input_type -> meza.v1.ListBlocksRequest
-	192, // 219: meza.v1.ChatService.SendFriendRequest:input_type -> meza.v1.SendFriendRequestRequest
-	194, // 220: meza.v1.ChatService.AcceptFriendRequest:input_type -> meza.v1.AcceptFriendRequestRequest
-	196, // 221: meza.v1.ChatService.DeclineFriendRequest:input_type -> meza.v1.DeclineFriendRequestRequest
-	198, // 222: meza.v1.ChatService.CancelFriendRequest:input_type -> meza.v1.CancelFriendRequestRequest
-	200, // 223: meza.v1.ChatService.RemoveFriend:input_type -> meza.v1.RemoveFriendRequest
-	202, // 224: meza.v1.ChatService.ListFriends:input_type -> meza.v1.ListFriendsRequest
-	204, // 225: meza.v1.ChatService.ListFriendRequests:input_type -> meza.v1.ListFriendRequestsRequest
-	171, // 226: meza.v1.ChatService.CreateServerFromTemplate:input_type -> meza.v1.CreateServerFromTemplateRequest
-	206, // 227: meza.v1.ChatService.SearchMessages:input_type -> meza.v1.SearchMessagesRequest
-	66,  // 228: meza.v1.ChatService.StreamEvents:input_type -> meza.v1.StreamEventsRequest
-	212, // 229: meza.v1.ChatService.GetMutualServers:input_type -> meza.v1.GetMutualServersRequest
-	214, // 230: meza.v1.ChatService.GetMutualFriends:input_type -> meza.v1.GetMutualFriendsRequest
-	216, // 231: meza.v1.ChatService.GetSystemMessageConfig:input_type -> meza.v1.GetSystemMessageConfigRequest
-	218, // 232: meza.v1.ChatService.UpdateSystemMessageConfig:input_type -> meza.v1.UpdateSystemMessageConfigRequest
-	3,   // 233: meza.v1.ChatService.SendMessage:output_type -> meza.v1.SendMessageResponse
-	5,   // 234: meza.v1.ChatService.EditMessage:output_type -> meza.v1.EditMessageResponse
-	7,   // 235: meza.v1.ChatService.DeleteMessage:output_type -> meza.v1.DeleteMessageResponse
-	9,   // 236: meza.v1.ChatService.GetMessages:output_type -> meza.v1.GetMessagesResponse
-	11,  // 237: meza.v1.ChatService.CreateChannel:output_type -> meza.v1.CreateChannelResponse
-	13,  // 238: meza.v1.ChatService.UpdateChannel:output_type -> meza.v1.UpdateChannelResponse
-	15,  // 239: meza.v1.ChatService.DeleteChannel:output_type -> meza.v1.DeleteChannelResponse
-	17,  // 240: meza.v1.ChatService.GetChannel:output_type -> meza.v1.GetChannelResponse
-	19,  // 241: meza.v1.ChatService.ListChannels:output_type -> meza.v1.ListChannelsResponse
-	21,  // 242: meza.v1.ChatService.CreateServer:output_type -> meza.v1.CreateServerResponse
-	23,  // 243: meza.v1.ChatService.UpdateServer:output_type -> meza.v1.UpdateServerResponse
-	25,  // 244: meza.v1.ChatService.DeleteServer:output_type -> meza.v1.DeleteServerResponse
-	27,  // 245: meza.v1.ChatService.GetServer:output_type -> meza.v1.GetServerResponse
-	29,  // 246: meza.v1.ChatService.ListServers:output_type -> meza.v1.ListServersResponse
-	31,  // 247: meza.v1.ChatService.JoinServer:output_type -> meza.v1.JoinServerResponse
-	33,  // 248: meza.v1.ChatService.LeaveServer:output_type -> meza.v1.LeaveServerResponse
-	35,  // 249: meza.v1.ChatService.ListMembers:output_type -> meza.v1.ListMembersResponse
-	37,  // 250: meza.v1.ChatService.UpdateMember:output_type -> meza.v1.UpdateMemberResponse
-	39,  // 251: meza.v1.ChatService.SetMemberRoles:output_type -> meza.v1.SetMemberRolesResponse
-	41,  // 252: meza.v1.ChatService.KickMember:output_type -> meza.v1.KickMemberResponse
-	43,  // 253: meza.v1.ChatService.BanMember:output_type -> meza.v1.BanMemberResponse
-	45,  // 254: meza.v1.ChatService.CreateRole:output_type -> meza.v1.CreateRoleResponse
-	47,  // 255: meza.v1.ChatService.UpdateRole:output_type -> meza.v1.UpdateRoleResponse
-	49,  // 256: meza.v1.ChatService.DeleteRole:output_type -> meza.v1.DeleteRoleResponse
-	79,  // 257: meza.v1.ChatService.UnbanMember:output_type -> meza.v1.UnbanMemberResponse
-	81,  // 258: meza.v1.ChatService.ListBans:output_type -> meza.v1.ListBansResponse
-	83,  // 259: meza.v1.ChatService.ListRoles:output_type -> meza.v1.ListRolesResponse
-	51,  // 260: meza.v1.ChatService.ReorderRoles:output_type -> meza.v1.ReorderRolesResponse
-	92,  // 261: meza.v1.ChatService.CreateEmoji:output_type -> meza.v1.CreateEmojiResponse
-	94,  // 262: meza.v1.ChatService.DeleteEmoji:output_type -> meza.v1.DeleteEmojiResponse
-	96,  // 263: meza.v1.ChatService.UpdateEmoji:output_type -> meza.v1.UpdateEmojiResponse
-	98,  // 264: meza.v1.ChatService.ListEmojis:output_type -> meza.v1.ListEmojisResponse
-	100, // 265: meza.v1.ChatService.ListUserEmojis:output_type -> meza.v1.ListUserEmojisResponse
-	53,  // 266: meza.v1.ChatService.CreateInvite:output_type -> meza.v1.CreateInviteResponse
-	55,  // 267: meza.v1.ChatService.ResolveInvite:output_type -> meza.v1.ResolveInviteResponse
-	57,  // 268: meza.v1.ChatService.RevokeInvite:output_type -> meza.v1.RevokeInviteResponse
-	59,  // 269: meza.v1.ChatService.ListInvites:output_type -> meza.v1.ListInvitesResponse
-	85,  // 270: meza.v1.ChatService.PinMessage:output_type -> meza.v1.PinMessageResponse
-	87,  // 271: meza.v1.ChatService.UnpinMessage:output_type -> meza.v1.UnpinMessageResponse
-	89,  // 272: meza.v1.ChatService.GetPinnedMessages:output_type -> meza.v1.GetPinnedMessagesResponse
-	61,  // 273: meza.v1.ChatService.AddChannelMember:output_type -> meza.v1.AddChannelMemberResponse
-	63,  // 274: meza.v1.ChatService.RemoveChannelMember:output_type -> meza.v1.RemoveChannelMemberResponse
-	65,  // 275: meza.v1.ChatService.ListChannelMembers:output_type -> meza.v1.ListChannelMembersResponse
-	112, // 276: meza.v1.ChatService.CreateSound:output_type -> meza.v1.CreateSoundResponse
-	114, // 277: meza.v1.ChatService.DeleteSound:output_type -> meza.v1.DeleteSoundResponse
-	116, // 278: meza.v1.ChatService.UpdateSound:output_type -> meza.v1.UpdateSoundResponse
-	118, // 279: meza.v1.ChatService.ListUserSounds:output_type -> meza.v1.ListUserSoundsResponse
-	120, // 280: meza.v1.ChatService.ListServerSounds:output_type -> meza.v1.ListServerSoundsResponse
-	103, // 281: meza.v1.ChatService.BulkDeleteMessages:output_type -> meza.v1.BulkDeleteMessagesResponse
-	106, // 282: meza.v1.ChatService.TimeoutMember:output_type -> meza.v1.TimeoutMemberResponse
-	108, // 283: meza.v1.ChatService.RemoveTimeout:output_type -> meza.v1.RemoveTimeoutResponse
-	110, // 284: meza.v1.ChatService.ListAuditLog:output_type -> meza.v1.ListAuditLogResponse
-	123, // 285: meza.v1.ChatService.AddReaction:output_type -> meza.v1.AddReactionResponse
-	125, // 286: meza.v1.ChatService.RemoveReaction:output_type -> meza.v1.RemoveReactionResponse
-	127, // 287: meza.v1.ChatService.GetReactions:output_type -> meza.v1.GetReactionsResponse
-	130, // 288: meza.v1.ChatService.AckMessage:output_type -> meza.v1.AckMessageResponse
-	132, // 289: meza.v1.ChatService.CreateOrGetDMChannel:output_type -> meza.v1.CreateOrGetDMChannelResponse
-	136, // 290: meza.v1.ChatService.ListDMChannels:output_type -> meza.v1.ListDMChannelsResponse
-	134, // 291: meza.v1.ChatService.CreateGroupDMChannel:output_type -> meza.v1.CreateGroupDMChannelResponse
-	139, // 292: meza.v1.ChatService.GetReplies:output_type -> meza.v1.GetRepliesResponse
-	141, // 293: meza.v1.ChatService.GetMessagesByIDs:output_type -> meza.v1.GetMessagesByIDsResponse
-	143, // 294: meza.v1.ChatService.AcknowledgeRules:output_type -> meza.v1.AcknowledgeRulesResponse
-	145, // 295: meza.v1.ChatService.CompleteOnboarding:output_type -> meza.v1.CompleteOnboardingResponse
-	148, // 296: meza.v1.ChatService.CreateChannelGroup:output_type -> meza.v1.CreateChannelGroupResponse
-	150, // 297: meza.v1.ChatService.UpdateChannelGroup:output_type -> meza.v1.UpdateChannelGroupResponse
-	152, // 298: meza.v1.ChatService.DeleteChannelGroup:output_type -> meza.v1.DeleteChannelGroupResponse
-	154, // 299: meza.v1.ChatService.ListChannelGroups:output_type -> meza.v1.ListChannelGroupsResponse
-	156, // 300: meza.v1.ChatService.SetPermissionOverride:output_type -> meza.v1.SetPermissionOverrideResponse
-	158, // 301: meza.v1.ChatService.DeletePermissionOverride:output_type -> meza.v1.DeletePermissionOverrideResponse
-	160, // 302: meza.v1.ChatService.ListPermissionOverrides:output_type -> meza.v1.ListPermissionOverridesResponse
-	162, // 303: meza.v1.ChatService.SyncChannelPermissions:output_type -> meza.v1.SyncChannelPermissionsResponse
-	164, // 304: meza.v1.ChatService.GetEffectivePermissions:output_type -> meza.v1.GetEffectivePermissionsResponse
-	175, // 305: meza.v1.ChatService.AcceptMessageRequest:output_type -> meza.v1.AcceptMessageRequestRes
-	177, // 306: meza.v1.ChatService.DeclineMessageRequest:output_type -> meza.v1.DeclineMessageRequestRes
-	179, // 307: meza.v1.ChatService.ReverseDecline:output_type -> meza.v1.ReverseDeclineResponse
-	181, // 308: meza.v1.ChatService.ListMessageRequests:output_type -> meza.v1.ListMessageRequestsResponse
-	184, // 309: meza.v1.ChatService.BlockUser:output_type -> meza.v1.BlockUserResponse
-	186, // 310: meza.v1.ChatService.UnblockUser:output_type -> meza.v1.UnblockUserResponse
-	188, // 311: meza.v1.ChatService.ListBlocks:output_type -> meza.v1.ListBlocksResponse
-	193, // 312: meza.v1.ChatService.SendFriendRequest:output_type -> meza.v1.SendFriendRequestResponse
-	195, // 313: meza.v1.ChatService.AcceptFriendRequest:output_type -> meza.v1.AcceptFriendRequestResponse
-	197, // 314: meza.v1.ChatService.DeclineFriendRequest:output_type -> meza.v1.DeclineFriendRequestResponse
-	199, // 315: meza.v1.ChatService.CancelFriendRequest:output_type -> meza.v1.CancelFriendRequestResponse
-	201, // 316: meza.v1.ChatService.RemoveFriend:output_type -> meza.v1.RemoveFriendResponse
-	203, // 317: meza.v1.ChatService.ListFriends:output_type -> meza.v1.ListFriendsResponse
-	205, // 318: meza.v1.ChatService.ListFriendRequests:output_type -> meza.v1.ListFriendRequestsResponse
-	172, // 319: meza.v1.ChatService.CreateServerFromTemplate:output_type -> meza.v1.CreateServerFromTemplateResponse
-	207, // 320: meza.v1.ChatService.SearchMessages:output_type -> meza.v1.SearchMessagesResponse
-	67,  // 321: meza.v1.ChatService.StreamEvents:output_type -> meza.v1.Event
-	213, // 322: meza.v1.ChatService.GetMutualServers:output_type -> meza.v1.GetMutualServersResponse
-	215, // 323: meza.v1.ChatService.GetMutualFriends:output_type -> meza.v1.GetMutualFriendsResponse
-	217, // 324: meza.v1.ChatService.GetSystemMessageConfig:output_type -> meza.v1.GetSystemMessageConfigResponse
-	219, // 325: meza.v1.ChatService.UpdateSystemMessageConfig:output_type -> meza.v1.UpdateSystemMessageConfigResponse
-	233, // [233:326] is the sub-list for method output_type
-	140, // [140:233] is the sub-list for method input_type
-	140, // [140:140] is the sub-list for extension type_name
-	140, // [140:140] is the sub-list for extension extendee
-	0,   // [0:140] is the sub-list for field type_name
+	221, // 95: meza.v1.GetReactionsResponse.custom_emojis:type_name -> meza.v1.GetReactionsResponse.CustomEmojisEntry
+	241, // 96: meza.v1.ReactionGroupList.groups:type_name -> meza.v1.ReactionGroup
+	235, // 97: meza.v1.AckMessageResponse.read_state:type_name -> meza.v1.ReadState
+	237, // 98: meza.v1.CreateOrGetDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
+	237, // 99: meza.v1.CreateGroupDMChannelResponse.dm_channel:type_name -> meza.v1.DMChannel
+	237, // 100: meza.v1.ListDMChannelsResponse.dm_channels:type_name -> meza.v1.DMChannel
+	222, // 101: meza.v1.ReplyEntry.created_at:type_name -> google.protobuf.Timestamp
+	138, // 102: meza.v1.GetRepliesResponse.replies:type_name -> meza.v1.ReplyEntry
+	223, // 103: meza.v1.GetMessagesByIDsResponse.messages:type_name -> meza.v1.Message
+	222, // 104: meza.v1.AcknowledgeRulesResponse.acknowledged_at:type_name -> google.protobuf.Timestamp
+	222, // 105: meza.v1.CompleteOnboardingResponse.completed_at:type_name -> google.protobuf.Timestamp
+	242, // 106: meza.v1.EmbedsUpdateEvent.embeds:type_name -> meza.v1.LinkEmbed
+	236, // 107: meza.v1.CreateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
+	236, // 108: meza.v1.UpdateChannelGroupResponse.channel_group:type_name -> meza.v1.ChannelGroup
+	236, // 109: meza.v1.ListChannelGroupsResponse.channel_groups:type_name -> meza.v1.ChannelGroup
+	243, // 110: meza.v1.SetPermissionOverrideResponse.permission_override:type_name -> meza.v1.PermissionOverride
+	243, // 111: meza.v1.ListPermissionOverridesResponse.permission_overrides:type_name -> meza.v1.PermissionOverride
+	225, // 112: meza.v1.SyncChannelPermissionsResponse.channel:type_name -> meza.v1.Channel
+	165, // 113: meza.v1.GetEffectivePermissionsResponse.sources:type_name -> meza.v1.PermissionSource
+	1,   // 114: meza.v1.PermissionSource.source_type:type_name -> meza.v1.PermissionSourceType
+	243, // 115: meza.v1.PermissionOverrideUpdateEvent.override:type_name -> meza.v1.PermissionOverride
+	224, // 116: meza.v1.ChannelSpec.type:type_name -> meza.v1.ChannelType
+	169, // 117: meza.v1.CreateServerFromTemplateRequest.channels:type_name -> meza.v1.ChannelSpec
+	170, // 118: meza.v1.CreateServerFromTemplateRequest.roles:type_name -> meza.v1.RoleSpec
+	226, // 119: meza.v1.CreateServerFromTemplateResponse.server:type_name -> meza.v1.Server
+	225, // 120: meza.v1.CreateServerFromTemplateResponse.channels:type_name -> meza.v1.Channel
+	229, // 121: meza.v1.CreateServerFromTemplateResponse.roles:type_name -> meza.v1.Role
+	230, // 122: meza.v1.CreateServerFromTemplateResponse.invite:type_name -> meza.v1.Invite
+	237, // 123: meza.v1.AcceptMessageRequestRes.dm_channel:type_name -> meza.v1.DMChannel
+	237, // 124: meza.v1.ReverseDeclineResponse.dm_channel:type_name -> meza.v1.DMChannel
+	237, // 125: meza.v1.ListMessageRequestsResponse.dm_channels:type_name -> meza.v1.DMChannel
+	244, // 126: meza.v1.ListBlocksResponse.blocked_users:type_name -> meza.v1.User
+	244, // 127: meza.v1.FriendEvent.user:type_name -> meza.v1.User
+	244, // 128: meza.v1.FriendRequestEntry.user:type_name -> meza.v1.User
+	244, // 129: meza.v1.ListFriendsResponse.friends:type_name -> meza.v1.User
+	191, // 130: meza.v1.ListFriendRequestsResponse.incoming:type_name -> meza.v1.FriendRequestEntry
+	191, // 131: meza.v1.ListFriendRequestsResponse.outgoing:type_name -> meza.v1.FriendRequestEntry
+	245, // 132: meza.v1.SearchMessagesRequest.message_types:type_name -> meza.v1.MessageType
+	223, // 133: meza.v1.SearchMessagesResponse.messages:type_name -> meza.v1.Message
+	226, // 134: meza.v1.ServerUpdateEvent.server:type_name -> meza.v1.Server
+	228, // 135: meza.v1.UserUpdateEvent.user:type_name -> meza.v1.PublicUser
+	226, // 136: meza.v1.GetMutualServersResponse.servers:type_name -> meza.v1.Server
+	244, // 137: meza.v1.GetMutualFriendsResponse.users:type_name -> meza.v1.User
+	246, // 138: meza.v1.GetSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
+	246, // 139: meza.v1.UpdateSystemMessageConfigResponse.config:type_name -> meza.v1.ServerSystemMessageConfig
+	128, // 140: meza.v1.GetReactionsResponse.ReactionsEntry.value:type_name -> meza.v1.ReactionGroupList
+	231, // 141: meza.v1.GetReactionsResponse.CustomEmojisEntry.value:type_name -> meza.v1.CustomEmoji
+	2,   // 142: meza.v1.ChatService.SendMessage:input_type -> meza.v1.SendMessageRequest
+	4,   // 143: meza.v1.ChatService.EditMessage:input_type -> meza.v1.EditMessageRequest
+	6,   // 144: meza.v1.ChatService.DeleteMessage:input_type -> meza.v1.DeleteMessageRequest
+	8,   // 145: meza.v1.ChatService.GetMessages:input_type -> meza.v1.GetMessagesRequest
+	10,  // 146: meza.v1.ChatService.CreateChannel:input_type -> meza.v1.CreateChannelRequest
+	12,  // 147: meza.v1.ChatService.UpdateChannel:input_type -> meza.v1.UpdateChannelRequest
+	14,  // 148: meza.v1.ChatService.DeleteChannel:input_type -> meza.v1.DeleteChannelRequest
+	16,  // 149: meza.v1.ChatService.GetChannel:input_type -> meza.v1.GetChannelRequest
+	18,  // 150: meza.v1.ChatService.ListChannels:input_type -> meza.v1.ListChannelsRequest
+	20,  // 151: meza.v1.ChatService.CreateServer:input_type -> meza.v1.CreateServerRequest
+	22,  // 152: meza.v1.ChatService.UpdateServer:input_type -> meza.v1.UpdateServerRequest
+	24,  // 153: meza.v1.ChatService.DeleteServer:input_type -> meza.v1.DeleteServerRequest
+	26,  // 154: meza.v1.ChatService.GetServer:input_type -> meza.v1.GetServerRequest
+	28,  // 155: meza.v1.ChatService.ListServers:input_type -> meza.v1.ListServersRequest
+	30,  // 156: meza.v1.ChatService.JoinServer:input_type -> meza.v1.JoinServerRequest
+	32,  // 157: meza.v1.ChatService.LeaveServer:input_type -> meza.v1.LeaveServerRequest
+	34,  // 158: meza.v1.ChatService.ListMembers:input_type -> meza.v1.ListMembersRequest
+	36,  // 159: meza.v1.ChatService.UpdateMember:input_type -> meza.v1.UpdateMemberRequest
+	38,  // 160: meza.v1.ChatService.SetMemberRoles:input_type -> meza.v1.SetMemberRolesRequest
+	40,  // 161: meza.v1.ChatService.KickMember:input_type -> meza.v1.KickMemberRequest
+	42,  // 162: meza.v1.ChatService.BanMember:input_type -> meza.v1.BanMemberRequest
+	44,  // 163: meza.v1.ChatService.CreateRole:input_type -> meza.v1.CreateRoleRequest
+	46,  // 164: meza.v1.ChatService.UpdateRole:input_type -> meza.v1.UpdateRoleRequest
+	48,  // 165: meza.v1.ChatService.DeleteRole:input_type -> meza.v1.DeleteRoleRequest
+	78,  // 166: meza.v1.ChatService.UnbanMember:input_type -> meza.v1.UnbanMemberRequest
+	80,  // 167: meza.v1.ChatService.ListBans:input_type -> meza.v1.ListBansRequest
+	82,  // 168: meza.v1.ChatService.ListRoles:input_type -> meza.v1.ListRolesRequest
+	50,  // 169: meza.v1.ChatService.ReorderRoles:input_type -> meza.v1.ReorderRolesRequest
+	91,  // 170: meza.v1.ChatService.CreateEmoji:input_type -> meza.v1.CreateEmojiRequest
+	93,  // 171: meza.v1.ChatService.DeleteEmoji:input_type -> meza.v1.DeleteEmojiRequest
+	95,  // 172: meza.v1.ChatService.UpdateEmoji:input_type -> meza.v1.UpdateEmojiRequest
+	97,  // 173: meza.v1.ChatService.ListEmojis:input_type -> meza.v1.ListEmojisRequest
+	99,  // 174: meza.v1.ChatService.ListUserEmojis:input_type -> meza.v1.ListUserEmojisRequest
+	52,  // 175: meza.v1.ChatService.CreateInvite:input_type -> meza.v1.CreateInviteRequest
+	54,  // 176: meza.v1.ChatService.ResolveInvite:input_type -> meza.v1.ResolveInviteRequest
+	56,  // 177: meza.v1.ChatService.RevokeInvite:input_type -> meza.v1.RevokeInviteRequest
+	58,  // 178: meza.v1.ChatService.ListInvites:input_type -> meza.v1.ListInvitesRequest
+	84,  // 179: meza.v1.ChatService.PinMessage:input_type -> meza.v1.PinMessageRequest
+	86,  // 180: meza.v1.ChatService.UnpinMessage:input_type -> meza.v1.UnpinMessageRequest
+	88,  // 181: meza.v1.ChatService.GetPinnedMessages:input_type -> meza.v1.GetPinnedMessagesRequest
+	60,  // 182: meza.v1.ChatService.AddChannelMember:input_type -> meza.v1.AddChannelMemberRequest
+	62,  // 183: meza.v1.ChatService.RemoveChannelMember:input_type -> meza.v1.RemoveChannelMemberRequest
+	64,  // 184: meza.v1.ChatService.ListChannelMembers:input_type -> meza.v1.ListChannelMembersRequest
+	111, // 185: meza.v1.ChatService.CreateSound:input_type -> meza.v1.CreateSoundRequest
+	113, // 186: meza.v1.ChatService.DeleteSound:input_type -> meza.v1.DeleteSoundRequest
+	115, // 187: meza.v1.ChatService.UpdateSound:input_type -> meza.v1.UpdateSoundRequest
+	117, // 188: meza.v1.ChatService.ListUserSounds:input_type -> meza.v1.ListUserSoundsRequest
+	119, // 189: meza.v1.ChatService.ListServerSounds:input_type -> meza.v1.ListServerSoundsRequest
+	102, // 190: meza.v1.ChatService.BulkDeleteMessages:input_type -> meza.v1.BulkDeleteMessagesRequest
+	105, // 191: meza.v1.ChatService.TimeoutMember:input_type -> meza.v1.TimeoutMemberRequest
+	107, // 192: meza.v1.ChatService.RemoveTimeout:input_type -> meza.v1.RemoveTimeoutRequest
+	109, // 193: meza.v1.ChatService.ListAuditLog:input_type -> meza.v1.ListAuditLogRequest
+	122, // 194: meza.v1.ChatService.AddReaction:input_type -> meza.v1.AddReactionRequest
+	124, // 195: meza.v1.ChatService.RemoveReaction:input_type -> meza.v1.RemoveReactionRequest
+	126, // 196: meza.v1.ChatService.GetReactions:input_type -> meza.v1.GetReactionsRequest
+	129, // 197: meza.v1.ChatService.AckMessage:input_type -> meza.v1.AckMessageRequest
+	131, // 198: meza.v1.ChatService.CreateOrGetDMChannel:input_type -> meza.v1.CreateOrGetDMChannelRequest
+	135, // 199: meza.v1.ChatService.ListDMChannels:input_type -> meza.v1.ListDMChannelsRequest
+	133, // 200: meza.v1.ChatService.CreateGroupDMChannel:input_type -> meza.v1.CreateGroupDMChannelRequest
+	137, // 201: meza.v1.ChatService.GetReplies:input_type -> meza.v1.GetRepliesRequest
+	140, // 202: meza.v1.ChatService.GetMessagesByIDs:input_type -> meza.v1.GetMessagesByIDsRequest
+	142, // 203: meza.v1.ChatService.AcknowledgeRules:input_type -> meza.v1.AcknowledgeRulesRequest
+	144, // 204: meza.v1.ChatService.CompleteOnboarding:input_type -> meza.v1.CompleteOnboardingRequest
+	147, // 205: meza.v1.ChatService.CreateChannelGroup:input_type -> meza.v1.CreateChannelGroupRequest
+	149, // 206: meza.v1.ChatService.UpdateChannelGroup:input_type -> meza.v1.UpdateChannelGroupRequest
+	151, // 207: meza.v1.ChatService.DeleteChannelGroup:input_type -> meza.v1.DeleteChannelGroupRequest
+	153, // 208: meza.v1.ChatService.ListChannelGroups:input_type -> meza.v1.ListChannelGroupsRequest
+	155, // 209: meza.v1.ChatService.SetPermissionOverride:input_type -> meza.v1.SetPermissionOverrideRequest
+	157, // 210: meza.v1.ChatService.DeletePermissionOverride:input_type -> meza.v1.DeletePermissionOverrideRequest
+	159, // 211: meza.v1.ChatService.ListPermissionOverrides:input_type -> meza.v1.ListPermissionOverridesRequest
+	161, // 212: meza.v1.ChatService.SyncChannelPermissions:input_type -> meza.v1.SyncChannelPermissionsRequest
+	163, // 213: meza.v1.ChatService.GetEffectivePermissions:input_type -> meza.v1.GetEffectivePermissionsRequest
+	174, // 214: meza.v1.ChatService.AcceptMessageRequest:input_type -> meza.v1.AcceptMessageRequestReq
+	176, // 215: meza.v1.ChatService.DeclineMessageRequest:input_type -> meza.v1.DeclineMessageRequestReq
+	178, // 216: meza.v1.ChatService.ReverseDecline:input_type -> meza.v1.ReverseDeclineRequest
+	180, // 217: meza.v1.ChatService.ListMessageRequests:input_type -> meza.v1.ListMessageRequestsRequest
+	183, // 218: meza.v1.ChatService.BlockUser:input_type -> meza.v1.BlockUserRequest
+	185, // 219: meza.v1.ChatService.UnblockUser:input_type -> meza.v1.UnblockUserRequest
+	187, // 220: meza.v1.ChatService.ListBlocks:input_type -> meza.v1.ListBlocksRequest
+	192, // 221: meza.v1.ChatService.SendFriendRequest:input_type -> meza.v1.SendFriendRequestRequest
+	194, // 222: meza.v1.ChatService.AcceptFriendRequest:input_type -> meza.v1.AcceptFriendRequestRequest
+	196, // 223: meza.v1.ChatService.DeclineFriendRequest:input_type -> meza.v1.DeclineFriendRequestRequest
+	198, // 224: meza.v1.ChatService.CancelFriendRequest:input_type -> meza.v1.CancelFriendRequestRequest
+	200, // 225: meza.v1.ChatService.RemoveFriend:input_type -> meza.v1.RemoveFriendRequest
+	202, // 226: meza.v1.ChatService.ListFriends:input_type -> meza.v1.ListFriendsRequest
+	204, // 227: meza.v1.ChatService.ListFriendRequests:input_type -> meza.v1.ListFriendRequestsRequest
+	171, // 228: meza.v1.ChatService.CreateServerFromTemplate:input_type -> meza.v1.CreateServerFromTemplateRequest
+	206, // 229: meza.v1.ChatService.SearchMessages:input_type -> meza.v1.SearchMessagesRequest
+	66,  // 230: meza.v1.ChatService.StreamEvents:input_type -> meza.v1.StreamEventsRequest
+	212, // 231: meza.v1.ChatService.GetMutualServers:input_type -> meza.v1.GetMutualServersRequest
+	214, // 232: meza.v1.ChatService.GetMutualFriends:input_type -> meza.v1.GetMutualFriendsRequest
+	216, // 233: meza.v1.ChatService.GetSystemMessageConfig:input_type -> meza.v1.GetSystemMessageConfigRequest
+	218, // 234: meza.v1.ChatService.UpdateSystemMessageConfig:input_type -> meza.v1.UpdateSystemMessageConfigRequest
+	3,   // 235: meza.v1.ChatService.SendMessage:output_type -> meza.v1.SendMessageResponse
+	5,   // 236: meza.v1.ChatService.EditMessage:output_type -> meza.v1.EditMessageResponse
+	7,   // 237: meza.v1.ChatService.DeleteMessage:output_type -> meza.v1.DeleteMessageResponse
+	9,   // 238: meza.v1.ChatService.GetMessages:output_type -> meza.v1.GetMessagesResponse
+	11,  // 239: meza.v1.ChatService.CreateChannel:output_type -> meza.v1.CreateChannelResponse
+	13,  // 240: meza.v1.ChatService.UpdateChannel:output_type -> meza.v1.UpdateChannelResponse
+	15,  // 241: meza.v1.ChatService.DeleteChannel:output_type -> meza.v1.DeleteChannelResponse
+	17,  // 242: meza.v1.ChatService.GetChannel:output_type -> meza.v1.GetChannelResponse
+	19,  // 243: meza.v1.ChatService.ListChannels:output_type -> meza.v1.ListChannelsResponse
+	21,  // 244: meza.v1.ChatService.CreateServer:output_type -> meza.v1.CreateServerResponse
+	23,  // 245: meza.v1.ChatService.UpdateServer:output_type -> meza.v1.UpdateServerResponse
+	25,  // 246: meza.v1.ChatService.DeleteServer:output_type -> meza.v1.DeleteServerResponse
+	27,  // 247: meza.v1.ChatService.GetServer:output_type -> meza.v1.GetServerResponse
+	29,  // 248: meza.v1.ChatService.ListServers:output_type -> meza.v1.ListServersResponse
+	31,  // 249: meza.v1.ChatService.JoinServer:output_type -> meza.v1.JoinServerResponse
+	33,  // 250: meza.v1.ChatService.LeaveServer:output_type -> meza.v1.LeaveServerResponse
+	35,  // 251: meza.v1.ChatService.ListMembers:output_type -> meza.v1.ListMembersResponse
+	37,  // 252: meza.v1.ChatService.UpdateMember:output_type -> meza.v1.UpdateMemberResponse
+	39,  // 253: meza.v1.ChatService.SetMemberRoles:output_type -> meza.v1.SetMemberRolesResponse
+	41,  // 254: meza.v1.ChatService.KickMember:output_type -> meza.v1.KickMemberResponse
+	43,  // 255: meza.v1.ChatService.BanMember:output_type -> meza.v1.BanMemberResponse
+	45,  // 256: meza.v1.ChatService.CreateRole:output_type -> meza.v1.CreateRoleResponse
+	47,  // 257: meza.v1.ChatService.UpdateRole:output_type -> meza.v1.UpdateRoleResponse
+	49,  // 258: meza.v1.ChatService.DeleteRole:output_type -> meza.v1.DeleteRoleResponse
+	79,  // 259: meza.v1.ChatService.UnbanMember:output_type -> meza.v1.UnbanMemberResponse
+	81,  // 260: meza.v1.ChatService.ListBans:output_type -> meza.v1.ListBansResponse
+	83,  // 261: meza.v1.ChatService.ListRoles:output_type -> meza.v1.ListRolesResponse
+	51,  // 262: meza.v1.ChatService.ReorderRoles:output_type -> meza.v1.ReorderRolesResponse
+	92,  // 263: meza.v1.ChatService.CreateEmoji:output_type -> meza.v1.CreateEmojiResponse
+	94,  // 264: meza.v1.ChatService.DeleteEmoji:output_type -> meza.v1.DeleteEmojiResponse
+	96,  // 265: meza.v1.ChatService.UpdateEmoji:output_type -> meza.v1.UpdateEmojiResponse
+	98,  // 266: meza.v1.ChatService.ListEmojis:output_type -> meza.v1.ListEmojisResponse
+	100, // 267: meza.v1.ChatService.ListUserEmojis:output_type -> meza.v1.ListUserEmojisResponse
+	53,  // 268: meza.v1.ChatService.CreateInvite:output_type -> meza.v1.CreateInviteResponse
+	55,  // 269: meza.v1.ChatService.ResolveInvite:output_type -> meza.v1.ResolveInviteResponse
+	57,  // 270: meza.v1.ChatService.RevokeInvite:output_type -> meza.v1.RevokeInviteResponse
+	59,  // 271: meza.v1.ChatService.ListInvites:output_type -> meza.v1.ListInvitesResponse
+	85,  // 272: meza.v1.ChatService.PinMessage:output_type -> meza.v1.PinMessageResponse
+	87,  // 273: meza.v1.ChatService.UnpinMessage:output_type -> meza.v1.UnpinMessageResponse
+	89,  // 274: meza.v1.ChatService.GetPinnedMessages:output_type -> meza.v1.GetPinnedMessagesResponse
+	61,  // 275: meza.v1.ChatService.AddChannelMember:output_type -> meza.v1.AddChannelMemberResponse
+	63,  // 276: meza.v1.ChatService.RemoveChannelMember:output_type -> meza.v1.RemoveChannelMemberResponse
+	65,  // 277: meza.v1.ChatService.ListChannelMembers:output_type -> meza.v1.ListChannelMembersResponse
+	112, // 278: meza.v1.ChatService.CreateSound:output_type -> meza.v1.CreateSoundResponse
+	114, // 279: meza.v1.ChatService.DeleteSound:output_type -> meza.v1.DeleteSoundResponse
+	116, // 280: meza.v1.ChatService.UpdateSound:output_type -> meza.v1.UpdateSoundResponse
+	118, // 281: meza.v1.ChatService.ListUserSounds:output_type -> meza.v1.ListUserSoundsResponse
+	120, // 282: meza.v1.ChatService.ListServerSounds:output_type -> meza.v1.ListServerSoundsResponse
+	103, // 283: meza.v1.ChatService.BulkDeleteMessages:output_type -> meza.v1.BulkDeleteMessagesResponse
+	106, // 284: meza.v1.ChatService.TimeoutMember:output_type -> meza.v1.TimeoutMemberResponse
+	108, // 285: meza.v1.ChatService.RemoveTimeout:output_type -> meza.v1.RemoveTimeoutResponse
+	110, // 286: meza.v1.ChatService.ListAuditLog:output_type -> meza.v1.ListAuditLogResponse
+	123, // 287: meza.v1.ChatService.AddReaction:output_type -> meza.v1.AddReactionResponse
+	125, // 288: meza.v1.ChatService.RemoveReaction:output_type -> meza.v1.RemoveReactionResponse
+	127, // 289: meza.v1.ChatService.GetReactions:output_type -> meza.v1.GetReactionsResponse
+	130, // 290: meza.v1.ChatService.AckMessage:output_type -> meza.v1.AckMessageResponse
+	132, // 291: meza.v1.ChatService.CreateOrGetDMChannel:output_type -> meza.v1.CreateOrGetDMChannelResponse
+	136, // 292: meza.v1.ChatService.ListDMChannels:output_type -> meza.v1.ListDMChannelsResponse
+	134, // 293: meza.v1.ChatService.CreateGroupDMChannel:output_type -> meza.v1.CreateGroupDMChannelResponse
+	139, // 294: meza.v1.ChatService.GetReplies:output_type -> meza.v1.GetRepliesResponse
+	141, // 295: meza.v1.ChatService.GetMessagesByIDs:output_type -> meza.v1.GetMessagesByIDsResponse
+	143, // 296: meza.v1.ChatService.AcknowledgeRules:output_type -> meza.v1.AcknowledgeRulesResponse
+	145, // 297: meza.v1.ChatService.CompleteOnboarding:output_type -> meza.v1.CompleteOnboardingResponse
+	148, // 298: meza.v1.ChatService.CreateChannelGroup:output_type -> meza.v1.CreateChannelGroupResponse
+	150, // 299: meza.v1.ChatService.UpdateChannelGroup:output_type -> meza.v1.UpdateChannelGroupResponse
+	152, // 300: meza.v1.ChatService.DeleteChannelGroup:output_type -> meza.v1.DeleteChannelGroupResponse
+	154, // 301: meza.v1.ChatService.ListChannelGroups:output_type -> meza.v1.ListChannelGroupsResponse
+	156, // 302: meza.v1.ChatService.SetPermissionOverride:output_type -> meza.v1.SetPermissionOverrideResponse
+	158, // 303: meza.v1.ChatService.DeletePermissionOverride:output_type -> meza.v1.DeletePermissionOverrideResponse
+	160, // 304: meza.v1.ChatService.ListPermissionOverrides:output_type -> meza.v1.ListPermissionOverridesResponse
+	162, // 305: meza.v1.ChatService.SyncChannelPermissions:output_type -> meza.v1.SyncChannelPermissionsResponse
+	164, // 306: meza.v1.ChatService.GetEffectivePermissions:output_type -> meza.v1.GetEffectivePermissionsResponse
+	175, // 307: meza.v1.ChatService.AcceptMessageRequest:output_type -> meza.v1.AcceptMessageRequestRes
+	177, // 308: meza.v1.ChatService.DeclineMessageRequest:output_type -> meza.v1.DeclineMessageRequestRes
+	179, // 309: meza.v1.ChatService.ReverseDecline:output_type -> meza.v1.ReverseDeclineResponse
+	181, // 310: meza.v1.ChatService.ListMessageRequests:output_type -> meza.v1.ListMessageRequestsResponse
+	184, // 311: meza.v1.ChatService.BlockUser:output_type -> meza.v1.BlockUserResponse
+	186, // 312: meza.v1.ChatService.UnblockUser:output_type -> meza.v1.UnblockUserResponse
+	188, // 313: meza.v1.ChatService.ListBlocks:output_type -> meza.v1.ListBlocksResponse
+	193, // 314: meza.v1.ChatService.SendFriendRequest:output_type -> meza.v1.SendFriendRequestResponse
+	195, // 315: meza.v1.ChatService.AcceptFriendRequest:output_type -> meza.v1.AcceptFriendRequestResponse
+	197, // 316: meza.v1.ChatService.DeclineFriendRequest:output_type -> meza.v1.DeclineFriendRequestResponse
+	199, // 317: meza.v1.ChatService.CancelFriendRequest:output_type -> meza.v1.CancelFriendRequestResponse
+	201, // 318: meza.v1.ChatService.RemoveFriend:output_type -> meza.v1.RemoveFriendResponse
+	203, // 319: meza.v1.ChatService.ListFriends:output_type -> meza.v1.ListFriendsResponse
+	205, // 320: meza.v1.ChatService.ListFriendRequests:output_type -> meza.v1.ListFriendRequestsResponse
+	172, // 321: meza.v1.ChatService.CreateServerFromTemplate:output_type -> meza.v1.CreateServerFromTemplateResponse
+	207, // 322: meza.v1.ChatService.SearchMessages:output_type -> meza.v1.SearchMessagesResponse
+	67,  // 323: meza.v1.ChatService.StreamEvents:output_type -> meza.v1.Event
+	213, // 324: meza.v1.ChatService.GetMutualServers:output_type -> meza.v1.GetMutualServersResponse
+	215, // 325: meza.v1.ChatService.GetMutualFriends:output_type -> meza.v1.GetMutualFriendsResponse
+	217, // 326: meza.v1.ChatService.GetSystemMessageConfig:output_type -> meza.v1.GetSystemMessageConfigResponse
+	219, // 327: meza.v1.ChatService.UpdateSystemMessageConfig:output_type -> meza.v1.UpdateSystemMessageConfigResponse
+	235, // [235:328] is the sub-list for method output_type
+	142, // [142:235] is the sub-list for method input_type
+	142, // [142:142] is the sub-list for extension type_name
+	142, // [142:142] is the sub-list for extension extendee
+	0,   // [0:142] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_chat_proto_init() }
@@ -13730,7 +13745,7 @@ func file_meza_v1_chat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meza_v1_chat_proto_rawDesc), len(file_meza_v1_chat_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   219,
+			NumMessages:   220,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

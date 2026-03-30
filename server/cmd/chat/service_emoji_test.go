@@ -61,6 +61,18 @@ func (s *statefulMockEmojiStore) GetEmoji(_ context.Context, emojiID string) (*m
 	return e, nil
 }
 
+func (s *statefulMockEmojiStore) GetEmojisByIDs(_ context.Context, emojiIDs []string) ([]*models.Emoji, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var emojis []*models.Emoji
+	for _, id := range emojiIDs {
+		if e, ok := s.emojis[id]; ok {
+			emojis = append(emojis, e)
+		}
+	}
+	return emojis, nil
+}
+
 func (s *statefulMockEmojiStore) ListEmojis(_ context.Context, serverID string) ([]*models.Emoji, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -250,6 +250,7 @@ message Reaction {
   string user_id = 3;
   string emoji = 4;
   google.protobuf.Timestamp created_at = 5;
+  CustomEmoji custom_emoji = 6;
 }
 
 message ReactionGroup {

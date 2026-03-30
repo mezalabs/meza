@@ -2004,6 +2004,7 @@ type Reaction struct {
 	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Emoji         string                 `protobuf:"bytes,4,opt,name=emoji,proto3" json:"emoji,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CustomEmoji   *CustomEmoji           `protobuf:"bytes,6,opt,name=custom_emoji,json=customEmoji,proto3" json:"custom_emoji,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2069,6 +2070,13 @@ func (x *Reaction) GetEmoji() string {
 func (x *Reaction) GetCreatedAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Reaction) GetCustomEmoji() *CustomEmoji {
+	if x != nil {
+		return x.CustomEmoji
 	}
 	return nil
 }
@@ -2733,7 +2741,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"targetType\x12\x1a\n" +
 	"\bmetadata\x18\a \x01(\tR\bmetadata\x129\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xb2\x01\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"\xeb\x01\n" +
 	"\bReaction\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1d\n" +
@@ -2742,7 +2750,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05emoji\x18\x04 \x01(\tR\x05emoji\x129\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"P\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x127\n" +
+	"\fcustom_emoji\x18\x06 \x01(\v2\x14.meza.v1.CustomEmojiR\vcustomEmoji\"P\n" +
 	"\rReactionGroup\x12\x14\n" +
 	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x0e\n" +
 	"\x02me\x18\x02 \x01(\bR\x02me\x12\x19\n" +
@@ -2879,11 +2888,12 @@ var file_meza_v1_models_proto_depIdxs = []int32{
 	26, // 24: meza.v1.SoundboardSound.created_at:type_name -> google.protobuf.Timestamp
 	26, // 25: meza.v1.AuditLogEntry.created_at:type_name -> google.protobuf.Timestamp
 	26, // 26: meza.v1.Reaction.created_at:type_name -> google.protobuf.Timestamp
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	17, // 27: meza.v1.Reaction.custom_emoji:type_name -> meza.v1.CustomEmoji
+	28, // [28:28] is the sub-list for method output_type
+	28, // [28:28] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_meza_v1_models_proto_init() }

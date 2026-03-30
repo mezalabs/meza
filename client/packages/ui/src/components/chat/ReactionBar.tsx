@@ -1,20 +1,17 @@
 import {
   addReaction,
-  getMediaURL,
   type ReactionState,
   removeReaction,
   useAuthStore,
-  useEmojiStore,
   useReactionStore,
 } from '@meza/core';
 import * as Popover from '@radix-ui/react-popover';
 import { memo, useCallback, useState } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
+import { EmojiDisplay } from './EmojiDisplay.tsx';
 import { EmojiPicker } from './EmojiPicker.tsx';
 
 type ReactionGroup = NonNullable<ReactionState['byMessage'][string]>[number];
-
-const CUSTOM_EMOJI_RE = /^<(a?):([a-z0-9_]{2,32}):([a-zA-Z0-9]+)>$/;
 
 interface ReactionBarProps {
   channelId: string;
@@ -147,36 +144,4 @@ function ReactionPill({
       <span>{group.userIds.length}</span>
     </button>
   );
-}
-
-function EmojiDisplay({
-  emoji,
-  serverId,
-}: {
-  emoji: string;
-  serverId?: string;
-}) {
-  const match = CUSTOM_EMOJI_RE.exec(emoji);
-  const emojis = useEmojiStore((s) =>
-    serverId ? s.byServer[serverId] : undefined,
-  );
-
-  if (match) {
-    const [, , name, id] = match;
-    const custom = emojis?.find((e) => e.id === id);
-    if (custom) {
-      const attachmentId = custom.imageUrl.replace('/media/', '');
-      return (
-        <img
-          src={getMediaURL(attachmentId)}
-          alt={`:${name}:`}
-          className="inline-block h-4.5 w-4.5 object-contain"
-          loading="lazy"
-        />
-      );
-    }
-    return <span>:{name}:</span>;
-  }
-
-  return <span style={{ fontSize: 18 }}>{emoji}</span>;
 }

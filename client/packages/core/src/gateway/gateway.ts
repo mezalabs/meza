@@ -755,10 +755,15 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         const { channelId, messageId } = event.payload.value;
         usePinStore.getState().removePin(channelId, messageId);
       } else if (event.payload.case === 'reactionAdd' && event.payload.value) {
-        const { messageId, emoji, userId } = event.payload.value;
+        const { messageId, emoji, userId, customEmoji } = event.payload.value;
         useReactionStore
           .getState()
           .addReaction(messageId, emoji, userId, userId === currentUserId);
+        if (customEmoji?.id) {
+          useEmojiStore
+            .getState()
+            .setReactionEmojis({ [customEmoji.id]: customEmoji });
+        }
       } else if (
         event.payload.case === 'reactionRemove' &&
         event.payload.value

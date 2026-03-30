@@ -220,6 +220,7 @@ type PinStorer interface {
 type EmojiStorer interface {
 	CreateEmoji(ctx context.Context, emoji *models.Emoji, maxPersonal, maxServer int) (*models.Emoji, error)
 	GetEmoji(ctx context.Context, emojiID string) (*models.Emoji, error)
+	GetEmojisByIDs(ctx context.Context, emojiIDs []string) ([]*models.Emoji, error)
 	ListEmojis(ctx context.Context, serverID string) ([]*models.Emoji, error)
 	ListEmojisByUser(ctx context.Context, userID string) ([]*models.Emoji, error)
 	UpdateEmoji(ctx context.Context, emojiID string, name *string) (*models.Emoji, error)
