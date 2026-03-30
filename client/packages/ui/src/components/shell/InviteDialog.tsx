@@ -1,6 +1,7 @@
 import {
   createInvite,
   createInviteKeyBundle,
+  getAppOrigin,
   isSessionReady,
   useChannelStore,
 } from '@meza/core';
@@ -75,7 +76,7 @@ export function InviteDialog({
         setInvite(inv);
 
         // Build URL with optional fragment containing the invite secret
-        const base = `${window.location.origin}/invite/${inv?.code}`;
+        const base = `${getAppOrigin()}/invite/${inv?.code}`;
         const url = inviteSecret
           ? `${base}#${bytesToBase64Url(inviteSecret)}`
           : base;

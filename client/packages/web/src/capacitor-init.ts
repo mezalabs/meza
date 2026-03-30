@@ -15,8 +15,10 @@ import {
   gatewayConnect,
   gatewayDisconnect,
   isSessionReady,
+  parseDeepLink,
   subscribeToPush,
   useAuthStore,
+  useInviteStore,
 } from '@meza/core';
 import { CapacitorPushAdapter } from './capacitor-push-adapter.ts';
 import { navigateToChannel } from './navigate.ts';
@@ -33,6 +35,7 @@ export async function initCapacitor(): Promise<void> {
 
   setupStatusBar();
   setupAppLifecycle(App);
+  setupDeepLinkHandler(App);
   setupPushNotifications();
   setupNotificationNavigation();
   setupBackButton(App);
@@ -93,6 +96,20 @@ function setupNotificationNavigation(): void {
     const channelId = data.channel_id;
     if (!channelId) return;
     navigateToChannel(channelId);
+  });
+}
+
+function setupDeepLinkHandler(App: typeof import('@capacitor/app').App): void {
+  App.addListener('appUrlOpen', ({ url }) => {
+    const invite = parseDeepLink(url);
+    if (!invite) return;
+
+    const store = useInviteStore.getState();
+    store.setPendingHost(invite.host);
+    store.setPendingCode(invite.code);
+    if (invite.secret) {
+      store.setInviteSecret(invite.secret);
+    }
   });
 }
 

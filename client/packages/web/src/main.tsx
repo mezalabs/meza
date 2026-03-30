@@ -12,6 +12,7 @@ import {
   isSessionReady,
   onCrossTabTeardown,
   onSessionReady,
+  parseDeepLink,
   subscribeToPush,
   teardownSession,
   useAuthStore,
@@ -56,6 +57,31 @@ if (inviteMatch) {
     useInviteStore.getState().setInviteSecret(fragment);
   }
   history.replaceState(null, '', '/');
+}
+
+// Register deep link handler for Electron — before React render so it's ready
+// when the main process sends the buffered cold-start deep link on did-finish-load.
+if (window.electronAPI?.deepLink) {
+  window.electronAPI.deepLink.onNavigate((url: string) => {
+    // Handle invite deep links: meza://i/{host}/{code}?s={secret}
+    const invite = parseDeepLink(url);
+    if (invite) {
+      const store = useInviteStore.getState();
+      store.setPendingHost(invite.host);
+      store.setPendingCode(invite.code);
+      if (invite.secret) {
+        store.setInviteSecret(invite.secret);
+      }
+      return;
+    }
+
+    // Handle channel deep links: meza://channel/{channelId}
+    // (sent by notification tap handler in ipc.ts)
+    const channelMatch = url.match(/^meza:\/\/channel\/(.+)$/);
+    if (channelMatch?.[1]) {
+      navigateToChannel(channelMatch[1]);
+    }
+  });
 }
 
 // Connect/disconnect gateway based on auth state — outside React to avoid StrictMode double-mount.

@@ -32,3 +32,22 @@ export function getBaseUrl(): string {
   // Web (same-origin): uses relative URLs
   return '';
 }
+
+/**
+ * Returns the public-facing origin for building shareable URLs (e.g. invite links).
+ * On Capacitor/Electron, window.location.origin is a local address (https://localhost),
+ * so we use the configured server URL instead.
+ */
+export function getAppOrigin(): string {
+  if (typeof window === 'undefined') return '';
+
+  if (window.__MEZA_BASE_URL__) {
+    return window.__MEZA_BASE_URL__.replace(/\/+$/, '');
+  }
+
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  }
+
+  return window.location.origin;
+}

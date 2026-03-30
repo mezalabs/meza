@@ -434,9 +434,11 @@ export { useVoiceParticipantsStore } from './store/voiceParticipants.ts';
 export * from './tiling/index.ts';
 // Types — Electron API
 export type { ElectronAPI } from './types/electron.d.ts';
+// Utils
+export type { DeepLinkInvite } from './utils/deep-link.ts';
+export { buildDeepLinkUrl, parseDeepLink } from './utils/deep-link.ts';
 export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
-// Utils
 export {
   hideKeyboard,
   onKeyboardWillHide,
@@ -444,5 +446,10 @@ export {
 } from './utils/keyboard.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
-export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';
+export {
+  getAppOrigin,
+  getBaseUrl,
+  isCapacitor,
+  isElectron,
+} from './utils/platform.ts';
 export { formatRelativeTime, toISO } from './utils/time.ts';
