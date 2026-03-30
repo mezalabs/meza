@@ -455,19 +455,12 @@ function DMRow({
   const hasUnread = (unreadCount ?? 0) > 0;
 
   return (
-    <div
-      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-bg-surface cursor-pointer ${
+    <button
+      type="button"
+      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-bg-surface ${
         hasUnread ? 'bg-bg-surface/50' : ''
       }`}
       onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
     >
       {/* Avatar: popover for 1-on-1 DMs, plain icon for groups */}
       {group ? (
@@ -529,6 +522,6 @@ function DMRow({
           {unreadCount >= 1000 ? '999+' : unreadCount}
         </span>
       )}
-    </div>
+    </button>
   );
 }
