@@ -550,7 +550,7 @@ tasks:
     cmds:
       - task: build:mobile
         vars:
-          VITE_API_URL: '{{.VITE_API_URL | default "https://meza.chat"}}'
+          VITE_API_URL: '{{.VITE_API_URL | default "https://api.meza.chat"}}'
 
   build:mobile:clean:
     desc: "Full clean build — wipe native web assets, rebuild, and sync"

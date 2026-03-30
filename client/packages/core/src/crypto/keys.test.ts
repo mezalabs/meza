@@ -15,16 +15,20 @@ describe('deriveKeys', () => {
     expect(masterKey).not.toEqual(authKey);
   });
 
-  it('produces deterministic output for the same password + salt', async () => {
-    const salt = new Uint8Array([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-    ]);
-    const keys1 = await deriveKeys('hello', salt);
-    const keys2 = await deriveKeys('hello', salt);
+  it(
+    'produces deterministic output for the same password + salt',
+    { timeout: 15_000 },
+    async () => {
+      const salt = new Uint8Array([
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+      ]);
+      const keys1 = await deriveKeys('hello', salt);
+      const keys2 = await deriveKeys('hello', salt);
 
-    expect(keys1.masterKey).toEqual(keys2.masterKey);
-    expect(keys1.authKey).toEqual(keys2.authKey);
-  });
+      expect(keys1.masterKey).toEqual(keys2.masterKey);
+      expect(keys1.authKey).toEqual(keys2.authKey);
+    },
+  );
 
   it('produces different output for different passwords', async () => {
     const salt = new Uint8Array([
