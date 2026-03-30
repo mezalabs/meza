@@ -1,5 +1,6 @@
 import { app, type BrowserWindow, ipcMain, Notification } from 'electron';
 import { getAutoLaunchEnabled, setAutoLaunch } from './autolaunch.js';
+import { DEFAULT_SERVER_URL } from './constants.js';
 import { store } from './store.js';
 
 export function registerIpcHandlers(win: BrowserWindow): void {
@@ -50,13 +51,13 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   // --- Settings ---
   ipcMain.on('settings:getServerUrlSync', (event) => {
     // In dev mode (not packaged), return empty so the web app uses same-origin
-    // (http://localhost:4080). In prod, fall back to https://meza.chat so the
-    // bundled meza://app origin can reach the real server.
+    // (http://localhost:4080). In prod, fall back to the default server URL so
+    // the bundled meza://app origin can reach the real server.
     const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
     event.returnValue =
       process.env.MEZA_SERVER_URL ||
       store.get('settings.serverUrl') ||
-      (prodMode ? 'https://meza.chat' : '');
+      (prodMode ? DEFAULT_SERVER_URL : '');
   });
 
   ipcMain.handle('settings:getServerUrl', () =>

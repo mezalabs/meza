@@ -19,7 +19,7 @@ import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
 
-const DEFAULT_SERVER_URL = 'https://meza.chat';
+import { DEFAULT_SERVER_URL } from './constants.js';
 
 // On Linux, enable PipeWire-based screen capture so getDisplayMedia() goes
 // through xdg-desktop-portal natively (single dialog, no desktopCapturer).
@@ -209,19 +209,40 @@ app.whenReady().then(() => {
   session.defaultSession.webRequest.onHeadersReceived(
     serverFilter,
     (details, callback) => {
-      // Replace the server's ACAO header with the actual page origin so the
-      // browser's CORS check passes on our side.
-      // Delete any existing ACAO headers first (keys are case-sensitive in
-      // Electron's responseHeaders, but HTTP headers are case-insensitive).
+      // Bridge CORS for the desktop app: the page origin (meza:// or
+      // localhost) differs from the server origin, so we rewrite the
+      // response headers to satisfy the browser's CORS checks.
       const prodMode = app.isPackaged || process.env.DESKTOP_PROD === '1';
       const pageOrigin = prodMode ? 'meza://app' : 'http://localhost:4080';
       const headers = details.responseHeaders ?? {};
+
+      // Delete any existing ACAO headers (keys are case-sensitive in
+      // Electron's responseHeaders, but HTTP headers are case-insensitive).
       for (const key of Object.keys(headers)) {
         if (key.toLowerCase() === 'access-control-allow-origin') {
           delete headers[key];
         }
       }
       headers['Access-Control-Allow-Origin'] = [pageOrigin];
+
+      // The server's Connect-RPC endpoints don't handle OPTIONS — CORS
+      // preflight is normally handled by the reverse proxy in production.
+      // Ensure preflight responses pass the browser's CORS checks.
+      if (details.method === 'OPTIONS') {
+        headers['Access-Control-Allow-Methods'] = [
+          'GET, POST, PUT, DELETE, OPTIONS',
+        ];
+        headers['Access-Control-Allow-Headers'] = [
+          'Content-Type, Authorization, Connect-Protocol-Version',
+        ];
+        headers['Access-Control-Max-Age'] = ['86400'];
+        callback({
+          responseHeaders: headers,
+          statusLine: 'HTTP/1.1 204 No Content',
+        });
+        return;
+      }
+
       callback({ responseHeaders: headers });
     },
   );
