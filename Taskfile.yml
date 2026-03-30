@@ -490,11 +490,15 @@ tasks:
       - pnpm --filter @meza/desktop dev
 
   dev:desktop:prod:
-    desc: Start Electron desktop app against prod (meza.chat)
+    desc: Build and run Electron desktop app the way prod does (meza:// protocol, bundled renderer)
     dir: client
     cmds:
       - pnpm install --frozen-lockfile --silent
-      - MEZA_SERVER_URL=https://meza.chat pnpm --filter @meza/desktop dev
+      - DESKTOP_BUILD=1 pnpm --filter @meza/web... build
+      - pnpm --filter @meza/desktop build
+      - mkdir -p packages/desktop/out/renderer
+      - cp -r packages/web/dist/* packages/desktop/out/renderer/
+      - DESKTOP_PROD=1 pnpm --filter @meza/desktop exec electron .
 
   dev:mobile:
     desc: Start HTTPS Vite dev server (Tailscale cert) and sync to Capacitor for live reload
