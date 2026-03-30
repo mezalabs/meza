@@ -10,6 +10,7 @@ import {
   sendFriendRequest,
   useFriendStore,
 } from '@meza/core';
+import { ClockIcon, UsersThreeIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { Avatar } from '../shared/Avatar.tsx';
@@ -59,7 +60,9 @@ export function FriendsPane({ tab: initialTab }: { tab?: Tab }) {
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'all' && <AllFriendsTab friends={friends} />}
+        {activeTab === 'all' && (
+          <AllFriendsTab friends={friends} onSwitchTab={setActiveTab} />
+        )}
         {activeTab === 'pending' && (
           <PendingTab incoming={incomingRequests} outgoing={outgoingRequests} />
         )}
@@ -100,17 +103,36 @@ function TabButton({
   );
 }
 
-function AllFriendsTab({ friends }: { friends: User[] }) {
+function AllFriendsTab({
+  friends,
+  onSwitchTab,
+}: {
+  friends: User[];
+  onSwitchTab: (tab: Tab) => void;
+}) {
   const setPaneContent = useTilingStore((s) => s.setPaneContent);
   const focusedPaneId = useTilingStore((s) => s.focusedPaneId);
 
   if (friends.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-text-subtle text-sm p-8">
-        <p>No friends yet.</p>
-        <p className="mt-1 text-xs">
-          Add friends from profile cards or member lists throughout Meza.
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <UsersThreeIcon
+          size={48}
+          className="text-text-subtle mb-4"
+          aria-hidden="true"
+        />
+        <p className="text-text-muted font-medium">No friends yet</p>
+        <p className="mt-2 text-xs text-text-subtle max-w-xs">
+          Add friends by their Meza username, or from profile cards and member
+          lists throughout Meza.
         </p>
+        <button
+          type="button"
+          className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-black hover:bg-accent-hover transition-colors"
+          onClick={() => onSwitchTab('add')}
+        >
+          Add Friend
+        </button>
       </div>
     );
   }
@@ -178,8 +200,13 @@ function PendingTab({
         </>
       )}
       {incoming.length === 0 && outgoing.length === 0 && (
-        <div className="flex items-center justify-center h-32 text-text-subtle text-sm">
-          No pending requests
+        <div className="flex flex-col items-center justify-center h-32 text-center">
+          <ClockIcon
+            size={32}
+            className="text-text-subtle mb-2"
+            aria-hidden="true"
+          />
+          <p className="text-text-subtle text-sm">No pending requests</p>
         </div>
       )}
     </div>
@@ -254,7 +281,7 @@ function AddFriendTab() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 max-w-md mx-auto">
+    <div className="flex flex-col items-center p-8 pt-16 max-w-md mx-auto">
       <p className="font-medium text-text-primary">Add Friend</p>
       <p className="mt-2 text-center text-xs text-text-subtle">
         You can add a friend with their Meza username.
@@ -310,7 +337,7 @@ function FriendRow({
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-tertiary/50 transition-colors group">
+    <div className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-tertiary/50 transition-colors">
       <Avatar
         avatarUrl={user.avatarUrl}
         displayName={user.displayName || user.username || '?'}
@@ -324,7 +351,7 @@ function FriendRow({
           @{user.username}
         </div>
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1">
         <button
           type="button"
           className="px-2.5 py-1 text-xs font-medium rounded bg-bg-tertiary text-text-primary hover:bg-bg-hover transition-colors"

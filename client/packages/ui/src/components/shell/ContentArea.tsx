@@ -18,6 +18,7 @@ import {
 import {
   AtIcon,
   BookOpenIcon,
+  ChatCircleDotsIcon,
   EnvelopeOpenIcon,
   GearIcon,
   HashIcon,
@@ -41,6 +42,7 @@ import { ChannelView } from '../chat/ChannelView.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { MessageRequestsPane } from '../chat/MessageRequestsPane.tsx';
 import { SearchPane } from '../chat/SearchPane.tsx';
+import { DMsHomePane } from '../dm/DMsHomePane.tsx';
 import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
@@ -169,6 +171,8 @@ function paneMeta(
       return { label: 'Message Requests' };
     case 'friends':
       return { label: 'Friends' };
+    case 'dmsHome':
+      return { label: 'Messages' };
     case 'empty':
       return { label: 'Empty' };
   }
@@ -243,6 +247,8 @@ function renderPaneContent(
       return <MessageRequestsPane />;
     case 'friends':
       return <FriendsPane tab={content.tab} />;
+    case 'dmsHome':
+      return <DMsHomePane paneId={opts.paneId} />;
     case 'search':
       return (
         <SearchPane
@@ -297,6 +303,8 @@ function paneIcon(
       return <EnvelopeOpenIcon {...sm} aria-hidden="true" />;
     case 'friends':
       return <UsersThreeIcon {...sm} aria-hidden="true" />;
+    case 'dmsHome':
+      return <ChatCircleDotsIcon {...sm} aria-hidden="true" />;
     case 'empty':
       return <HashIcon weight="regular" {...sm} aria-hidden="true" />;
   }

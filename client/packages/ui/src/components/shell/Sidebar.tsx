@@ -459,7 +459,25 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                   : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
               }`}
               title="Direct Messages"
-              onClick={selectDMs}
+              onClick={() => {
+                selectDMs();
+                if (!isMobile) {
+                  const {
+                    focusedPaneId: fpId,
+                    panes,
+                    setPaneContent: setPC,
+                  } = useTilingStore.getState();
+                  const current = panes[fpId];
+                  const isDMRelated =
+                    current?.type === 'dm' ||
+                    current?.type === 'dmsHome' ||
+                    current?.type === 'friends' ||
+                    current?.type === 'messageRequests';
+                  if (!isDMRelated) {
+                    setPC(fpId, { type: 'dmsHome' });
+                  }
+                }
+              }}
             >
               <MezaIcon className="h-7 w-7 md:h-6 md:w-6" />
               {totalDMNotifications > 0 && !showDMs && (
@@ -540,9 +558,19 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
           {showDMs ? (
             <>
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle">
+                <button
+                  type="button"
+                  className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle hover:text-text transition-colors"
+                  onClick={() => {
+                    if (sidebarFocusedPaneId) {
+                      sidebarSetPaneContent(sidebarFocusedPaneId, {
+                        type: 'dmsHome',
+                      });
+                    }
+                  }}
+                >
                   Direct Messages
-                </h2>
+                </button>
                 <button
                   type="button"
                   className="flex h-5 w-5 items-center justify-center rounded text-text-subtle hover:text-text hover:bg-bg-tertiary transition-colors"

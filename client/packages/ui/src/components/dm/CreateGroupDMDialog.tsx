@@ -196,7 +196,7 @@ export function CreateGroupDMDialog({
                 <button
                   type="button"
                   disabled={isSubmitting}
-                  className="rounded-md bg-bg-surface px-3 py-1.5 text-sm text-text-muted hover:bg-bg-elevated hover:text-text disabled:opacity-50"
+                  className="rounded-md border border-border bg-bg-elevated px-3 py-1.5 text-sm text-text-muted hover:bg-bg-tertiary hover:text-text disabled:opacity-50"
                 >
                   Cancel
                 </button>
