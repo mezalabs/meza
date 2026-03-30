@@ -1,7 +1,5 @@
 import {
-  getMediaURL,
   useAuthStore,
-  useEmojiStore,
   useReactionStore,
   useUsersStore,
 } from '@meza/core';
@@ -9,8 +7,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { memo, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { Avatar } from '../shared/Avatar.tsx';
-
-const CUSTOM_EMOJI_RE = /^<(a?):([a-z0-9_]{2,32}):([a-zA-Z0-9]+)>$/;
+import { EmojiDisplay } from './EmojiDisplay.tsx';
 
 interface ReactionsDialogProps {
   messageId: string;
@@ -83,7 +80,12 @@ export function ReactionsDialog({
                       : 'text-text-muted hover:bg-bg-surface hover:text-text'
                   }`}
                 >
-                  <EmojiDisplay emoji={group.emoji} serverId={serverId} />
+                  <EmojiDisplay
+                    emoji={group.emoji}
+                    serverId={serverId}
+                    imgClassName="inline-block h-5 w-5 object-contain"
+                    fontSize={20}
+                  />
                   <span className="text-xs">{group.userIds.length}</span>
                 </button>
               ))}
@@ -145,35 +147,3 @@ const ReactionUser = memo(function ReactionUser({
     </div>
   );
 });
-
-function EmojiDisplay({
-  emoji,
-  serverId,
-}: {
-  emoji: string;
-  serverId?: string;
-}) {
-  const match = CUSTOM_EMOJI_RE.exec(emoji);
-  const emojis = useEmojiStore((s) =>
-    serverId ? s.byServer[serverId] : undefined,
-  );
-
-  if (match) {
-    const [, , name, id] = match;
-    const custom = emojis?.find((e) => e.id === id);
-    if (custom) {
-      const attachmentId = custom.imageUrl.replace('/media/', '');
-      return (
-        <img
-          src={getMediaURL(attachmentId)}
-          alt={`:${name}:`}
-          className="inline-block h-5 w-5 object-contain"
-          loading="lazy"
-        />
-      );
-    }
-    return <span>:{name}:</span>;
-  }
-
-  return <span style={{ fontSize: 20 }}>{emoji}</span>;
-}
