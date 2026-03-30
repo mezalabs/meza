@@ -8,6 +8,7 @@ import {
   screen,
   session,
 } from 'electron';
+import { DEFAULT_SERVER_URL } from './constants.js';
 import {
   extractDeepLinkFromArgs,
   handleDeepLink,
@@ -18,8 +19,6 @@ import { showScreenPicker } from './screenPicker.js';
 import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
-
-import { DEFAULT_SERVER_URL } from './constants.js';
 
 // On Linux, enable PipeWire-based screen capture so getDisplayMedia() goes
 // through xdg-desktop-portal natively (single dialog, no desktopCapturer).
