@@ -97,11 +97,13 @@ export function DMsHomePane({ paneId }: { paneId: PaneId }) {
               </span>
             </SectionHeader>
             <div className="space-y-0.5">
-              {incomingRequests.slice(0, 4).map((req) =>
-                req.user ? (
-                  <FriendRequestRow key={req.user.id} request={req} />
-                ) : null,
-              )}
+              {incomingRequests
+                .slice(0, 4)
+                .map((req) =>
+                  req.user ? (
+                    <FriendRequestRow key={req.user.id} request={req} />
+                  ) : null,
+                )}
               {incomingRequests.length >= 5 && (
                 <ViewAllRow
                   label={`View all ${incomingRequests.length} pending requests`}
@@ -113,16 +115,14 @@ export function DMsHomePane({ paneId }: { paneId: PaneId }) {
                   }
                 />
               )}
-              {messageRequests
-                .slice(0, 4)
-                .map((req) => (
-                  <MessageRequestRow
-                    key={req.channel?.id}
-                    request={req}
-                    currentUserId={currentUserId}
-                    paneId={paneId}
-                  />
-                ))}
+              {messageRequests.slice(0, 4).map((req) => (
+                <MessageRequestRow
+                  key={req.channel?.id}
+                  request={req}
+                  currentUserId={currentUserId}
+                  paneId={paneId}
+                />
+              ))}
               {messageRequests.length >= 5 && (
                 <ViewAllRow
                   label={`View all ${messageRequests.length} message requests`}
@@ -358,10 +358,7 @@ function MessageRequestRow({
       <div className="flex-1 min-w-0">
         {other ? (
           <ProfilePopoverCard userId={other.id}>
-            <button
-              type="button"
-              className="cursor-pointer hover:underline"
-            >
+            <button type="button" className="cursor-pointer hover:underline">
               {nameEl}
             </button>
           </ProfilePopoverCard>
