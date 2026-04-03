@@ -45,8 +45,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Validate inputs
+        env:
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
         run: |
-          if [ "${{ inputs.desktop_bump }}" = "skip" ] && [ "${{ inputs.mobile_bump }}" = "skip" ] && [ "${{ inputs.server_bump }}" = "skip" ]; then
+          if [ "$DESKTOP_BUMP" = "skip" ] && [ "$MOBILE_BUMP" = "skip" ] && [ "$SERVER_BUMP" = "skip" ]; then
             echo "::error::At least one bump level (desktop, mobile, or server) must be selected"
             exit 1
           fi
@@ -62,6 +66,10 @@ jobs:
 
       - name: Compute new versions
         id: versions
+        env:
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
         run: |
           bump_version() {
             local current="$1" level="$2"
@@ -74,24 +82,28 @@ jobs:
             " "$current" "$level"
           }
 
-          if [ "${{ inputs.desktop_bump }}" != "skip" ]; then
+          if [ "$DESKTOP_BUMP" != "skip" ]; then
             CURRENT=$(node -p "require('./client/packages/desktop/package.json').version")
-            DESKTOP=$(bump_version "$CURRENT" "${{ inputs.desktop_bump }}")
-            echo "Desktop: $CURRENT → $DESKTOP (${{ inputs.desktop_bump }})"
+            DESKTOP=$(bump_version "$CURRENT" "$DESKTOP_BUMP")
+            echo "Desktop: $CURRENT → $DESKTOP ($DESKTOP_BUMP)"
             echo "desktop=$DESKTOP" >> "$GITHUB_OUTPUT"
           fi
 
-          if [ "${{ inputs.mobile_bump }}" != "skip" ]; then
+          if [ "$MOBILE_BUMP" != "skip" ]; then
             CURRENT=$(node -p "require('./client/packages/mobile/package.json').version")
-            MOBILE=$(bump_version "$CURRENT" "${{ inputs.mobile_bump }}")
-            echo "Mobile: $CURRENT → $MOBILE (${{ inputs.mobile_bump }})"
+            MOBILE=$(bump_version "$CURRENT" "$MOBILE_BUMP")
+            echo "Mobile: $CURRENT → $MOBILE ($MOBILE_BUMP)"
             echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
           fi
 
-          if [ "${{ inputs.server_bump }}" != "skip" ]; then
+          if [ "$SERVER_BUMP" != "skip" ]; then
             CURRENT=$(cat server/VERSION | tr -d '[:space:]')
-            SERVER=$(bump_version "$CURRENT" "${{ inputs.server_bump }}")
-            echo "Server: $CURRENT → $SERVER (${{ inputs.server_bump }})"
+            if ! echo "$CURRENT" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::Invalid version in server/VERSION: $CURRENT"
+              exit 1
+            fi
+            SERVER=$(bump_version "$CURRENT" "$SERVER_BUMP")
+            echo "Server: $CURRENT → $SERVER ($SERVER_BUMP)"
             echo "server=$SERVER" >> "$GITHUB_OUTPUT"
           fi
 
@@ -153,7 +165,6 @@ jobs:
 
           echo "branch=release/${PARTS}" >> "$GITHUB_OUTPUT"
           echo "message=chore: bump ${MSGS}" >> "$GITHUB_OUTPUT"
-          echo "title=chore: bump ${MSGS}" >> "$GITHUB_OUTPUT"
 
       - name: Bump version files
         env:
@@ -245,7 +256,7 @@ jobs:
       - name: Create PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ steps.meta.outputs.title }}
+          PR_TITLE: ${{ steps.meta.outputs.message }}
         run: |
           gh label create release --description "Automated release PR" --color "0e8a16" 2>/dev/null || true
 
