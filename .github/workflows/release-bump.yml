@@ -3,12 +3,36 @@ name: Release Bump
 on:
   workflow_dispatch:
     inputs:
-      desktop_version:
-        description: 'Desktop version to release (e.g., 0.0.16). Leave empty to skip.'
+      desktop_bump:
+        description: 'Desktop version bump'
         required: false
-      mobile_version:
-        description: 'Mobile version to release (e.g., 0.0.8). Leave empty to skip.'
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+      mobile_bump:
+        description: 'Mobile version bump'
         required: false
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+      server_bump:
+        description: 'Server version bump'
+        required: false
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
@@ -22,23 +46,12 @@ jobs:
     steps:
       - name: Validate inputs
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
         run: |
-          if [ -z "$DESKTOP" ] && [ -z "$MOBILE" ]; then
-            echo "::error::At least one version (desktop or mobile) must be provided"
-            exit 1
-          fi
-
-          SEMVER_RE='^[0-9]+\.[0-9]+\.[0-9]+$'
-
-          if [ -n "$DESKTOP" ] && ! echo "$DESKTOP" | grep -qE "$SEMVER_RE"; then
-            echo "::error::Invalid desktop version '$DESKTOP' — must be semver (e.g., 0.0.16)"
-            exit 1
-          fi
-
-          if [ -n "$MOBILE" ] && ! echo "$MOBILE" | grep -qE "$SEMVER_RE"; then
-            echo "::error::Invalid mobile version '$MOBILE' — must be semver (e.g., 0.0.8)"
+          if [ "$DESKTOP_BUMP" = "skip" ] && [ "$MOBILE_BUMP" = "skip" ] && [ "$SERVER_BUMP" = "skip" ]; then
+            echo "::error::At least one bump level (desktop, mobile, or server) must be selected"
             exit 1
           fi
 
@@ -51,35 +64,54 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate versions against current
+      - name: Compute new versions
+        id: versions
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
         run: |
-          version_gt() {
+          bump_version() {
+            local current="$1" level="$2"
             node -e "
-              const [a, b] = [process.argv[1], process.argv[2]].map(v => v.split('.').map(Number));
-              const gt = b[0] > a[0] || (b[0] === a[0] && b[1] > a[1]) || (b[0] === a[0] && b[1] === a[1] && b[2] > a[2]);
-              if (!gt) { console.error('Version ' + process.argv[2] + ' must be greater than current ' + process.argv[1]); process.exit(1); }
-            " "$1" "$2"
+              const [major, minor, patch] = process.argv[1].split('.').map(Number);
+              const level = process.argv[2];
+              if (level === 'major') console.log((major+1) + '.0.0');
+              else if (level === 'minor') console.log(major + '.' + (minor+1) + '.0');
+              else console.log(major + '.' + minor + '.' + (patch+1));
+            " "$current" "$level"
           }
 
-          if [ -n "$DESKTOP" ]; then
+          if [ "$DESKTOP_BUMP" != "skip" ]; then
             CURRENT=$(node -p "require('./client/packages/desktop/package.json').version")
-            echo "Desktop: current=$CURRENT, new=$DESKTOP"
-            version_gt "$CURRENT" "$DESKTOP"
+            DESKTOP=$(bump_version "$CURRENT" "$DESKTOP_BUMP")
+            echo "Desktop: $CURRENT → $DESKTOP ($DESKTOP_BUMP)"
+            echo "desktop=$DESKTOP" >> "$GITHUB_OUTPUT"
           fi
 
-          if [ -n "$MOBILE" ]; then
+          if [ "$MOBILE_BUMP" != "skip" ]; then
             CURRENT=$(node -p "require('./client/packages/mobile/package.json').version")
-            echo "Mobile: current=$CURRENT, new=$MOBILE"
-            version_gt "$CURRENT" "$MOBILE"
+            MOBILE=$(bump_version "$CURRENT" "$MOBILE_BUMP")
+            echo "Mobile: $CURRENT → $MOBILE ($MOBILE_BUMP)"
+            echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$SERVER_BUMP" != "skip" ]; then
+            CURRENT=$(cat server/VERSION | tr -d '[:space:]')
+            if ! echo "$CURRENT" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::Invalid version in server/VERSION: $CURRENT"
+              exit 1
+            fi
+            SERVER=$(bump_version "$CURRENT" "$SERVER_BUMP")
+            echo "Server: $CURRENT → $SERVER ($SERVER_BUMP)"
+            echo "server=$SERVER" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check tags do not already exist
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
         run: |
           if [ -n "$DESKTOP" ] && git rev-parse "desktop-v${DESKTOP}" >/dev/null 2>&1; then
             echo "::error::Tag desktop-v${DESKTOP} already exists"
@@ -88,6 +120,11 @@ jobs:
 
           if [ -n "$MOBILE" ] && git rev-parse "mobile-v${MOBILE}" >/dev/null 2>&1; then
             echo "::error::Tag mobile-v${MOBILE} already exists"
+            exit 1
+          fi
+
+          if [ -n "$SERVER" ] && git rev-parse "v${SERVER}" >/dev/null 2>&1; then
+            echo "::error::Tag v${SERVER} already exists"
             exit 1
           fi
 
@@ -104,27 +141,36 @@ jobs:
       - name: Determine branch name and commit message
         id: meta
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
         run: |
-          if [ -n "$DESKTOP" ] && [ -n "$MOBILE" ]; then
-            echo "branch=release/desktop-${DESKTOP}-mobile-${MOBILE}" >> "$GITHUB_OUTPUT"
-            echo "message=chore: bump desktop to ${DESKTOP}, mobile to ${MOBILE}" >> "$GITHUB_OUTPUT"
-            echo "title=chore: bump desktop to ${DESKTOP}, mobile to ${MOBILE}" >> "$GITHUB_OUTPUT"
-          elif [ -n "$DESKTOP" ]; then
-            echo "branch=release/desktop-${DESKTOP}" >> "$GITHUB_OUTPUT"
-            echo "message=chore(desktop): bump version to ${DESKTOP}" >> "$GITHUB_OUTPUT"
-            echo "title=chore(desktop): bump version to ${DESKTOP}" >> "$GITHUB_OUTPUT"
-          else
-            echo "branch=release/mobile-${MOBILE}" >> "$GITHUB_OUTPUT"
-            echo "message=chore(mobile): bump version to ${MOBILE}" >> "$GITHUB_OUTPUT"
-            echo "title=chore(mobile): bump version to ${MOBILE}" >> "$GITHUB_OUTPUT"
+          PARTS=""
+          MSGS=""
+
+          if [ -n "$DESKTOP" ]; then
+            PARTS="${PARTS:+${PARTS}-}desktop-${DESKTOP}"
+            MSGS="${MSGS:+${MSGS}, }desktop to ${DESKTOP}"
           fi
+
+          if [ -n "$MOBILE" ]; then
+            PARTS="${PARTS:+${PARTS}-}mobile-${MOBILE}"
+            MSGS="${MSGS:+${MSGS}, }mobile to ${MOBILE}"
+          fi
+
+          if [ -n "$SERVER" ]; then
+            PARTS="${PARTS:+${PARTS}-}server-${SERVER}"
+            MSGS="${MSGS:+${MSGS}, }server to ${SERVER}"
+          fi
+
+          echo "branch=release/${PARTS}" >> "$GITHUB_OUTPUT"
+          echo "message=chore: bump ${MSGS}" >> "$GITHUB_OUTPUT"
 
       - name: Bump version files
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
         run: |
           if [ -n "$DESKTOP" ]; then
             jq --arg v "$DESKTOP" '.version = $v' client/packages/desktop/package.json > tmp.json
@@ -145,6 +191,11 @@ jobs:
             echo "Bumped mobile to $MOBILE"
           fi
 
+          if [ -n "$SERVER" ]; then
+            echo "$SERVER" > server/VERSION
+            echo "Bumped server to $SERVER"
+          fi
+
       - name: Create branch, commit, and push
         env:
           BRANCH: ${{ steps.meta.outputs.branch }}
@@ -156,14 +207,16 @@ jobs:
           git add client/packages/desktop/package.json \
                   client/packages/mobile/package.json \
                   client/packages/mobile/android/app/build.gradle \
-                  client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
+                  client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj \
+                  server/VERSION
           git commit -m "$MESSAGE"
           git push -u origin "$BRANCH"
 
       - name: Build PR body
         env:
-          DESKTOP: ${{ inputs.desktop_version }}
-          MOBILE: ${{ inputs.mobile_version }}
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
         run: |
           {
@@ -186,6 +239,14 @@ jobs:
               fi
             fi
 
+            if [ -n "$SERVER" ]; then
+              PREV_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+              echo "- **Server:** \`${PREV_TAG:-none}\` → \`v${SERVER}\`"
+              if [ -n "$PREV_TAG" ]; then
+                echo "  - [Changes since ${PREV_TAG}](${REPO_URL}/compare/${PREV_TAG}...HEAD)"
+              fi
+            fi
+
             echo ""
             echo "---"
             echo ""
@@ -195,7 +256,7 @@ jobs:
       - name: Create PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_TITLE: ${{ steps.meta.outputs.title }}
+          PR_TITLE: ${{ steps.meta.outputs.message }}
         run: |
           gh label create release --description "Automated release PR" --color "0e8a16" 2>/dev/null || true
 
