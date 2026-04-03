@@ -164,18 +164,31 @@ try {
   // --- OS detection + download button logic ---
   const ua = navigator.userAgent.toLowerCase();
   let os = 'linux';
-  if (ua.includes('mac')) os = 'macos';
+  if (/android|iphone|ipad|ipod/.test(ua)) os = 'mobile';
+  else if (ua.includes('mac')) os = 'macos';
   else if (ua.includes('win')) os = 'windows';
 
-  const match = document.querySelector(`.download-btn[data-os="${os}"]`);
   const primary = document.getElementById('download-primary');
-  if (match instanceof HTMLAnchorElement && primary instanceof HTMLAnchorElement) {
-    primary.href = match.href;
-    primary.textContent = match.textContent;
-  }
-
   const toggle = document.getElementById('download-toggle');
   const dropdown = document.getElementById('download-dropdown');
+
+  if (os === 'mobile') {
+    // On mobile, replace download button with a link to the repo
+    if (primary instanceof HTMLAnchorElement) {
+      primary.href = 'https://github.com/mezalabs/meza';
+      primary.textContent = 'View the code';
+      primary.classList.remove('rounded-l-lg');
+      primary.classList.add('rounded-lg');
+    }
+    if (toggle) toggle.style.display = 'none';
+  } else {
+    const match = document.querySelector(`.download-btn[data-os="${os}"]`);
+    if (match instanceof HTMLAnchorElement && primary instanceof HTMLAnchorElement) {
+      primary.href = match.href;
+      primary.textContent = match.textContent;
+    }
+  }
+
   if (toggle && dropdown) {
     toggle.addEventListener('click', () => {
       const open = !dropdown.classList.contains('hidden');

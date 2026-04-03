@@ -13,6 +13,7 @@ const RELEASES_URL = 'https://github.com/mezalabs/meza/releases';
 
     <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center md:mt-12">
       <a
+        id="cta-download"
         href={RELEASES_URL}
         target="_blank"
         rel="noopener noreferrer"
@@ -33,3 +34,25 @@ const RELEASES_URL = 'https://github.com/mezalabs/meza/releases';
     </p>
   </div>
 </section>
+
+<script>
+  const ua = navigator.userAgent.toLowerCase();
+  let os = 'linux';
+  if (/android|iphone|ipad|ipod/.test(ua)) os = 'mobile';
+  else if (ua.includes('mac')) os = 'macos';
+  else if (ua.includes('win')) os = 'windows';
+
+  const cta = document.getElementById('cta-download');
+  if (cta instanceof HTMLAnchorElement) {
+    if (os === 'mobile') {
+      cta.href = 'https://github.com/mezalabs/meza';
+      cta.textContent = 'View the code';
+    } else {
+      const match = document.querySelector(`.download-btn[data-os="${os}"]`);
+      if (match instanceof HTMLAnchorElement) {
+        cta.href = match.href;
+        cta.textContent = match.textContent;
+      }
+    }
+  }
+</script>
