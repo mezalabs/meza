@@ -29,6 +29,9 @@ func (s *chatService) BlockUser(ctx context.Context, req *connect.Request[v1.Blo
 	if userID == targetID {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot block yourself"))
 	}
+	if targetID == models.SystemUserID {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot block system user"))
+	}
 
 	// Block the user and remove any friendship atomically in a single transaction.
 	// This prevents inconsistent state where the block succeeds but friendship removal fails.

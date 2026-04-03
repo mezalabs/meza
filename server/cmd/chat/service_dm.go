@@ -27,8 +27,8 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 	if recipientID == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("recipient_id is required"))
 	}
-	if userID == recipientID {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot DM yourself"))
+	if recipientID == models.SystemUserID {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create DM with system user"))
 	}
 
 	// Per-user rate limit: 20 DM creations per 60 seconds.
@@ -36,26 +36,35 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 		return nil, err
 	}
 
-	// Verify recipient exists.
-	recipient, err := s.authStore.GetUserByID(ctx, recipientID)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("recipient not found"))
-	}
+	isSelfDM := userID == recipientID
 
+	// Verify recipient exists (for self-DMs, caller IS the recipient).
+	var recipient *models.User
 	caller, err := s.authStore.GetUserByID(ctx, userID)
 	if err != nil {
 		slog.Error("getting caller user", "err", err, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
-
-	// Block check: either direction blocks the DM.
-	blocked, err := s.blockStore.IsBlockedEither(ctx, userID, recipientID)
-	if err != nil {
-		slog.Error("checking block status", "err", err, "user", userID, "recipient", recipientID)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	if isSelfDM {
+		recipient = caller
+	} else {
+		recipient, err = s.authStore.GetUserByID(ctx, recipientID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeNotFound, errors.New("recipient not found"))
+		}
 	}
-	if blocked {
-		return nil, errUnableToMessage
+
+	// Self-DMs skip block checks, privacy checks, and friendship checks.
+	if !isSelfDM {
+		// Block check: either direction blocks the DM.
+		blocked, err := s.blockStore.IsBlockedEither(ctx, userID, recipientID)
+		if err != nil {
+			slog.Error("checking block status", "err", err, "user", userID, "recipient", recipientID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if blocked {
+			return nil, errUnableToMessage
+		}
 	}
 
 	// Check for existing DM channel.
@@ -67,6 +76,15 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 	if existing != nil {
 		switch existing.DMStatus {
 		case "declined":
+			if isSelfDM {
+				// Self-DMs should never be declined, but recover gracefully.
+				if err := s.chatStore.UpdateDMStatus(ctx, existing.ID, "active"); err != nil {
+					slog.Error("reactivating self-DM", "err", err, "channel", existing.ID)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				existing.DMStatus = "active"
+				return s.buildDMResponse(existing, caller, recipient, false), nil
+			}
 			if existing.DMInitiatorID == userID {
 				// Sender re-opens a declined channel: return silently, no status change.
 				return s.buildDMResponse(existing, caller, recipient, false), nil
@@ -84,54 +102,57 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 		}
 	}
 
-	// No existing channel — check recipient's dm_privacy setting.
+	// No existing channel — determine dm_status and dm_initiator_id.
 	dmStatus := "active"
 	dmInitiatorID := ""
 
-	// Check friendship once up front — used by friends, mutual_servers, and message_requests cases.
-	areFriends, err := s.friendStore.AreFriends(ctx, userID, recipientID)
-	if err != nil {
-		slog.Error("checking friendship for DM privacy", "err", err, "user", userID, "recipient", recipientID)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-	}
-
-	switch recipient.DMPrivacy {
-	case "nobody":
-		return nil, errUnableToMessage
-
-	case "friends":
-		if !areFriends {
-			dmStatus = "pending"
-			dmInitiatorID = userID
+	// Self-DMs are always active with no initiator.
+	if !isSelfDM {
+		// Check friendship once up front — used by friends, mutual_servers, and message_requests cases.
+		areFriends, err := s.friendStore.AreFriends(ctx, userID, recipientID)
+		if err != nil {
+			slog.Error("checking friendship for DM privacy", "err", err, "user", userID, "recipient", recipientID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
 
-	case "mutual_servers":
-		if !areFriends {
-			mutual, err := s.chatStore.ShareAnyServer(ctx, userID, recipientID)
-			if err != nil {
-				slog.Error("checking mutual servers", "err", err, "user", userID, "recipient", recipientID)
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			if !mutual {
-				return nil, errUnableToMessage
-			}
-		}
+		switch recipient.DMPrivacy {
+		case "nobody":
+			return nil, errUnableToMessage
 
-	case "message_requests":
-		if !areFriends {
-			mutual, err := s.chatStore.ShareAnyServer(ctx, userID, recipientID)
-			if err != nil {
-				slog.Error("checking mutual servers", "err", err, "user", userID, "recipient", recipientID)
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-			}
-			if !mutual {
+		case "friends":
+			if !areFriends {
 				dmStatus = "pending"
 				dmInitiatorID = userID
 			}
-		}
 
-	case "anyone", "":
-		// No gating.
+		case "mutual_servers":
+			if !areFriends {
+				mutual, err := s.chatStore.ShareAnyServer(ctx, userID, recipientID)
+				if err != nil {
+					slog.Error("checking mutual servers", "err", err, "user", userID, "recipient", recipientID)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				if !mutual {
+					return nil, errUnableToMessage
+				}
+			}
+
+		case "message_requests":
+			if !areFriends {
+				mutual, err := s.chatStore.ShareAnyServer(ctx, userID, recipientID)
+				if err != nil {
+					slog.Error("checking mutual servers", "err", err, "user", userID, "recipient", recipientID)
+					return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+				}
+				if !mutual {
+					dmStatus = "pending"
+					dmInitiatorID = userID
+				}
+			}
+
+		case "anyone", "":
+			// No gating.
+		}
 	}
 
 	ch, created, err := s.chatStore.CreateDMChannel(ctx, userID, recipientID, dmStatus, dmInitiatorID)
@@ -143,7 +164,9 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 	if created {
 		// Notify gateways for channel subscription refresh.
 		s.nc.Publish(subjects.UserSubscription(userID), nil)
-		s.nc.Publish(subjects.UserSubscription(recipientID), nil)
+		if !isSelfDM {
+			s.nc.Publish(subjects.UserSubscription(recipientID), nil)
+		}
 
 		// If pending, publish DM_REQUEST_RECEIVED event to recipient.
 		if dmStatus == "pending" {
@@ -155,9 +178,12 @@ func (s *chatService) CreateOrGetDMChannel(ctx context.Context, req *connect.Req
 }
 
 func (s *chatService) buildDMResponse(ch *models.Channel, caller, recipient *models.User, created bool) *connect.Response[v1.CreateOrGetDMChannelResponse] {
-	participants := []*v1.User{
-		userToProto(caller),
-		userToProto(recipient),
+	var participants []*v1.User
+	if caller.ID == recipient.ID {
+		// Self-DM: single participant.
+		participants = []*v1.User{userToProto(caller)}
+	} else {
+		participants = []*v1.User{userToProto(caller), userToProto(recipient)}
 	}
 	return connect.NewResponse(&v1.CreateOrGetDMChannelResponse{
 		DmChannel: &v1.DMChannel{
@@ -274,6 +300,9 @@ func (s *chatService) CreateGroupDMChannel(ctx context.Context, req *connect.Req
 	participants = append(participants, caller)
 
 	for _, pid := range validIDs {
+		if pid == models.SystemUserID {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot add system user to group DM"))
+		}
 		blocked, err := s.blockStore.IsBlockedEither(ctx, userID, pid)
 		if err != nil {
 			slog.Error("checking block status", "err", err, "user", userID, "participant", pid)
