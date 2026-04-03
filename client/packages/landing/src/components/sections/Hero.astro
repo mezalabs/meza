@@ -39,7 +39,7 @@ try {
 <!-- Extra height on lg creates a scroll runway that drives the animation -->
 <section class="relative lg:h-[200vh]" id="hero-scroll">
   <div
-    class="relative flex min-h-screen items-center px-6 pt-20 pb-16 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
+    class="relative flex min-h-screen items-center px-6 pt-20 pb-16 md:px-8 md:pt-28 md:pb-20 lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden"
     id="hero-sticky"
   >
     <div class="relative mx-auto w-full max-w-7xl">
@@ -51,7 +51,7 @@ try {
           Private conversations, zero compromises
         </h1>
 
-        <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl lg:mx-0">
+        <p data-decrypt class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-muted sm:text-xl lg:mx-0">
           End-to-end encrypted group chat with voice, video, and text.
           Open source and self-hostable. No tracking, no ads, ever.
         </p>
@@ -126,7 +126,7 @@ try {
       </div>
 
       <!-- App screenshot — absolutely positioned behind text on lg -->
-      <div id="hero-image-wrap" class="mt-12 lg:absolute lg:inset-y-0 lg:left-[25%] lg:right-[-3%] lg:mt-0 lg:flex lg:items-center [perspective:1200px]">
+      <div id="hero-image-wrap" class="mt-12 md:mt-16 lg:absolute lg:inset-y-0 lg:left-[25%] lg:right-[-3%] lg:mt-0 lg:flex lg:items-center [perspective:1200px]">
       <div
         id="hero-image"
         class="overflow-hidden rounded-xl border border-border shadow-2xl will-change-transform [transform-style:preserve-3d] lg:[transform:rotateY(-25deg)]"

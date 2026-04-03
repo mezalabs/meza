@@ -21,3 +21,79 @@ import Footer from '../components/Footer.astro';
   </main>
   <Footer />
 </Layout>
+
+<script>
+  // --- Decryption reveal effect for all [data-decrypt] subtitles ---
+  const CIPHER =
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' +
+    '!@#$%^&*+-=~<>?' +
+    'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ';
+
+  const TICK = 30;
+  const DURATION_FRAMES = 25; // ~0.75s total
+
+  function runDecrypt(el: HTMLElement) {
+    const finalText = el.textContent!.replace(/\s+/g, ' ').trim();
+    const len = finalText.length;
+
+    // Each character gets a reveal frame: left-to-right sweep with random jitter
+    const chars: { ch: string; revealAt: number }[] = [];
+    for (let i = 0; i < len; i++) {
+      const ch = finalText[i];
+      if (ch === ' ') {
+        chars.push({ ch, revealAt: 0 });
+      } else {
+        const t = i / len;
+        const jitter = (Math.random() - 0.5) * 0.2;
+        chars.push({
+          ch,
+          revealAt: Math.max(1, Math.round((t + jitter) * DURATION_FRAMES)),
+        });
+      }
+    }
+
+    let frame = 0;
+
+    function render() {
+      let out = '';
+      for (const c of chars) {
+        if (frame >= c.revealAt) {
+          out += c.ch;
+        } else {
+          out += CIPHER[Math.floor(Math.random() * CIPHER.length)];
+        }
+      }
+      el.textContent = out;
+    }
+
+    // Start scrambled
+    render();
+
+    const id = setInterval(() => {
+      frame++;
+      render();
+      if (frame >= DURATION_FRAMES) {
+        clearInterval(id);
+        el.textContent = finalText;
+      }
+    }, TICK);
+  }
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const targets = document.querySelectorAll<HTMLElement>('[data-decrypt]');
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            observer.unobserve(entry.target);
+            runDecrypt(entry.target as HTMLElement);
+          }
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  }
+</script>
