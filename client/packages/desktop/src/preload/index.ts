@@ -5,9 +5,24 @@ type UpdateUrgency = 'patch' | 'minor' | 'major';
 type UpdateStatus =
   | { state: 'idle' }
   | { state: 'checking' }
-  | { state: 'available'; version: string; urgency: UpdateUrgency; releaseUrl: string }
-  | { state: 'downloading'; version: string; urgency: UpdateUrgency; percent: number }
-  | { state: 'ready'; version: string; urgency: UpdateUrgency; releaseNotes: string | null }
+  | {
+      state: 'available';
+      version: string;
+      urgency: UpdateUrgency;
+      releaseUrl: string;
+    }
+  | {
+      state: 'downloading';
+      version: string;
+      urgency: UpdateUrgency;
+      percent: number;
+    }
+  | {
+      state: 'ready';
+      version: string;
+      urgency: UpdateUrgency;
+      releaseNotes: string | null;
+    }
   | { state: 'error'; message: string };
 
 // Inject the API base URL so Connect-RPC requests target the server.

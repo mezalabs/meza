@@ -29,10 +29,10 @@ import {
 } from '../../stores/tiling.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
+import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
 import { ContentArea } from './ContentArea.tsx';
 import { computeDropZone } from './computeDropZone.ts';
 import { MobileShell } from './MobileShell.tsx';
-import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
 import { ShortcutHelpOverlay } from './ShortcutHelpOverlay.tsx';
 import { Sidebar } from './Sidebar.tsx';
 import { ToastContainer } from './ToastContainer.tsx';

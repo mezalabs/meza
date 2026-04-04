@@ -18,8 +18,8 @@ import {
   useInviteStore,
 } from '@meza/core';
 import {
-  initUpdateListeners,
   InviteLanding,
+  initUpdateListeners,
   LandingPage,
   resetE2EEKeyProvider,
   Shell,

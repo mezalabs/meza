@@ -30,7 +30,10 @@ export function AppUpdateBanner() {
 
 // ── Styling helpers ─────────────────────────────────────────────────────
 
-type VisibleStatus = Exclude<UpdateStatus, { state: 'idle' } | { state: 'checking' } | { state: 'error' }>;
+type VisibleStatus = Exclude<
+  UpdateStatus,
+  { state: 'idle' } | { state: 'checking' } | { state: 'error' }
+>;
 
 function bannerClass(status: VisibleStatus): string {
   const base = 'flex-shrink-0 border-b border-border bg-bg-overlay px-3 py-1.5';
@@ -47,10 +50,7 @@ function dotClass(status: VisibleStatus): string {
   return `${base} bg-accent animate-pulse`;
 }
 
-function bannerText(
-  status: VisibleStatus,
-  isLinux: boolean,
-): string {
+function bannerText(status: VisibleStatus, isLinux: boolean): string {
   const version = status.version;
 
   if (isLinux) {
@@ -69,10 +69,7 @@ function bannerText(
   return `Update v${version} available`;
 }
 
-function bannerAction(
-  status: VisibleStatus,
-  isLinux: boolean,
-) {
+function bannerAction(status: VisibleStatus, isLinux: boolean) {
   if (isLinux && 'releaseUrl' in status) {
     return (
       <a

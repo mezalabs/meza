@@ -1,4 +1,4 @@
-import { type BrowserWindow, app, ipcMain, powerMonitor } from 'electron';
+import { app, type BrowserWindow, ipcMain, powerMonitor } from 'electron';
 import pkg from 'electron-updater';
 
 const { autoUpdater } = pkg;
