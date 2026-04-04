@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
@@ -78,9 +79,9 @@ func (s *federationService) checkJTIReplay(ctx context.Context, rawToken string)
 
 // sanitizeFederationProfile validates and cleans federation profile claims.
 func sanitizeFederationProfile(displayName, avatarURL string) (string, string) {
-	// Limit display_name to 64 characters
-	if len(displayName) > 64 {
-		displayName = displayName[:64]
+	// Limit display_name to 64 runes (not bytes) to avoid splitting multi-byte UTF-8 characters
+	if utf8.RuneCountInString(displayName) > 64 {
+		displayName = string([]rune(displayName)[:64])
 	}
 	// Strip any HTML tags from display_name
 	displayName = stripHTMLTags(displayName)
