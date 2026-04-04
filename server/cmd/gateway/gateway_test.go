@@ -56,6 +56,9 @@ func (m *mockChatStoreGW) GetServer(_ context.Context, serverID string) (*models
 func (m *mockChatStoreGW) ListServers(_ context.Context, _ string) ([]*models.Server, error) {
 	return nil, nil
 }
+func (m *mockChatStoreGW) ListAllServers(_ context.Context) ([]*models.Server, error) {
+	return nil, nil
+}
 func (m *mockChatStoreGW) CreateChannel(_ context.Context, _, _ string, _ int, _ bool, _ string) (*models.Channel, error) {
 	return nil, fmt.Errorf("not implemented")
 }

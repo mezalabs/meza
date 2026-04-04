@@ -74,6 +74,9 @@ func (m *mockChatStore) GetServer(_ context.Context, serverID string) (*models.S
 func (m *mockChatStore) ListServers(context.Context, string) ([]*models.Server, error) {
 	panic("not implemented")
 }
+func (m *mockChatStore) ListAllServers(_ context.Context) ([]*models.Server, error) {
+	return nil, nil
+}
 func (m *mockChatStore) CreateChannel(context.Context, string, string, int, bool, string) (*models.Channel, error) {
 	panic("not implemented")
 }
