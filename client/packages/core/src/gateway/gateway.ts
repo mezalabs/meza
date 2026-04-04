@@ -585,6 +585,21 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
             maybePlaySound(soundType, msg.authorId);
           }
         }
+        // Bump the DM channel to the top of the list so the sidebar and
+        // DMs home page reflect the most-recently-active conversation.
+        // For brand-new DM channels (e.g. a friend's first message) the
+        // channel won't be in the store yet — re-fetch the full list.
+        if (isDMChannel(msg.channelId)) {
+          useDMStore.getState().bumpDMChannel(msg.channelId);
+        } else if (msg.authorId !== currentUserId) {
+          // Unknown channel that isn't a server channel — likely a new DM.
+          const isServerChannel = Object.values(
+            useChannelStore.getState().byServer,
+          ).some((chs) => chs.some((c) => c.id === msg.channelId));
+          if (!isServerChannel) {
+            fetchDMChannels().catch(() => {});
+          }
+        }
         // Index for local search (best-effort, no-ops if decrypt unavailable)
         indexIncomingMessage(msg.channelId, msg);
       } else if (

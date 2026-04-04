@@ -12,6 +12,7 @@ export interface DMState {
 export interface DMActions {
   setDMChannels: (channels: DMChannel[]) => void;
   addOrUpdateDMChannel: (channel: DMChannel) => void;
+  bumpDMChannel: (channelId: string) => void;
   removeDMChannel: (channelId: string) => void;
   addDMChannelParticipant: (channelId: string, user: User) => void;
   removeDMChannelParticipant: (channelId: string, userId: string) => void;
@@ -44,9 +45,20 @@ export const useDMStore = create<DMState & DMActions>()(
           (c) => c.channel?.id === channel.channel?.id,
         );
         if (idx !== -1) {
-          state.dmChannels[idx] = channel;
-        } else {
-          state.dmChannels.unshift(channel);
+          state.dmChannels.splice(idx, 1);
+        }
+        state.dmChannels.unshift(channel);
+      });
+    },
+
+    bumpDMChannel: (channelId) => {
+      set((state) => {
+        const idx = state.dmChannels.findIndex(
+          (c) => c.channel?.id === channelId,
+        );
+        if (idx > 0) {
+          const [dm] = state.dmChannels.splice(idx, 1);
+          state.dmChannels.unshift(dm);
         }
       });
     },
