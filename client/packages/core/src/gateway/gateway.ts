@@ -554,6 +554,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // (e.g., encryptedKey for file decryption). Merge the attachment data
         // without overwriting the plaintext content.
         const store = useMessageStore.getState();
+        const alreadySeen = !!store.byId[msg.channelId]?.[msg.id];
         const existingOwn =
           msg.authorId === currentUserId && msg.keyVersion > 0
             ? store.byId[msg.channelId]?.[msg.id]
@@ -583,8 +584,9 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         const likelyDM = knownDM || !isServerCh;
 
         // Increment unread count for messages from other users, but only if
-        // the channel is not currently being viewed by the user.
-        if (msg.authorId !== currentUserId) {
+        // the channel is not currently being viewed and the message wasn't
+        // already processed (guards against duplicate gateway delivery).
+        if (!alreadySeen && msg.authorId !== currentUserId) {
           const viewed = useGatewayStore.getState().viewedChannelIds;
           if (!viewed[msg.channelId]) {
             useReadStateStore.getState().incrementUnread(msg.channelId);
