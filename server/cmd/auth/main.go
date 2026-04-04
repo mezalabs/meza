@@ -77,6 +77,10 @@ func main() {
 	svc.chatStore = chatStore
 	svc.friendStore = friendStore
 	svc.instanceURL = cfg.InstanceURL
+	svc.registrationDisabled = cfg.RegistrationDisabled
+	if cfg.RegistrationDisabled {
+		slog.Info("local user registration is disabled")
+	}
 
 	// Connect Redis for per-email recovery rate limiting and device blocklist.
 	if cfg.RedisURL != "" {

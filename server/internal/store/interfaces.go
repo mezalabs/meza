@@ -65,6 +65,7 @@ type ChatStorer interface {
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
 	UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, bannerURL *string) (*models.Server, error)
 	ListServers(ctx context.Context, userID string) ([]*models.Server, error)
+	ListAllServers(ctx context.Context) ([]*models.Server, error)
 	CreateChannel(ctx context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error)
 	GetChannel(ctx context.Context, channelID string) (*models.Channel, error)
 	GetChannelAndCheckMembership(ctx context.Context, channelID, userID string) (*models.Channel, bool, error)

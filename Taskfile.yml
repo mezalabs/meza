@@ -603,7 +603,7 @@ tasks:
         TAG="{{.IMAGE_TAG}}"
 
         echo "==> Pushing images to $REGISTRY..."
-        for name in gateway auth chat presence voice notification keys migrate media client; do
+        for name in gateway auth chat presence voice notification keys migrate admin media client; do
           docker push "$REGISTRY/$name:$TAG"
           docker push "$REGISTRY/$name:latest"
           echo "  ✓ $name"
@@ -768,3 +768,9 @@ tasks:
     cmds:
       - git config core.hooksPath .githooks
       - echo "Git hooks installed — pre-push will now run CI checks before each push."
+
+  admin:
+    desc: "Run spoke admin CLI (usage: task admin -- create-server --name 'My Server')"
+    dir: server
+    cmds:
+      - go run ./cmd/admin {{.CLI_ARGS}}
