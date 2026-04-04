@@ -53,6 +53,7 @@ import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
 import { ScreenSharePane } from '../voice/ScreenSharePane.tsx';
 import { VoicePanel } from '../voice/VoicePanel.tsx';
+import { AppUpdateBanner } from './AppUpdateBanner.tsx';
 import { GatewayConnectionBanner } from './GatewayConnectionBanner.tsx';
 import { Pane } from './Pane.tsx';
 import { PaneSlot } from './PaneSlot.tsx';
@@ -535,6 +536,7 @@ export function ContentArea({
     <main className="relative flex flex-1 flex-col min-h-0 min-w-0 bg-bg-overlay">
       {resizeHandle}
       <GatewayConnectionBanner />
+      <AppUpdateBanner />
       <div className="flex flex-1 min-h-0 min-w-0 p-1.5">
         <TilingRenderer node={root} renderPane={renderPane} />
       </div>

@@ -433,7 +433,11 @@ export type {
 export { useVoiceParticipantsStore } from './store/voiceParticipants.ts';
 export * from './tiling/index.ts';
 // Types — Electron API
-export type { ElectronAPI } from './types/electron.d.ts';
+export type {
+  ElectronAPI,
+  UpdateStatus,
+  UpdateUrgency,
+} from './types/electron.d.ts';
 export { getDMDisplayName, isGroupDM, isSelfDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 // Utils

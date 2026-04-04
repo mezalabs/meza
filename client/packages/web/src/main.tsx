@@ -18,6 +18,7 @@ import {
   useInviteStore,
 } from '@meza/core';
 import {
+  initUpdateListeners,
   InviteLanding,
   LandingPage,
   resetE2EEKeyProvider,
@@ -129,6 +130,11 @@ if (isCapacitor()) {
       }
     });
   });
+}
+
+// Initialize auto-update listeners when running inside Electron.
+if (isElectron()) {
+  initUpdateListeners();
 }
 
 // Handle PUSH_NAVIGATE messages from the push service worker (web).

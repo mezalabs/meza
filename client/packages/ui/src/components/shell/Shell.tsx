@@ -32,6 +32,7 @@ import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.ts
 import { ContentArea } from './ContentArea.tsx';
 import { computeDropZone } from './computeDropZone.ts';
 import { MobileShell } from './MobileShell.tsx';
+import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
 import { ShortcutHelpOverlay } from './ShortcutHelpOverlay.tsx';
 import { Sidebar } from './Sidebar.tsx';
 import { ToastContainer } from './ToastContainer.tsx';
@@ -328,6 +329,7 @@ function DesktopShell() {
         <ShortcutHelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
         <ImageViewer />
         <ToastContainer />
+        <AppUpdateOverlay />
       </div>
     </IconContext.Provider>
   );
