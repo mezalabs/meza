@@ -91,6 +91,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
 
+  // --- Screen sharing (Windows only) ---
+  ...(process.platform === 'win32'
+    ? {
+        screenShare: {
+          pick: () =>
+            ipcRenderer.invoke('screen-share:pick') as Promise<boolean>,
+        },
+      }
+    : {}),
+
   // --- App info ---
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion') as Promise<string>,

@@ -9,14 +9,35 @@ import {
 let pickerOpen = false;
 
 /**
- * Shows a screen/window picker dialog on Windows where the native system picker
- * is unavailable. Returns the user-selected source, or null if cancelled.
+ * Opens the screen/window picker and returns the user's selection.
+ * Called via IPC from the renderer BEFORE getDisplayMedia() — this avoids
+ * the Windows deadlock where desktopCapturer.getSources() or opening a
+ * BrowserWindow from inside setDisplayMediaRequestHandler freezes the app.
  */
-export function showScreenPicker(
+export async function showScreenPicker(
   parent: BrowserWindow,
 ): Promise<DesktopCapturerSource | null> {
-  if (pickerOpen) return Promise.resolve(null);
+  if (pickerOpen) return null;
   pickerOpen = true;
+
+  let sources: DesktopCapturerSource[];
+  try {
+    sources = await desktopCapturer.getSources({
+      types: ['screen', 'window'],
+      thumbnailSize: { width: 320, height: 180 },
+    });
+  } catch {
+    pickerOpen = false;
+    return null;
+  }
+
+  const serializedSources = sources.map((s) => ({
+    id: s.id,
+    name: s.name,
+    thumbnail: s.thumbnail.isEmpty()
+      ? ''
+      : s.thumbnail.toJPEG(80).toString('base64'),
+  }));
 
   return new Promise((resolve) => {
     const picker = new BrowserWindow({
@@ -39,33 +60,21 @@ export function showScreenPicker(
     });
 
     let resolved = false;
-    let cachedSources: DesktopCapturerSource[] = [];
 
     const cleanup = () => {
       pickerOpen = false;
-      cachedSources = [];
       ipcMain.removeHandler('picker:getSources');
       ipcMain.removeAllListeners('picker:select');
       ipcMain.removeAllListeners('picker:cancel');
     };
 
-    ipcMain.handle('picker:getSources', async () => {
-      cachedSources = await desktopCapturer.getSources({
-        types: ['screen', 'window'],
-        thumbnailSize: { width: 320, height: 180 },
-      });
-      return cachedSources.map((s) => ({
-        id: s.id,
-        name: s.name,
-        thumbnail: s.thumbnail.toJPEG(80).toString('base64'),
-      }));
-    });
+    ipcMain.handle('picker:getSources', () => serializedSources);
 
     ipcMain.once('picker:select', (_event, sourceId: string) => {
       if (_event.sender.id !== picker.webContents.id) return;
       resolved = true;
       cleanup();
-      const selected = cachedSources.find((s) => s.id === sourceId) ?? null;
+      const selected = sources.find((s) => s.id === sourceId) ?? null;
       picker.close();
       resolve(selected);
     });
@@ -222,7 +231,11 @@ const PICKER_HTML = /* html */ `<!DOCTYPE html>
     div.dataset.id = s.id;
 
     var img = document.createElement('img');
-    img.src = 'data:image/jpeg;base64,' + s.thumbnail;
+    if (s.thumbnail) {
+      img.src = 'data:image/jpeg;base64,' + s.thumbnail;
+    } else {
+      img.style.background = '#333';
+    }
     img.alt = s.name;
     div.appendChild(img);
 
