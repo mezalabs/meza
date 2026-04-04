@@ -21,6 +21,14 @@ import { useTilingStore } from '../../stores/tiling.ts';
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Strip Unicode control characters (bidi overrides, zero-width joiners) from display names. */
+function sanitizeDisplayName(name: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentionally stripping control chars
+  return name
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, '')
+    .slice(0, 64);
+}
+
 /** Extract the 8-char invite code from any input: full URL, URL with fragment, or bare code. */
 function extractInviteCode(input: string): string {
   const trimmed = input.trim();
@@ -42,8 +50,8 @@ function classifyInviteInput(input: string): InviteClassification {
   // Try to parse as a URL
   try {
     const url = new URL(trimmed);
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      // Not a URL — treat as bare code
+    if (url.protocol !== 'https:') {
+      // Only HTTPS is allowed for federation; treat non-HTTPS as local code
       return { type: 'local', code: extractInviteCode(trimmed) };
     }
     // Compare against our own origin
@@ -175,13 +183,11 @@ export function JoinServerDialog({
       try {
         validateFederationUrl(classification.url);
 
-        // Check if already connected to this spoke
+        // Check if already connected to this spoke (use origin comparison, not startsWith)
+        const inputOrigin = new URL(classification.url).origin;
         const spokes = useFederationStore.getState().spokes;
         for (const spoke of Object.values(spokes)) {
-          if (
-            classification.url.startsWith(spoke.instanceUrl) &&
-            spoke.status === 'connected'
-          ) {
+          if (new URL(spoke.instanceUrl).origin === inputOrigin) {
             useNavigationStore.getState().selectServer(spoke.serverId);
             handleOpenChange(false);
             return;
@@ -371,8 +377,9 @@ export function JoinServerDialog({
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-text">
-                      {remotePreview.serverName ??
-                        `Remote server on ${new URL(remotePreview.instanceUrl).hostname}`}
+                      {remotePreview.serverName
+                        ? sanitizeDisplayName(remotePreview.serverName)
+                        : `Remote server on ${new URL(remotePreview.instanceUrl).hostname}`}
                     </div>
                     {remotePreview.memberCount != null && (
                       <div className="text-xs text-text-muted">

@@ -15,6 +15,7 @@ import { removeSpokeTransport } from '../api/federation-transport.ts';
 import { useAuthStore } from '../store/auth.ts';
 import { useChannelGroupStore } from '../store/channel-groups.ts';
 import { useChannelStore } from '../store/channels.ts';
+import { useEmojiStore } from '../store/emojis.ts';
 import {
   type SpokeConnectionStatus,
   useFederationStore,
@@ -383,10 +384,15 @@ function dispatchSpokeEvent(
 
     // --- Reactions ---
   } else if (event.payload.case === 'reactionAdd' && event.payload.value) {
-    const { messageId, emoji, userId } = event.payload.value;
+    const { messageId, emoji, userId, customEmoji } = event.payload.value;
     useReactionStore
       .getState()
       .addReaction(messageId, emoji, userId, userId === currentUserId);
+    if (customEmoji?.id) {
+      useEmojiStore
+        .getState()
+        .setReactionEmojis({ [customEmoji.id]: customEmoji });
+    }
   } else if (event.payload.case === 'reactionRemove' && event.payload.value) {
     const { messageId, emoji, userId } = event.payload.value;
     useReactionStore
@@ -420,16 +426,10 @@ function dispatchSpokeEvent(
     const { userId, status, statusText } = event.payload.value;
     usePresenceStore.getState().setPresence(userId, status, statusText);
 
-    // --- Channel members (simplified: no E2EE key distribution for spokes) ---
-  } else if (event.payload.case === 'channelMemberAdd' && event.payload.value) {
-    // No direct store method for channel member add in the spoke context.
-    // The channel store doesn't track individual channel members — the
-    // origin gateway re-fetches channels instead. For spokes, this is a no-op.
-  } else if (
-    event.payload.case === 'channelMemberRemove' &&
-    event.payload.value
-  ) {
-    // Same as above — no-op for spoke context.
+    // Events intentionally not handled by spoke dispatch:
+    // channelMemberAdd/Remove (origin re-fetches channels, no spoke equivalent)
+    // permissionsUpdated (would need spoke transport for re-fetch, deferred)
+
     // --- Channel groups ---
   } else if (
     event.payload.case === 'channelGroupCreate' &&
@@ -448,13 +448,7 @@ function dispatchSpokeEvent(
     const { serverId: sid, channelGroupId } = event.payload.value;
     useChannelGroupStore.getState().removeGroup(sid, channelGroupId);
 
-    // --- Permissions (simplified: no re-fetch, just log) ---
-  } else if (
-    event.payload.case === 'permissionsUpdated' &&
-    event.payload.value
-  ) {
-    // Spoke permissions updated — no server-side re-fetch available via
-    // origin transport. The channel list from initial join stays as-is.
+    // --- Permissions ---
   } else if (
     event.payload.case === 'permissionOverrideUpdate' &&
     event.payload.value
@@ -487,47 +481,66 @@ function dispatchSpokeEvent(
 // Startup reconnection
 // ---------------------------------------------------------------------------
 
-const RECONNECT_CONCURRENCY = 5;
+const RECONNECT_STAGGER_MS = 200;
 
 /**
  * Reconnect to all persisted spokes. Called once the origin gateway is connected.
- * Connects spokes in parallel with a concurrency limit.
+ * Staggers connections by 200ms to avoid a burst of simultaneous WebSocket handshakes.
  */
 export async function reconnectAllSpokes(): Promise<void> {
   const spokes = Object.values(useFederationStore.getState().spokes);
-  if (spokes.length === 0) return;
-
-  const queue = [...spokes];
-  async function worker() {
-    while (queue.length > 0) {
-      const spoke = queue.shift();
-      if (!spoke) break;
-      connectSpoke(spoke.instanceUrl);
+  for (const spoke of spokes) {
+    connectSpoke(spoke.instanceUrl);
+    if (spokes.length > 1) {
+      await new Promise((r) => setTimeout(r, RECONNECT_STAGGER_MS));
     }
   }
-  await Promise.all(
-    Array.from({ length: Math.min(RECONNECT_CONCURRENCY, queue.length) }, () =>
-      worker(),
-    ),
-  );
 }
 
 // Auto-reconnect spokes when the origin gateway connects.
-// This subscribes once at module load time.
+// This subscribes once at module load time (same pattern as gateway.ts browser listeners).
+// Note: HMR during development may add duplicate subscriptions — this is a known
+// limitation shared with gateway.ts and is benign due to the debounce flag.
 let spokeReconnectScheduled = false;
 if (typeof window !== 'undefined') {
   useGatewayStore.subscribe((state, prev) => {
     if (state.status === 'connected' && prev.status !== 'connected') {
-      // Debounce: only reconnect once per origin connection cycle.
       if (spokeReconnectScheduled) return;
       spokeReconnectScheduled = true;
-      // Small delay to let origin data hydrate first.
       setTimeout(() => {
         spokeReconnectScheduled = false;
         reconnectAllSpokes().catch((err) =>
           console.error('[SpokeGateway] Reconnection failed:', err),
         );
       }, 500);
+    }
+  });
+
+  // Mirror origin gateway's connectivity listeners for spoke connections.
+  window.addEventListener('online', () => {
+    for (const [instanceUrl, gw] of spokeGateways) {
+      if (!gw.ws || gw.ws.readyState !== WebSocket.OPEN) {
+        gw.reconnectDelay = 1000;
+        gw.reconnectAttempts = 0;
+        connectSpoke(instanceUrl);
+      }
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    for (const [instanceUrl, gw] of spokeGateways) {
+      // If connection is stale (no recent heartbeat ACK), force reconnect.
+      if (
+        gw.ws &&
+        gw.lastHeartbeatAck > 0 &&
+        Date.now() - gw.lastHeartbeatAck > HEARTBEAT_ACK_TIMEOUT_MS
+      ) {
+        console.warn(
+          `[SpokeGateway] Stale heartbeat on visibility change for ${instanceUrl}`,
+        );
+        gw.ws.close();
+      }
     }
   });
 }

@@ -291,6 +291,7 @@ export {
   connectSpoke,
   disconnectAllSpokes,
   disconnectSpoke,
+  reconnectAllSpokes,
 } from './gateway/spoke-gateway.ts';
 export * from './keybinds/index.ts';
 export type { StoredEmoji } from './lib/emojiCache.ts';
@@ -375,10 +376,7 @@ export type {
   SpokeConnection,
   SpokeConnectionStatus,
 } from './store/federation.ts';
-export {
-  readFederatedServerIdsSync,
-  useFederationStore,
-} from './store/federation.ts';
+export { useFederationStore } from './store/federation.ts';
 export type { FriendActions, FriendState } from './store/friends.ts';
 export { useFriendStore } from './store/friends.ts';
 export type {

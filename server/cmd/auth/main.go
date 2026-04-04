@@ -217,6 +217,12 @@ func main() {
 // ConnectRPC calls. Instead of a wildcard, the request Origin is echoed back so
 // that browsers scope the CORS grant to the specific requesting origin. Non-browser
 // server-to-server calls (no Origin header) are allowed through without CORS headers.
+//
+// SECURITY NOTE: Echoing Origin is standard for token-based APIs (no cookies).
+// Since all authenticated endpoints require an Authorization header, CSRF is not
+// a concern (browsers don't auto-attach Authorization headers). A spoke origin
+// allowlist would be ideal but requires a spoke registration mechanism (Phase 2).
+// The primary security is the assertion system (audience-scoped, JTI replay-protected).
 func federationCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")

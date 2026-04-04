@@ -64,26 +64,8 @@ function buildServerIndex(
   return idx;
 }
 
-/**
- * Synchronous fallback for reading the serverIndex when the persist middleware
- * hasn't finished async hydration yet (used by setServers guard).
- */
-export function readFederatedServerIdsSync(): Set<string> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed = JSON.parse(raw);
-    const spokes: Record<string, { serverId?: string }> =
-      parsed?.state?.spokes ?? {};
-    return new Set(
-      Object.values(spokes)
-        .map((s) => s.serverId)
-        .filter(Boolean) as string[],
-    );
-  } catch {
-    return new Set();
-  }
-}
+/** Storage key exported for use by the setServers hydration guard. */
+export const FEDERATION_STORAGE_KEY = STORAGE_KEY;
 
 // ---------------------------------------------------------------------------
 // Store
@@ -148,9 +130,20 @@ export const useFederationStore = create<FederationState & FederationActions>()(
       name: STORAGE_KEY,
       version: 1,
       partialize: (state) => ({
-        // Only persist spokes — serverIndex is derived on hydration.
-        // Status and lastError are excluded via onRehydrateStorage below.
-        spokes: state.spokes,
+        // Persist only credentials — exclude volatile status/lastError
+        // (which trigger frequent writes) and serverIndex (derived on hydration).
+        spokes: Object.fromEntries(
+          Object.entries(state.spokes).map(([k, v]) => [
+            k,
+            {
+              instanceUrl: v.instanceUrl,
+              accessToken: v.accessToken,
+              refreshToken: v.refreshToken,
+              shadowUserId: v.shadowUserId,
+              serverId: v.serverId,
+            },
+          ]),
+        ),
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;

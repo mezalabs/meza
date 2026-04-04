@@ -7,6 +7,12 @@ import { getBaseUrl } from './platform.ts';
  *
  * For origin servers: uses getBaseUrl() + origin access token.
  * For federated servers: uses the spoke's instanceUrl + spoke access token.
+ *
+ * SECURITY NOTE: The access token is appended as a query parameter, which
+ * means it appears in server logs, browser history, and Referer headers.
+ * For spoke servers this means the spoke operator can observe the token.
+ * Mitigated by short access token TTL (~15 min). A future improvement
+ * would use Authorization-header-based fetch + blob URLs (like E2EE media).
  */
 export function resolveMediaUrl(
   serverId: string,

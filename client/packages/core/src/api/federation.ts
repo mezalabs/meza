@@ -1,4 +1,4 @@
-import { ConnectError, createClient } from '@connectrpc/connect';
+import { Code, ConnectError, createClient } from '@connectrpc/connect';
 import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import { FederationService } from '@meza/gen/meza/v1/federation_pb.ts';
 import { useChannelStore } from '../store/channels.ts';
@@ -43,19 +43,19 @@ export function validateFederationUrl(input: string): string {
 export function mapFederationError(err: unknown): string {
   if (err instanceof ConnectError) {
     switch (err.code) {
-      case 3: // InvalidArgument
+      case Code.InvalidArgument:
         return 'Invalid invite URL or code';
-      case 5: // NotFound
+      case Code.NotFound:
         return 'Invite not found or expired';
-      case 6: // AlreadyExists
+      case Code.AlreadyExists:
         return 'You are already a member of this server';
-      case 7: // PermissionDenied
+      case Code.PermissionDenied:
         return 'You have been banned from this server';
-      case 13: // Internal
+      case Code.Internal:
         return 'The remote server encountered an error';
-      case 14: // Unavailable
+      case Code.Unavailable:
         return 'The remote server is unreachable';
-      case 16: // Unauthenticated
+      case Code.Unauthenticated:
         return 'Authentication failed — please try again';
       default:
         return err.message;
@@ -108,15 +108,18 @@ export async function federationJoin(
   );
   const res = await spokeClient.federationJoin({ assertionToken, inviteCode });
 
+  if (!res.server) {
+    throw new Error('Federation join returned no server');
+  }
+
   // Hydrate stores from the response.
-  if (res.server) {
-    useServerStore.getState().addServer(res.server);
-    if (res.channels.length > 0) {
-      useChannelStore.getState().setChannels(res.server.id, res.channels);
-    }
-    if (res.members.length > 0) {
-      useMemberStore.getState().setMembers(res.server.id, res.members);
-    }
+  const { server } = res;
+  useServerStore.getState().addServer(server);
+  if (res.channels.length > 0) {
+    useChannelStore.getState().setChannels(server.id, res.channels);
+  }
+  if (res.members.length > 0) {
+    useMemberStore.getState().setMembers(server.id, res.members);
   }
 
   // Add spoke to federation store.
@@ -125,10 +128,10 @@ export async function federationJoin(
     accessToken: res.accessToken,
     refreshToken: res.refreshToken,
     shadowUserId: res.userId,
-    serverId: res.server?.id ?? '',
+    serverId: server.id,
   });
 
-  return { serverId: res.server?.id ?? '' };
+  return { serverId: server.id };
 }
 
 /**

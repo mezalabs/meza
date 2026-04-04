@@ -1,7 +1,29 @@
 import type { Server } from '@meza/gen/meza/v1/models_pb.ts';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { readFederatedServerIdsSync } from './federation.ts';
+import { FEDERATION_STORAGE_KEY, useFederationStore } from './federation.ts';
+
+/**
+ * Read federated server IDs synchronously from localStorage as a fallback
+ * when the federation store hasn't finished Zustand persist hydration.
+ */
+function readFederatedServerIdsSync(): Set<string> {
+  try {
+    const raw = localStorage.getItem(FEDERATION_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (parsed?.version !== 1) return new Set();
+    const spokes: Record<string, { serverId?: string }> =
+      parsed?.state?.spokes ?? {};
+    return new Set(
+      Object.values(spokes)
+        .map((s) => s.serverId)
+        .filter(Boolean) as string[],
+    );
+  } catch {
+    return new Set();
+  }
+}
 
 export interface ServerState {
   servers: Record<string, Server>;
@@ -27,9 +49,13 @@ export const useServerStore = create<ServerState & ServerActions>()(
     setServers: (servers) => {
       set((state) => {
         // Preserve federated servers that were added via federation join.
-        // Uses a sync localStorage read as a fallback in case the federation
-        // store hasn't finished async hydration yet.
-        const federatedIds = readFederatedServerIdsSync();
+        // Try the hydrated store first; fall back to sync localStorage read
+        // if the federation store hasn't finished persist hydration yet.
+        const storeIndex = useFederationStore.getState().serverIndex;
+        const federatedIds =
+          Object.keys(storeIndex).length > 0
+            ? new Set(Object.keys(storeIndex))
+            : readFederatedServerIdsSync();
         const preserved: Record<string, Server> = {};
         for (const [id, s] of Object.entries(state.servers)) {
           if (federatedIds.has(id)) {

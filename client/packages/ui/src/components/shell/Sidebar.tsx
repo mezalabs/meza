@@ -115,6 +115,9 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const serversLoading = useServerStore((s) => s.isLoading);
   const channelsLoading = useChannelStore((s) => s.isLoading);
   const selectedServerId = useNavigationStore((s) => s.selectedServerId);
+  const isFederatedServer = useFederationStore(
+    (s) => !!(selectedServerId && s.serverIndex[selectedServerId]),
+  );
   const showDMs = useNavigationStore((s) => s.showDMs);
   const selectServer = useNavigationStore((s) => s.selectServer);
   const selectDMs = useNavigationStore((s) => s.selectDMs);
@@ -250,7 +253,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     if (!isAuthenticated) return;
     if (selectedServerId) {
       // Skip for federated servers — data comes from spoke gateway events
-      if (useFederationStore.getState().serverIndex[selectedServerId]) return;
+      if (isFederatedServer) return;
       listChannels(selectedServerId).catch(() => {});
       listChannelGroups(selectedServerId).catch(() => {});
     }
@@ -362,7 +365,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     setServerNotifyLevel(null);
     if (!selectedServerId) return;
     // Skip for federated servers — notification prefs are origin-only
-    if (useFederationStore.getState().serverIndex[selectedServerId]) return;
+    if (isFederatedServer) return;
     let cancelled = false;
     (async () => {
       try {
@@ -379,7 +382,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedServerId]);
+  }, [selectedServerId, isFederatedServer]);
 
   const handleSetNotifyLevel = useCallback(
     async (level: string) => {

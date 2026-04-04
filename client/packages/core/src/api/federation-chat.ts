@@ -5,19 +5,32 @@
  * the spoke transport. The caller determines if the server is federated
  * and uses the spoke variant.
  */
-import { createClient } from '@connectrpc/connect';
+import { type Client, createClient } from '@connectrpc/connect';
 import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
 import { useFederationStore } from '../store/federation.ts';
 import { mapFederationError } from './federation.ts';
 import { getSpokeTransport } from './federation-transport.ts';
 
-function getSpokeChat(serverId: string) {
+type SpokeChat = Client<typeof ChatService>;
+
+function getSpokeChat(serverId: string): SpokeChat {
   const instanceUrl = useFederationStore.getState().serverIndex[serverId];
   if (!instanceUrl) throw new Error('Not a federated server');
   return createClient(ChatService, getSpokeTransport(instanceUrl));
 }
 
-export async function spokeSendMessage(
+async function withSpokeError<T>(
+  serverId: string,
+  fn: (client: SpokeChat) => Promise<T>,
+): Promise<T> {
+  try {
+    return await fn(getSpokeChat(serverId));
+  } catch (err) {
+    throw new Error(mapFederationError(err), { cause: err });
+  }
+}
+
+export function spokeSendMessage(
   serverId: string,
   params: {
     channelId: string;
@@ -31,9 +44,8 @@ export async function spokeSendMessage(
     mentionEveryone?: boolean;
   },
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    return await client.sendMessage({
+  return withSpokeError(serverId, (client) =>
+    client.sendMessage({
       channelId: params.channelId,
       encryptedContent: params.encryptedContent,
       keyVersion: params.keyVersion ?? 0,
@@ -43,13 +55,11 @@ export async function spokeSendMessage(
       mentionedUserIds: params.mentionedUserIds ?? [],
       mentionedRoleIds: params.mentionedRoleIds ?? [],
       mentionEveryone: params.mentionEveryone ?? false,
-    });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+    }),
+  );
 }
 
-export async function spokeEditMessage(
+export function spokeEditMessage(
   serverId: string,
   params: {
     channelId: string;
@@ -58,69 +68,54 @@ export async function spokeEditMessage(
     keyVersion?: number;
   },
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    return await client.editMessage({
+  return withSpokeError(serverId, (client) =>
+    client.editMessage({
       channelId: params.channelId,
       messageId: params.messageId,
       encryptedContent: params.encryptedContent,
       keyVersion: params.keyVersion ?? 0,
-    });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+    }),
+  );
 }
 
-export async function spokeDeleteMessage(
+export function spokeDeleteMessage(
   serverId: string,
   channelId: string,
   messageId: string,
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    await client.deleteMessage({ channelId, messageId });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+  return withSpokeError(serverId, (client) =>
+    client.deleteMessage({ channelId, messageId }),
+  );
 }
 
-export async function spokeAddReaction(
+export function spokeAddReaction(
   serverId: string,
   channelId: string,
   messageId: string,
   emoji: string,
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    await client.addReaction({ channelId, messageId, emoji });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+  return withSpokeError(serverId, (client) =>
+    client.addReaction({ channelId, messageId, emoji }),
+  );
 }
 
-export async function spokeRemoveReaction(
+export function spokeRemoveReaction(
   serverId: string,
   channelId: string,
   messageId: string,
   emoji: string,
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    await client.removeReaction({ channelId, messageId, emoji });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+  return withSpokeError(serverId, (client) =>
+    client.removeReaction({ channelId, messageId, emoji }),
+  );
 }
 
-export async function spokeAckMessage(
+export function spokeAckMessage(
   serverId: string,
   channelId: string,
   messageId: string,
 ) {
-  try {
-    const client = getSpokeChat(serverId);
-    await client.ackMessage({ channelId, messageId });
-  } catch (err) {
-    throw new Error(mapFederationError(err), { cause: err });
-  }
+  return withSpokeError(serverId, (client) =>
+    client.ackMessage({ channelId, messageId }),
+  );
 }
