@@ -89,10 +89,29 @@ function getDB(): Promise<IDBDatabase> {
         }
       }
     };
+    request.onblocked = () => {
+      // Another tab holds an older version of the DB open.  Close our
+      // singleton (if any) so the upgrade can proceed once the other
+      // tab is closed, and reject so callers don't hang forever.
+      dbPromise = null;
+      reject(
+        new Error(
+          'IndexedDB upgrade blocked — close other Meza tabs and retry',
+        ),
+      );
+    };
     request.onsuccess = () => {
       dbInstance = request.result;
       // Reset singleton if the connection is unexpectedly closed.
       dbInstance.onclose = () => {
+        dbInstance = null;
+        dbPromise = null;
+      };
+      // Close this connection when another context (tab, HMR reload)
+      // requests a higher DB version.  Without this the upgrade request
+      // in the other context gets blocked indefinitely.
+      dbInstance.onversionchange = () => {
+        dbInstance?.close();
         dbInstance = null;
         dbPromise = null;
       };
