@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -365,12 +366,6 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("not a refresh token"))
 	}
 
-	// Consume the old refresh token (one-time use / rotation)
-	oldTokenHash := hashToken(req.Msg.RefreshToken)
-	if _, _, err := s.authStore.ConsumeRefreshToken(ctx, oldTokenHash); err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token not found or expired"))
-	}
-
 	// Validate fresh assertion from the origin
 	assertionClaims, err := s.verifier.VerifyAssertion(ctx, req.Msg.AssertionToken)
 	if err != nil {
@@ -406,6 +401,14 @@ func (s *federationService) FederationRefresh(ctx context.Context, req *connect.
 			"shadow_home_server", shadowUser.HomeServer,
 		)
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("assertion identity does not match refresh token identity"))
+	}
+
+	// Consume the old refresh token (one-time use / rotation).
+	// This happens AFTER all validations pass so that a failed validation
+	// does not inadvertently revoke the user's refresh token.
+	oldTokenHash := hashToken(req.Msg.RefreshToken)
+	if _, _, err := s.authStore.ConsumeRefreshToken(ctx, oldTokenHash); err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token not found or expired"))
 	}
 
 	// Sanitize federation profile claims
@@ -503,6 +506,19 @@ func (s *federationService) ResolveRemoteInvite(ctx context.Context, req *connec
 	}
 
 	instanceURL := parsed.Scheme + "://" + parsed.Host
+
+	// SSRF protection: reject invite URLs that resolve to private/internal IPs.
+	hostname := parsed.Hostname()
+	ips, err := net.DefaultResolver.LookupHost(ctx, hostname)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to resolve hostname %q: %w", hostname, err))
+	}
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip != nil && federation.IsPrivateIP(ip) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invite URL resolves to a private IP address"))
+		}
+	}
 
 	return connect.NewResponse(&v1.ResolveRemoteInviteResponse{
 		InstanceUrl: instanceURL,

@@ -214,11 +214,16 @@ func main() {
 }
 
 // federationCORS wraps a handler with CORS headers for cross-origin federation
-// ConnectRPC calls. Allows all origins since federation endpoints are designed
-// to be called from any trusted instance's client.
+// ConnectRPC calls. Instead of a wildcard, the request Origin is echoed back so
+// that browsers scope the CORS grant to the specific requesting origin. Non-browser
+// server-to-server calls (no Origin header) are allowed through without CORS headers.
 func federationCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Authorization")
 		w.Header().Set("Access-Control-Max-Age", "86400")
