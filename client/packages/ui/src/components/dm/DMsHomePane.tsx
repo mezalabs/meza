@@ -2,10 +2,12 @@ import type { DMChannel, FriendRequestEntry, PaneId } from '@meza/core';
 import {
   acceptFriendRequest,
   acceptMessageRequest,
+  createOrGetDMChannel,
   declineFriendRequest,
   declineMessageRequest,
   getDMDisplayName,
   isGroupDM,
+  isSelfDM,
   useAuthStore,
   useDMStore,
   useFriendStore,
@@ -14,6 +16,7 @@ import {
 import {
   ArrowRightIcon,
   ChatCircleDotsIcon,
+  NotePencilIcon,
   PencilSimpleIcon,
   UserPlusIcon,
   UsersThreeIcon,
@@ -63,7 +66,27 @@ export function DMsHomePane({ paneId }: { paneId: PaneId }) {
         {/* Quick Actions */}
         <section>
           <SectionHeader>Quick Actions</SectionHeader>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ActionCard
+              icon={<NotePencilIcon size={22} aria-hidden="true" />}
+              label="Message Yourself"
+              subtitle="Personal notes"
+              onClick={async () => {
+                if (!currentUserId) return;
+                try {
+                  const res = await createOrGetDMChannel(currentUserId);
+                  const channelId = res.dmChannel?.channel?.id;
+                  if (channelId) {
+                    setPaneContent(paneId, {
+                      type: 'dm',
+                      conversationId: channelId,
+                    });
+                  }
+                } catch {
+                  // Error is already set in DM store by createOrGetDMChannel
+                }
+              }}
+            />
             <ActionCard
               icon={<PencilSimpleIcon size={22} aria-hidden="true" />}
               label="New Message"
@@ -439,7 +462,9 @@ function DMRow({
 }) {
   const displayName = getDMDisplayName(dm, currentUserId);
   const group = isGroupDM(dm);
-  const other = !group
+  const selfDM = isSelfDM(dm, currentUserId);
+  const self = selfDM ? dm.participants[0] : undefined;
+  const other = !group && !selfDM
     ? (dm.participants.find((p) => p.id !== currentUserId) as
         | {
             id: string;
@@ -459,8 +484,16 @@ function DMRow({
       }`}
       onClick={onClick}
     >
-      {/* Avatar: popover for 1-on-1 DMs, plain icon for groups */}
-      {group ? (
+      {/* Avatar: own avatar for self-DMs, popover for 1-on-1 DMs, plain icon for groups */}
+      {selfDM && self ? (
+        <div className="relative flex-shrink-0">
+          <Avatar
+            avatarUrl={self.avatarUrl}
+            displayName={self.displayName || self.username || 'You'}
+            size="lg"
+          />
+        </div>
+      ) : group ? (
         <div className="relative flex-shrink-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-text-subtle">
             <UsersThreeIcon size={16} aria-hidden="true" />
