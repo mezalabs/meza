@@ -19,10 +19,6 @@ import {
 } from '../api/chat.ts';
 import { getPublicKeys } from '../api/keys.ts';
 import {
-  cachePublicKey,
-  clearVerification,
-} from '../crypto/key-monitor.ts';
-import {
   clearStatusOverride,
   getMyPresence,
   updatePresence,
@@ -36,6 +32,7 @@ import {
   redistributeChannelKeys,
 } from '../crypto/channel-keys.ts';
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
+import { cachePublicKey, clearVerification } from '../crypto/key-monitor.ts';
 import { isSessionReady, onSessionReady } from '../crypto/session.ts';
 import { indexIncomingMessage } from '../search/indexer.ts';
 import {

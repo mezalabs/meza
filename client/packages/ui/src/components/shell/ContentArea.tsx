@@ -34,8 +34,6 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { resolveDisplayName } from '../../hooks/useDisplayName.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
-import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
-import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import {
   openChannelSettingsPane,
   useTilingStore,
@@ -49,6 +47,8 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
+import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
@@ -492,9 +492,7 @@ export function ContentArea({
               ) : undefined
             }
           >
-            {dmOtherUserId && (
-              <KeyChangeNotice userId={dmOtherUserId} />
-            )}
+            {dmOtherUserId && <KeyChangeNotice userId={dmOtherUserId} />}
             {children}
           </Pane>
         </PaneSlot>

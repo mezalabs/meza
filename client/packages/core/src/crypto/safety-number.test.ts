@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { ed25519 } from '@noble/curves/ed25519.js';
+import { describe, expect, it } from 'vitest';
 import {
   computeFingerprint,
   computeSafetyNumber,
@@ -69,12 +69,7 @@ describe('computeFingerprint', () => {
 
 describe('computeSafetyNumber', () => {
   it('returns a 60-digit string', () => {
-    const sn = computeSafetyNumber(
-      ALICE_PUBLIC,
-      ALICE_ID,
-      BOB_PUBLIC,
-      BOB_ID,
-    );
+    const sn = computeSafetyNumber(ALICE_PUBLIC, ALICE_ID, BOB_PUBLIC, BOB_ID);
     expect(sn).toHaveLength(60);
     expect(sn).toMatch(/^\d{60}$/);
   });
@@ -96,12 +91,7 @@ describe('computeSafetyNumber', () => {
   });
 
   it('produces different numbers for different key pairs', () => {
-    const sn1 = computeSafetyNumber(
-      ALICE_PUBLIC,
-      ALICE_ID,
-      BOB_PUBLIC,
-      BOB_ID,
-    );
+    const sn1 = computeSafetyNumber(ALICE_PUBLIC, ALICE_ID, BOB_PUBLIC, BOB_ID);
 
     const charlieSecret = new Uint8Array(32).fill(0x03);
     const charliePublic = ed25519.getPublicKey(charlieSecret);
@@ -117,30 +107,15 @@ describe('computeSafetyNumber', () => {
   });
 
   it('is deterministic across calls', () => {
-    const sn1 = computeSafetyNumber(
-      ALICE_PUBLIC,
-      ALICE_ID,
-      BOB_PUBLIC,
-      BOB_ID,
-    );
-    const sn2 = computeSafetyNumber(
-      ALICE_PUBLIC,
-      ALICE_ID,
-      BOB_PUBLIC,
-      BOB_ID,
-    );
+    const sn1 = computeSafetyNumber(ALICE_PUBLIC, ALICE_ID, BOB_PUBLIC, BOB_ID);
+    const sn2 = computeSafetyNumber(ALICE_PUBLIC, ALICE_ID, BOB_PUBLIC, BOB_ID);
     expect(sn1).toBe(sn2);
   });
 
   it('matches a known test vector', () => {
     // Pinned output for regression detection. If the algorithm changes,
     // this test must be updated to the new expected value.
-    const sn = computeSafetyNumber(
-      ALICE_PUBLIC,
-      ALICE_ID,
-      BOB_PUBLIC,
-      BOB_ID,
-    );
+    const sn = computeSafetyNumber(ALICE_PUBLIC, ALICE_ID, BOB_PUBLIC, BOB_ID);
     // Snapshot: computed once, hardcoded for regression.
     // If this fails after an intentional algorithm change, re-generate.
     expect(sn).toMatchSnapshot();

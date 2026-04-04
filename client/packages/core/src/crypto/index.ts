@@ -102,11 +102,6 @@ export {
   wrapChannelKey,
 } from './primitives.ts';
 export {
-  computeFingerprint,
-  computeSafetyNumber,
-  formatSafetyNumber,
-} from './safety-number.ts';
-export {
   decryptRecoveryBundle,
   deriveRecoveryKey,
   deriveRecoveryVerifier,
@@ -114,6 +109,11 @@ export {
   generateRecoveryPhrase,
   validateRecoveryPhrase,
 } from './recovery.ts';
+export {
+  computeFingerprint,
+  computeSafetyNumber,
+  formatSafetyNumber,
+} from './safety-number.ts';
 export {
   bootstrapSession,
   getIdentity,

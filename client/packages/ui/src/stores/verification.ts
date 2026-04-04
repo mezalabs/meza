@@ -6,12 +6,12 @@
  */
 
 import {
-  type VerificationRecord,
   getVerificationStatus,
   loadAllVerifications,
-  markVerified as persistVerified,
-  clearVerification as persistClearVerification,
   onKeyChanged,
+  clearVerification as persistClearVerification,
+  markVerified as persistVerified,
+  type VerificationRecord,
 } from '@meza/core';
 import { create } from 'zustand';
 
@@ -37,67 +37,65 @@ interface VerificationState {
   dismissKeyChange: (userId: string) => void;
 }
 
-export const useVerificationStore = create<VerificationState>()(
-  (set, get) => ({
-    records: {},
-    keyChangedUsers: new Set(),
+export const useVerificationStore = create<VerificationState>()((set, get) => ({
+  records: {},
+  keyChangedUsers: new Set(),
 
-    hydrate: async () => {
-      const records = await loadAllVerifications();
-      const map: Record<string, VerificationRecord> = {};
-      for (const r of records) {
-        map[r.userId] = r;
-      }
-      set({ records: map });
+  hydrate: async () => {
+    const records = await loadAllVerifications();
+    const map: Record<string, VerificationRecord> = {};
+    for (const r of records) {
+      map[r.userId] = r;
+    }
+    set({ records: map });
 
-      // Register key change callback so core → UI notifications work
-      onKeyChanged((userId) => {
-        get().onKeyChanged(userId);
-      });
-    },
+    // Register key change callback so core → UI notifications work
+    onKeyChanged((userId) => {
+      get().onKeyChanged(userId);
+    });
+  },
 
-    setVerified: async (userId, publicKey) => {
-      await persistVerified(userId, publicKey);
-      const record = await getVerificationStatus(userId);
-      if (record) {
-        set((state) => ({
-          records: { ...state.records, [userId]: record },
-        }));
-      }
-    },
+  setVerified: async (userId, publicKey) => {
+    await persistVerified(userId, publicKey);
+    const record = await getVerificationStatus(userId);
+    if (record) {
+      set((state) => ({
+        records: { ...state.records, [userId]: record },
+      }));
+    }
+  },
 
-    clearVerified: async (userId) => {
-      await persistClearVerification(userId);
-      set((state) => {
-        const { [userId]: _, ...rest } = state.records;
-        return { records: rest };
-      });
-    },
+  clearVerified: async (userId) => {
+    await persistClearVerification(userId);
+    set((state) => {
+      const { [userId]: _, ...rest } = state.records;
+      return { records: rest };
+    });
+  },
 
-    onKeyChanged: async (userId) => {
-      await persistClearVerification(userId);
-      set((state) => {
-        const { [userId]: _, ...rest } = state.records;
-        const changed = new Set(state.keyChangedUsers);
-        changed.add(userId);
-        return { records: rest, keyChangedUsers: changed };
-      });
-    },
+  onKeyChanged: async (userId) => {
+    await persistClearVerification(userId);
+    set((state) => {
+      const { [userId]: _, ...rest } = state.records;
+      const changed = new Set(state.keyChangedUsers);
+      changed.add(userId);
+      return { records: rest, keyChangedUsers: changed };
+    });
+  },
 
-    isVerified: (userId) => {
-      return get().records[userId]?.verified === true;
-    },
+  isVerified: (userId) => {
+    return get().records[userId]?.verified === true;
+  },
 
-    hasKeyChanged: (userId) => {
-      return get().keyChangedUsers.has(userId);
-    },
+  hasKeyChanged: (userId) => {
+    return get().keyChangedUsers.has(userId);
+  },
 
-    dismissKeyChange: (userId) => {
-      set((state) => {
-        const changed = new Set(state.keyChangedUsers);
-        changed.delete(userId);
-        return { keyChangedUsers: changed };
-      });
-    },
-  }),
-);
+  dismissKeyChange: (userId) => {
+    set((state) => {
+      const changed = new Set(state.keyChangedUsers);
+      changed.delete(userId);
+      return { keyChangedUsers: changed };
+    });
+  },
+}));

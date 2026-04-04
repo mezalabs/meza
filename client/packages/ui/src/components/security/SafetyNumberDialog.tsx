@@ -126,17 +126,16 @@ export function SafetyNumberDialog({
 
           {state === 'ready' && grid && (
             <>
-              <div
+              <section
                 className="mt-5 rounded-lg bg-bg-surface p-4"
-                role="group"
                 aria-label={`Safety number: ${safetyNumber.match(/.{5}/g)?.join(' ')}`}
               >
                 <div className="grid grid-cols-3 gap-x-4 gap-y-2 text-center font-mono text-lg tracking-widest text-text select-all">
-                  {grid.flat().map((group: string, i: number) => (
-                    <span key={i}>{group}</span>
+                  {grid.flat().map((group: string) => (
+                    <span key={group}>{group}</span>
                   ))}
                 </div>
-              </div>
+              </section>
 
               <div className="mt-4 flex gap-2">
                 <button
