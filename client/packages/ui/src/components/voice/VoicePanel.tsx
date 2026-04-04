@@ -521,6 +521,14 @@ function ScreenShareButton({ canScreenShare }: { canScreenShare: boolean }) {
       if (isSharing) {
         await localParticipant.setScreenShareEnabled(false);
       } else {
+        // On Windows (Electron), show the source picker via IPC before
+        // calling getDisplayMedia — the handler returns the pre-selected
+        // source instantly, avoiding the deadlock that occurs when
+        // desktopCapturer.getSources() is called inside the handler.
+        if (window.electronAPI?.screenShare) {
+          const picked = await window.electronAPI.screenShare.pick();
+          if (!picked) return;
+        }
         const state = useStreamSettingsStore.getState();
         await localParticipant.setScreenShareEnabled(
           true,

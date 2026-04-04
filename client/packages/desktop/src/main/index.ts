@@ -3,6 +3,7 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
+  ipcMain,
   nativeImage,
   protocol,
   screen,
@@ -271,17 +272,25 @@ app.whenReady().then(() => {
       },
     );
   } else if (process.platform === 'win32') {
-    // Windows: no native system picker — show a custom picker window so the
-    // user can choose which screen or window to share.
+    // Windows: desktopCapturer.getSources() and opening BrowserWindows both
+    // deadlock when called inside setDisplayMediaRequestHandler. Instead:
+    // 1. Renderer calls 'screen-share:pick' IPC → main shows picker (no deadlock)
+    // 2. User picks a source → main stores it in pendingSource
+    // 3. Renderer calls getDisplayMedia() → handler returns pendingSource instantly
+    let pendingSource: Electron.DesktopCapturerSource | null = null;
+
+    ipcMain.handle('screen-share:pick', async () => {
+      if (!mainWindow) return false;
+      const selected = await showScreenPicker(mainWindow);
+      pendingSource = selected;
+      return selected !== null;
+    });
+
     session.defaultSession.setDisplayMediaRequestHandler(
-      async (_request, callback) => {
-        if (!mainWindow) {
-          callback({});
-          return;
-        }
-        const selected = await showScreenPicker(mainWindow);
-        if (selected) {
-          callback({ video: selected, audio: 'loopback' });
+      (_request, callback) => {
+        if (pendingSource) {
+          callback({ video: pendingSource, audio: 'loopback' });
+          pendingSource = null;
         } else {
           callback({});
         }

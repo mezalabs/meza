@@ -132,6 +132,10 @@ function VoiceBarConnectedControls({
               if (isScreenSharing) {
                 await localParticipant.setScreenShareEnabled(false);
               } else {
+                if (window.electronAPI?.screenShare) {
+                  const picked = await window.electronAPI.screenShare.pick();
+                  if (!picked) return;
+                }
                 const state = useStreamSettingsStore.getState();
                 await localParticipant.setScreenShareEnabled(
                   true,
