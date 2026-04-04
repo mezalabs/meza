@@ -1163,11 +1163,12 @@ export async function createOrGetDMChannel(recipientId: string) {
       if (res.created && res.dmChannel.channel) {
         const userId = useAuthStore.getState().user?.id;
         if (userId) {
+          const members =
+            userId === recipientId
+              ? [userId] // self-DM: single member
+              : [userId, recipientId];
           try {
-            await provisionChannelKey(res.dmChannel.channel.id, [
-              userId,
-              recipientId,
-            ]);
+            await provisionChannelKey(res.dmChannel.channel.id, members);
           } catch (err) {
             console.error('[E2EE] Failed to provision key for new DM:', err);
           }

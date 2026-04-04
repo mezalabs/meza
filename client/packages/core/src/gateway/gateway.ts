@@ -128,6 +128,11 @@ const signingKeyCache = new Map<
   { key: Uint8Array; fetchedAt: number }
 >();
 
+// Guard: channel IDs for which a fetchDMChannels call is already in flight,
+// preventing duplicate API calls when multiple messages arrive in quick
+// succession for a brand-new DM channel.
+const pendingDMFetchChannels = new Set<string>();
+
 // --- Notification sound infrastructure ---
 let reconnectGraceUntil = 0;
 let overrideExpiryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -549,6 +554,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // (e.g., encryptedKey for file decryption). Merge the attachment data
         // without overwriting the plaintext content.
         const store = useMessageStore.getState();
+        const alreadySeen = !!store.byId[msg.channelId]?.[msg.id];
         const existingOwn =
           msg.authorId === currentUserId && msg.keyVersion > 0
             ? store.byId[msg.channelId]?.[msg.id]
@@ -566,9 +572,21 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           }
         }
         useTypingStore.getState().clearUser(msg.channelId, msg.authorId);
+
+        // Classify the channel once: known DM, server channel, or unknown
+        // (likely a new DM from a friend that hasn't been fetched yet).
+        const knownDM = isDMChannel(msg.channelId);
+        const isServerCh =
+          !knownDM &&
+          Object.values(useChannelStore.getState().byServer).some((chs) =>
+            chs.some((c) => c.id === msg.channelId),
+          );
+        const likelyDM = knownDM || !isServerCh;
+
         // Increment unread count for messages from other users, but only if
-        // the channel is not currently being viewed by the user.
-        if (msg.authorId !== currentUserId) {
+        // the channel is not currently being viewed and the message wasn't
+        // already processed (guards against duplicate gateway delivery).
+        if (!alreadySeen && msg.authorId !== currentUserId) {
           const viewed = useGatewayStore.getState().viewedChannelIds;
           if (!viewed[msg.channelId]) {
             useReadStateStore.getState().incrementUnread(msg.channelId);
@@ -579,10 +597,24 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
               msg.mentionEveryone
             ) {
               soundType = 'mention';
-            } else if (isDMChannel(msg.channelId)) {
+            } else if (likelyDM) {
               soundType = 'dm';
             }
             maybePlaySound(soundType, msg.authorId);
+          }
+        }
+        // Bump the DM channel to the top of the list so the sidebar and
+        // DMs home page reflect the most-recently-active conversation.
+        if (knownDM) {
+          useDMStore.getState().bumpDMChannel(msg.channelId);
+        } else if (likelyDM && msg.authorId !== currentUserId) {
+          // New DM not yet in the store — fetch once (guard against
+          // duplicate fetches while the first request is in flight).
+          if (!pendingDMFetchChannels.has(msg.channelId)) {
+            pendingDMFetchChannels.add(msg.channelId);
+            fetchDMChannels()
+              .catch(() => {})
+              .finally(() => pendingDMFetchChannels.delete(msg.channelId));
           }
         }
         // Index for local search (best-effort, no-ops if decrypt unavailable)

@@ -9,6 +9,7 @@ import {
   getDMDisplayName,
   getNotificationPreferences,
   isGroupDM,
+  isSelfDM,
   listChannelGroups,
   listChannels,
   listDMChannels,
@@ -1113,17 +1114,20 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
   );
   const hasUnread = unreadCount > 0;
   const isGroup = isGroupDM(dm);
+  const selfDM = isSelfDM(dm, currentUserId);
   const displayName = getDMDisplayName(dm, currentUserId);
-  const other = !isGroup
-    ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
-        | {
-            id: string;
-            displayName: string;
-            username: string;
-            avatarUrl?: string;
-          }
-        | undefined)
-    : undefined;
+  const self = selfDM ? dm.participants[0] : undefined;
+  const other =
+    !isGroup && !selfDM
+      ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
+          | {
+              id: string;
+              displayName: string;
+              username: string;
+              avatarUrl?: string;
+            }
+          | undefined)
+      : undefined;
   const active =
     focusedContent?.type === 'dm' &&
     focusedContent.conversationId === channelId;
@@ -1159,7 +1163,13 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
       }
     >
       <div className="relative">
-        {isGroup ? (
+        {selfDM && self ? (
+          <Avatar
+            avatarUrl={self.avatarUrl}
+            displayName={self.displayName || self.username || 'You'}
+            size="sm"
+          />
+        ) : isGroup ? (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-text-subtle">
             <UsersThreeIcon size={16} aria-hidden="true" />
           </div>

@@ -1010,17 +1010,21 @@ func (s *chatService) SendMessage(ctx context.Context, req *connect.Request[v1.S
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
 
-		blocked, err := s.blockStore.IsBlockedEither(ctx, userID, otherID)
-		if err != nil {
-			slog.Error("checking block in SendMessage", "err", err, "user", userID, "other", otherID)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		if blocked {
-			return nil, errUnableToMessage
+		// Skip block check for self-DMs and system-DMs.
+		if otherID != userID && otherID != models.SystemUserID {
+			blocked, err := s.blockStore.IsBlockedEither(ctx, userID, otherID)
+			if err != nil {
+				slog.Error("checking block in SendMessage", "err", err, "user", userID, "other", otherID)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if blocked {
+				return nil, errUnableToMessage
+			}
 		}
 
 		// Pending channel: only the initiator (sender) can send messages.
 		// The recipient must accept before replying.
+		// Self-DMs are always active so this check is a no-op for them.
 		if ch.DMStatus == "pending" && ch.DMInitiatorID != userID {
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("accept this message request before replying"))
 		}
@@ -1692,13 +1696,16 @@ func (s *chatService) EditMessage(ctx context.Context, req *connect.Request[v1.E
 			slog.Error("getting DM other participant for edit", "err", err, "channel", ch.ID)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
-		blocked, err := s.blockStore.IsBlockedEither(ctx, userID, otherID)
-		if err != nil {
-			slog.Error("checking block in EditMessage", "err", err, "user", userID, "other", otherID)
-			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
-		}
-		if blocked {
-			return nil, errUnableToMessage
+		// Skip block check for self-DMs and system-DMs.
+		if otherID != userID && otherID != models.SystemUserID {
+			blocked, err := s.blockStore.IsBlockedEither(ctx, userID, otherID)
+			if err != nil {
+				slog.Error("checking block in EditMessage", "err", err, "user", userID, "other", otherID)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+			}
+			if blocked {
+				return nil, errUnableToMessage
+			}
 		}
 	}
 
