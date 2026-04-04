@@ -4,7 +4,6 @@ import type { DMChannel, PaneContent } from '@meza/core';
 import {
   ChannelType,
   createChannelGroup,
-  getBaseUrl,
   getBulkPresence,
   getDMDisplayName,
   getNotificationPreferences,
@@ -19,12 +18,14 @@ import {
   listServers,
   Permissions,
   resolveIconUrl,
+  resolveMediaUrl,
   soundManager,
   updateNotificationPreference,
   useAuthStore,
   useChannelGroupStore,
   useChannelStore,
   useDMStore,
+  useFederationStore,
   useFriendStore,
   useGatewayStore,
   useInviteStore,
@@ -248,6 +249,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (selectedServerId) {
+      // Skip for federated servers — data comes from spoke gateway events
+      if (useFederationStore.getState().serverIndex[selectedServerId]) return;
       listChannels(selectedServerId).catch(() => {});
       listChannelGroups(selectedServerId).catch(() => {});
     }
@@ -260,6 +263,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated || !selectedServerId) return;
+    // Skip for federated servers — data comes from spoke gateway events
+    if (useFederationStore.getState().serverIndex[selectedServerId]) return;
 
     const fetchPresence = () => {
       listMembers(selectedServerId, { limit: 200 })
@@ -356,6 +361,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   useEffect(() => {
     setServerNotifyLevel(null);
     if (!selectedServerId) return;
+    // Skip for federated servers — notification prefs are origin-only
+    if (useFederationStore.getState().serverIndex[selectedServerId]) return;
     let cancelled = false;
     (async () => {
       try {
@@ -1265,12 +1272,10 @@ function ServerIcon({
     return channels.some((ch) => (s.byChannel[ch.id]?.unreadCount ?? 0) > 0);
   });
 
-  const token = useAuthStore((s) => s.accessToken);
-  const authQuery = token ? `?token=${encodeURIComponent(token)}` : '';
   // Show the static thumbnail by default; swap to the full (possibly animated) URL on hover.
-  const base = getBaseUrl();
+  // resolveMediaUrl handles both origin and federated server URLs/tokens.
   const iconSrc = iconUrl
-    ? `${base}${iconUrl}${hovered ? '' : '/thumb'}${authQuery}`
+    ? resolveMediaUrl(serverId, iconUrl, { thumb: !hovered })
     : undefined;
 
   return (

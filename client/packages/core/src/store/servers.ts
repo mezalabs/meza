@@ -1,6 +1,7 @@
 import type { Server } from '@meza/gen/meza/v1/models_pb.ts';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { readFederatedServerIdsSync } from './federation.ts';
 
 export interface ServerState {
   servers: Record<string, Server>;
@@ -25,7 +26,17 @@ export const useServerStore = create<ServerState & ServerActions>()(
 
     setServers: (servers) => {
       set((state) => {
-        state.servers = {};
+        // Preserve federated servers that were added via federation join.
+        // Uses a sync localStorage read as a fallback in case the federation
+        // store hasn't finished async hydration yet.
+        const federatedIds = readFederatedServerIdsSync();
+        const preserved: Record<string, Server> = {};
+        for (const [id, s] of Object.entries(state.servers)) {
+          if (federatedIds.has(id)) {
+            preserved[id] = s;
+          }
+        }
+        state.servers = { ...preserved };
         for (const s of servers) {
           state.servers[s.id] = s;
         }

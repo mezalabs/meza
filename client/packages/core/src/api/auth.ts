@@ -4,6 +4,7 @@ import type { AudioPreferences, User } from '@meza/gen/meza/v1/models_pb.ts';
 import { registerPublicKey } from '../crypto/credentials.ts';
 import { clearCryptoStorage, isSessionReady } from '../crypto/index.ts';
 import { disconnect } from '../gateway/gateway.ts';
+import { disconnectAllSpokes } from '../gateway/spoke-gateway.ts';
 import { clearFrequentEmojis } from '../lib/frequentEmojis.ts';
 import { resetSearchState } from '../search/index.ts';
 import { useAudioSettingsStore } from '../store/audioSettings.ts';
@@ -17,6 +18,7 @@ import { useChannelGroupStore } from '../store/channel-groups.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useDMStore } from '../store/dms.ts';
 import { useEmojiStore } from '../store/emojis.ts';
+import { useFederationStore } from '../store/federation.ts';
 import { useFriendStore } from '../store/friends.ts';
 import { useGatewayStore } from '../store/gateway.ts';
 import { useKeybindOverridesStore } from '../store/keybindOverrides.ts';
@@ -376,6 +378,8 @@ export async function logout() {
   }
 
   disconnect();
+  disconnectAllSpokes();
+  useFederationStore.getState().reset();
   useVoiceStore.getState().disconnect();
   useVoiceParticipantsStore.getState().clearAll();
   useServerStore.getState().reset();

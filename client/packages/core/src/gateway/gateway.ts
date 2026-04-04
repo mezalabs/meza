@@ -910,9 +910,16 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         event.payload.case === 'federationRemoved' &&
         event.payload.value
       ) {
-        const { serverId } = event.payload.value;
-        if (serverId) {
-          fetchChannels(serverId).catch(() => {});
+        const { serverId, instanceUrl, reason } = event.payload.value;
+        if (instanceUrl) {
+          // Full cleanup: disconnect spoke, remove from stores.
+          import('./spoke-gateway.ts').then(({ cleanupSpoke }) => {
+            cleanupSpoke(
+              instanceUrl,
+              serverId,
+              reason || 'Removed from federation',
+            );
+          });
         }
       } else if (
         event.payload.case === 'dmRequestReceived' &&
