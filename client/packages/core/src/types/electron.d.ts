@@ -37,7 +37,7 @@ export interface ElectronAPI {
     setAutoLaunch: (enabled: boolean) => Promise<void>;
     getAutoLaunch: () => Promise<boolean>;
   };
-  screenShare: {
+  screenShare?: {
     pick: () => Promise<boolean>;
   };
   settings: {
