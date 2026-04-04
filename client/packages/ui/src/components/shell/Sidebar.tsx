@@ -1117,16 +1117,17 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
   const selfDM = isSelfDM(dm, currentUserId);
   const displayName = getDMDisplayName(dm, currentUserId);
   const self = selfDM ? dm.participants[0] : undefined;
-  const other = !isGroup && !selfDM
-    ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
-        | {
-            id: string;
-            displayName: string;
-            username: string;
-            avatarUrl?: string;
-          }
-        | undefined)
-    : undefined;
+  const other =
+    !isGroup && !selfDM
+      ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
+          | {
+              id: string;
+              displayName: string;
+              username: string;
+              avatarUrl?: string;
+            }
+          | undefined)
+      : undefined;
   const active =
     focusedContent?.type === 'dm' &&
     focusedContent.conversationId === channelId;

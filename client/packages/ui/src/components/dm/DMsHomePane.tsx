@@ -464,16 +464,17 @@ function DMRow({
   const group = isGroupDM(dm);
   const selfDM = isSelfDM(dm, currentUserId);
   const self = selfDM ? dm.participants[0] : undefined;
-  const other = !group && !selfDM
-    ? (dm.participants.find((p) => p.id !== currentUserId) as
-        | {
-            id: string;
-            displayName?: string;
-            username?: string;
-            avatarUrl?: string;
-          }
-        | undefined)
-    : undefined;
+  const other =
+    !group && !selfDM
+      ? (dm.participants.find((p) => p.id !== currentUserId) as
+          | {
+              id: string;
+              displayName?: string;
+              username?: string;
+              avatarUrl?: string;
+            }
+          | undefined)
+      : undefined;
   const hasUnread = (unreadCount ?? 0) > 0;
 
   return (
