@@ -1,13 +1,15 @@
 import type { UpdateStatus } from '@meza/core';
 import { useUpdateStore } from '../../stores/updates.ts';
 
+const PLATFORM = window.electronAPI?.app.getPlatform();
+
 export function AppUpdateOverlay() {
   const status = useUpdateStore((s) => s.status);
-  const platform = window.electronAPI?.app.getPlatform();
+  const lastMajorVersion = useUpdateStore((s) => s.lastMajorVersion);
 
   // Only show for major urgency on non-Linux platforms
-  if (platform === 'linux') return null;
-  if (!shouldShowOverlay(status)) return null;
+  if (PLATFORM === 'linux') return null;
+  if (!shouldShowOverlay(status, lastMajorVersion)) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/80 backdrop-blur-sm">
@@ -16,38 +18,32 @@ export function AppUpdateOverlay() {
         <p className="mt-2 text-sm text-text-subtle">
           A new version of Meza is available. Please update to continue.
         </p>
-        <div className="mt-6">{overlayContent(status, platform)}</div>
+        <div className="mt-6">{overlayContent(status)}</div>
       </div>
     </div>
   );
 }
 
-// Track whether we entered the overlay so errors during a major update
-// still show the overlay (error state has no urgency field).
-let lastMajorVersion: string | null = null;
-
-function shouldShowOverlay(status: UpdateStatus): boolean {
+function shouldShowOverlay(
+  status: UpdateStatus,
+  lastMajorVersion: string | null,
+): boolean {
   if (
     status.state !== 'idle' &&
     status.state !== 'checking' &&
     status.state !== 'error' &&
     status.urgency === 'major'
   ) {
-    lastMajorVersion = status.version;
     return true;
   }
   // Keep overlay visible during errors if we were in a major update flow
   if (status.state === 'error' && lastMajorVersion !== null) {
     return true;
   }
-  // Clear tracking when returning to idle
-  if (status.state === 'idle') {
-    lastMajorVersion = null;
-  }
   return false;
 }
 
-function overlayContent(status: UpdateStatus, platform: string | undefined) {
+function overlayContent(status: UpdateStatus): React.ReactNode {
   if (status.state === 'downloading') {
     return (
       <div>
@@ -57,7 +53,7 @@ function overlayContent(status: UpdateStatus, platform: string | undefined) {
         </div>
         <div className="h-2 rounded-full bg-bg-overlay overflow-hidden">
           <div
-            className="h-full rounded-full bg-accent transition-[width] duration-300"
+            className="h-full rounded-full bg-accent transition-[width] duration-200"
             style={{ width: `${Math.min(status.percent, 100)}%` }}
           />
         </div>
@@ -81,7 +77,7 @@ function overlayContent(status: UpdateStatus, platform: string | undefined) {
         className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 transition-colors"
         onClick={() => window.electronAPI?.updates.install()}
       >
-        {platform === 'win32' ? 'Install update' : 'Restart to update'}
+        {PLATFORM === 'win32' ? 'Install update' : 'Restart to update'}
       </button>
     );
   }

@@ -19,7 +19,6 @@ export type UpdateStatus =
       state: 'ready';
       version: string;
       urgency: UpdateUrgency;
-      releaseNotes: string | null;
     }
   | { state: 'error'; message: string };
 
@@ -39,7 +38,6 @@ export interface ElectronAPI {
   };
   updates: {
     check: () => Promise<void>;
-    download: () => Promise<void>;
     install: () => Promise<void>;
     onStatus: (callback: (status: UpdateStatus) => void) => () => void;
   };

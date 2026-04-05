@@ -4,6 +4,7 @@ import pkg from 'electron-updater';
 const { autoUpdater } = pkg;
 
 // ── Types (shared with preload/renderer via IPC) ────────────────────────
+// Canonical definition: client/packages/core/src/types/electron.d.ts
 
 export type UpdateUrgency = 'patch' | 'minor' | 'major';
 
@@ -26,32 +27,17 @@ export type UpdateStatus =
       state: 'ready';
       version: string;
       urgency: UpdateUrgency;
-      releaseNotes: string | null;
     }
   | { state: 'error'; message: string };
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 function getUrgency(current: string, next: string): UpdateUrgency {
-  const [cMaj, cMin] = current.split('.').map(Number);
-  const [nMaj, nMin] = next.split('.').map(Number);
+  const [cMaj = 0, cMin = 0] = current.split('.').map(Number);
+  const [nMaj = 0, nMin = 0] = next.split('.').map(Number);
   if (nMaj > cMaj) return 'major';
-  if (nMin > cMin) return 'minor';
+  if (nMaj === cMaj && nMin > cMin) return 'minor';
   return 'patch';
-}
-
-function sanitizeReleaseNotes(notes: unknown): string | null {
-  if (!notes) return null;
-  const raw =
-    typeof notes === 'string'
-      ? notes
-      : Array.isArray(notes)
-        ? notes
-            .map((n: { note?: string }) => n.note ?? '')
-            .filter(Boolean)
-            .join('\n')
-        : '';
-  return raw.replace(/<[^>]*>/g, '').trim() || null;
 }
 
 // ── Main ────────────────────────────────────────────────────────────────
@@ -75,7 +61,12 @@ export function initAutoUpdater(win: BrowserWindow): void {
   let checkInFlight: Promise<unknown> | null = null;
 
   async function serializedCheck(): Promise<void> {
-    if (checkInFlight || updateDownloaded) return;
+    if (updateDownloaded) return;
+    if (checkInFlight) {
+      // If a check is already in flight, wait for it instead of dropping
+      await checkInFlight;
+      return;
+    }
     sendStatus(win, { state: 'checking' });
     checkInFlight = autoUpdater
       .checkForUpdates()
@@ -93,6 +84,7 @@ export function initAutoUpdater(win: BrowserWindow): void {
       .finally(() => {
         checkInFlight = null;
       });
+    await checkInFlight;
   }
 
   // ── Send status to renderer ─────────────────────────────────────────
@@ -151,7 +143,6 @@ export function initAutoUpdater(win: BrowserWindow): void {
       state: 'ready',
       version: info.version,
       urgency: currentUrgency,
-      releaseNotes: sanitizeReleaseNotes(info.releaseNotes),
     });
   });
 
@@ -171,12 +162,9 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   // ── IPC handlers ────────────────────────────────────────────────────
 
-  ipcMain.handle('update:check', async () => {
+  ipcMain.handle('update:check', async (event) => {
+    if (event.sender.id !== win.webContents.id) return;
     await serializedCheck();
-  });
-
-  ipcMain.handle('update:download', async () => {
-    await autoUpdater.downloadUpdate();
   });
 
   ipcMain.handle('update:install', (event) => {
@@ -192,27 +180,34 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   const CHECK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
   let checkInterval: ReturnType<typeof setInterval> | null = null;
+  let pendingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   function startPeriodicChecks(): void {
     // Delay initial check to avoid blocking startup
-    setTimeout(() => serializedCheck(), 10_000);
+    pendingTimeout = setTimeout(() => {
+      pendingTimeout = null;
+      serializedCheck();
+    }, 10_000);
     checkInterval = setInterval(() => serializedCheck(), CHECK_INTERVAL_MS);
 
-    powerMonitor.on('suspend', () => {
-      if (checkInterval) {
-        clearInterval(checkInterval);
-        checkInterval = null;
-      }
-    });
+    powerMonitor.on('suspend', stopPeriodicChecks);
 
     powerMonitor.on('resume', () => {
+      if (checkInterval) return; // already running
       // Delay to let network reconnect after wake
-      setTimeout(() => serializedCheck(), 5_000);
+      pendingTimeout = setTimeout(() => {
+        pendingTimeout = null;
+        serializedCheck();
+      }, 5_000);
       checkInterval = setInterval(() => serializedCheck(), CHECK_INTERVAL_MS);
     });
   }
 
   function stopPeriodicChecks(): void {
+    if (pendingTimeout) {
+      clearTimeout(pendingTimeout);
+      pendingTimeout = null;
+    }
     if (checkInterval) {
       clearInterval(checkInterval);
       checkInterval = null;

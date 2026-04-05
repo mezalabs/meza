@@ -3,17 +3,36 @@ import { create } from 'zustand';
 
 interface UpdateState {
   status: UpdateStatus;
+  lastMajorVersion: string | null;
 }
 
 interface UpdateActions {
   setStatus: (status: UpdateStatus) => void;
 }
 
-export const useUpdateStore = create<UpdateState & UpdateActions>((set) => ({
-  status: { state: 'idle' },
+export const useUpdateStore = create<UpdateState & UpdateActions>(
+  (set, get) => ({
+    status: { state: 'idle' },
+    lastMajorVersion: null,
 
-  setStatus: (status) => set({ status }),
-}));
+    setStatus: (status) => {
+      let lastMajorVersion = get().lastMajorVersion;
+
+      if (
+        status.state !== 'idle' &&
+        status.state !== 'checking' &&
+        status.state !== 'error' &&
+        status.urgency === 'major'
+      ) {
+        lastMajorVersion = status.version;
+      } else if (status.state === 'idle') {
+        lastMajorVersion = null;
+      }
+
+      set({ status, lastMajorVersion });
+    },
+  }),
+);
 
 // ── IPC subscription (call once at app startup) ─────────────────────────
 

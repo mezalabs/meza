@@ -1,24 +1,32 @@
 import type { UpdateStatus } from '@meza/core';
 import { useUpdateStore } from '../../stores/updates.ts';
 
+const PLATFORM = window.electronAPI?.app.getPlatform();
+
 export function AppUpdateBanner() {
   const status = useUpdateStore((s) => s.status);
 
-  if (
-    status.state === 'idle' ||
-    status.state === 'checking' ||
-    status.state === 'error'
-  ) {
+  if (status.state === 'idle' || status.state === 'checking') {
     return null;
   }
 
+  if (status.state === 'error') {
+    return (
+      <div className="flex-shrink-0 border-b border-border bg-bg-overlay px-3 py-1.5">
+        <div className="flex items-center gap-2 text-sm text-text-subtle">
+          <span className="h-2 w-2 flex-shrink-0 rounded-full bg-error" />
+          <span className="flex-1">Update failed — will retry later</span>
+        </div>
+      </div>
+    );
+  }
+
   // Major tier on mac/win is handled by AppUpdateOverlay — don't show banner
-  const platform = window.electronAPI?.app.getPlatform();
-  const isLinux = platform === 'linux';
+  const isLinux = PLATFORM === 'linux';
   if (status.urgency === 'major' && !isLinux) return null;
 
   return (
-    <div className={bannerClass(status)}>
+    <div className="flex-shrink-0 border-b border-border bg-bg-overlay px-3 py-1.5">
       <div className="flex items-center gap-2 text-sm">
         <span className={dotClass(status)} />
         <span className="flex-1">{bannerText(status, isLinux)}</span>
@@ -28,20 +36,12 @@ export function AppUpdateBanner() {
   );
 }
 
-// ── Styling helpers ─────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────��──────────────────────────────
 
-type VisibleStatus = Exclude<
+type VisibleStatus = Extract<
   UpdateStatus,
-  { state: 'idle' } | { state: 'checking' } | { state: 'error' }
+  { state: 'available' } | { state: 'downloading' } | { state: 'ready' }
 >;
-
-function bannerClass(status: VisibleStatus): string {
-  const base = 'flex-shrink-0 border-b border-border bg-bg-overlay px-3 py-1.5';
-  if (status.state === 'available' || status.state === 'downloading') {
-    return `${base}`;
-  }
-  return base;
-}
 
 function dotClass(status: VisibleStatus): string {
   const base = 'h-2 w-2 flex-shrink-0 rounded-full';
@@ -51,26 +51,23 @@ function dotClass(status: VisibleStatus): string {
 }
 
 function bannerText(status: VisibleStatus, isLinux: boolean): string {
-  const version = status.version;
-
   if (isLinux) {
-    return `Update v${version} available`;
+    return `Update v${status.version} available`;
   }
-
   if (status.state === 'downloading') {
-    return `Downloading update v${version}... ${Math.round(status.percent)}%`;
+    return `Downloading update v${status.version}... ${Math.round(status.percent)}%`;
   }
-
   if (status.state === 'ready') {
-    return `Update v${version} ready`;
+    return `Update v${status.version} ready`;
   }
-
-  // state === 'available' (brief moment before download starts)
-  return `Update v${version} available`;
+  return `Update v${status.version} available`;
 }
 
-function bannerAction(status: VisibleStatus, isLinux: boolean) {
-  if (isLinux && 'releaseUrl' in status) {
+function bannerAction(
+  status: VisibleStatus,
+  isLinux: boolean,
+): React.ReactNode {
+  if (isLinux && status.state === 'available') {
     return (
       <a
         href={status.releaseUrl}
@@ -87,7 +84,7 @@ function bannerAction(status: VisibleStatus, isLinux: boolean) {
     return (
       <div className="w-24 h-1.5 rounded-full bg-bg-surface overflow-hidden">
         <div
-          className="h-full rounded-full bg-accent transition-[width] duration-300"
+          className="h-full rounded-full bg-accent transition-[width] duration-200"
           style={{ width: `${Math.min(status.percent, 100)}%` }}
         />
       </div>
@@ -95,8 +92,7 @@ function bannerAction(status: VisibleStatus, isLinux: boolean) {
   }
 
   if (status.state === 'ready') {
-    const platform = window.electronAPI?.app.getPlatform();
-    const label = platform === 'win32' ? 'Install update' : 'Restart to update';
+    const label = PLATFORM === 'win32' ? 'Install update' : 'Restart to update';
     return (
       <button
         type="button"

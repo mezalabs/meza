@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Update status discriminated union — mirrors the type in updater.ts and electron.d.ts
+// Update status discriminated union.
+// @see canonical definition: client/packages/core/src/types/electron.d.ts
 type UpdateUrgency = 'patch' | 'minor' | 'major';
 type UpdateStatus =
   | { state: 'idle' }
@@ -21,7 +22,6 @@ type UpdateStatus =
       state: 'ready';
       version: string;
       urgency: UpdateUrgency;
-      releaseNotes: string | null;
     }
   | { state: 'error'; message: string };
 
@@ -66,7 +66,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Auto-update ---
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
-    download: () => ipcRenderer.invoke('update:download') as Promise<void>,
     install: () => ipcRenderer.invoke('update:install'),
     onStatus: (callback: (status: UpdateStatus) => void) => {
       const handler = (_event: unknown, status: UpdateStatus) =>
