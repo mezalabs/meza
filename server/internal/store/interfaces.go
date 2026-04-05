@@ -65,6 +65,7 @@ type ChatStorer interface {
 	GetServer(ctx context.Context, serverID string) (*models.Server, error)
 	UpdateServer(ctx context.Context, serverID string, name, iconURL, welcomeMessage, rules *string, onboardingEnabled, rulesRequired, defaultChannelPrivacy *bool, bannerURL *string) (*models.Server, error)
 	ListServers(ctx context.Context, userID string) ([]*models.Server, error)
+	ListAllServers(ctx context.Context) ([]*models.Server, error)
 	CreateChannel(ctx context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error)
 	GetChannel(ctx context.Context, channelID string) (*models.Channel, error)
 	GetChannelAndCheckMembership(ctx context.Context, channelID, userID string) (*models.Channel, bool, error)
@@ -220,6 +221,7 @@ type PinStorer interface {
 type EmojiStorer interface {
 	CreateEmoji(ctx context.Context, emoji *models.Emoji, maxPersonal, maxServer int) (*models.Emoji, error)
 	GetEmoji(ctx context.Context, emojiID string) (*models.Emoji, error)
+	GetEmojisByIDs(ctx context.Context, emojiIDs []string) ([]*models.Emoji, error)
 	ListEmojis(ctx context.Context, serverID string) ([]*models.Emoji, error)
 	ListEmojisByUser(ctx context.Context, userID string) ([]*models.Emoji, error)
 	UpdateEmoji(ctx context.Context, emojiID string, name *string) (*models.Emoji, error)

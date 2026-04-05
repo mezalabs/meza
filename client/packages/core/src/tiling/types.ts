@@ -25,6 +25,7 @@ export type PaneContent =
   | { type: 'createServer' }
   | { type: 'messageRequests' }
   | { type: 'friends'; tab?: 'all' | 'pending' | 'add' }
+  | { type: 'dmsHome' }
   | { type: 'empty' };
 
 export interface PaneLeaf {

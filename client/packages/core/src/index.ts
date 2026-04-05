@@ -128,6 +128,28 @@ export {
   updateSound,
   updateSystemMessageConfig,
 } from './api/chat.ts';
+// API — federation
+export {
+  createFederationAssertion,
+  federationJoin,
+  federationLeave,
+  mapFederationError,
+  resolveRemoteInvite,
+  resolveSpokeInvitePreview,
+  validateFederationUrl,
+} from './api/federation.ts';
+export {
+  spokeAckMessage,
+  spokeAddReaction,
+  spokeDeleteMessage,
+  spokeEditMessage,
+  spokeRemoveReaction,
+  spokeSendMessage,
+} from './api/federation-chat.ts';
+export {
+  getSpokeTransport,
+  removeSpokeTransport,
+} from './api/federation-transport.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
@@ -185,8 +207,13 @@ export {
   base64ToUint8,
   bootstrapSession,
   buildMessageContent,
+  type CachedKeyRecord,
+  cachePublicKey,
   clearChannelKeyCache,
   clearCryptoStorage,
+  clearVerification,
+  computeFingerprint,
+  computeSafetyNumber,
   createChannelKey,
   createIdentity,
   createInviteKeyBundle,
@@ -212,6 +239,7 @@ export {
   encryptRecoveryBundle,
   fetchAndCacheChannelKeys,
   flushChannelKeys,
+  formatSafetyNumber,
   generateChannelKey,
   generateFileKey,
   generateIdentityKeypair,
@@ -223,21 +251,28 @@ export {
   getChannelKeysForServer,
   getIdentity,
   getLatestKeyVersion,
+  getVerificationStatus,
   hasChannelKey,
   type IdentityKeypair,
   importChannelKeys,
   importInviteKeyBundle,
   initChannelKeys,
   isSessionReady,
+  isVerificationValid,
+  type KeyCacheResult,
   lazyInitChannelKey,
+  loadAllVerifications,
   loadCachedChannelKeys,
   loadKeyBundle,
+  markVerified,
   onCrossTabTeardown,
+  onKeyChanged,
   onSessionReady,
   type ParsedMessageContent,
   parseMessageContent,
   persistIdentity,
   provisionChannelKeyBatched,
+  pruneStaleVerifications,
   redistributeChannelKeys,
   registerPublicKey,
   releaseAllBlobURLs,
@@ -251,6 +286,7 @@ export {
   teardownSession,
   unwrapChannelKey,
   unwrapFileKey,
+  type VerificationRecord,
   validateRecoveryPhrase,
   verifySignature,
   wrapChannelKey,
@@ -263,6 +299,14 @@ export {
   disconnect as gatewayDisconnect,
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
+// Gateway — spoke
+export {
+  cleanupSpoke,
+  connectSpoke,
+  disconnectAllSpokes,
+  disconnectSpoke,
+  reconnectAllSpokes,
+} from './gateway/spoke-gateway.ts';
 export * from './keybinds/index.ts';
 export type { StoredEmoji } from './lib/emojiCache.ts';
 export {
@@ -339,6 +383,14 @@ export type { DMActions, DMState } from './store/dms.ts';
 export { useDMStore } from './store/dms.ts';
 export type { EmojiActions, EmojiState } from './store/emojis.ts';
 export { useEmojiStore } from './store/emojis.ts';
+// Stores — federation
+export type {
+  FederationActions,
+  FederationState,
+  SpokeConnection,
+  SpokeConnectionStatus,
+} from './store/federation.ts';
+export { useFederationStore } from './store/federation.ts';
 export type { FriendActions, FriendState } from './store/friends.ts';
 export { useFriendStore } from './store/friends.ts';
 export type {
@@ -433,17 +485,22 @@ export type {
 export { useVoiceParticipantsStore } from './store/voiceParticipants.ts';
 export * from './tiling/index.ts';
 // Types — Electron API
-export type { ElectronAPI } from './types/electron.d.ts';
+export type {
+  ElectronAPI,
+  UpdateStatus,
+  UpdateUrgency,
+} from './types/electron.d.ts';
 // Utils
 export type { DeepLinkInvite } from './utils/deep-link.ts';
 export { buildDeepLinkUrl, parseDeepLink } from './utils/deep-link.ts';
-export { getDMDisplayName, isGroupDM } from './utils/dm.ts';
+export { getDMDisplayName, isGroupDM, isSelfDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export {
   hideKeyboard,
   onKeyboardWillHide,
   onKeyboardWillShow,
 } from './utils/keyboard.ts';
+export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export {

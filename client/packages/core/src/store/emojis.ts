@@ -22,6 +22,7 @@ function loadFromCache(): Partial<EmojiState> {
     return {
       byServer: cached.byServer as unknown as Record<string, CustomEmoji[]>,
       personal: cached.personal as unknown as CustomEmoji[] | null,
+      byId: cached.byId as unknown as Record<string, CustomEmoji>,
       cachedServerIds,
       personalFromCache: !!cached.personal,
     };
@@ -33,6 +34,8 @@ function loadFromCache(): Partial<EmojiState> {
 export interface EmojiState {
   byServer: Record<string, CustomEmoji[]>;
   personal: CustomEmoji[] | null;
+  /** Emojis enriched from reaction responses/events (foreign emojis the user doesn't have locally). */
+  byId: Record<string, CustomEmoji>;
   error: string | null;
   /** Server IDs whose emoji data came from cache and hasn't been refreshed from API yet. */
   cachedServerIds: Record<string, true>;
@@ -43,6 +46,8 @@ export interface EmojiState {
 export interface EmojiActions {
   setEmojis: (serverId: string, emojis: CustomEmoji[]) => void;
   setPersonalEmojis: (emojis: CustomEmoji[]) => void;
+  /** Merge reaction-enriched emojis into the byId lookup map. */
+  setReactionEmojis: (emojis: Record<string, CustomEmoji>) => void;
   addEmoji: (emoji: CustomEmoji) => void;
   updateEmoji: (emoji: CustomEmoji) => void;
   removeEmoji: (serverId: string, emojiId: string) => void;
@@ -59,6 +64,7 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
   immer((set) => ({
     byServer: {},
     personal: null,
+    byId: {},
     error: null,
     cachedServerIds: {},
     personalFromCache: false,
@@ -77,6 +83,12 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
         state.personal = [...emojis].sort((a, b) =>
           a.name.localeCompare(b.name),
         );
+      });
+    },
+
+    setReactionEmojis: (emojis) => {
+      set((state) => {
+        Object.assign(state.byId, emojis);
       });
     },
 
@@ -130,6 +142,7 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
           const idx = state.personal.findIndex((e) => e.id === emojiId);
           if (idx !== -1) state.personal.splice(idx, 1);
         }
+        delete state.byId[emojiId];
       });
     },
 
@@ -161,6 +174,7 @@ export const useEmojiStore = create<EmojiState & EmojiActions>()(
       set((state) => {
         state.byServer = {};
         state.personal = null;
+        state.byId = {};
         state.error = null;
         state.cachedServerIds = {};
         state.personalFromCache = false;

@@ -7,6 +7,9 @@
  * Depends on Journey 1 (alice and bob registered, server + channels exist).
  */
 
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { ChannelPage } from '../pages/ChannelPage';
 import { chapter, createContext, reportFailures } from './helpers';
@@ -100,6 +103,108 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     ).toBeVisible({ timeout: 10_000 });
   });
 
+  // ---- Chapter: Custom Emoji Reactions ----
+  const customEmojiMsg = `Custom emoji test ${ts()}`;
+
+  await chapter(alicePage, testInfo, 'Custom Emoji Reactions', async () => {
+    // Step 1: Create a small test PNG for the custom emoji upload
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-emoji-'));
+    const emojiPath = path.join(tmpDir, 'testemoji.png');
+    // 1x1 red PNG (smallest valid PNG)
+    const pngBytes = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    fs.writeFileSync(emojiPath, pngBytes);
+
+    // Step 2: Alice opens server settings → Emojis and uploads a custom emoji
+    await alicePage.getByLabel('Server settings').click();
+    const settingsNav = alicePage.locator(
+      'nav[aria-label="Server settings sections"]',
+    );
+    await settingsNav.getByText('Emojis').click();
+    await expect(
+      alicePage.getByRole('heading', { name: 'Custom Emojis' }),
+    ).toBeVisible({ timeout: 5_000 });
+
+    const fileChooserPromise = alicePage.waitForEvent('filechooser');
+    await alicePage.getByRole('button', { name: 'Upload Emoji' }).click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(emojiPath);
+
+    // Wait for the emoji to appear in the list (name derived from filename: "testemoji")
+    await expect(alicePage.getByText(':testemoji:')).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Step 3: Navigate back to #general
+    // Small wait so the debounced emoji cache write (1s) persists the new emoji
+    await alicePage.waitForTimeout(1_500);
+    await alice.goto(SERVER, CHANNEL);
+    await alice.waitForEncryption();
+
+    // Step 4: Alice sends a message and reacts with the custom emoji
+    await alice.sendMessage(customEmojiMsg);
+    await alice.expectMessage(customEmojiMsg);
+    await bob.expectMessage(customEmojiMsg);
+
+    await alice.clickAddReaction(customEmojiMsg);
+    // The emoji picker is rendered inside a Popover, which Radix gives role="dialog"
+    const picker = alicePage.getByRole('dialog');
+    await expect(picker).toBeVisible({ timeout: 5_000 });
+
+    // Search for the custom emoji — wait for a gridcell containing an <img>
+    // (custom emojis render as <img>, unicode emojis render as <span>)
+    const searchBox = picker.getByRole('searchbox', { name: 'Search' });
+    await expect(searchBox).toBeVisible({ timeout: 5_000 });
+    await searchBox.fill('testemoji');
+    // Wait for the debounced search to filter and show custom emoji results
+    const customEmojiBtn = picker.locator('button[role="gridcell"]:has(img)');
+    await expect(customEmojiBtn.first()).toBeVisible({ timeout: 10_000 });
+    await customEmojiBtn.first().click();
+
+    // Step 5: Verify Alice sees a reaction pill on the message
+    const aliceMsgContainer = alice.messageList
+      .locator('[data-message-id]')
+      .filter({ hasText: customEmojiMsg })
+      .first();
+    // The reaction pill contains either an <img> (custom emoji rendered) or
+    // a <span> with :testemoji: text (fallback). We first wait for any
+    // reaction pill to appear, then assert it contains an image.
+    const aliceReactionPill = aliceMsgContainer
+      .locator('button:has(span)')
+      .filter({ hasText: /1/ });
+    await expect(aliceReactionPill.first()).toBeVisible({ timeout: 15_000 });
+    // Assert the pill renders an image, not :name: text fallback
+    await expect(
+      aliceMsgContainer.locator('img[alt=":testemoji:"]'),
+    ).toBeVisible({ timeout: 5_000 });
+
+    // Step 6: Verify Bob sees the custom emoji reaction as an image (the core fix)
+    const bobMsgContainer = bob.messageList
+      .locator('[data-message-id]')
+      .filter({ hasText: customEmojiMsg })
+      .first();
+    const bobReactionPill = bobMsgContainer
+      .locator('button:has(span)')
+      .filter({ hasText: /1/ });
+    await expect(bobReactionPill.first()).toBeVisible({ timeout: 15_000 });
+    await expect(bobMsgContainer.locator('img[alt=":testemoji:"]')).toBeVisible(
+      { timeout: 5_000 },
+    );
+
+    // Step 7: Bob clicks the reaction pill to pile-on
+    await bobMsgContainer.locator('button:has(img[alt=":testemoji:"])').click();
+
+    // Reaction count should update to 2
+    await expect(
+      bobMsgContainer.locator('button:has(img[alt=":testemoji:"])'),
+    ).toContainText('2', { timeout: 10_000 });
+
+    // Clean up temp file
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
   // ---- Chapter: Pins ----
   await chapter(alicePage, testInfo, 'Pins', async () => {
     const msgContainer = alice.messageList
@@ -137,7 +242,7 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     });
     await alice.composer.press('Enter');
     await expect(
-      alice.messageList.locator('strong').filter({ hasText: 'bold test' }),
+      alice.messageList.locator('strong').filter({ hasText: boldTs }),
     ).toBeVisible({ timeout: 10_000 });
 
     const italicTs = ts();
@@ -146,7 +251,7 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     });
     await alice.composer.press('Enter');
     await expect(
-      alice.messageList.locator('em').filter({ hasText: 'italic test' }),
+      alice.messageList.locator('em').filter({ hasText: italicTs }),
     ).toBeVisible({ timeout: 10_000 });
 
     const codeText = `code-${ts()}`;

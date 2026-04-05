@@ -1,0 +1,196 @@
+name: Release Tag
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  tag-and-dispatch:
+    name: Tag & Dispatch Releases
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Detect platforms from branch name
+        id: detect
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          echo "Branch: $BRANCH"
+
+          # Parse branch name: release/desktop-X.Y.Z, release/mobile-X.Y.Z,
+          # release/server-X.Y.Z, or any combination joined with hyphens
+          DESKTOP_VER=""
+          MOBILE_VER=""
+          SERVER_VER=""
+
+          if echo "$BRANCH" | grep -qE 'desktop-[0-9]+\.[0-9]+\.[0-9]+'; then
+            DESKTOP_VER=$(echo "$BRANCH" | grep -oE 'desktop-[0-9]+\.[0-9]+\.[0-9]+' | sed 's/desktop-//')
+          fi
+
+          if echo "$BRANCH" | grep -qE 'mobile-[0-9]+\.[0-9]+\.[0-9]+'; then
+            MOBILE_VER=$(echo "$BRANCH" | grep -oE 'mobile-[0-9]+\.[0-9]+\.[0-9]+' | sed 's/mobile-//')
+          fi
+
+          if echo "$BRANCH" | grep -qE 'server-[0-9]+\.[0-9]+\.[0-9]+'; then
+            SERVER_VER=$(echo "$BRANCH" | grep -oE 'server-[0-9]+\.[0-9]+\.[0-9]+' | sed 's/server-//')
+          fi
+
+          echo "desktop_version=$DESKTOP_VER" >> "$GITHUB_OUTPUT"
+          echo "mobile_version=$MOBILE_VER" >> "$GITHUB_OUTPUT"
+          echo "server_version=$SERVER_VER" >> "$GITHUB_OUTPUT"
+
+          if [ -z "$DESKTOP_VER" ] && [ -z "$MOBILE_VER" ] && [ -z "$SERVER_VER" ]; then
+            echo "::error::Could not parse any version from branch name: $BRANCH"
+            exit 1
+          fi
+
+      - name: Validate versions match source files
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SERVER_VER: ${{ steps.detect.outputs.server_version }}
+        run: |
+          if [ -n "$DESKTOP_VER" ]; then
+            PKG_VER=$(node -p "require('./client/packages/desktop/package.json').version")
+            if [ "$DESKTOP_VER" != "$PKG_VER" ]; then
+              echo "::error::Branch says desktop $DESKTOP_VER but package.json says $PKG_VER"
+              exit 1
+            fi
+            echo "Desktop version confirmed: $DESKTOP_VER"
+          fi
+
+          if [ -n "$MOBILE_VER" ]; then
+            PKG_VER=$(node -p "require('./client/packages/mobile/package.json').version")
+            if [ "$MOBILE_VER" != "$PKG_VER" ]; then
+              echo "::error::Branch says mobile $MOBILE_VER but package.json says $PKG_VER"
+              exit 1
+            fi
+            echo "Mobile version confirmed: $MOBILE_VER"
+          fi
+
+          if [ -n "$SERVER_VER" ]; then
+            FILE_VER=$(cat server/VERSION | tr -d '[:space:]')
+            if [ "$SERVER_VER" != "$FILE_VER" ]; then
+              echo "::error::Branch says server $SERVER_VER but VERSION file says $FILE_VER"
+              exit 1
+            fi
+            echo "Server version confirmed: $SERVER_VER"
+          fi
+
+      - name: Check tags do not already exist
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SERVER_VER: ${{ steps.detect.outputs.server_version }}
+        run: |
+          if [ -n "$DESKTOP_VER" ] && git rev-parse "desktop-v${DESKTOP_VER}" >/dev/null 2>&1; then
+            echo "::warning::Tag desktop-v${DESKTOP_VER} already exists, skipping desktop"
+            echo "SKIP_DESKTOP=true" >> "$GITHUB_ENV"
+          fi
+
+          if [ -n "$MOBILE_VER" ] && git rev-parse "mobile-v${MOBILE_VER}" >/dev/null 2>&1; then
+            echo "::warning::Tag mobile-v${MOBILE_VER} already exists, skipping mobile"
+            echo "SKIP_MOBILE=true" >> "$GITHUB_ENV"
+          fi
+
+          if [ -n "$SERVER_VER" ] && git rev-parse "v${SERVER_VER}" >/dev/null 2>&1; then
+            echo "::warning::Tag v${SERVER_VER} already exists, skipping server"
+            echo "SKIP_SERVER=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Create and push tags
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SERVER_VER: ${{ steps.detect.outputs.server_version }}
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -n "$DESKTOP_VER" ] && [ "$SKIP_DESKTOP" != "true" ]; then
+            git tag "desktop-v${DESKTOP_VER}" "$SHA"
+            git push origin "desktop-v${DESKTOP_VER}"
+            echo "Created tag desktop-v${DESKTOP_VER} at $SHA"
+          fi
+
+          if [ -n "$MOBILE_VER" ] && [ "$SKIP_MOBILE" != "true" ]; then
+            git tag "mobile-v${MOBILE_VER}" "$SHA"
+            git push origin "mobile-v${MOBILE_VER}"
+            echo "Created tag mobile-v${MOBILE_VER} at $SHA"
+          fi
+
+          if [ -n "$SERVER_VER" ] && [ "$SKIP_SERVER" != "true" ]; then
+            git tag "v${SERVER_VER}" "$SHA"
+            git push origin "v${SERVER_VER}"
+            echo "Created tag v${SERVER_VER} at $SHA"
+          fi
+
+      # Tags pushed with GITHUB_TOKEN do not trigger on:push:tags workflows
+      # (GitHub anti-recursion). We dispatch explicitly with --ref <tag> so the
+      # downstream workflow sees github.ref = refs/tags/<tag>, which is required
+      # for validation and the AUR update-packaging job condition.
+      - name: Dispatch release workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SERVER_VER: ${{ steps.detect.outputs.server_version }}
+        run: |
+          if [ -n "$DESKTOP_VER" ] && [ "$SKIP_DESKTOP" != "true" ]; then
+            echo "Dispatching desktop-release.yml with --ref desktop-v${DESKTOP_VER}"
+            gh workflow run desktop-release.yml --ref "desktop-v${DESKTOP_VER}"
+          fi
+
+          if [ -n "$MOBILE_VER" ] && [ "$SKIP_MOBILE" != "true" ]; then
+            echo "Dispatching mobile-release.yml with --ref mobile-v${MOBILE_VER}"
+            gh workflow run mobile-release.yml --ref "mobile-v${MOBILE_VER}"
+          fi
+
+          if [ -n "$SERVER_VER" ] && [ "$SKIP_SERVER" != "true" ]; then
+            echo "Dispatching build-images.yml with --ref v${SERVER_VER}"
+            gh workflow run build-images.yml --ref "v${SERVER_VER}"
+          fi
+
+      - name: Post summary
+        env:
+          DESKTOP_VER: ${{ steps.detect.outputs.desktop_version }}
+          MOBILE_VER: ${{ steps.detect.outputs.mobile_version }}
+          SERVER_VER: ${{ steps.detect.outputs.server_version }}
+        run: |
+          {
+            echo "## Release Tags Created"
+            echo ""
+            if [ -n "$DESKTOP_VER" ] && [ "$SKIP_DESKTOP" != "true" ]; then
+              echo "- \`desktop-v${DESKTOP_VER}\` → dispatched **desktop-release.yml**"
+            elif [ -n "$DESKTOP_VER" ]; then
+              echo "- ~~desktop-v${DESKTOP_VER}~~ (tag already existed, skipped)"
+            fi
+            if [ -n "$MOBILE_VER" ] && [ "$SKIP_MOBILE" != "true" ]; then
+              echo "- \`mobile-v${MOBILE_VER}\` → dispatched **mobile-release.yml**"
+            elif [ -n "$MOBILE_VER" ]; then
+              echo "- ~~mobile-v${MOBILE_VER}~~ (tag already existed, skipped)"
+            fi
+            if [ -n "$SERVER_VER" ] && [ "$SKIP_SERVER" != "true" ]; then
+              echo "- \`v${SERVER_VER}\` → dispatched **build-images.yml**"
+            elif [ -n "$SERVER_VER" ]; then
+              echo "- ~~v${SERVER_VER}~~ (tag already existed, skipped)"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

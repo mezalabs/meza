@@ -28,6 +28,7 @@ vi.mock('../api/presence.ts', () => ({
 const mockListChannels = vi.fn().mockResolvedValue([]);
 vi.mock('../api/chat.ts', () => ({
   listChannels: (...args: unknown[]) => mockListChannels(...args),
+  listDMChannels: vi.fn().mockResolvedValue([]),
 }));
 
 // ---------------------------------------------------------------------------

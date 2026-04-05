@@ -77,6 +77,10 @@ func main() {
 	svc.chatStore = chatStore
 	svc.friendStore = friendStore
 	svc.instanceURL = cfg.InstanceURL
+	svc.registrationDisabled = cfg.RegistrationDisabled
+	if cfg.RegistrationDisabled {
+		slog.Info("local user registration is disabled")
+	}
 
 	// Connect Redis for per-email recovery rate limiting and device blocklist.
 	if cfg.RedisURL != "" {
@@ -210,11 +214,22 @@ func main() {
 }
 
 // federationCORS wraps a handler with CORS headers for cross-origin federation
-// ConnectRPC calls. Allows all origins since federation endpoints are designed
-// to be called from any trusted instance's client.
+// ConnectRPC calls. Instead of a wildcard, the request Origin is echoed back so
+// that browsers scope the CORS grant to the specific requesting origin. Non-browser
+// server-to-server calls (no Origin header) are allowed through without CORS headers.
+//
+// SECURITY NOTE: Echoing Origin is standard for token-based APIs (no cookies).
+// Since all authenticated endpoints require an Authorization header, CSRF is not
+// a concern (browsers don't auto-attach Authorization headers). A spoke origin
+// allowlist would be ideal but requires a spoke registration mechanism (Phase 2).
+// The primary security is the assertion system (audience-scoped, JTI replay-protected).
 func federationCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version, Authorization")
 		w.Header().Set("Access-Control-Max-Age", "86400")

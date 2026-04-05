@@ -8,13 +8,13 @@ set -euo pipefail
 
 REGISTRY="${BUILD_REGISTRY:?missing BUILD_REGISTRY}"
 TAG="${BUILD_TAG:?missing BUILD_TAG}"
-SERVICES=(gateway auth chat presence voice notification keys migrate)
+SERVICES=(gateway auth chat presence voice notification keys migrate admin)
 LOGDIR=$(mktemp -d)
 trap 'rm -rf "$LOGDIR"' EXIT
 
 echo "==> Registry: $REGISTRY"
 echo "==> Tag:      $TAG"
-echo "==> Building all 10 images in parallel..."
+echo "==> Building all 11 images in parallel..."
 echo ""
 
 build_one() {
@@ -61,7 +61,7 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-echo "✓ All 10 images built:"
+echo "✓ All 11 images built:"
 for name in "${SERVICES[@]}" media client; do
   echo "  $REGISTRY/$name:$TAG"
 done

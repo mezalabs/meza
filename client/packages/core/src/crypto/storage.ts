@@ -10,9 +10,11 @@
  */
 
 const DB_NAME = 'meza-crypto';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_KEY_BUNDLE = 'key-bundle';
 const STORE_CHANNEL_KEYS = 'channel-keys';
+const STORE_CACHED_KEYS = 'cached-keys';
+const STORE_VERIFICATION = 'verification';
 
 interface KeyBundleRecord {
   id: 'current';
@@ -23,6 +25,20 @@ interface ChannelKeysRecord {
   id: 'current';
   encryptedKeys: Uint8Array;
   iv: Uint8Array;
+}
+
+export interface CachedKeyRecord {
+  userId: string;
+  publicKey: Uint8Array;
+  firstSeenAt: number;
+}
+
+export interface VerificationRecord {
+  userId: string;
+  verified: boolean;
+  /** SHA-256 hex digest of the public key at verification time. */
+  publicKeyHash: string;
+  verifiedAt: number;
 }
 
 /** Singleton DB connection, reused across all operations. */
@@ -54,6 +70,16 @@ function getDB(): Promise<IDBDatabase> {
         db.createObjectStore(STORE_CHANNEL_KEYS, { keyPath: 'id' });
       }
 
+      // Create cached-keys store for key change detection (new in v5)
+      if (!db.objectStoreNames.contains(STORE_CACHED_KEYS)) {
+        db.createObjectStore(STORE_CACHED_KEYS, { keyPath: 'userId' });
+      }
+
+      // Create verification store for safety number status (new in v5)
+      if (!db.objectStoreNames.contains(STORE_VERIFICATION)) {
+        db.createObjectStore(STORE_VERIFICATION, { keyPath: 'userId' });
+      }
+
       // Remove MLS-era stores on upgrade from v3 or earlier
       if (oldVersion < 4) {
         for (const storeName of ['provider-state', 'mls-groups']) {
@@ -63,10 +89,29 @@ function getDB(): Promise<IDBDatabase> {
         }
       }
     };
+    request.onblocked = () => {
+      // Another tab holds an older version of the DB open.  Close our
+      // singleton (if any) so the upgrade can proceed once the other
+      // tab is closed, and reject so callers don't hang forever.
+      dbPromise = null;
+      reject(
+        new Error(
+          'IndexedDB upgrade blocked — close other Meza tabs and retry',
+        ),
+      );
+    };
     request.onsuccess = () => {
       dbInstance = request.result;
       // Reset singleton if the connection is unexpectedly closed.
       dbInstance.onclose = () => {
+        dbInstance = null;
+        dbPromise = null;
+      };
+      // Close this connection when another context (tab, HMR reload)
+      // requests a higher DB version.  Without this the upgrade request
+      // in the other context gets blocked indefinitely.
+      dbInstance.onversionchange = () => {
+        dbInstance?.close();
         dbInstance = null;
         dbPromise = null;
       };
@@ -168,6 +213,100 @@ export async function loadChannelKeys(): Promise<{
   });
 }
 
+// --- Cached Public Keys (key change detection) ---
+
+/**
+ * Read a cached public key record for a user.
+ */
+export async function loadCachedKey(
+  userId: string,
+): Promise<CachedKeyRecord | null> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CACHED_KEYS, 'readonly');
+    const req = tx.objectStore(STORE_CACHED_KEYS).get(userId);
+    tx.oncomplete = () => resolve((req.result as CachedKeyRecord) ?? null);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
+/**
+ * Store or update a cached public key record.
+ */
+export async function storeCachedKey(record: CachedKeyRecord): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CACHED_KEYS, 'readwrite');
+    tx.objectStore(STORE_CACHED_KEYS).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
+// --- Verification Status (safety numbers) ---
+
+/**
+ * Read the verification status for a user.
+ */
+export async function loadVerification(
+  userId: string,
+): Promise<VerificationRecord | null> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_VERIFICATION, 'readonly');
+    const req = tx.objectStore(STORE_VERIFICATION).get(userId);
+    tx.oncomplete = () => resolve((req.result as VerificationRecord) ?? null);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
+/**
+ * Store or update the verification status for a user.
+ */
+export async function storeVerification(
+  record: VerificationRecord,
+): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_VERIFICATION, 'readwrite');
+    tx.objectStore(STORE_VERIFICATION).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
+/**
+ * Remove verification status for a user.
+ */
+export async function deleteVerification(userId: string): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_VERIFICATION, 'readwrite');
+    tx.objectStore(STORE_VERIFICATION).delete(userId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
+/**
+ * Load all verification records (for hydrating the verification store).
+ */
+export async function loadAllVerifications(): Promise<VerificationRecord[]> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_VERIFICATION, 'readonly');
+    const req = tx.objectStore(STORE_VERIFICATION).getAll();
+    tx.oncomplete = () => resolve((req.result as VerificationRecord[]) ?? []);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error ?? new Error('Transaction aborted'));
+  });
+}
+
 // --- Testing ---
 
 /**
@@ -206,7 +345,12 @@ export async function clearCryptoStorage(): Promise<void> {
   if (typeof indexedDB === 'undefined') return;
   const db = await getDB();
   return new Promise((resolve, reject) => {
-    const stores = [STORE_KEY_BUNDLE, STORE_CHANNEL_KEYS];
+    const stores = [
+      STORE_KEY_BUNDLE,
+      STORE_CHANNEL_KEYS,
+      STORE_CACHED_KEYS,
+      STORE_VERIFICATION,
+    ];
     const tx = db.transaction(stores, 'readwrite');
     for (const name of stores) {
       tx.objectStore(name).clear();

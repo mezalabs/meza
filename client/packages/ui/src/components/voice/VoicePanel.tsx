@@ -249,7 +249,7 @@ function ConnectedView({
         <div className="inline-flex items-center rounded-lg bg-bg-surface overflow-hidden divide-x divide-border/50">
           <MuteButton />
           <DeafenButton />
-          {canScreenShare && <ScreenShareButton />}
+          <ScreenShareButton canScreenShare={canScreenShare} />
           <DisconnectButton />
         </div>
       </div>
@@ -500,7 +500,7 @@ function DisconnectButton() {
   );
 }
 
-function ScreenShareButton() {
+function ScreenShareButton({ canScreenShare }: { canScreenShare: boolean }) {
   const { localParticipant } = useLocalParticipant();
   const isSharing = localParticipant.isScreenShareEnabled;
   const isToggling = useRef(false);
@@ -515,12 +515,20 @@ function ScreenShareButton() {
   }
 
   const toggle = async () => {
-    if (isToggling.current) return;
+    if (!canScreenShare || isToggling.current) return;
     isToggling.current = true;
     try {
       if (isSharing) {
         await localParticipant.setScreenShareEnabled(false);
       } else {
+        // On Windows (Electron), show the source picker via IPC before
+        // calling getDisplayMedia — the handler returns the pre-selected
+        // source instantly, avoiding the deadlock that occurs when
+        // desktopCapturer.getSources() is called inside the handler.
+        if (window.electronAPI?.screenShare) {
+          const picked = await window.electronAPI.screenShare.pick();
+          if (!picked) return;
+        }
         const state = useStreamSettingsStore.getState();
         await localParticipant.setScreenShareEnabled(
           true,
@@ -534,6 +542,19 @@ function ScreenShareButton() {
       isToggling.current = false;
     }
   };
+
+  if (!canScreenShare) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="px-4 py-3 text-text-muted/40 cursor-not-allowed"
+        title="You don't have permission to share your screen in this channel"
+      >
+        <MonitorArrowUpIcon size={22} aria-hidden="true" />
+      </button>
+    );
+  }
 
   return (
     <button

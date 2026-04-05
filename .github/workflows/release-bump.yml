@@ -1,0 +1,267 @@
+name: Release Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop_bump:
+        description: 'Desktop version bump'
+        required: false
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+      mobile_bump:
+        description: 'Mobile version bump'
+        required: false
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+      server_bump:
+        description: 'Server version bump'
+        required: false
+        type: choice
+        default: 'skip'
+        options:
+          - skip
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    name: Bump Versions & Create PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate inputs
+        env:
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
+        run: |
+          if [ "$DESKTOP_BUMP" = "skip" ] && [ "$MOBILE_BUMP" = "skip" ] && [ "$SERVER_BUMP" = "skip" ]; then
+            echo "::error::At least one bump level (desktop, mobile, or server) must be selected"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Compute new versions
+        id: versions
+        env:
+          DESKTOP_BUMP: ${{ inputs.desktop_bump }}
+          MOBILE_BUMP: ${{ inputs.mobile_bump }}
+          SERVER_BUMP: ${{ inputs.server_bump }}
+        run: |
+          bump_version() {
+            local current="$1" level="$2"
+            node -e "
+              const [major, minor, patch] = process.argv[1].split('.').map(Number);
+              const level = process.argv[2];
+              if (level === 'major') console.log((major+1) + '.0.0');
+              else if (level === 'minor') console.log(major + '.' + (minor+1) + '.0');
+              else console.log(major + '.' + minor + '.' + (patch+1));
+            " "$current" "$level"
+          }
+
+          if [ "$DESKTOP_BUMP" != "skip" ]; then
+            CURRENT=$(node -p "require('./client/packages/desktop/package.json').version")
+            DESKTOP=$(bump_version "$CURRENT" "$DESKTOP_BUMP")
+            echo "Desktop: $CURRENT → $DESKTOP ($DESKTOP_BUMP)"
+            echo "desktop=$DESKTOP" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$MOBILE_BUMP" != "skip" ]; then
+            CURRENT=$(node -p "require('./client/packages/mobile/package.json').version")
+            MOBILE=$(bump_version "$CURRENT" "$MOBILE_BUMP")
+            echo "Mobile: $CURRENT → $MOBILE ($MOBILE_BUMP)"
+            echo "mobile=$MOBILE" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$SERVER_BUMP" != "skip" ]; then
+            CURRENT=$(cat server/VERSION | tr -d '[:space:]')
+            if ! echo "$CURRENT" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::Invalid version in server/VERSION: $CURRENT"
+              exit 1
+            fi
+            SERVER=$(bump_version "$CURRENT" "$SERVER_BUMP")
+            echo "Server: $CURRENT → $SERVER ($SERVER_BUMP)"
+            echo "server=$SERVER" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check tags do not already exist
+        env:
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
+        run: |
+          if [ -n "$DESKTOP" ] && git rev-parse "desktop-v${DESKTOP}" >/dev/null 2>&1; then
+            echo "::error::Tag desktop-v${DESKTOP} already exists"
+            exit 1
+          fi
+
+          if [ -n "$MOBILE" ] && git rev-parse "mobile-v${MOBILE}" >/dev/null 2>&1; then
+            echo "::error::Tag mobile-v${MOBILE} already exists"
+            exit 1
+          fi
+
+          if [ -n "$SERVER" ] && git rev-parse "v${SERVER}" >/dev/null 2>&1; then
+            echo "::error::Tag v${SERVER} already exists"
+            exit 1
+          fi
+
+      - name: Check no open release PR exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh pr list --state open --json headRefName,url --jq '.[] | select(.headRefName | startswith("release/")) | .url' | head -1)
+          if [ -n "$EXISTING" ]; then
+            echo "::error::A release PR is already open: $EXISTING"
+            exit 1
+          fi
+
+      - name: Determine branch name and commit message
+        id: meta
+        env:
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
+        run: |
+          PARTS=""
+          MSGS=""
+
+          if [ -n "$DESKTOP" ]; then
+            PARTS="${PARTS:+${PARTS}-}desktop-${DESKTOP}"
+            MSGS="${MSGS:+${MSGS}, }desktop to ${DESKTOP}"
+          fi
+
+          if [ -n "$MOBILE" ]; then
+            PARTS="${PARTS:+${PARTS}-}mobile-${MOBILE}"
+            MSGS="${MSGS:+${MSGS}, }mobile to ${MOBILE}"
+          fi
+
+          if [ -n "$SERVER" ]; then
+            PARTS="${PARTS:+${PARTS}-}server-${SERVER}"
+            MSGS="${MSGS:+${MSGS}, }server to ${SERVER}"
+          fi
+
+          echo "branch=release/${PARTS}" >> "$GITHUB_OUTPUT"
+          echo "message=chore: bump ${MSGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version files
+        env:
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
+        run: |
+          if [ -n "$DESKTOP" ]; then
+            jq --arg v "$DESKTOP" '.version = $v' client/packages/desktop/package.json > tmp.json
+            mv tmp.json client/packages/desktop/package.json
+            echo "Bumped desktop to $DESKTOP"
+          fi
+
+          if [ -n "$MOBILE" ]; then
+            jq --arg v "$MOBILE" '.version = $v' client/packages/mobile/package.json > tmp.json
+            mv tmp.json client/packages/mobile/package.json
+
+            sed -i "s/versionName \"[^\"]*\"/versionName \"$MOBILE\"/" \
+              client/packages/mobile/android/app/build.gradle
+
+            sed -i "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $MOBILE/" \
+              client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj
+
+            echo "Bumped mobile to $MOBILE"
+          fi
+
+          if [ -n "$SERVER" ]; then
+            echo "$SERVER" > server/VERSION
+            echo "Bumped server to $SERVER"
+          fi
+
+      - name: Create branch, commit, and push
+        env:
+          BRANCH: ${{ steps.meta.outputs.branch }}
+          MESSAGE: ${{ steps.meta.outputs.message }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add client/packages/desktop/package.json \
+                  client/packages/mobile/package.json \
+                  client/packages/mobile/android/app/build.gradle \
+                  client/packages/mobile/ios/App/App.xcodeproj/project.pbxproj \
+                  server/VERSION
+          git commit -m "$MESSAGE"
+          git push -u origin "$BRANCH"
+
+      - name: Build PR body
+        env:
+          DESKTOP: ${{ steps.versions.outputs.desktop }}
+          MOBILE: ${{ steps.versions.outputs.mobile }}
+          SERVER: ${{ steps.versions.outputs.server }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          {
+            echo "## Release"
+            echo ""
+
+            if [ -n "$DESKTOP" ]; then
+              PREV_TAG=$(git tag -l 'desktop-v*' --sort=-v:refname | head -1)
+              echo "- **Desktop:** \`${PREV_TAG:-none}\` → \`desktop-v${DESKTOP}\`"
+              if [ -n "$PREV_TAG" ]; then
+                echo "  - [Changes since ${PREV_TAG}](${REPO_URL}/compare/${PREV_TAG}...HEAD)"
+              fi
+            fi
+
+            if [ -n "$MOBILE" ]; then
+              PREV_TAG=$(git tag -l 'mobile-v*' --sort=-v:refname | head -1)
+              echo "- **Mobile:** \`${PREV_TAG:-none}\` → \`mobile-v${MOBILE}\`"
+              if [ -n "$PREV_TAG" ]; then
+                echo "  - [Changes since ${PREV_TAG}](${REPO_URL}/compare/${PREV_TAG}...HEAD)"
+              fi
+            fi
+
+            if [ -n "$SERVER" ]; then
+              PREV_TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+              echo "- **Server:** \`${PREV_TAG:-none}\` → \`v${SERVER}\`"
+              if [ -n "$PREV_TAG" ]; then
+                echo "  - [Changes since ${PREV_TAG}](${REPO_URL}/compare/${PREV_TAG}...HEAD)"
+              fi
+            fi
+
+            echo ""
+            echo "---"
+            echo ""
+            echo "Tags will be created automatically when this PR is merged."
+          } > pr_body.md
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ steps.meta.outputs.message }}
+        run: |
+          gh label create release --description "Automated release PR" --color "0e8a16" 2>/dev/null || true
+
+          gh pr create \
+            --title "$PR_TITLE" \
+            --body-file pr_body.md \
+            --base main \
+            --label release

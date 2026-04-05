@@ -18,7 +18,10 @@
   /* ── Background layers (neutral dark, ascending lightness) ── */
   --color-bg-base: #121212; /* oklch(0.18 0 0) — must match inline bg in index.html */
   --color-bg-surface: #1b1b1b; /* oklch(0.22 0 0) */
+  --color-bg-secondary: #1e1e1e; /* oklch(0.24 0 0) — panel backgrounds */
   --color-bg-elevated: #242424; /* oklch(0.26 0 0) */
+  --color-bg-tertiary: #2a2a2a; /* oklch(0.28 0 0) — pills, chips, active tabs */
+  --color-bg-hover: #303030; /* oklch(0.30 0 0) — interactive hover feedback */
   --color-bg-overlay: #0f0f0f; /* oklch(0.17 0 0) */
 
   /* ── Mint accent scale ── */
@@ -29,6 +32,7 @@
 
   /* ── Text ── */
   --color-text: #e8e8e8; /* oklch(0.93 0 0) */
+  --color-text-primary: #f0f0f0; /* oklch(0.95 0 0) — high-emphasis headings */
   --color-text-muted: #8f8f8f; /* oklch(0.65 0 0) */
   --color-text-subtle: #555555; /* oklch(0.45 0 0) */
 

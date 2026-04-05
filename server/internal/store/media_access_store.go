@@ -72,7 +72,11 @@ func (s *MediaAccessStore) CheckAttachmentAccess(ctx context.Context, attachment
 	case "chat_attachment":
 		return s.checkChatAttachmentAccess(ctx, attachment, userID)
 	case "server_emoji":
-		return s.checkEmojiAccess(ctx, attachment, userID)
+		// Emoji images are accessible to any authenticated user. Custom emojis
+		// can appear in reactions and messages across servers, so restricting
+		// downloads to the emoji's origin server would cause broken images for
+		// viewers who aren't members of that server.
+		return nil
 	case "soundboard":
 		return s.checkSoundboardAccess(ctx, attachment, userID)
 	case "profile_avatar", "profile_banner", "server_icon", "server_banner":

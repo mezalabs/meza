@@ -13,6 +13,8 @@ import { useEmojiStore } from '../store/emojis.ts';
 const CACHE_KEY = 'meza:emoji-cache';
 const CACHE_VERSION = 1;
 const DEBOUNCE_MS = 1000;
+/** Max number of reaction-enriched emojis to persist in localStorage. */
+const MAX_CACHED_BY_ID = 500;
 
 /** Stripped-down emoji for storage — omits protobuf Timestamp fields. */
 export interface StoredEmoji {
@@ -30,6 +32,7 @@ interface EmojiCache {
   userId: string;
   byServer: Record<string, StoredEmoji[]>;
   personal: StoredEmoji[] | null;
+  byId?: Record<string, StoredEmoji>;
 }
 
 function toStored({
@@ -52,6 +55,7 @@ function toStored({
 export function loadEmojiCache(userId: string): {
   byServer: Record<string, StoredEmoji[]>;
   personal: StoredEmoji[] | null;
+  byId: Record<string, StoredEmoji>;
 } | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -67,7 +71,11 @@ export function loadEmojiCache(userId: string): {
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
-    return { byServer: cache.byServer, personal: cache.personal };
+    return {
+      byServer: cache.byServer,
+      personal: cache.personal,
+      byId: cache.byId ?? {},
+    };
   } catch {
     // Corrupt data — discard
     try {
@@ -108,6 +116,11 @@ function writeCache(): void {
         ]),
       ),
       personal: state.personal ? state.personal.map(toStored) : null,
+      byId: Object.fromEntries(
+        Object.entries(state.byId)
+          .slice(-MAX_CACHED_BY_ID)
+          .map(([id, emoji]) => [id, toStored(emoji)]),
+      ),
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {

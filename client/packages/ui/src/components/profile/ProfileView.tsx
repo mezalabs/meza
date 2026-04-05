@@ -28,6 +28,7 @@ import {
 } from '@meza/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useImageCropUpload } from '../../hooks/useImageCropUpload.ts';
+import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { ImageCropper } from '../shared/ImageCropper.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
@@ -439,6 +440,7 @@ export function ProfileView({ userId, initialEditing }: ProfileViewProps) {
                     ? 'Unblock'
                     : 'Block'}
               </button>
+              <VerificationBadge userId={userId} />
             </div>
           )}
         </div>

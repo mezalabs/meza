@@ -422,4 +422,34 @@ Meza does **not** provide forward secrecy. All messages within a channel version
 
 
 
+## Safety Numbers (Key Verification)
+
+Users can verify each other's identity keys out-of-band using **safety numbers** — a 60-digit numeric fingerprint displayed as 12 groups of 5 digits in a 4×3 grid.
+
+### Algorithm
+
+Adapted from Signal's `NumericFingerprintGenerator`:
+
+1. For each user, compute 5200 iterations of SHA-512: iteration 0 hashes `version (2 bytes) || Ed25519 public key (32 bytes) || user ID (UTF-8) || Ed25519 public key (32 bytes)`. Subsequent iterations hash `previous hash (64 bytes) || Ed25519 public key (32 bytes)`.
+2. Take the first 30 bytes of the final hash. Encode as 6 groups: each 5-byte chunk read as big-endian uint40, mod 100000, zero-padded to 5 digits.
+3. Sort both users' 30-digit fingerprints lexicographically. Concatenate to form the 60-digit safety number.
+
+Both users compute the same number regardless of who is "local" vs "remote".
+
+### What safety numbers protect against
+
+- A compromised server operator replacing `signing_public_key` in the database to MITM key distribution.
+- A supply chain attack on the server that silently substitutes keys in `GetPublicKeys` responses.
+
+### What safety numbers do NOT protect against
+
+- A compromised server serving modified client-side JavaScript that bypasses verification.
+- Metadata leakage (who talks to whom, when, message counts).
+
+### Verification storage
+
+Verification status is stored **client-only** in IndexedDB (`verification` store in `meza-crypto` database v5). The server never learns who you have verified. Verification is bound to a SHA-256 hash of the public key at verification time — if the key changes, verification is automatically invalidated.
+
+---
+
 Client-side crypto code lives in `client/packages/core/src/crypto/`. Server-side auth hashing in `server/internal/auth/`. Key service proto in `proto/meza/v1/keys.proto`.

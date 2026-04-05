@@ -44,8 +44,8 @@ func init() {
 	}
 }
 
-// isPrivateIP reports whether ip falls within any blocked network range.
-func isPrivateIP(ip net.IP) bool {
+// IsPrivateIP reports whether ip falls within any blocked network range.
+func IsPrivateIP(ip net.IP) bool {
 	// Normalize IPv4-mapped IPv6 addresses (e.g. ::ffff:127.0.0.1) to IPv4
 	// for consistent matching against the IPv4 CIDR blocklist.
 	if v4 := ip.To4(); v4 != nil {
@@ -74,7 +74,7 @@ func ssrfSafeDialer() func(network, address string, c syscall.RawConn) error {
 			return fmt.Errorf("JWKS SSRF check: could not parse IP %q", host)
 		}
 
-		if isPrivateIP(ip) {
+		if IsPrivateIP(ip) {
 			return fmt.Errorf("JWKS SSRF check: connection to private IP %s is forbidden", ip)
 		}
 

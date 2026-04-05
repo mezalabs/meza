@@ -271,3 +271,20 @@ func (s *chatService) subscribeKeyRotation() (*nats.Subscription, error) {
 		}
 	})
 }
+
+// getOrCreateSystemDMChannel returns the system-DM channel for a user,
+// creating it if it doesn't exist. System-DMs are regular CHANNEL_TYPE_DM
+// channels between the target user and the System user.
+func (s *chatService) getOrCreateSystemDMChannel(ctx context.Context, targetUserID string) (*models.Channel, error) {
+	ch, created, err := s.chatStore.CreateDMChannel(ctx, models.SystemUserID, targetUserID, "active", "")
+	if err != nil {
+		return nil, fmt.Errorf("get or create system DM: %w", err)
+	}
+
+	if created {
+		// Notify the target user's gateway for subscription refresh.
+		s.nc.Publish(subjects.UserSubscription(targetUserID), nil)
+	}
+
+	return ch, nil
+}

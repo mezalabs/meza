@@ -20,3 +20,4 @@ export type {
 export { useNavigationStore } from './stores/navigation.ts';
 export type { TilingActions, TilingState } from './stores/tiling.ts';
 export { useTilingStore } from './stores/tiling.ts';
+export { initUpdateListeners, useUpdateStore } from './stores/updates.ts';

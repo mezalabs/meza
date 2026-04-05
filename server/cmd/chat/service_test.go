@@ -111,6 +111,10 @@ func (m *mockChatStore) ListServers(_ context.Context, userID string) ([]*models
 	return servers, nil
 }
 
+func (m *mockChatStore) ListAllServers(_ context.Context) ([]*models.Server, error) {
+	return nil, nil
+}
+
 func (m *mockChatStore) CreateChannel(_ context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -1081,6 +1085,9 @@ func (s *mockEmojiStore) CountEmojisByUser(context.Context, string) (int, error)
 	return 0, nil
 }
 func (s *mockEmojiStore) ListEmojisByUser(context.Context, string) ([]*models.Emoji, error) {
+	return nil, nil
+}
+func (s *mockEmojiStore) GetEmojisByIDs(_ context.Context, _ []string) ([]*models.Emoji, error) {
 	return nil, nil
 }
 

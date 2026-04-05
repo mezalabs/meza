@@ -995,6 +995,10 @@ export async function getReactions(channelId: string, messageIds: string[]) {
       groups[msgId] = list.groups;
     }
     reactionStore.setBulkReactions(groups);
+    // Store enriched custom emoji metadata for rendering foreign emojis.
+    if (res.customEmojis && Object.keys(res.customEmojis).length > 0) {
+      useEmojiStore.getState().setReactionEmojis(res.customEmojis);
+    }
     return res.reactions;
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });
@@ -1159,11 +1163,12 @@ export async function createOrGetDMChannel(recipientId: string) {
       if (res.created && res.dmChannel.channel) {
         const userId = useAuthStore.getState().user?.id;
         if (userId) {
+          const members =
+            userId === recipientId
+              ? [userId] // self-DM: single member
+              : [userId, recipientId];
           try {
-            await provisionChannelKey(res.dmChannel.channel.id, [
-              userId,
-              recipientId,
-            ]);
+            await provisionChannelKey(res.dmChannel.channel.id, members);
           } catch (err) {
             console.error('[E2EE] Failed to provision key for new DM:', err);
           }

@@ -35,12 +35,16 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
 
     setReadStates: (states) => {
       set((state) => {
+        // Replace the entire map so stale counts from a previous gateway
+        // connection (within the same page session) are cleared.
+        const fresh: Record<string, ReadStateData> = {};
         for (const s of states) {
-          state.byChannel[s.channelId] = {
+          fresh[s.channelId] = {
             lastReadMessageId: s.lastReadMessageId,
             unreadCount: s.unreadCount,
           };
         }
+        state.byChannel = fresh;
       });
     },
 

@@ -134,6 +134,32 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 	return servers, nil
 }
 
+func (s *ChatStore) ListAllServers(ctx context.Context) ([]*models.Server, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT s.id, s.name, s.icon_url, s.owner_id, s.created_at,
+		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy, s.banner_url
+		 FROM servers s
+		 ORDER BY s.created_at`)
+	if err != nil {
+		return nil, fmt.Errorf("query all servers: %w", err)
+	}
+	defer rows.Close()
+
+	var servers []*models.Server
+	for rows.Next() {
+		var srv models.Server
+		if err := rows.Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
+			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy, &srv.BannerURL); err != nil {
+			return nil, fmt.Errorf("scan server: %w", err)
+		}
+		servers = append(servers, &srv)
+	}
+	return servers, nil
+}
+
 func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -1197,7 +1223,8 @@ func (s *ChatStore) CreateDMChannel(ctx context.Context, userID1, userID2, dmSta
 	created := ch.ID == channelID
 	if created {
 		_, err = tx.Exec(ctx,
-			`INSERT INTO channel_members (channel_id, user_id) VALUES ($1, $2), ($1, $3)`,
+			`INSERT INTO channel_members (channel_id, user_id) VALUES ($1, $2), ($1, $3)
+			 ON CONFLICT (channel_id, user_id) DO NOTHING`,
 			channelID, userID1, userID2,
 		)
 		if err != nil {
@@ -1335,6 +1362,9 @@ func (s *ChatStore) GetMutualServers(ctx context.Context, userID1, userID2 strin
 	return servers, rows.Err()
 }
 
+// GetDMOtherParticipantID returns the other participant's user ID in a DM channel.
+// The caller must already be a confirmed member of the channel (e.g. via GetChannelAndCheckMembership).
+// If no other member exists, it returns userID itself, indicating a self-DM.
 func (s *ChatStore) GetDMOtherParticipantID(ctx context.Context, channelID, userID string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
@@ -1345,6 +1375,10 @@ func (s *ChatStore) GetDMOtherParticipantID(ctx context.Context, channelID, user
 		channelID, userID,
 	).Scan(&otherID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Self-DM: only member is the caller themselves.
+			return userID, nil
+		}
 		return "", fmt.Errorf("get DM other participant: %w", err)
 	}
 	return otherID, nil

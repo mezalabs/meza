@@ -490,11 +490,15 @@ tasks:
       - pnpm --filter @meza/desktop dev
 
   dev:desktop:prod:
-    desc: Start Electron desktop app against prod (meza.chat)
+    desc: Build and run Electron desktop app the way prod does (meza:// protocol, bundled renderer)
     dir: client
     cmds:
       - pnpm install --frozen-lockfile --silent
-      - MEZA_SERVER_URL=https://meza.chat pnpm --filter @meza/desktop dev
+      - DESKTOP_BUILD=1 pnpm --filter @meza/web... build
+      - pnpm --filter @meza/desktop build
+      - mkdir -p packages/desktop/out/renderer
+      - cp -r packages/web/dist/* packages/desktop/out/renderer/
+      - DESKTOP_PROD=1 pnpm --filter @meza/desktop exec electron .
 
   dev:mobile:
     desc: Start HTTPS Vite dev server (Tailscale cert) and sync to Capacitor for live reload
@@ -546,7 +550,7 @@ tasks:
     cmds:
       - task: build:mobile
         vars:
-          VITE_API_URL: '{{.VITE_API_URL | default "https://meza.chat"}}'
+          VITE_API_URL: '{{.VITE_API_URL | default "https://api.meza.chat"}}'
 
   build:mobile:clean:
     desc: "Full clean build — wipe native web assets, rebuild, and sync"
@@ -599,7 +603,7 @@ tasks:
         TAG="{{.IMAGE_TAG}}"
 
         echo "==> Pushing images to $REGISTRY..."
-        for name in gateway auth chat presence voice notification keys migrate media client; do
+        for name in gateway auth chat presence voice notification keys migrate admin media client; do
           docker push "$REGISTRY/$name:$TAG"
           docker push "$REGISTRY/$name:latest"
           echo "  ✓ $name"
@@ -759,8 +763,80 @@ tasks:
         echo "Packaging files updated for v${VERSION}."
         echo "Review changes, then push PKGBUILD + .SRCINFO to aur.archlinux.org/meza-desktop-bin.git"
 
+  mobile:icons:
+    desc: Regenerate mobile app icons and splash screens from the source SVG
+    cmds:
+      - |
+        set -euo pipefail
+        SVG="client/packages/web/public/favicon.svg"
+        RES="client/packages/mobile/android/app/src/main/res"
+        IOS_ICONS="client/packages/mobile/ios/App/App/Assets.xcassets/AppIcon.appiconset"
+        IOS_SPLASH="client/packages/mobile/ios/App/App/Assets.xcassets/Splash.imageset"
+        ICON_BG="#3f0032"
+        SPLASH_BG="#121212"
+
+        command -v magick >/dev/null || { echo "ERROR: ImageMagick (magick) is required. Install via: brew install imagemagick"; exit 1; }
+        command -v rsvg-convert >/dev/null || { echo "ERROR: rsvg-convert is required. Install via: brew install librsvg"; exit 1; }
+
+        echo "Generating splash screens..."
+        rsvg-convert -w 500 -h 500 "$SVG" -o /tmp/meza-splash.png
+        magick -size 2732x2732 "xc:$SPLASH_BG" /tmp/meza-splash.png -gravity center -composite "$IOS_SPLASH/splash-2732x2732.png"
+        cp "$IOS_SPLASH/splash-2732x2732.png" "$IOS_SPLASH/splash-2732x2732-1.png"
+        cp "$IOS_SPLASH/splash-2732x2732.png" "$IOS_SPLASH/splash-2732x2732-2.png"
+        rsvg-convert -w 120 -h 120 "$SVG" -o /tmp/meza-splash-sm.png
+        magick -size 480x320 "xc:$SPLASH_BG" /tmp/meza-splash-sm.png -gravity center -composite "$RES/drawable/splash.png"
+
+        echo "Generating iOS app icon..."
+        rsvg-convert -w 855 -h 855 "$SVG" -o /tmp/meza-ios-icon.png
+        magick -size 1024x1024 "xc:$ICON_BG" /tmp/meza-ios-icon.png -geometry +0+30 -gravity center -composite "$IOS_ICONS/AppIcon-512@2x.png"
+
+        echo "Generating Android icons..."
+        declare -A ICON_SIZES=( [mdpi]=48 [hdpi]=72 [xhdpi]=96 [xxhdpi]=144 [xxxhdpi]=192 )
+        declare -A FG_SIZES=( [mdpi]=108 [hdpi]=162 [xhdpi]=216 [xxhdpi]=324 [xxxhdpi]=432 )
+
+        for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+          size=${ICON_SIZES[$density]}
+          fg_size=${FG_SIZES[$density]}
+          logo=$((size * 83 / 100))
+          fg_logo=$((fg_size * 63 / 100))
+          offset=$((size * 3 / 100))
+          fg_offset=$((fg_size * 3 / 100))
+
+          rsvg-convert -w $logo -h $logo "$SVG" -o /tmp/meza-ic.png
+          rsvg-convert -w $fg_logo -h $fg_logo "$SVG" -o /tmp/meza-fg.png
+
+          # Regular icon
+          magick -size ${size}x${size} "xc:$ICON_BG" /tmp/meza-ic.png -geometry +0+${offset} -gravity center -composite \
+            "$RES/mipmap-$density/ic_launcher.png"
+
+          # Adaptive foreground
+          magick -size ${fg_size}x${fg_size} xc:none /tmp/meza-fg.png -geometry +0+${fg_offset} -gravity center -composite \
+            "$RES/mipmap-$density/ic_launcher_foreground.png"
+
+          # Round icon (floating disc with shadow)
+          cx=$((size / 2)); cy=$((size / 2)); radius=$((size * 45 / 100))
+          shadow_blur=$((size / 12)); shadow_off=$((size / 48 > 0 ? size / 48 : 1))
+          rsvg-convert -w $((size * 58 / 100)) -h $((size * 58 / 100)) "$SVG" -o /tmp/meza-rnd.png
+          magick -size ${size}x${size} xc:none \
+            \( -size ${size}x${size} xc:none -fill "rgba(0,0,0,0.25)" \
+               -draw "circle $cx,$((cy + shadow_off)) $cx,$((cy + shadow_off - radius))" \
+               -blur 0x${shadow_blur} \) -composite \
+            \( -size ${size}x${size} xc:none -fill "$ICON_BG" \
+               -draw "circle $cx,$cy $cx,$((cy - radius))" \) -composite \
+            /tmp/meza-rnd.png -gravity center -geometry +0+$((size * 2 / 100)) -composite \
+            "$RES/mipmap-$density/ic_launcher_round.png"
+        done
+
+        echo "✓ All icons and splash screens generated"
+
   hooks:install:
     desc: Configure git to use .githooks/ for pre-push checks
     cmds:
       - git config core.hooksPath .githooks
       - echo "Git hooks installed — pre-push will now run CI checks before each push."
+
+  admin:
+    desc: "Run spoke admin CLI (usage: task admin -- create-server --name 'My Server')"
+    dir: server
+    cmds:
+      - go run ./cmd/admin {{.CLI_ARGS}}

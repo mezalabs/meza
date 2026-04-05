@@ -27,17 +27,18 @@ import (
 )
 
 type authService struct {
-	store          store.AuthStorer
-	deviceStore    store.DeviceStorer
-	chatStore      store.ChatStorer
-	friendStore    store.FriendStorer
-	hmacSecret     string              // HMAC secret for anti-enumeration (fake salts/recovery bundles)
-	ed25519Keys    *auth.Ed25519Keys   // Ed25519 keys for JWT signing
-	instanceURL    string              // This instance's public URL
-	redisClient    *redis.Client       // Optional Redis client for rate limiting
-	tokenBlocklist *auth.TokenBlocklist // Optional blocklist for revoked devices
-	nc             *nats.Conn          // NATS connection for publishing recovery events
-	emailSender    email.Sender        // Email sender for OTP
+	store                store.AuthStorer
+	deviceStore          store.DeviceStorer
+	chatStore            store.ChatStorer
+	friendStore          store.FriendStorer
+	hmacSecret           string              // HMAC secret for anti-enumeration (fake salts/recovery bundles)
+	ed25519Keys          *auth.Ed25519Keys   // Ed25519 keys for JWT signing
+	instanceURL          string              // This instance's public URL
+	registrationDisabled bool                // Spoke: block local user registration
+	redisClient          *redis.Client       // Optional Redis client for rate limiting
+	tokenBlocklist       *auth.TokenBlocklist // Optional blocklist for revoked devices
+	nc                   *nats.Conn          // NATS connection for publishing recovery events
+	emailSender          email.Sender        // Email sender for OTP
 }
 
 func newAuthService(s store.AuthStorer, ds store.DeviceStorer, hmacSecret string, ed25519Keys *auth.Ed25519Keys) *authService {
@@ -98,6 +99,9 @@ func (s *authService) generateTokenPair(userID, deviceID string) (string, string
 }
 
 func (s *authService) Register(ctx context.Context, req *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error) {
+	if s.registrationDisabled {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("registration is disabled on this instance"))
+	}
 	r := req.Msg
 	if r.Email == "" || r.Username == "" || len(r.AuthKey) == 0 || len(r.Salt) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("email, username, auth_key, and salt are required"))

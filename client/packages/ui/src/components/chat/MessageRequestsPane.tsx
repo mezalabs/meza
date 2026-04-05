@@ -6,8 +6,10 @@ import {
   useAuthStore,
   useDMStore,
 } from '@meza/core';
+import { EnvelopeOpenIcon } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
+import { Avatar } from '../shared/Avatar.tsx';
 
 export function MessageRequestsPane() {
   const messageRequests = useDMStore((s) => s.messageRequests);
@@ -54,8 +56,13 @@ export function MessageRequestsPane() {
         </div>
         <div className="flex-1 overflow-y-auto">
           {messageRequests.length === 0 ? (
-            <div className="p-4 text-center text-xs text-text-subtle">
-              No pending requests
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <EnvelopeOpenIcon
+                size={32}
+                className="text-text-subtle mb-2"
+                aria-hidden="true"
+              />
+              <p className="text-xs text-text-subtle">No pending requests</p>
             </div>
           ) : (
             messageRequests.map((request) => {
@@ -73,11 +80,11 @@ export function MessageRequestsPane() {
                   }`}
                   onClick={() => setSelectedId(channelId)}
                 >
-                  <div className="size-8 rounded-full bg-bg-tertiary flex items-center justify-center text-xs font-semibold text-text-primary shrink-0">
-                    {(other?.displayName ||
-                      other?.username ||
-                      '?')[0]?.toUpperCase()}
-                  </div>
+                  <Avatar
+                    avatarUrl={other?.avatarUrl}
+                    displayName={other?.displayName || other?.username || '?'}
+                    size="lg"
+                  />
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-text-primary truncate">
                       {other?.displayName || other?.username || 'Unknown'}
@@ -103,8 +110,16 @@ export function MessageRequestsPane() {
             onDecline={handleDecline}
           />
         ) : (
-          <div className="flex items-center justify-center flex-1 text-text-subtle text-sm">
-            Select a request to preview
+          <div className="flex flex-col items-center justify-center flex-1 text-center p-8">
+            <EnvelopeOpenIcon
+              size={48}
+              className="text-text-subtle mb-3"
+              aria-hidden="true"
+            />
+            <p className="text-text-muted font-medium">Message Requests</p>
+            <p className="mt-1 text-xs text-text-subtle">
+              Select a request from the list to preview and respond
+            </p>
           </div>
         )}
       </div>
@@ -134,9 +149,11 @@ function RequestDetail({
       {/* Header with accept/decline */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-bg-secondary">
         <div className="flex items-center gap-2">
-          <div className="size-8 rounded-full bg-bg-tertiary flex items-center justify-center text-xs font-semibold text-text-primary">
-            {(other?.displayName || other?.username || '?')[0]?.toUpperCase()}
-          </div>
+          <Avatar
+            avatarUrl={other?.avatarUrl}
+            displayName={other?.displayName || other?.username || '?'}
+            size="lg"
+          />
           <div>
             <span className="text-sm font-semibold text-text-primary">
               {other?.displayName || other?.username || 'Unknown'}

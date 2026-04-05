@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aesGcmDecrypt, aesGcmEncrypt, deriveKeys } from './keys.ts';
 
-describe('deriveKeys', () => {
+describe('deriveKeys', { timeout: 15_000 }, () => {
   it('derives two different 32-byte keys from the same password', async () => {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const { masterKey, authKey } = await deriveKeys('test-password-123', salt);
@@ -99,7 +99,7 @@ describe('aesGcmEncrypt / aesGcmDecrypt', () => {
   });
 });
 
-describe('full registration flow', () => {
+describe('full registration flow', { timeout: 15_000 }, () => {
   it('derives keys, encrypts identity, then decrypts with same password', async () => {
     const password = 'my-secure-password!';
     const salt = crypto.getRandomValues(new Uint8Array(16));

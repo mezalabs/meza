@@ -16,7 +16,8 @@ type Config struct {
 
 	// Auth — HMAC secret for anti-enumeration (fake salts/recovery bundles).
 	// Only needed by the auth service; not required for verification-only services.
-	HMACSecret string `envconfig:"HMAC_SECRET"`
+	HMACSecret           string `envconfig:"HMAC_SECRET"`
+	RegistrationDisabled bool   `envconfig:"REGISTRATION_DISABLED" default:"false"` // Spoke: disable local user registration
 
 	// Auth — Ed25519 (federation)
 	JWTPrivateKey     string `envconfig:"JWT_PRIVATE_KEY"`      // PEM-encoded Ed25519 private key

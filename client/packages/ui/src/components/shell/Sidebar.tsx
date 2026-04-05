@@ -4,11 +4,11 @@ import type { DMChannel, PaneContent } from '@meza/core';
 import {
   ChannelType,
   createChannelGroup,
-  getBaseUrl,
   getBulkPresence,
   getDMDisplayName,
   getNotificationPreferences,
   isGroupDM,
+  isSelfDM,
   listChannelGroups,
   listChannels,
   listDMChannels,
@@ -19,12 +19,14 @@ import {
   listServers,
   Permissions,
   resolveIconUrl,
+  resolveMediaUrl,
   soundManager,
   updateNotificationPreference,
   useAuthStore,
   useChannelGroupStore,
   useChannelStore,
   useDMStore,
+  useFederationStore,
   useFriendStore,
   useGatewayStore,
   useInviteStore,
@@ -114,6 +116,9 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const serversLoading = useServerStore((s) => s.isLoading);
   const channelsLoading = useChannelStore((s) => s.isLoading);
   const selectedServerId = useNavigationStore((s) => s.selectedServerId);
+  const isFederatedServer = useFederationStore(
+    (s) => !!(selectedServerId && s.serverIndex[selectedServerId]),
+  );
   const showDMs = useNavigationStore((s) => s.showDMs);
   const selectServer = useNavigationStore((s) => s.selectServer);
   const selectDMs = useNavigationStore((s) => s.selectDMs);
@@ -248,6 +253,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (selectedServerId) {
+      // Skip for federated servers — data comes from spoke gateway events
+      if (isFederatedServer) return;
       listChannels(selectedServerId).catch(() => {});
       listChannelGroups(selectedServerId).catch(() => {});
     }
@@ -260,6 +267,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
   useEffect(() => {
     if (!isAuthenticated || !selectedServerId) return;
+    // Skip for federated servers — data comes from spoke gateway events
+    if (useFederationStore.getState().serverIndex[selectedServerId]) return;
 
     const fetchPresence = () => {
       listMembers(selectedServerId, { limit: 200 })
@@ -356,6 +365,8 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   useEffect(() => {
     setServerNotifyLevel(null);
     if (!selectedServerId) return;
+    // Skip for federated servers — notification prefs are origin-only
+    if (isFederatedServer) return;
     let cancelled = false;
     (async () => {
       try {
@@ -372,7 +383,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
     return () => {
       cancelled = true;
     };
-  }, [selectedServerId]);
+  }, [selectedServerId, isFederatedServer]);
 
   const handleSetNotifyLevel = useCallback(
     async (level: string) => {
@@ -459,7 +470,25 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                   : 'bg-bg-surface text-text-muted hover:bg-bg-elevated'
               }`}
               title="Direct Messages"
-              onClick={selectDMs}
+              onClick={() => {
+                selectDMs();
+                if (!isMobile) {
+                  const {
+                    focusedPaneId: fpId,
+                    panes,
+                    setPaneContent: setPC,
+                  } = useTilingStore.getState();
+                  const current = panes[fpId];
+                  const isDMRelated =
+                    current?.type === 'dm' ||
+                    current?.type === 'dmsHome' ||
+                    current?.type === 'friends' ||
+                    current?.type === 'messageRequests';
+                  if (!isDMRelated) {
+                    setPC(fpId, { type: 'dmsHome' });
+                  }
+                }
+              }}
             >
               <MezaIcon className="h-7 w-7 md:h-6 md:w-6" />
               {totalDMNotifications > 0 && !showDMs && (
@@ -540,9 +569,19 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
           {showDMs ? (
             <>
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle">
+                <button
+                  type="button"
+                  className="truncate text-sm font-semibold uppercase tracking-wider text-text-subtle hover:text-text transition-colors"
+                  onClick={() => {
+                    if (sidebarFocusedPaneId) {
+                      sidebarSetPaneContent(sidebarFocusedPaneId, {
+                        type: 'dmsHome',
+                      });
+                    }
+                  }}
+                >
                   Direct Messages
-                </h2>
+                </button>
                 <button
                   type="button"
                   className="flex h-5 w-5 items-center justify-center rounded text-text-subtle hover:text-text hover:bg-bg-tertiary transition-colors"
@@ -1085,17 +1124,20 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
   );
   const hasUnread = unreadCount > 0;
   const isGroup = isGroupDM(dm);
+  const selfDM = isSelfDM(dm, currentUserId);
   const displayName = getDMDisplayName(dm, currentUserId);
-  const other = !isGroup
-    ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
-        | {
-            id: string;
-            displayName: string;
-            username: string;
-            avatarUrl?: string;
-          }
-        | undefined)
-    : undefined;
+  const self = selfDM ? dm.participants[0] : undefined;
+  const other =
+    !isGroup && !selfDM
+      ? (dm.participants.find((p: { id: string }) => p.id !== currentUserId) as
+          | {
+              id: string;
+              displayName: string;
+              username: string;
+              avatarUrl?: string;
+            }
+          | undefined)
+      : undefined;
   const active =
     focusedContent?.type === 'dm' &&
     focusedContent.conversationId === channelId;
@@ -1131,7 +1173,13 @@ function SidebarDMItem({ dm }: { dm: DMChannel }) {
       }
     >
       <div className="relative">
-        {isGroup ? (
+        {selfDM && self ? (
+          <Avatar
+            avatarUrl={self.avatarUrl}
+            displayName={self.displayName || self.username || 'You'}
+            size="sm"
+          />
+        ) : isGroup ? (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-tertiary text-text-subtle">
             <UsersThreeIcon size={16} aria-hidden="true" />
           </div>
@@ -1237,12 +1285,10 @@ function ServerIcon({
     return channels.some((ch) => (s.byChannel[ch.id]?.unreadCount ?? 0) > 0);
   });
 
-  const token = useAuthStore((s) => s.accessToken);
-  const authQuery = token ? `?token=${encodeURIComponent(token)}` : '';
   // Show the static thumbnail by default; swap to the full (possibly animated) URL on hover.
-  const base = getBaseUrl();
+  // resolveMediaUrl handles both origin and federated server URLs/tokens.
   const iconSrc = iconUrl
-    ? `${base}${iconUrl}${hovered ? '' : '/thumb'}${authQuery}`
+    ? resolveMediaUrl(serverId, iconUrl, { thumb: !hovered })
     : undefined;
 
   return (

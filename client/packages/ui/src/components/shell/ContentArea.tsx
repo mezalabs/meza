@@ -18,6 +18,7 @@ import {
 import {
   AtIcon,
   BookOpenIcon,
+  ChatCircleDotsIcon,
   EnvelopeOpenIcon,
   GearIcon,
   HashIcon,
@@ -41,16 +42,20 @@ import { ChannelView } from '../chat/ChannelView.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { MessageRequestsPane } from '../chat/MessageRequestsPane.tsx';
 import { SearchPane } from '../chat/SearchPane.tsx';
+import { DMsHomePane } from '../dm/DMsHomePane.tsx';
 import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
+import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
 import { ScreenSharePane } from '../voice/ScreenSharePane.tsx';
 import { VoicePanel } from '../voice/VoicePanel.tsx';
+import { AppUpdateBanner } from './AppUpdateBanner.tsx';
 import { GatewayConnectionBanner } from './GatewayConnectionBanner.tsx';
 import { Pane } from './Pane.tsx';
 import { PaneSlot } from './PaneSlot.tsx';
@@ -169,6 +174,8 @@ function paneMeta(
       return { label: 'Message Requests' };
     case 'friends':
       return { label: 'Friends' };
+    case 'dmsHome':
+      return { label: 'Messages' };
     case 'empty':
       return { label: 'Empty' };
   }
@@ -243,6 +250,8 @@ function renderPaneContent(
       return <MessageRequestsPane />;
     case 'friends':
       return <FriendsPane tab={content.tab} />;
+    case 'dmsHome':
+      return <DMsHomePane paneId={opts.paneId} />;
     case 'search':
       return (
         <SearchPane
@@ -297,6 +306,8 @@ function paneIcon(
       return <EnvelopeOpenIcon {...sm} aria-hidden="true" />;
     case 'friends':
       return <UsersThreeIcon {...sm} aria-hidden="true" />;
+    case 'dmsHome':
+      return <ChatCircleDotsIcon {...sm} aria-hidden="true" />;
     case 'empty':
       return <HashIcon weight="regular" {...sm} aria-hidden="true" />;
   }
@@ -429,6 +440,18 @@ export function ContentArea({
         overPaneId === paneId && (sidebarDragContent ? true : !isSource);
       const dropZone = isTarget ? activeDropZone : null;
 
+      // For 1:1 DMs, resolve the other user's ID for the verification badge
+      let dmOtherUserId: string | undefined;
+      if (content.type === 'dm') {
+        const dm = dmChannels.find(
+          (d: DMChannel) => d.channel?.id === content.conversationId,
+        );
+        if (dm && !isGroupDM(dm)) {
+          const other = dm.participants.find((p) => p.id !== currentUserId);
+          dmOtherUserId = other?.id;
+        }
+      }
+
       return (
         <PaneSlot paneId={paneId} isDragging={isSource && !sidebarDragContent}>
           <Pane
@@ -464,7 +487,13 @@ export function ContentArea({
             isDragSource={isSource}
             dropZone={dropZone}
             dragDisabled={dragDisabled}
+            extraToolbar={
+              dmOtherUserId ? (
+                <VerificationBadge userId={dmOtherUserId} />
+              ) : undefined
+            }
           >
+            {dmOtherUserId && <KeyChangeNotice userId={dmOtherUserId} />}
             {children}
           </Pane>
         </PaneSlot>
@@ -527,6 +556,7 @@ export function ContentArea({
     <main className="relative flex flex-1 flex-col min-h-0 min-w-0 bg-bg-overlay">
       {resizeHandle}
       <GatewayConnectionBanner />
+      <AppUpdateBanner />
       <div className="flex flex-1 min-h-0 min-w-0 p-1.5">
         <TilingRenderer node={root} renderPane={renderPane} />
       </div>

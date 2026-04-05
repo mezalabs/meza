@@ -457,6 +457,8 @@ function useContentLabel(content: PaneContent): string {
       return 'Friends';
     case 'screenShare':
       return 'Screen Share';
+    case 'dmsHome':
+      return 'Messages';
     case 'empty':
       return '';
   }

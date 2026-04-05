@@ -31,6 +31,8 @@ interface PaneProps {
   isDragSource?: boolean;
   dropZone?: DropPosition | null;
   dragDisabled?: boolean;
+  /** Extra toolbar items rendered before the close button. */
+  extraToolbar?: ReactNode;
 }
 
 export function Pane({
@@ -53,6 +55,7 @@ export function Pane({
   isDragSource = false,
   dropZone,
   dragDisabled = false,
+  extraToolbar,
 }: PaneProps) {
   const [iconHovered, setIconHovered] = useState(false);
   const token = useAuthStore((s) => s.accessToken);
@@ -182,6 +185,7 @@ export function Pane({
               <UsersThreeIcon size={20} aria-hidden="true" />
             </button>
           )}
+          {extraToolbar}
           {showClose && (
             <button
               type="button"
