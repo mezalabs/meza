@@ -101,6 +101,7 @@ enum MessageType {
   MESSAGE_TYPE_MEMBER_KICK    = 3; // content.action differentiates kick/ban/timeout
   MESSAGE_TYPE_CHANNEL_UPDATE = 4; // content.field differentiates name/topic
   MESSAGE_TYPE_KEY_ROTATION   = 5;
+  MESSAGE_TYPE_WEBHOOK        = 6;
 }
 
 message DMChannel {
@@ -292,6 +293,45 @@ message ServerSystemMessageConfig {
   optional string ban_template = 11;
   bool timeout_enabled = 12;
   optional string timeout_template = 13;
+}
+
+// Webhooks
+
+message Webhook {
+  string id = 1;
+  string channel_id = 2;
+  string server_id = 3;
+  string name = 4;
+  string avatar_url = 5;
+  string created_by = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message WebhookEmbed {
+  string title = 1;
+  string description = 2;  // supports markdown
+  string url = 3;
+  uint32 color = 4;        // 24-bit RGB integer
+  repeated WebhookEmbedField fields = 5;
+}
+
+message WebhookEmbedField {
+  string name = 1;
+  string value = 2;   // supports markdown
+  bool inline = 3;
+}
+
+message WebhookDelivery {
+  string id = 1;
+  string webhook_id = 2;
+  bool success = 3;
+  string error_code = 4;
+  string request_body_preview = 5;
+  string message_id = 6;
+  string source_ip = 7;
+  int32 latency_ms = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 // PublicUser is a safe subset of User for broadcasting to other users.
