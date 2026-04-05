@@ -250,9 +250,10 @@ jobs:
             exit 1
           fi
 
-          APPIMAGE="artifacts/Meza-${VERSION}-linux-x86_64.AppImage"
-          if [ ! -f "$APPIMAGE" ]; then
-            echo "::error::AppImage not found at ${APPIMAGE}"
+          APPIMAGE=$(find artifacts -name "Meza-${VERSION}-linux-x86_64.AppImage" -type f | head -1)
+          if [ -z "$APPIMAGE" ]; then
+            echo "::error::AppImage not found for version ${VERSION} under artifacts/"
+            find artifacts -type f -name "*.AppImage" || echo "No AppImage files found"
             exit 1
           fi
 
