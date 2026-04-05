@@ -1,3 +1,27 @@
+export type UpdateUrgency = 'patch' | 'minor' | 'major';
+
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | {
+      state: 'available';
+      version: string;
+      urgency: UpdateUrgency;
+      releaseUrl: string;
+    }
+  | {
+      state: 'downloading';
+      version: string;
+      urgency: UpdateUrgency;
+      percent: number;
+    }
+  | {
+      state: 'ready';
+      version: string;
+      urgency: UpdateUrgency;
+    }
+  | { state: 'error'; message: string };
+
 export interface ElectronAPI {
   window: {
     minimize: () => void;
@@ -13,20 +37,9 @@ export interface ElectronAPI {
     setBadgeCount: (count: number) => void;
   };
   updates: {
-    check: () => Promise<unknown>;
-    download: () => Promise<void>;
-    install: () => void;
-    onAvailable: (
-      callback: (info: { version: string; releaseNotes?: string }) => void,
-    ) => () => void;
-    onProgress: (
-      callback: (progress: {
-        percent: number;
-        transferred: number;
-        total: number;
-      }) => void,
-    ) => () => void;
-    onDownloaded: (callback: () => void) => () => void;
+    check: () => Promise<void>;
+    install: () => Promise<void>;
+    onStatus: (callback: (status: UpdateStatus) => void) => () => void;
   };
   deepLink: {
     onNavigate: (callback: (url: string) => void) => () => void;

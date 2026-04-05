@@ -19,6 +19,7 @@ import {
 } from '@meza/core';
 import {
   InviteLanding,
+  initUpdateListeners,
   LandingPage,
   resetE2EEKeyProvider,
   Shell,
@@ -129,6 +130,11 @@ if (isCapacitor()) {
       }
     });
   });
+}
+
+// Initialize auto-update listeners when running inside Electron.
+if (isElectron()) {
+  initUpdateListeners();
 }
 
 // Handle PUSH_NAVIGATE messages from the push service worker (web).

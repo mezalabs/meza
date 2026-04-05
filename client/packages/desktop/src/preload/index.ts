@@ -1,5 +1,30 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Update status discriminated union.
+// @see canonical definition: client/packages/core/src/types/electron.d.ts
+type UpdateUrgency = 'patch' | 'minor' | 'major';
+type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | {
+      state: 'available';
+      version: string;
+      urgency: UpdateUrgency;
+      releaseUrl: string;
+    }
+  | {
+      state: 'downloading';
+      version: string;
+      urgency: UpdateUrgency;
+      percent: number;
+    }
+  | {
+      state: 'ready';
+      version: string;
+      urgency: UpdateUrgency;
+    }
+  | { state: 'error'; message: string };
+
 // Inject the API base URL so Connect-RPC requests target the server.
 // In dev mode (empty serverUrl), leave it empty so the web app uses same-origin
 // (http://localhost:4080). In prod, the packaged app sets it via the store or
@@ -41,41 +66,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Auto-update ---
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
-    download: () => ipcRenderer.invoke('update:download') as Promise<void>,
-    install: () => ipcRenderer.send('update:install'),
-    onAvailable: (
-      callback: (info: { version: string; releaseNotes?: string }) => void,
-    ) => {
-      const handler = (
-        _event: unknown,
-        info: { version: string; releaseNotes?: string },
-      ) => callback(info);
-      ipcRenderer.on('update-available', handler);
+    install: () => ipcRenderer.invoke('update:install'),
+    onStatus: (callback: (status: UpdateStatus) => void) => {
+      const handler = (_event: unknown, status: UpdateStatus) =>
+        callback(status);
+      ipcRenderer.on('update-status', handler);
       return () => {
-        ipcRenderer.removeListener('update-available', handler);
-      };
-    },
-    onProgress: (
-      callback: (progress: {
-        percent: number;
-        transferred: number;
-        total: number;
-      }) => void,
-    ) => {
-      const handler = (
-        _event: unknown,
-        progress: { percent: number; transferred: number; total: number },
-      ) => callback(progress);
-      ipcRenderer.on('update-progress', handler);
-      return () => {
-        ipcRenderer.removeListener('update-progress', handler);
-      };
-    },
-    onDownloaded: (callback: () => void) => {
-      const handler = () => callback();
-      ipcRenderer.on('update-downloaded', handler);
-      return () => {
-        ipcRenderer.removeListener('update-downloaded', handler);
+        ipcRenderer.removeListener('update-status', handler);
       };
     },
   },

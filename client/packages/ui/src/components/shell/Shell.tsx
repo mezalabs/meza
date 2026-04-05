@@ -29,6 +29,7 @@ import {
 } from '../../stores/tiling.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
+import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
 import { ContentArea } from './ContentArea.tsx';
 import { computeDropZone } from './computeDropZone.ts';
 import { MobileShell } from './MobileShell.tsx';
@@ -328,6 +329,7 @@ function DesktopShell() {
         <ShortcutHelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
         <ImageViewer />
         <ToastContainer />
+        <AppUpdateOverlay />
       </div>
     </IconContext.Provider>
   );
