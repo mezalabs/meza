@@ -49,7 +49,7 @@ export async function showScreenPicker(
       minimizable: false,
       maximizable: false,
       frame: false,
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#121212',
       show: false,
       webPreferences: {
         preload: path.join(import.meta.dirname, '../preload/picker.js'),
@@ -110,7 +110,7 @@ const PICKER_HTML = /* html */ `<!DOCTYPE html>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #1a1a1a;
+    background: #121212;
     color: #e0e0e0;
     overflow: hidden;
     user-select: none;

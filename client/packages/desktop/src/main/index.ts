@@ -73,7 +73,7 @@ function createWindow(): BrowserWindow {
           trafficLightPosition: { x: 12, y: 10 },
         }
       : {}),
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#121212',
     show: false,
     webPreferences: {
       preload: path.join(import.meta.dirname, '../preload/index.js'),
