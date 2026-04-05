@@ -221,7 +221,9 @@ function ImageGrid({
         : 'grid grid-cols-2 gap-1';
 
   return (
-    <div className={`${gridClass} w-full max-w-[400px] rounded-md overflow-hidden`}>
+    <div
+      className={`${gridClass} w-full max-w-[400px] rounded-md overflow-hidden`}
+    >
       {images.map((img, i) => (
         <div
           key={img.id}
