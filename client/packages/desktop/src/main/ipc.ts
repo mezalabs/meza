@@ -1,7 +1,31 @@
-import { app, type BrowserWindow, ipcMain, Notification } from 'electron';
+import {
+  app,
+  type BrowserWindow,
+  ipcMain,
+  nativeImage,
+  Notification,
+} from 'electron';
 import { getAutoLaunchEnabled, setAutoLaunch } from './autolaunch.js';
 import { DEFAULT_SERVER_URL } from './constants.js';
 import { store } from './store.js';
+
+function createOverlayIcon(count: number): Electron.NativeImage | null {
+  if (count <= 0) return null;
+
+  const size = 16;
+  const canvas = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#e53935"/>
+      <text x="${size / 2}" y="${size / 2}" text-anchor="middle" dy="0.35em"
+        font-family="sans-serif" font-size="${count > 9 ? 8 : 10}" font-weight="bold" fill="white">
+        ${count > 99 ? '99+' : count}
+      </text>
+    </svg>`;
+
+  return nativeImage.createFromBuffer(
+    Buffer.from(canvas.trim()),
+  );
+}
 
 export function registerIpcHandlers(win: BrowserWindow): void {
   // --- Window controls ---
@@ -86,5 +110,15 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   // --- Tray badge ---
   ipcMain.on('tray:setBadgeCount', (_event, count: number) => {
     app.setBadgeCount(count);
+  });
+
+  // --- Windows taskbar overlay ---
+  ipcMain.on('tray:setOverlayIcon', (_event, count: number) => {
+    if (process.platform !== 'win32') return;
+    const overlay = createOverlayIcon(count);
+    win.setOverlayIcon(
+      overlay,
+      count > 0 ? `${count} unread messages` : '',
+    );
   });
 }

@@ -9,6 +9,7 @@ const config: CapacitorConfig = {
   webDir: '../web/dist',
   backgroundColor: '#121212',
   includePlugins: [
+    '@capawesome/capacitor-badge',
     '@capacitor/app',
     '@capacitor/keyboard',
     '@capacitor/push-notifications',

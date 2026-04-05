@@ -5,6 +5,7 @@ import './index.css';
 import {
   applyDeepLinkInvite,
   bootstrapSession,
+  ElectronBadgeAdapter,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,
@@ -14,6 +15,8 @@ import {
   onCrossTabTeardown,
   onSessionReady,
   parseDeepLink,
+  startBadgeSync,
+  stopBadgeSync,
   subscribeToPush,
   teardownSession,
   useAuthStore,
@@ -158,6 +161,21 @@ if (isCapacitor()) {
 // Initialize auto-update listeners when running inside Electron.
 if (isElectron()) {
   initUpdateListeners();
+}
+
+// Badge sync: show unread count on desktop dock/taskbar or mobile app icon.
+if (isElectron()) {
+  const badgeAdapter = new ElectronBadgeAdapter();
+  if (useAuthStore.getState().isAuthenticated) {
+    startBadgeSync(badgeAdapter);
+  }
+  useAuthStore.subscribe((state, prevState) => {
+    if (state.isAuthenticated && !prevState.isAuthenticated) {
+      startBadgeSync(badgeAdapter);
+    } else if (!state.isAuthenticated && prevState.isAuthenticated) {
+      stopBadgeSync();
+    }
+  });
 }
 
 // Handle PUSH_NAVIGATE messages from the push service worker (web).

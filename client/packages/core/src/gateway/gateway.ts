@@ -600,14 +600,18 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
           if (!viewed[msg.channelId]) {
             useReadStateStore.getState().incrementUnread(msg.channelId);
             // Notification sound: mention > dm > message
-            let soundType: SoundType = 'message';
-            if (
+            const isMention =
               msg.mentionedUserIds.includes(currentUserId ?? '') ||
-              msg.mentionEveryone
-            ) {
+              msg.mentionEveryone;
+            let soundType: SoundType = 'message';
+            if (isMention) {
               soundType = 'mention';
             } else if (likelyDM) {
               soundType = 'dm';
+            }
+            // Track mentions and DMs separately for badge filtering
+            if (isMention || likelyDM) {
+              useReadStateStore.getState().incrementMention(msg.channelId);
             }
             maybePlaySound(soundType, msg.authorId);
           }

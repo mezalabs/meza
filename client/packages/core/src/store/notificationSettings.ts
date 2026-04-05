@@ -21,16 +21,20 @@ const ALL_SOUND_TYPES: SoundType[] = [
   'unmute',
 ];
 
+export type BadgeMode = 'all' | 'mentions_dms' | 'off';
+
 export interface NotificationSettingsState {
   soundEnabled: boolean;
   enabledSounds: Record<SoundType, boolean>;
   notificationVolume: number;
+  badgeMode: BadgeMode;
 }
 
 export interface NotificationSettingsActions {
   setSoundEnabled: (enabled: boolean) => void;
   setEnabledSound: (type: SoundType, enabled: boolean) => void;
   setNotificationVolume: (volume: number) => void;
+  setBadgeMode: (mode: BadgeMode) => void;
   reset: () => void;
 }
 
@@ -46,6 +50,7 @@ const initialState: NotificationSettingsState = {
   soundEnabled: true,
   enabledSounds: defaultEnabledSounds(),
   notificationVolume: 0.7,
+  badgeMode: 'all',
 };
 
 function loadFromStorage(): Partial<NotificationSettingsState> {
@@ -77,6 +82,13 @@ function loadFromStorage(): Partial<NotificationSettingsState> {
         }
       }
       result.enabledSounds = enabled;
+    }
+    if (
+      parsed.badgeMode === 'all' ||
+      parsed.badgeMode === 'mentions_dms' ||
+      parsed.badgeMode === 'off'
+    ) {
+      result.badgeMode = parsed.badgeMode;
     }
     return result;
   } catch {
@@ -127,6 +139,13 @@ export const useNotificationSettingsStore = create<
         s.notificationVolume = clamped;
       });
       soundManager.setVolume(clamped);
+      debouncedSave(get);
+    },
+
+    setBadgeMode: (mode) => {
+      set((s) => {
+        s.badgeMode = mode;
+      });
       debouncedSave(get);
     },
 

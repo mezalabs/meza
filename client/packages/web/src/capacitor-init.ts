@@ -13,10 +13,13 @@
 import {
   applyDeepLinkInvite,
   bootstrapSession,
+  CapacitorBadgeAdapter,
   gatewayConnect,
   gatewayDisconnect,
   isSessionReady,
   parseDeepLink,
+  startBadgeSync,
+  stopBadgeSync,
   subscribeToPush,
   useAuthStore,
 } from '@meza/core';
@@ -39,6 +42,7 @@ export async function initCapacitor(): Promise<void> {
   setupPushNotifications();
   setupNotificationNavigation();
   setupBackButton(App);
+  setupBadgeSync();
 }
 
 async function setupStatusBar(): Promise<void> {
@@ -125,6 +129,20 @@ function setupBackButton(App: typeof import('@capacitor/app').App): void {
       window.history.back();
     } else {
       App.minimizeApp();
+    }
+  });
+}
+
+function setupBadgeSync(): void {
+  const badgeAdapter = new CapacitorBadgeAdapter();
+  if (useAuthStore.getState().isAuthenticated) {
+    startBadgeSync(badgeAdapter);
+  }
+  useAuthStore.subscribe((state, prevState) => {
+    if (state.isAuthenticated && !prevState.isAuthenticated) {
+      startBadgeSync(badgeAdapter);
+    } else if (!state.isAuthenticated && prevState.isAuthenticated) {
+      stopBadgeSync();
     }
   });
 }

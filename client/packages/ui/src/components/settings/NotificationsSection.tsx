@@ -1,4 +1,5 @@
 import {
+  type BadgeMode,
   type SoundType,
   soundManager,
   useNotificationSettingsStore,
@@ -20,16 +21,54 @@ const SOUND_LABELS: { type: SoundType; label: string }[] = [
   { type: 'unmute', label: 'Unmute microphone' },
 ];
 
+const BADGE_OPTIONS: { value: BadgeMode; label: string; description: string }[] = [
+  { value: 'all', label: 'All unreads', description: 'Badge shows total unread messages' },
+  { value: 'mentions_dms', label: 'Mentions & DMs only', description: 'Badge shows only mentions and direct messages' },
+  { value: 'off', label: 'Off', description: 'No badge count on the app icon' },
+];
+
 export function NotificationsSection() {
   const soundEnabled = useNotificationSettingsStore((s) => s.soundEnabled);
   const enabledSounds = useNotificationSettingsStore((s) => s.enabledSounds);
   const notificationVolume = useNotificationSettingsStore(
     (s) => s.notificationVolume,
   );
+  const badgeMode = useNotificationSettingsStore((s) => s.badgeMode);
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <h2 className="text-lg font-semibold text-text">Notifications</h2>
+
+      {/* Badge mode */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-text-muted">Badge</h3>
+        <p className="text-xs text-text-muted">
+          Controls the unread count shown on the app icon in your dock or taskbar.
+        </p>
+        <div className="space-y-2">
+          {BADGE_OPTIONS.map(({ value, label, description }) => (
+            <label
+              key={value}
+              className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-1.5 hover:bg-bg-surface transition-colors"
+            >
+              <input
+                type="radio"
+                name="badge-mode"
+                value={value}
+                checked={badgeMode === value}
+                onChange={() =>
+                  useNotificationSettingsStore.getState().setBadgeMode(value)
+                }
+                className="mt-0.5 accent-accent"
+              />
+              <div>
+                <span className="text-sm text-text">{label}</span>
+                <p className="text-xs text-text-muted">{description}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {/* Master toggle */}
       <div className="space-y-4">

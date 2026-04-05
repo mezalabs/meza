@@ -61,6 +61,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   tray: {
     setBadgeCount: (count: number) =>
       ipcRenderer.send('tray:setBadgeCount', count),
+    setOverlayIcon: (count: number) =>
+      ipcRenderer.send('tray:setOverlayIcon', count),
   },
 
   // --- Auto-update ---
