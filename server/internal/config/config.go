@@ -46,8 +46,9 @@ type Config struct {
 	RedisURL    string `envconfig:"REDIS_URL"`
 
 	// Gateway
-	ChatServiceURL string `envconfig:"CHAT_SERVICE_URL" default:"http://localhost:8082"`
-	AllowedOrigins string `envconfig:"ALLOWED_ORIGINS"` // Comma-separated WebSocket origin patterns; defaults to "*" (wildcard) if unset
+	ChatServiceURL       string `envconfig:"CHAT_SERVICE_URL" default:"http://localhost:8082"`
+	AllowedOrigins       string `envconfig:"ALLOWED_ORIGINS"`        // Comma-separated WebSocket origin patterns; defaults to "*" (wildcard) if unset
+	AllowWildcardOrigins bool   `envconfig:"ALLOW_WILDCARD_ORIGINS" default:"false"` // Must be true to allow wildcard origins; prevents accidental "*" in production
 
 	// Media (S3-compatible)
 	S3Endpoint       string `envconfig:"S3_ENDPOINT"`

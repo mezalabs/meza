@@ -82,17 +82,19 @@ func main() {
 		slog.Info("local user registration is disabled")
 	}
 
-	// Connect Redis for per-email recovery rate limiting and device blocklist.
-	if cfg.RedisURL != "" {
-		rdb, err := mezaRedis.NewClient(ctx, cfg.RedisURL)
-		if err != nil {
-			slog.Error("connect redis", "err", err)
-			os.Exit(1)
-		}
-		defer rdb.Close()
-		svc.redisClient = rdb
-		svc.tokenBlocklist = auth.NewTokenBlocklist(rdb)
+	// Connect Redis for per-email recovery rate limiting and device blocklist (required).
+	if cfg.RedisURL == "" {
+		slog.Error("MEZA_REDIS_URL is required for the auth service (device revocation, rate limiting)")
+		os.Exit(1)
 	}
+	rdb, err := mezaRedis.NewClient(ctx, cfg.RedisURL)
+	if err != nil {
+		slog.Error("connect redis", "err", err)
+		os.Exit(1)
+	}
+	defer rdb.Close()
+	svc.redisClient = rdb
+	svc.tokenBlocklist = auth.NewTokenBlocklist(rdb)
 
 	// Connect NATS for publishing device recovery events.
 	nc, err := bfnats.NewClient(cfg.NatsURL)
@@ -111,12 +113,10 @@ func main() {
 		slog.Warn("SMTP not configured, using noop email sender")
 	}
 
-	// Build interceptor options: verification cache + optional token blocklist
+	// Build interceptor options: verification cache + token blocklist
 	baseOpts := []auth.InterceptorOption{
 		auth.WithVerificationCache(auth.NewVerificationCache()),
-	}
-	if svc.tokenBlocklist != nil {
-		baseOpts = append(baseOpts, auth.WithTokenBlocklist(svc.tokenBlocklist))
+		auth.WithTokenBlocklist(svc.tokenBlocklist),
 	}
 
 	// Auth service interceptor blocks federated users from identity RPCs
@@ -152,10 +152,6 @@ func main() {
 
 	// Set up federation verifier if federation is enabled
 	if cfg.FederationEnabled && ed25519Keys != nil {
-		if svc.redisClient == nil {
-			slog.Error("Redis is required when federation is enabled (for JTI replay protection)")
-			os.Exit(1)
-		}
 		jwksClient := federation.NewJWKSClient()
 		if err := jwksClient.EagerLoad(ctx, cfg.OriginURL); err != nil {
 			slog.Error("eager loading JWKS", "err", err)

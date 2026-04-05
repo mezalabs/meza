@@ -94,11 +94,8 @@ type Gateway struct {
 	heartbeatBatch map[string]struct{} // userIDs to flush
 }
 
-func NewGateway(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, allowedOrigins string, tokenBlocklist *auth.TokenBlocklist) *Gateway {
-	// Fix 3: Read allowed origins from config instead of os.Getenv.
-	// Defaults to "*" for development, but logs a WARNING to alert operators.
-	origins := parseAllowedOrigins(allowedOrigins)
-
+// NewGatewayWithOrigins creates a Gateway with pre-parsed origin patterns.
+func NewGatewayWithOrigins(chatStore store.ChatStorer, readStateStore store.ReadStateStorer, messageStore store.MessageStorer, chatClient mezav1connect.ChatServiceClient, nc *nats.Conn, origins []string, tokenBlocklist *auth.TokenBlocklist) *Gateway {
 	return &Gateway{
 		originPatterns: origins,
 		tokenBlocklist: tokenBlocklist,

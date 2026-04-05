@@ -30,12 +30,19 @@ func (b *TokenBlocklist) BlockDevice(ctx context.Context, deviceID string, ttl t
 }
 
 // IsDeviceBlocked checks whether a device ID has been revoked.
+// Fails closed: returns true (blocked) if Redis is unreachable, because
+// allowing a potentially-revoked device is worse than a brief rejection.
+// Uses a 100ms deadline to avoid adding perceptible latency on the auth
+// hot path (default go-redis retries would take 3-6 seconds).
 func (b *TokenBlocklist) IsDeviceBlocked(ctx context.Context, deviceID string) bool {
+	checkCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
 	key := fmt.Sprintf("blocked:device:%s", deviceID)
-	val, err := b.client.Exists(ctx, key).Result()
+	val, err := b.client.Exists(checkCtx, key).Result()
 	if err != nil {
-		slog.Error("device blocklist check failed, failing open", "err", err, "device", deviceID)
-		return false
+		slog.Error("device blocklist check failed, failing closed", "err", err, "device", deviceID)
+		return true
 	}
 	return val > 0
 }

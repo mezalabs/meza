@@ -7,12 +7,31 @@ import (
 	"strings"
 )
 
+// HTTPAuthOption configures the RequireHTTPAuth middleware.
+type HTTPAuthOption func(*httpAuthConfig)
+
+type httpAuthConfig struct {
+	tokenBlocklist *TokenBlocklist
+}
+
+// WithHTTPTokenBlocklist enables device revocation checking on HTTP endpoints.
+func WithHTTPTokenBlocklist(blocklist *TokenBlocklist) HTTPAuthOption {
+	return func(cfg *httpAuthConfig) {
+		cfg.tokenBlocklist = blocklist
+	}
+}
+
 // RequireHTTPAuth returns an HTTP middleware that validates a JWT from the
 // Authorization header ("Bearer <token>") or a "token" query parameter. On
 // success it injects the user ID and device ID into the request context
 // (retrievable via UserIDFromContext / DeviceIDFromContext). On failure it
 // responds with 401 Unauthorized.
-func RequireHTTPAuth(ed25519PubKey ed25519.PublicKey) func(http.Handler) http.Handler {
+func RequireHTTPAuth(ed25519PubKey ed25519.PublicKey, opts ...HTTPAuthOption) func(http.Handler) http.Handler {
+	var cfg httpAuthConfig
+	for _, o := range opts {
+		o(&cfg)
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := extractBearerToken(r)
@@ -29,6 +48,14 @@ func RequireHTTPAuth(ed25519PubKey ed25519.PublicKey) func(http.Handler) http.Ha
 			if claims.IsRefresh {
 				http.Error(w, "refresh token cannot be used for authentication", http.StatusUnauthorized)
 				return
+			}
+
+			// Check if the device has been revoked.
+			if cfg.tokenBlocklist != nil && claims.DeviceID != "" {
+				if cfg.tokenBlocklist.IsDeviceBlocked(r.Context(), claims.DeviceID) {
+					http.Error(w, "device has been revoked", http.StatusUnauthorized)
+					return
+				}
 			}
 
 			ctx := r.Context()

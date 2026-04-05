@@ -17,8 +17,10 @@ import (
 )
 
 const (
-	accessTokenExpiry  = 1 * time.Hour
-	refreshTokenExpiry = 30 * 24 * time.Hour
+	// AccessTokenExpiry is the lifetime of an access token. Exported so that
+	// the token blocklist TTL (set when revoking a device) stays in sync.
+	AccessTokenExpiry   = 1 * time.Hour
+	refreshTokenExpiry  = 30 * 24 * time.Hour
 )
 
 // Claims holds the structured JWT claims for a Meza token.
@@ -135,7 +137,7 @@ func GenerateTokenPairEd25519(userID, deviceID string, keys *Ed25519Keys, issuer
 		"iss":       issuer,
 		"jti":       randomID(),
 		"iat":       now.Unix(),
-		"exp":       now.Add(accessTokenExpiry).Unix(),
+		"exp":       now.Add(AccessTokenExpiry).Unix(),
 	}
 	if isFederated {
 		accessClaims["is_federated"] = true

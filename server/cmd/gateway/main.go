@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 
 	"github.com/mezalabs/meza/gen/meza/v1/mezav1connect"
 	"github.com/mezalabs/meza/internal/auth"
@@ -77,23 +80,34 @@ func main() {
 	}
 	slog.Info("Ed25519 signing enabled", "kid", ed25519Keys.KeyID, "fingerprint", ed25519Keys.KeyFingerprint())
 
-	// Redis-backed token blocklist for device revocation checks.
-	// Optional: if REDIS_URL is not configured, revocation checks are skipped.
-	var tokenBlocklist *auth.TokenBlocklist
-	if cfg.RedisURL != "" {
-		redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
-		if err != nil {
-			slog.Error("connect redis", "err", err)
+	// Redis-backed token blocklist for device revocation checks (required).
+	if cfg.RedisURL == "" {
+		slog.Error("MEZA_REDIS_URL is required for the gateway (device revocation)")
+		os.Exit(1)
+	}
+	redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
+	if err != nil {
+		slog.Error("connect redis", "err", err)
+		os.Exit(1)
+	}
+	defer redisClient.Close()
+	tokenBlocklist := auth.NewTokenBlocklist(redisClient)
+	slog.Info("device revocation blocklist enabled")
+
+	// Validate WebSocket origin configuration. Refuse to start with wildcard
+	// origins unless explicitly opted in via MEZA_ALLOW_WILDCARD_ORIGINS=true.
+	origins := parseAllowedOrigins(cfg.AllowedOrigins)
+	for _, o := range origins {
+		if o == "*" && !cfg.AllowWildcardOrigins {
+			slog.Error("MEZA_ALLOWED_ORIGINS must not contain \"*\". Set explicit origins or set MEZA_ALLOW_WILDCARD_ORIGINS=true to override.")
 			os.Exit(1)
 		}
-		defer redisClient.Close()
-		tokenBlocklist = auth.NewTokenBlocklist(redisClient)
-		slog.Info("device revocation blocklist enabled")
-	} else {
-		slog.Warn("SECURITY: MEZA_REDIS_URL is not set -- device revocation checks are disabled on WebSocket auth")
+		if o != "*" && strings.Contains(o, "*") {
+			slog.Warn("SECURITY: origin pattern contains wildcard glob -- this may be overly broad", "pattern", o)
+		}
 	}
 
-	gw := NewGateway(chatStore, readStateStore, messageStore, chatClient, nc, cfg.AllowedOrigins, tokenBlocklist)
+	gw := NewGatewayWithOrigins(chatStore, readStateStore, messageStore, chatClient, nc, origins, tokenBlocklist)
 	gw.ed25519Keys = ed25519Keys
 	gw.instanceURL = cfg.InstanceURL
 	gw.verificationCache = auth.NewVerificationCache()
@@ -108,7 +122,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/ws", wsLimiter.Wrap(http.HandlerFunc(gw.HandleWebSocket)))
-	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/healthz", healthHandler)
+	mux.HandleFunc("/health", healthHandler) // backwards compat
+	mux.HandleFunc("/readyz", readinessHandler(redisClient))
 	mux.Handle("/metrics", observability.MetricsHandler())
 
 	srv := &http.Server{
@@ -145,4 +161,23 @@ func main() {
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+// readinessHandler checks that security-critical dependencies (Redis) are
+// reachable. Used as a Kubernetes readiness probe — failure removes the pod
+// from the load balancer but does not restart it (unlike liveness).
+func readinessHandler(redisClient *redis.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 50*time.Millisecond)
+		defer cancel()
+
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusServiceUnavailable)
+			json.NewEncoder(w).Encode(map[string]string{"status": "not ready", "redis": err.Error()})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+	}
 }

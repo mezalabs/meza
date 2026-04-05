@@ -27,6 +27,12 @@ importers:
       '@biomejs/biome':
         specifier: ^2.3.14
         version: 2.3.14
+      '@noble/curves':
+        specifier: ^2
+        version: 2.0.1
+      '@noble/hashes':
+        specifier: ^2.0.1
+        version: 2.0.1
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5
