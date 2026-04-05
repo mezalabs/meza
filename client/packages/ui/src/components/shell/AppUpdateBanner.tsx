@@ -1,7 +1,10 @@
 import type { UpdateStatus } from '@meza/core';
 import { useUpdateStore } from '../../stores/updates.ts';
 
-const PLATFORM = window.electronAPI?.app.getPlatform();
+const PLATFORM =
+  typeof window !== 'undefined'
+    ? window.electronAPI?.app.getPlatform()
+    : undefined;
 
 export function AppUpdateBanner() {
   const status = useUpdateStore((s) => s.status);
