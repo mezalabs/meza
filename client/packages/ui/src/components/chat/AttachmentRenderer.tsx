@@ -144,13 +144,15 @@ function ImageAttachment({
             : { maxWidth: 400, maxHeight: 300 }
       }
     >
-      {/* Micro thumbnail placeholder (instant, blurred) */}
-      {hasMicroThumb && !thumbLoaded && !thumbError && (
+      {/* Micro thumbnail placeholder (instant, blurred) — kept until real image loads */}
+      {hasMicroThumb && (
         <img
           src={microThumbDataURI(attachment.microThumbnail)}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 rounded-md"
+          className={`absolute inset-0 w-full h-full object-cover blur-xl scale-110 rounded-md transition-opacity duration-300 ${
+            thumbLoaded || thumbError ? 'opacity-0' : 'opacity-100'
+          }`}
         />
       )}
 
@@ -219,7 +221,7 @@ function ImageGrid({
         : 'grid grid-cols-2 gap-1';
 
   return (
-    <div className={`${gridClass} max-w-[400px] rounded-md overflow-hidden`}>
+    <div className={`${gridClass} w-full max-w-[400px] rounded-md overflow-hidden`}>
       {images.map((img, i) => (
         <div
           key={img.id}
@@ -311,58 +313,69 @@ function EncryptedImageAttachment({
   channelId: string;
   cover?: boolean;
 }) {
+  const [thumbLoaded, setThumbLoaded] = useState(false);
   const { blobUrl, error } = useDecryptedThumbnail(attachment, channelId);
   const openViewer = useImageViewerStore((s) => s.openViewer);
 
   const hasMicroThumb = attachment.microThumbnail.length > 0;
   const hasAspectRatio = attachment.width > 0 && attachment.height > 0;
 
+  // Compute the display width that accounts for the maxHeight cap, so the
+  // container is exactly the size the image will render at — no excess space.
+  const containerStyle = (() => {
+    if (cover) return { width: '100%', height: '100%' };
+    if (!hasAspectRatio) return { maxWidth: 400, maxHeight: 300 };
+    const cappedW = Math.min(400, attachment.width);
+    const heightAtCappedW = (cappedW * attachment.height) / attachment.width;
+    const displayW =
+      heightAtCappedW > 300
+        ? Math.round((300 * attachment.width) / attachment.height)
+        : cappedW;
+    return {
+      aspectRatio: `${attachment.width}/${attachment.height}`,
+      width: displayW,
+      maxWidth: '100%',
+      maxHeight: 300,
+    };
+  })();
+
+  // Container owns its dimensions — children are all absolutely positioned
+  // so adding/removing them never causes layout shift.
   return (
     <button
       type="button"
       onClick={() => openViewer(allImageAttachments, indexInGroup, channelId)}
       className="cursor-pointer rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus relative overflow-hidden"
       aria-label={`View ${attachment.filename} in image viewer`}
-      style={
-        hasAspectRatio && !cover
-          ? {
-              aspectRatio: `${attachment.width}/${attachment.height}`,
-              maxWidth: Math.min(400, attachment.width),
-              maxHeight: 300,
-            }
-          : cover
-            ? { width: '100%', height: '100%' }
-            : { maxWidth: 400, maxHeight: 300 }
-      }
+      style={containerStyle}
     >
-      {/* Micro thumbnail placeholder (instant, blurred) */}
-      {hasMicroThumb && !blobUrl && !error && (
+      {/* Micro thumbnail — blurred preview, fades out when real image loads */}
+      {hasMicroThumb && (
         <img
           src={microThumbDataURI(attachment.microThumbnail)}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 rounded-md"
+          className={`absolute inset-0 w-full h-full object-cover blur-xl scale-110 rounded-md transition-opacity duration-300 ${
+            thumbLoaded || error ? 'opacity-0' : 'opacity-100'
+          }`}
         />
       )}
 
-      {/* Decrypted thumbnail */}
+      {/* Decrypted thumbnail — absolute overlay, crossfades in */}
       {blobUrl && (
         <img
           src={blobUrl}
           alt={attachment.filename}
-          className={`rounded-md ${
-            cover
-              ? 'w-full h-full object-cover'
-              : 'max-w-full max-h-[300px] object-contain'
-          }`}
-          width={!cover && attachment.width ? attachment.width : undefined}
-          height={!cover && attachment.height ? attachment.height : undefined}
+          className={`absolute inset-0 w-full h-full rounded-md transition-opacity duration-300 ${
+            cover ? 'object-cover' : 'object-contain'
+          } ${thumbLoaded ? 'opacity-100' : hasMicroThumb ? 'opacity-0' : 'opacity-100'}`}
+          onLoad={() => setThumbLoaded(true)}
         />
       )}
 
       {/* Error state */}
       {error && (
-        <div className="flex items-center justify-center w-full h-full min-h-[60px] text-text-muted text-xs">
+        <div className="absolute inset-0 flex items-center justify-center text-text-muted text-xs">
           Decrypt failed
         </div>
       )}
