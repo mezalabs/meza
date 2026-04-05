@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`computeSafetyNumber > matches a known test vector 1`] = `"054589702395026603194450341684767456262063587538991804143669"`;

@@ -47,6 +47,8 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
+import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
+import { VerificationBadge } from '../security/VerificationBadge.tsx';
 import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
@@ -438,6 +440,18 @@ export function ContentArea({
         overPaneId === paneId && (sidebarDragContent ? true : !isSource);
       const dropZone = isTarget ? activeDropZone : null;
 
+      // For 1:1 DMs, resolve the other user's ID for the verification badge
+      let dmOtherUserId: string | undefined;
+      if (content.type === 'dm') {
+        const dm = dmChannels.find(
+          (d: DMChannel) => d.channel?.id === content.conversationId,
+        );
+        if (dm && !isGroupDM(dm)) {
+          const other = dm.participants.find((p) => p.id !== currentUserId);
+          dmOtherUserId = other?.id;
+        }
+      }
+
       return (
         <PaneSlot paneId={paneId} isDragging={isSource && !sidebarDragContent}>
           <Pane
@@ -473,7 +487,13 @@ export function ContentArea({
             isDragSource={isSource}
             dropZone={dropZone}
             dragDisabled={dragDisabled}
+            extraToolbar={
+              dmOtherUserId ? (
+                <VerificationBadge userId={dmOtherUserId} />
+              ) : undefined
+            }
           >
+            {dmOtherUserId && <KeyChangeNotice userId={dmOtherUserId} />}
             {children}
           </Pane>
         </PaneSlot>

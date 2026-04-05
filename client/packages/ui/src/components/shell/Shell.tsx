@@ -27,6 +27,7 @@ import {
   useSimpleMode,
   useTilingStore,
 } from '../../stores/tiling.ts';
+import { useVerificationStore } from '../../stores/verification.ts';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
@@ -94,6 +95,13 @@ function DesktopShell() {
   // Auto-open Get Started pane for newly registered users with no servers
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const servers = useServerStore((s) => s.servers);
+
+  // Hydrate verification store on authentication
+  useEffect(() => {
+    if (isAuthenticated) {
+      useVerificationStore.getState().hydrate();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     // Only trigger for authenticated users

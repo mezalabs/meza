@@ -31,14 +31,14 @@ And because of E2EE, even you (with full access to the server) can't read your u
 ## "I am concerned about nation state actors exfiltrating my messages"
 Probably use Signal.
 
-Meza's threat model assumes a passive adversary - someone who can read the database, not someone who can compromise your device, intercept or impersonate your network traffic, or exploit your browser. Nation states can and do all of these things. Meza has no forward secrecy, no key verification ceremony, and runs in a JavaScript runtime that can't guarantee memory erasure. Signal is purpose built for this threat model. Meza was not.
+Meza's threat model assumes a passive adversary - someone who can read the database, not someone who can compromise your device, intercept or impersonate your network traffic, or exploit your browser. Nation states can and do all of these things. Meza has no forward secrecy and runs in a JavaScript runtime that can't guarantee memory erasure. While safety numbers allow users to verify identity keys out-of-band, a compromised server could serve modified client code that bypasses verification entirely. Signal is purpose built for this threat model. Meza was not.
 
 # Explicit Trust Assumptions
 
 For security researchers and contributors, here are the explicit boundaries of the E2EE model:
 
 ## Server trust model
-The server is assumed to be an **honest-but-curious passive adversary**. It stores encrypted data faithfully but may attempt to read it. The server is **trusted not to substitute public keys** — there is no key transparency log or out-of-band verification (safety numbers). A fully compromised server that actively substitutes keys could perform a man-in-the-middle attack on key distribution. Key transparency is a planned future addition.
+The server is assumed to be an **honest-but-curious passive adversary**. It stores encrypted data faithfully but may attempt to read it. By default the server is trusted not to substitute public keys, but users can **independently verify** this trust using **safety numbers** — a 60-digit numeric fingerprint derived from both users' Ed25519 identity keys. Users who compare safety numbers (in person or over a trusted channel) gain resistance against an **active adversary** that substitutes keys for man-in-the-middle attacks. Users who do not verify still benefit from the existing passive-adversary protections and the server's first-write-only key registration policy.
 
 ## Forward secrecy
 Meza does **not** provide per-message forward secrecy. All messages within a channel key version use the same static AES-256-GCM key. Key rotation creates a new version that excluded members do not receive, but old messages encrypted with prior key versions remain decryptable by anyone who possessed those keys. Forward secrecy is bounded by key rotation events, not individual messages.
