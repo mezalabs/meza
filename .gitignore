@@ -19,6 +19,9 @@ dist/
 # Dev keys (Ed25519 keypairs for local development)
 .keys/
 
+# Firebase
+GoogleService-Info.plist
+
 # IDE
 .idea/
 .vscode/
