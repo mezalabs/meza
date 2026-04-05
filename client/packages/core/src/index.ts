@@ -250,6 +250,7 @@ export {
   parseMessageContent,
   persistIdentity,
   provisionChannelKeyBatched,
+  pruneStaleVerifications,
   redistributeChannelKeys,
   registerPublicKey,
   releaseAllBlobURLs,

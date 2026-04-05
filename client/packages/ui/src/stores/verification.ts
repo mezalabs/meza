@@ -11,6 +11,7 @@ import {
   onKeyChanged,
   clearVerification as persistClearVerification,
   markVerified as persistVerified,
+  pruneStaleVerifications,
   type VerificationRecord,
 } from '@meza/core';
 import { create } from 'zustand';
@@ -42,12 +43,20 @@ export const useVerificationStore = create<VerificationState>()((set, get) => ({
   keyChangedUsers: new Set(),
 
   hydrate: async () => {
+    // Prune verifications whose key hash no longer matches the cached
+    // public key.  Catches key changes that happened before the callback
+    // was registered (race on page load, HMR module reset, etc.).
+    const staleUserIds = await pruneStaleVerifications();
+
     const records = await loadAllVerifications();
     const map: Record<string, VerificationRecord> = {};
     for (const r of records) {
       map[r.userId] = r;
     }
-    set({ records: map });
+    set({
+      records: map,
+      keyChangedUsers: new Set(staleUserIds),
+    });
 
     // Register key change callback so core → UI notifications work
     onKeyChanged((userId) => {

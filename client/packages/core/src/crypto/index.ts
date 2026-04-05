@@ -65,6 +65,7 @@ export {
   type KeyCacheResult,
   markVerified,
   onKeyChanged,
+  pruneStaleVerifications,
 } from './key-monitor.ts';
 export {
   aesGcmDecrypt,

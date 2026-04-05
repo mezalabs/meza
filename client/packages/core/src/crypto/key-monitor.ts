@@ -10,6 +10,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import {
   deleteVerification,
+  loadAllVerifications,
   loadCachedKey,
   loadVerification,
   storeCachedKey,
@@ -113,6 +114,26 @@ export async function isVerificationValid(
   const record = await loadVerification(userId);
   if (!record?.verified) return false;
   return record.publicKeyHash === hashPublicKey(currentKey);
+}
+
+/**
+ * Validate all persisted verification records against cached public keys.
+ * Deletes any record whose key hash no longer matches (key changed while
+ * the callback was unregistered, e.g. during HMR or before hydration).
+ * Returns the user IDs whose stale verifications were pruned.
+ */
+export async function pruneStaleVerifications(): Promise<string[]> {
+  const records = await loadAllVerifications();
+  const stale: string[] = [];
+  for (const r of records) {
+    if (!r.verified) continue;
+    const cached = await loadCachedKey(r.userId);
+    if (cached && r.publicKeyHash !== hashPublicKey(cached.publicKey)) {
+      await deleteVerification(r.userId);
+      stale.push(r.userId);
+    }
+  }
+  return stale;
 }
 
 /** SHA-256 hex digest of a public key, used to bind verification to key material. */
