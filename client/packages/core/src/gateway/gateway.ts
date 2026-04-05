@@ -611,7 +611,7 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
             }
             // Track mentions and DMs separately for badge filtering
             if (isMention || likelyDM) {
-              useReadStateStore.getState().incrementMention(msg.channelId);
+              useReadStateStore.getState().incrementMentionOrDm(msg.channelId);
             }
             maybePlaySound(soundType, msg.authorId);
           }

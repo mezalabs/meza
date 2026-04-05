@@ -322,7 +322,7 @@ function dispatchSpokeEvent(
           msg.mentionedUserIds.includes(currentUserId ?? '') ||
           msg.mentionEveryone
         ) {
-          useReadStateStore.getState().incrementMention(msg.channelId);
+          useReadStateStore.getState().incrementMentionOrDm(msg.channelId);
         }
       }
     }

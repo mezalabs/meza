@@ -16,7 +16,7 @@ function computeBadgeCount(): number {
 
   const store = useReadStateStore.getState();
   if (badgeMode === 'mentions_dms') {
-    return store.getTotalMentionCount();
+    return store.getTotalMentionOrDmCount();
   }
   return store.getTotalUnreadCount();
 }

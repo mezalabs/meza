@@ -30,6 +30,10 @@ export class CapacitorBadgeAdapter implements BadgeAdapter {
         }
         return badge.clear();
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (err instanceof Error && err.message === 'Badge plugin not available')
+          return;
+        console.warn('[Badge] Failed to update badge:', err);
+      });
   }
 }

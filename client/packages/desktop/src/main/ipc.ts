@@ -109,16 +109,21 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   // --- Tray badge ---
   ipcMain.on('tray:setBadgeCount', (_event, count: number) => {
-    app.setBadgeCount(count);
+    if (typeof count !== 'number' || !Number.isFinite(count) || count < 0)
+      return;
+    app.setBadgeCount(Math.floor(count));
   });
 
   // --- Windows taskbar overlay ---
   ipcMain.on('tray:setOverlayIcon', (_event, count: number) => {
     if (process.platform !== 'win32') return;
-    const overlay = createOverlayIcon(count);
+    if (typeof count !== 'number' || !Number.isFinite(count) || count < 0)
+      return;
+    const safeCount = Math.floor(count);
+    const overlay = createOverlayIcon(safeCount);
     win.setOverlayIcon(
       overlay,
-      count > 0 ? `${count} unread messages` : '',
+      safeCount > 0 ? `${safeCount} unread messages` : '',
     );
   });
 }

@@ -4,7 +4,8 @@ import { immer } from 'zustand/middleware/immer';
 interface ReadStateData {
   lastReadMessageId: string;
   unreadCount: number;
-  mentionCount: number;
+  /** Tracks @mentions, @everyone, and DM messages — not just mentions. */
+  mentionOrDmCount: number;
 }
 
 export interface ReadStateState {
@@ -25,11 +26,11 @@ export interface ReadStateActions {
     unreadCount: number,
   ) => void;
   incrementUnread: (channelId: string) => void;
-  incrementMention: (channelId: string) => void;
+  incrementMentionOrDm: (channelId: string) => void;
   getUnreadCount: (channelId: string) => number;
   hasUnread: (channelId: string) => boolean;
   getTotalUnreadCount: () => number;
-  getTotalMentionCount: () => number;
+  getTotalMentionOrDmCount: () => number;
   reset: () => void;
 }
 
@@ -48,7 +49,7 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
           fresh[s.channelId] = {
             lastReadMessageId: s.lastReadMessageId,
             unreadCount: s.unreadCount,
-            mentionCount: 0,
+            mentionOrDmCount: 0,
           };
         }
         state.byChannel = fresh;
@@ -60,7 +61,7 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
         state.byChannel[channelId] = {
           lastReadMessageId,
           unreadCount,
-          mentionCount: unreadCount === 0 ? 0 : (state.byChannel[channelId]?.mentionCount ?? 0),
+          mentionOrDmCount: unreadCount === 0 ? 0 : (state.byChannel[channelId]?.mentionOrDmCount ?? 0),
         };
       });
     },
@@ -74,22 +75,22 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
           state.byChannel[channelId] = {
             lastReadMessageId: '',
             unreadCount: 1,
-            mentionCount: 0,
+            mentionOrDmCount: 0,
           };
         }
       });
     },
 
-    incrementMention: (channelId) => {
+    incrementMentionOrDm: (channelId) => {
       set((state) => {
         const existing = state.byChannel[channelId];
         if (existing) {
-          existing.mentionCount++;
+          existing.mentionOrDmCount++;
         } else {
           state.byChannel[channelId] = {
             lastReadMessageId: '',
             unreadCount: 1,
-            mentionCount: 1,
+            mentionOrDmCount: 1,
           };
         }
       });
@@ -111,10 +112,10 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
       return total;
     },
 
-    getTotalMentionCount: () => {
+    getTotalMentionOrDmCount: () => {
       let total = 0;
       for (const data of Object.values(get().byChannel)) {
-        total += data.mentionCount;
+        total += data.mentionOrDmCount;
       }
       return total;
     },
