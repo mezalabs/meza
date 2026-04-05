@@ -1,6 +1,6 @@
 import type { TrackReference } from '@livekit/components-react';
 import { useTracks, VideoTrack } from '@livekit/components-react';
-import { useVoiceParticipantsStore } from '@meza/core';
+import { useVoiceParticipantsStore, useVoiceStore } from '@meza/core';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import { Track } from 'livekit-client';
 import {
@@ -97,17 +97,34 @@ function useWatchStream(channelId: string, channelName: string) {
 
   return useCallback(
     async (participantId: string) => {
-      // Join the voice channel (auto-leaves previous if connected elsewhere)
-      await voiceConnect(channelId, channelName);
+      // Only join if not already connected to this channel
+      const voiceState = useVoiceStore.getState();
+      if (
+        voiceState.channelId !== channelId ||
+        voiceState.status !== 'connected'
+      ) {
+        await voiceConnect(channelId, channelName);
+      }
+
+      // If a pane already shows this participant's stream, just focus it
+      const store = useTilingStore.getState();
+      for (const [paneId, pane] of Object.entries(store.panes)) {
+        if (
+          pane.type === 'screenShare' &&
+          pane.channelId === channelId &&
+          pane.participantIdentity === participantId
+        ) {
+          store.focusPane(paneId);
+          return;
+        }
+      }
 
       // Look up display name from participants store
       const participants =
         useVoiceParticipantsStore.getState().byChannel[channelId];
       const participant = participants?.find((p) => p.userId === participantId);
 
-      // Open the screen share pane
-      const { splitFocused, setPaneContent, focusedPaneId } =
-        useTilingStore.getState();
+      // Open a new screen share pane
       const content = {
         type: 'screenShare' as const,
         channelId,
@@ -116,10 +133,10 @@ function useWatchStream(channelId: string, channelName: string) {
       };
 
       try {
-        splitFocused('horizontal', content);
+        store.splitFocused('horizontal', content);
       } catch {
         // At max panes — replace focused pane instead
-        setPaneContent(focusedPaneId, content);
+        store.setPaneContent(store.focusedPaneId, content);
       }
     },
     [channelId, channelName, voiceConnect],

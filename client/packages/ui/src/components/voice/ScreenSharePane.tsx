@@ -114,6 +114,17 @@ function StreamAudioToggle({
 }) {
   const [isMuted, setIsMuted] = useState(true);
 
+  // Start muted — sync initial volume with the muted state
+  useEffect(() => {
+    if (participant) {
+      try {
+        participant.setVolume(0, Track.Source.ScreenShareAudio);
+      } catch {
+        // GainNode may not be ready if the track is still attaching
+      }
+    }
+  }, [participant]);
+
   if (!participant) return null;
 
   const toggle = () => {
