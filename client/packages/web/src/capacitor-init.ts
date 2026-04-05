@@ -11,10 +11,12 @@
  * when not imported.
  */
 import {
+  applyDeepLinkInvite,
   bootstrapSession,
   gatewayConnect,
   gatewayDisconnect,
   isSessionReady,
+  parseDeepLink,
   subscribeToPush,
   useAuthStore,
 } from '@meza/core';
@@ -33,6 +35,7 @@ export async function initCapacitor(): Promise<void> {
 
   setupStatusBar();
   setupAppLifecycle(App);
+  setupDeepLinkHandler(App);
   setupPushNotifications();
   setupNotificationNavigation();
   setupBackButton(App);
@@ -93,6 +96,26 @@ function setupNotificationNavigation(): void {
     const channelId = data.channel_id;
     if (!channelId) return;
     navigateToChannel(channelId);
+  });
+}
+
+async function setupDeepLinkHandler(
+  App: typeof import('@capacitor/app').App,
+): Promise<void> {
+  // Check for a cold-start deep link that arrived before this module loaded.
+  const launchUrl = await App.getLaunchUrl();
+  if (launchUrl?.url) {
+    const invite = parseDeepLink(launchUrl.url);
+    if (invite) {
+      applyDeepLinkInvite(invite);
+    }
+  }
+
+  // Listen for warm deep links while the app is running.
+  App.addListener('appUrlOpen', ({ url }) => {
+    const invite = parseDeepLink(url);
+    if (!invite) return;
+    applyDeepLinkInvite(invite);
   });
 }
 

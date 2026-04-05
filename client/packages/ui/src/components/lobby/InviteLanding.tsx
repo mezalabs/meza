@@ -1,6 +1,6 @@
-import { resolveInvite, useInviteStore } from '@meza/core';
+import { buildDeepLinkUrl, resolveInvite, useInviteStore } from '@meza/core';
 import { IconContext } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AuthForm } from './AuthForm.tsx';
 
 interface ServerPreview {
@@ -10,6 +10,7 @@ interface ServerPreview {
 
 export function InviteLanding() {
   const pendingCode = useInviteStore((s) => s.pendingCode);
+  const inviteSecret = useInviteStore((s) => s.inviteSecret);
 
   const [preview, setPreview] = useState<ServerPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +42,20 @@ export function InviteLanding() {
       cancelled = true;
     };
   }, [pendingCode]);
+
+  const handleOpenInApp = useCallback(() => {
+    if (!pendingCode) return;
+    const url = buildDeepLinkUrl({
+      host: window.location.hostname,
+      code: pendingCode,
+      secret: inviteSecret ?? undefined,
+    });
+    // Use a hidden <a> element instead of window.location.href to avoid
+    // ERR_UNKNOWN_URL_SCHEME errors on some Android browsers.
+    const a = document.createElement('a');
+    a.href = url;
+    a.click();
+  }, [pendingCode, inviteSecret]);
 
   return (
     <IconContext.Provider value={{ weight: 'fill' }}>
@@ -76,8 +91,27 @@ export function InviteLanding() {
             ) : null}
           </div>
 
+          {/* Open in App CTA */}
+          {preview && pendingCode && (
+            <button
+              type="button"
+              onClick={handleOpenInApp}
+              className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-black hover:bg-accent-hover"
+            >
+              Open in Meza
+            </button>
+          )}
+
           {/* Divider */}
-          <div className="border-t border-border" />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-border" />
+            {preview && (
+              <span className="text-xs text-text-muted">
+                Or continue in browser
+              </span>
+            )}
+            <div className="flex-1 border-t border-border" />
+          </div>
 
           {/* Auth form */}
           <div>

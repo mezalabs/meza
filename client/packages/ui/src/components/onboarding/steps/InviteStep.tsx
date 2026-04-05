@@ -1,4 +1,9 @@
-import { type Invite, resolveIconUrl, type Server } from '@meza/core';
+import {
+  getAppOrigin,
+  type Invite,
+  resolveIconUrl,
+  type Server,
+} from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {
@@ -9,9 +14,7 @@ interface InviteStepProps {
 export function InviteStep({ server, invite }: InviteStepProps) {
   const [copied, setCopied] = useState(false);
 
-  const inviteUrl = invite
-    ? `${window.location.origin}/invite/${invite.code}`
-    : '';
+  const inviteUrl = invite ? `${getAppOrigin()}/invite/${invite.code}` : '';
 
   const shareMessage = invite
     ? `Join ${server.name} on Meza! ${inviteUrl}`

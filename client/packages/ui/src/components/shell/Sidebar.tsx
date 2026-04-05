@@ -144,6 +144,7 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const sidebarSetPaneContent = useTilingStore((s) => s.setPaneContent);
 
   const pendingInvite = useInviteStore((s) => s.pendingCode);
+  const pendingHost = useInviteStore((s) => s.pendingHost);
 
   // Poll voice channel participants for the selected server
   useVoiceChannelParticipants(selectedServerId, isAuthenticated);
@@ -152,12 +153,13 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
   const [joinOpen, setJoinOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Auto-open JoinServerDialog when a pending invite code exists
+  // Auto-open JoinServerDialog when a pending invite code exists.
+  // Skip when pendingHost is set — deep link invites are handled by DeepLinkInviteOverlay.
   useEffect(() => {
-    if (pendingInvite) {
+    if (pendingInvite && !pendingHost) {
       setJoinOpen(true);
     }
-  }, [pendingInvite]);
+  }, [pendingInvite, pendingHost]);
 
   // Fetch servers on mount (and on reconnect)
   // biome-ignore lint/correctness/useExhaustiveDependencies: reconnectCount is an intentional trigger to re-fetch after gateway reconnect
