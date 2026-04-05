@@ -128,6 +128,28 @@ export {
   updateSound,
   updateSystemMessageConfig,
 } from './api/chat.ts';
+// API — federation
+export {
+  createFederationAssertion,
+  federationJoin,
+  federationLeave,
+  mapFederationError,
+  resolveRemoteInvite,
+  resolveSpokeInvitePreview,
+  validateFederationUrl,
+} from './api/federation.ts';
+export {
+  spokeAckMessage,
+  spokeAddReaction,
+  spokeDeleteMessage,
+  spokeEditMessage,
+  spokeRemoveReaction,
+  spokeSendMessage,
+} from './api/federation-chat.ts';
+export {
+  getSpokeTransport,
+  removeSpokeTransport,
+} from './api/federation-transport.ts';
 // API — key distribution
 export { getPublicKeys, requestChannelKeys } from './api/keys.ts';
 // API — media
@@ -263,6 +285,14 @@ export {
   disconnect as gatewayDisconnect,
   sendTyping as gatewaySendTyping,
 } from './gateway/gateway.ts';
+// Gateway — spoke
+export {
+  cleanupSpoke,
+  connectSpoke,
+  disconnectAllSpokes,
+  disconnectSpoke,
+  reconnectAllSpokes,
+} from './gateway/spoke-gateway.ts';
 export * from './keybinds/index.ts';
 export type { StoredEmoji } from './lib/emojiCache.ts';
 export {
@@ -339,6 +369,14 @@ export type { DMActions, DMState } from './store/dms.ts';
 export { useDMStore } from './store/dms.ts';
 export type { EmojiActions, EmojiState } from './store/emojis.ts';
 export { useEmojiStore } from './store/emojis.ts';
+// Stores — federation
+export type {
+  FederationActions,
+  FederationState,
+  SpokeConnection,
+  SpokeConnectionStatus,
+} from './store/federation.ts';
+export { useFederationStore } from './store/federation.ts';
 export type { FriendActions, FriendState } from './store/friends.ts';
 export { useFriendStore } from './store/friends.ts';
 export type {
@@ -446,6 +484,7 @@ export {
   onKeyboardWillHide,
   onKeyboardWillShow,
 } from './utils/keyboard.ts';
+export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export { getBaseUrl, isCapacitor, isElectron } from './utils/platform.ts';

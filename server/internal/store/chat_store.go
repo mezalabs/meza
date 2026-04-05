@@ -134,6 +134,32 @@ func (s *ChatStore) ListServers(ctx context.Context, userID string) ([]*models.S
 	return servers, nil
 }
 
+func (s *ChatStore) ListAllServers(ctx context.Context) ([]*models.Server, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT s.id, s.name, s.icon_url, s.owner_id, s.created_at,
+		        s.welcome_message, s.rules, s.onboarding_enabled, s.rules_required, s.default_channel_privacy, s.banner_url
+		 FROM servers s
+		 ORDER BY s.created_at`)
+	if err != nil {
+		return nil, fmt.Errorf("query all servers: %w", err)
+	}
+	defer rows.Close()
+
+	var servers []*models.Server
+	for rows.Next() {
+		var srv models.Server
+		if err := rows.Scan(&srv.ID, &srv.Name, &srv.IconURL, &srv.OwnerID, &srv.CreatedAt,
+			&srv.WelcomeMessage, &srv.Rules, &srv.OnboardingEnabled, &srv.RulesRequired, &srv.DefaultChannelPrivacy, &srv.BannerURL); err != nil {
+			return nil, fmt.Errorf("scan server: %w", err)
+		}
+		servers = append(servers, &srv)
+	}
+	return servers, nil
+}
+
 func (s *ChatStore) CreateChannel(ctx context.Context, serverID, name string, channelType int, isPrivate bool, channelGroupID string) (*models.Channel, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
