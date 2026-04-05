@@ -3,6 +3,7 @@ import '@fontsource-variable/geist-mono';
 import './index.css';
 
 import {
+  applyDeepLinkInvite,
   bootstrapSession,
   gatewayConnect,
   gatewayDisconnect,
@@ -19,6 +20,7 @@ import {
   useInviteStore,
 } from '@meza/core';
 import {
+  DeepLinkInviteOverlay,
   InviteLanding,
   initUpdateListeners,
   LandingPage,
@@ -67,18 +69,13 @@ if (window.electronAPI?.deepLink) {
     // Handle invite deep links: meza://i/{host}/{code}?s={secret}
     const invite = parseDeepLink(url);
     if (invite) {
-      const store = useInviteStore.getState();
-      store.setPendingHost(invite.host);
-      store.setPendingCode(invite.code);
-      if (invite.secret) {
-        store.setInviteSecret(invite.secret);
-      }
+      applyDeepLinkInvite(invite);
       return;
     }
 
     // Handle channel deep links: meza://channel/{channelId}
     // (sent by notification tap handler in ipc.ts)
-    const channelMatch = url.match(/^meza:\/\/channel\/(.+)$/);
+    const channelMatch = url.match(/^meza:\/\/channel\/([a-zA-Z0-9_-]+)$/);
     if (channelMatch?.[1]) {
       navigateToChannel(channelMatch[1]);
     }
@@ -212,7 +209,13 @@ function App() {
   }, [sessionReady, isAuthenticated]);
 
   let content: React.ReactNode;
-  if (isAuthenticated && sessionReady) content = <Shell />;
+  if (isAuthenticated && sessionReady)
+    content = (
+      <>
+        <Shell />
+        <DeepLinkInviteOverlay />
+      </>
+    );
   else if (hasPendingInvite) content = <InviteLanding />;
   else if (!isAuthenticated) content = <LandingPage />;
   else {

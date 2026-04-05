@@ -4,6 +4,7 @@ export { LandingPage } from './components/lobby/LandingPage.tsx';
 export { WebLandingPage } from './components/lobby/WebLandingPage.tsx';
 export { SettingsView } from './components/settings/SettingsView.tsx';
 export { ContentArea } from './components/shell/ContentArea.tsx';
+export { DeepLinkInviteOverlay } from './components/shell/DeepLinkInviteOverlay.tsx';
 export { MobileShell } from './components/shell/MobileShell.tsx';
 export { Pane } from './components/shell/Pane.tsx';
 export { ResizeHandle } from './components/shell/ResizeHandle.tsx';

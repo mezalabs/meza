@@ -492,7 +492,7 @@ export type {
 } from './types/electron.d.ts';
 // Utils
 export type { DeepLinkInvite } from './utils/deep-link.ts';
-export { buildDeepLinkUrl, parseDeepLink } from './utils/deep-link.ts';
+export { applyDeepLinkInvite, buildDeepLinkUrl, parseDeepLink } from './utils/deep-link.ts';
 export { getDMDisplayName, isGroupDM, isSelfDM } from './utils/dm.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export {
