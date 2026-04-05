@@ -19,6 +19,7 @@ import (
 	bfnats "github.com/mezalabs/meza/internal/nats"
 	"github.com/mezalabs/meza/internal/observability"
 	"github.com/mezalabs/meza/internal/ratelimit"
+	bfredis "github.com/mezalabs/meza/internal/redis"
 	"github.com/mezalabs/meza/internal/store"
 )
 
@@ -44,6 +45,19 @@ func main() {
 	}
 	defer nc.Drain()
 
+	// Redis-backed token blocklist for device revocation checks (required).
+	if cfg.RedisURL == "" {
+		slog.Error("MEZA_REDIS_URL is required for the keys service (device revocation)")
+		os.Exit(1)
+	}
+	redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
+	if err != nil {
+		slog.Error("connect redis", "err", err)
+		os.Exit(1)
+	}
+	defer redisClient.Close()
+	tokenBlocklist := auth.NewTokenBlocklist(redisClient)
+
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	permStore := store.NewChannelPermissionStore(pool)
 	chatStore := store.NewChatStore(pool)
@@ -59,6 +73,7 @@ func main() {
 
 	interceptor := connect.WithInterceptors(auth.NewConnectInterceptor(ed25519PubKey,
 		auth.WithVerificationCache(auth.NewVerificationCache()),
+		auth.WithTokenBlocklist(tokenBlocklist),
 	))
 
 	// Rate limit: 20 req/s burst 40 per IP for key endpoints

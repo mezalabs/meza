@@ -22,7 +22,7 @@ func NewClient(ctx context.Context, url string) (*redis.Client, error) {
 		return nil, fmt.Errorf("parsing redis URL: %w", err)
 	}
 
-	opts.PoolSize = 10
+	opts.PoolSize = 50
 	opts.ReadTimeout = 3 * time.Second
 	opts.WriteTimeout = 3 * time.Second
 	opts.DialTimeout = 5 * time.Second

@@ -11,8 +11,9 @@ import { getBaseUrl } from './platform.ts';
  * SECURITY NOTE: The access token is appended as a query parameter, which
  * means it appears in server logs, browser history, and Referer headers.
  * For spoke servers this means the spoke operator can observe the token.
- * Mitigated by short access token TTL (~15 min). A future improvement
- * would use Authorization-header-based fetch + blob URLs (like E2EE media).
+ * Access token TTL is 1 hour — a meaningful exposure window. A future
+ * improvement would use Authorization-header-based fetch + blob URLs
+ * (like E2EE media) to avoid token exposure in URLs.
  */
 export function resolveMediaUrl(
   serverId: string,

@@ -21,6 +21,7 @@ import (
 	"github.com/mezalabs/meza/internal/middleware"
 	"github.com/mezalabs/meza/internal/observability"
 	"github.com/mezalabs/meza/internal/ratelimit"
+	bfredis "github.com/mezalabs/meza/internal/redis"
 	"github.com/mezalabs/meza/internal/s3"
 	"github.com/mezalabs/meza/internal/store"
 	"github.com/davidbyttow/govips/v2/vips"
@@ -88,6 +89,19 @@ func main() {
 		slog.Info("using public S3 endpoint for presigned URLs", "endpoint", cfg.S3PublicEndpoint)
 	}
 
+	// Redis-backed token blocklist for device revocation checks (required).
+	if cfg.RedisURL == "" {
+		slog.Error("MEZA_REDIS_URL is required for the media service (device revocation)")
+		os.Exit(1)
+	}
+	redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
+	if err != nil {
+		slog.Error("connect redis", "err", err)
+		os.Exit(1)
+	}
+	defer redisClient.Close()
+	tokenBlocklist := auth.NewTokenBlocklist(redisClient)
+
 	mediaStore := store.NewMediaStore(pool)
 	permChk := store.NewChannelPermissionStore(pool)
 	accessChk := store.NewMediaAccessStore(pool, permChk)
@@ -119,6 +133,7 @@ func main() {
 	interceptorOpts := []auth.InterceptorOption{
 		auth.WithUserExistenceCheck(authStore),
 		auth.WithVerificationCache(auth.NewVerificationCache()),
+		auth.WithTokenBlocklist(tokenBlocklist),
 	}
 	path, handler := mezav1connect.NewMediaServiceHandler(svc,
 		connect.WithInterceptors(auth.NewConnectInterceptor(ed25519PubKey, interceptorOpts...)),
@@ -129,8 +144,8 @@ func main() {
 	)
 	mux.Handle(path, rpcLimiter.Wrap(handler))
 
-	// Stable redirect endpoint for media URLs (requires authentication).
-	authMiddleware := auth.RequireHTTPAuth(ed25519PubKey)
+	// Stable redirect endpoint for media URLs (requires authentication + device revocation check).
+	authMiddleware := auth.RequireHTTPAuth(ed25519PubKey, auth.WithHTTPTokenBlocklist(tokenBlocklist))
 	mux.Handle("/media/", redirectLimiter.Wrap(authMiddleware(mediaRedirectHandler(mediaStore, accessChk, s3Public))))
 
 	mux.HandleFunc("/health", healthHandler)

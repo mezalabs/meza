@@ -17,6 +17,7 @@ import (
 	"github.com/mezalabs/meza/internal/database"
 	"github.com/mezalabs/meza/internal/middleware"
 	"github.com/mezalabs/meza/internal/observability"
+	bfredis "github.com/mezalabs/meza/internal/redis"
 	"github.com/mezalabs/meza/internal/store"
 	lksdk "github.com/livekit/server-sdk-go/v2"
 )
@@ -35,6 +36,19 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+
+	// Redis-backed token blocklist for device revocation checks (required).
+	if cfg.RedisURL == "" {
+		slog.Error("MEZA_REDIS_URL is required for the voice service (device revocation)")
+		os.Exit(1)
+	}
+	redisClient, err := bfredis.NewClient(ctx, cfg.RedisURL)
+	if err != nil {
+		slog.Error("connect redis", "err", err)
+		os.Exit(1)
+	}
+	defer redisClient.Close()
+	tokenBlocklist := auth.NewTokenBlocklist(redisClient)
 
 	chatStore := store.NewChatStore(pool)
 	roleStore := store.NewRoleStore(pool)
@@ -63,6 +77,7 @@ func main() {
 	interceptorOpts := []auth.InterceptorOption{
 		auth.WithUserExistenceCheck(authStore),
 		auth.WithBlockFederated(),
+		auth.WithTokenBlocklist(tokenBlocklist),
 	}
 
 	// Load Ed25519 public key (required for JWT verification).

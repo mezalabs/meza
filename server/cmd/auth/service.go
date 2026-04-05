@@ -264,10 +264,10 @@ func (s *authService) Logout(ctx context.Context, req *connect.Request[v1.Logout
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	// Block the device ID in the token blocklist for 1 hour (matching access token TTL)
+	// Block the device ID in the token blocklist (matching access token TTL)
 	// so any outstanding access tokens are immediately rejected.
 	if s.tokenBlocklist != nil {
-		if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, 1*time.Hour); err != nil {
+		if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, auth.AccessTokenExpiry); err != nil {
 			slog.Error("logout: block device", "err", err, "device", deviceID)
 			// Non-fatal: refresh tokens are already deleted, access tokens will expire naturally.
 		}
@@ -701,11 +701,11 @@ func (s *authService) RevokeDevice(ctx context.Context, req *connect.Request[v1.
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	// Block tokens for the revoked device until they naturally expire (1 hour).
+	// Block tokens for the revoked device until they naturally expire.
 	if s.tokenBlocklist != nil {
-		if err := s.tokenBlocklist.BlockDevice(ctx, req.Msg.DeviceId, 1*time.Hour); err != nil {
+		if err := s.tokenBlocklist.BlockDevice(ctx, req.Msg.DeviceId, auth.AccessTokenExpiry); err != nil {
 			slog.Error("blocking revoked device", "err", err, "device", req.Msg.DeviceId)
-			// Non-fatal: device is already deleted, tokens will expire naturally.
+			return nil, connect.NewError(connect.CodeInternal, errors.New("failed to block revoked device"))
 		}
 	}
 
@@ -731,8 +731,9 @@ func (s *authService) RevokeAllOtherDevices(ctx context.Context, req *connect.Re
 	// Block tokens for all deleted devices.
 	if s.tokenBlocklist != nil && len(deletedIDs) > 0 {
 		for _, deviceID := range deletedIDs {
-			if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, 1*time.Hour); err != nil {
+			if err := s.tokenBlocklist.BlockDevice(ctx, deviceID, auth.AccessTokenExpiry); err != nil {
 				slog.Error("blocking revoked device", "err", err, "device", deviceID)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("failed to block revoked device"))
 			}
 		}
 	}
