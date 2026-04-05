@@ -23,7 +23,12 @@ export function parseDeepLink(url: string): DeepLinkInvite | null {
 
   const host = segments[0];
   const code = segments[1];
-  if (!host || !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(host) || !/^[a-z0-9]{8}$/i.test(code)) return null;
+  if (
+    !host ||
+    !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(host) ||
+    !/^[a-z0-9]{8}$/i.test(code)
+  )
+    return null;
 
   const secret = queryPart
     ? new URLSearchParams(queryPart).get('s') || undefined

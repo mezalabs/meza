@@ -1,8 +1,4 @@
-import {
-  joinServer,
-  resolveInvite,
-  useInviteStore,
-} from '@meza/core';
+import { joinServer, resolveInvite, useInviteStore } from '@meza/core';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
@@ -110,7 +106,10 @@ export function DeepLinkInviteOverlay() {
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center safe-top safe-bottom ${
         dismissing ? 'animate-fade-out' : 'animate-fade-in'
       }`}
-      style={{ backgroundColor: 'rgba(15, 15, 15, 0.92)', backdropFilter: 'blur(20px)' }}
+      style={{
+        backgroundColor: 'rgba(15, 15, 15, 0.92)',
+        backdropFilter: 'blur(20px)',
+      }}
       onAnimationEnd={handleAnimationEnd}
     >
       {/* Decorative glow behind the avatar */}

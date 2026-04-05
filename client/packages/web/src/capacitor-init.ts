@@ -99,7 +99,9 @@ function setupNotificationNavigation(): void {
   });
 }
 
-async function setupDeepLinkHandler(App: typeof import('@capacitor/app').App): Promise<void> {
+async function setupDeepLinkHandler(
+  App: typeof import('@capacitor/app').App,
+): Promise<void> {
   // Check for a cold-start deep link that arrived before this module loaded.
   const launchUrl = await App.getLaunchUrl();
   if (launchUrl?.url) {
