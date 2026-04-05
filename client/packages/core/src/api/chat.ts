@@ -1682,3 +1682,56 @@ export async function syncChannelPermissions(channelId: string) {
     throw err;
   }
 }
+
+// --- Webhooks ---
+
+export async function createWebhook(
+  channelId: string,
+  name: string,
+  avatarUrl?: string,
+) {
+  const res = await chatClient.createWebhook({
+    channelId,
+    name,
+    avatarUrl,
+  });
+  return { webhook: res.webhook!, token: res.token, url: res.url };
+}
+
+export async function getWebhook(webhookId: string) {
+  const res = await chatClient.getWebhook({ webhookId });
+  return res.webhook!;
+}
+
+export async function updateWebhook(
+  webhookId: string,
+  name?: string,
+  avatarUrl?: string,
+) {
+  const res = await chatClient.updateWebhook({ webhookId, name, avatarUrl });
+  return res.webhook!;
+}
+
+export async function deleteWebhook(webhookId: string) {
+  await chatClient.deleteWebhook({ webhookId });
+}
+
+export async function listChannelWebhooks(channelId: string) {
+  const res = await chatClient.listChannelWebhooks({ channelId });
+  return res.webhooks;
+}
+
+export async function listServerWebhooks(serverId: string) {
+  const res = await chatClient.listServerWebhooks({ serverId });
+  return res.webhooks;
+}
+
+export async function regenerateWebhookToken(webhookId: string) {
+  const res = await chatClient.regenerateWebhookToken({ webhookId });
+  return { token: res.token, url: res.url };
+}
+
+export async function listWebhookDeliveries(webhookId: string, limit?: number) {
+  const res = await chatClient.listWebhookDeliveries({ webhookId, limit: limit ?? 25 });
+  return res.deliveries;
+}

@@ -100,6 +100,7 @@ import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
 import { ReactionsDialog } from './ReactionsDialog.tsx';
 import { GroupedJoinMessage, SystemMessage } from './SystemMessage.tsx';
+import { WebhookMessage } from './WebhookMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
 
 type Message = MessageState['byChannel'][string][number];
@@ -1524,6 +1525,17 @@ const MessageItem = memo(function MessageItem({
       {/* end avatar + content row */}
     </div>
   );
+
+  // Webhook messages render like regular messages but with a BOT badge.
+  if (msg.type === MessageType.WEBHOOK) {
+    return (
+      <WebhookMessage
+        encryptedContent={msg.encryptedContent}
+        createdAt={msg.createdAt}
+        serverId={serverId}
+      />
+    );
+  }
 
   // System messages get a distinct centered layout — no avatar, actions, or reactions.
   if (msg.type > 0) {

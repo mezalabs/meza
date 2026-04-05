@@ -127,6 +127,15 @@ export {
   updateServer,
   updateSound,
   updateSystemMessageConfig,
+  // Webhooks
+  createWebhook,
+  getWebhook,
+  updateWebhook,
+  deleteWebhook,
+  listChannelWebhooks,
+  listServerWebhooks,
+  regenerateWebhookToken,
+  listWebhookDeliveries,
 } from './api/chat.ts';
 // API — federation
 export {
