@@ -40,12 +40,14 @@ export const WebhookEmbed = memo(function WebhookEmbed({
     <div
       className="mt-1 max-w-md rounded-lg border border-border bg-bg-secondary overflow-hidden"
       style={
-        borderColor ? { borderLeftWidth: '3px', borderLeftColor: borderColor } : undefined
+        borderColor
+          ? { borderLeftWidth: '3px', borderLeftColor: borderColor }
+          : undefined
       }
     >
       <div className="px-3 py-2 flex flex-col gap-1">
-        {hasTitle && (
-          embed.url ? (
+        {hasTitle &&
+          (embed.url ? (
             <a
               href={embed.url}
               target="_blank"
@@ -55,23 +57,32 @@ export const WebhookEmbed = memo(function WebhookEmbed({
               {embed.title}
             </a>
           ) : (
-            <span className="text-sm font-semibold text-text">{embed.title}</span>
-          )
-        )}
+            <span className="text-sm font-semibold text-text">
+              {embed.title}
+            </span>
+          ))}
         {hasDescription && (
           <div className="text-sm text-text-secondary">
-            <MarkdownRenderer content={embed.description!} serverId={serverId} />
+            <MarkdownRenderer
+              content={embed.description!}
+              serverId={serverId}
+            />
           </div>
         )}
         {hasFields && (
-          <div className="grid gap-1 mt-1" style={{
-            gridTemplateColumns: embed.fields!.some(f => f.inline)
-              ? 'repeat(auto-fill, minmax(150px, 1fr))'
-              : '1fr',
-          }}>
+          <div
+            className="grid gap-1 mt-1"
+            style={{
+              gridTemplateColumns: embed.fields!.some((f) => f.inline)
+                ? 'repeat(auto-fill, minmax(150px, 1fr))'
+                : '1fr',
+            }}
+          >
             {embed.fields!.map((field, i) => (
               <div key={i} className={field.inline ? '' : 'col-span-full'}>
-                <div className="text-xs font-semibold text-text-muted">{field.name}</div>
+                <div className="text-xs font-semibold text-text-muted">
+                  {field.name}
+                </div>
                 <div className="text-sm text-text-secondary">
                   <MarkdownRenderer content={field.value} serverId={serverId} />
                 </div>

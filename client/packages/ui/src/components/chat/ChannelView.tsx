@@ -100,8 +100,8 @@ import { QuickReactionBar } from './QuickReactionBar.tsx';
 import { ReactionBar } from './ReactionBar.tsx';
 import { ReactionsDialog } from './ReactionsDialog.tsx';
 import { GroupedJoinMessage, SystemMessage } from './SystemMessage.tsx';
-import { WebhookMessage } from './WebhookMessage.tsx';
 import { TypingIndicator } from './TypingIndicator.tsx';
+import { WebhookMessage } from './WebhookMessage.tsx';
 
 type Message = MessageState['byChannel'][string][number];
 

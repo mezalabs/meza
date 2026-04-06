@@ -1732,6 +1732,9 @@ export async function regenerateWebhookToken(webhookId: string) {
 }
 
 export async function listWebhookDeliveries(webhookId: string, limit?: number) {
-  const res = await chatClient.listWebhookDeliveries({ webhookId, limit: limit ?? 25 });
+  const res = await chatClient.listWebhookDeliveries({
+    webhookId,
+    limit: limit ?? 25,
+  });
   return res.deliveries;
 }

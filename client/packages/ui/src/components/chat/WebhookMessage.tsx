@@ -49,21 +49,19 @@ export const WebhookMessage = memo(function WebhookMessage({
 
   const displayName = parsed.username || parsed.webhook_name || 'Webhook';
   const avatarUrl = parsed.avatar_url || undefined;
-  const time = createdAt
-    ? new Date(Number(createdAt.seconds) * 1000)
-    : null;
+  const time = createdAt ? new Date(Number(createdAt.seconds) * 1000) : null;
 
   return (
     <div className="group relative flex flex-col px-2 py-1 hover:bg-bg-surface/50 transition-colors">
       <div className="flex items-start gap-2">
         {/* Avatar */}
-        <WebhookPopover parsed={parsed} avatarUrl={avatarUrl} displayName={displayName}>
+        <WebhookPopover
+          parsed={parsed}
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+        >
           <button type="button" className="mt-0.5 flex-shrink-0 cursor-pointer">
-            <Avatar
-              avatarUrl={avatarUrl}
-              displayName={displayName}
-              size="md"
-            />
+            <Avatar avatarUrl={avatarUrl} displayName={displayName} size="md" />
           </button>
         </WebhookPopover>
 
@@ -71,8 +69,15 @@ export const WebhookMessage = memo(function WebhookMessage({
         <div className="min-w-0 flex-1 select-text">
           {/* Header: name + BOT badge + timestamp */}
           <div className="flex items-baseline gap-2">
-            <WebhookPopover parsed={parsed} avatarUrl={avatarUrl} displayName={displayName}>
-              <button type="button" className="text-sm font-medium text-text cursor-pointer hover:underline">
+            <WebhookPopover
+              parsed={parsed}
+              avatarUrl={avatarUrl}
+              displayName={displayName}
+            >
+              <button
+                type="button"
+                className="text-sm font-medium text-text cursor-pointer hover:underline"
+              >
                 {displayName}
               </button>
             </WebhookPopover>
@@ -119,7 +124,8 @@ function WebhookPopover({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const hasOverride = parsed.username && parsed.username !== parsed.webhook_name;
+  const hasOverride =
+    parsed.username && parsed.username !== parsed.webhook_name;
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>

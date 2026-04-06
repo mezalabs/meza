@@ -76,10 +76,14 @@ export function ChannelSettingsView({
       ALL_SECTIONS.filter((s) => {
         if (s.textOnly && !isTextChannel) return false;
         switch (s.perm) {
-          case 'manageChannels': return canManageChannels;
-          case 'manageRoles': return canManageRoles;
-          case 'manageWebhooks': return canManageWebhooks;
-          default: return false;
+          case 'manageChannels':
+            return canManageChannels;
+          case 'manageRoles':
+            return canManageRoles;
+          case 'manageWebhooks':
+            return canManageWebhooks;
+          default:
+            return false;
         }
       }),
     [canManageChannels, canManageRoles, canManageWebhooks, isTextChannel],
@@ -224,9 +228,7 @@ function renderChannelSettingsContent(
         <EffectivePermissionsViewer serverId={serverId} channelId={channelId} />
       );
     case 'webhooks':
-      return (
-        <WebhooksSection serverId={serverId} channelId={channelId} />
-      );
+      return <WebhooksSection serverId={serverId} channelId={channelId} />;
     case 'danger':
       return channel ? (
         <DangerZoneSection

@@ -78,12 +78,16 @@ export function WebhooksSection({ channelId }: WebhooksSectionProps) {
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-16 animate-pulse rounded-lg bg-bg-surface" />
+            <div
+              key={i}
+              className="h-16 animate-pulse rounded-lg bg-bg-surface"
+            />
           ))}
         </div>
       ) : webhooks.length === 0 ? (
         <p className="text-sm text-text-muted">
-          No webhooks yet. Create one to allow external services to post messages to this channel.
+          No webhooks yet. Create one to allow external services to post
+          messages to this channel.
         </p>
       ) : (
         <div className="space-y-3">
@@ -111,7 +115,9 @@ function CreateWebhookForm({
 }) {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
-  const [result, setResult] = useState<{ token: string; url: string } | null>(null);
+  const [result, setResult] = useState<{ token: string; url: string } | null>(
+    null,
+  );
   const [error, setError] = useState('');
 
   const handleCreate = async () => {
@@ -136,16 +142,22 @@ function CreateWebhookForm({
           <p className="text-xs text-text-muted">
             Copy the URL below. It won't be shown again.
           </p>
-          <CopyField value={`${getAppOrigin()}${result.url}`} label="Webhook URL" />
+          <CopyField
+            value={`${getAppOrigin()}${result.url}`}
+            label="Webhook URL"
+          />
 
           <div className="space-y-2 rounded-md border border-border bg-bg-base p-3">
             <p className="text-xs font-medium text-text">Usage</p>
             <p className="text-xs text-text-muted">
-              Send a <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">POST</code> request
-              with a JSON body to the URL above.
+              Send a{' '}
+              <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">
+                POST
+              </code>{' '}
+              request with a JSON body to the URL above.
             </p>
             <pre className="overflow-x-auto rounded bg-bg-tertiary px-3 py-2 text-xs text-text font-mono leading-relaxed">
-{`curl -X POST ${getAppOrigin()}${result.url} \\
+              {`curl -X POST ${getAppOrigin()}${result.url} \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ content: 'Hello from a webhook!' }, null, 2)}'`}
             </pre>
@@ -154,10 +166,30 @@ function CreateWebhookForm({
                 <span className="ml-0.5">All fields</span>
               </summary>
               <div className="mt-2 space-y-1 text-xs text-text-muted">
-                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">content</code> — message text (required if no embeds)</p>
-                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">username</code> — override display name</p>
-                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">avatar_url</code> — override avatar (HTTPS only)</p>
-                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">embeds</code> — array of rich embeds (max 10)</p>
+                <p>
+                  <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">
+                    content
+                  </code>{' '}
+                  — message text (required if no embeds)
+                </p>
+                <p>
+                  <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">
+                    username
+                  </code>{' '}
+                  — override display name
+                </p>
+                <p>
+                  <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">
+                    avatar_url
+                  </code>{' '}
+                  — override avatar (HTTPS only)
+                </p>
+                <p>
+                  <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">
+                    embeds
+                  </code>{' '}
+                  — array of rich embeds (max 10)
+                </p>
               </div>
             </details>
           </div>
@@ -173,7 +205,10 @@ function CreateWebhookForm({
       ) : (
         <>
           <div className="space-y-1.5">
-            <label htmlFor="webhook-name" className="block text-xs text-text-muted">
+            <label
+              htmlFor="webhook-name"
+              className="block text-xs text-text-muted"
+            >
               Name
             </label>
             <input
@@ -219,7 +254,10 @@ function WebhookCard({
   onUpdate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [showToken, setShowToken] = useState<{ token: string; url: string } | null>(null);
+  const [showToken, setShowToken] = useState<{
+    token: string;
+    url: string;
+  } | null>(null);
   const [showDeliveries, setShowDeliveries] = useState(false);
   const [deliveries, setDeliveries] = useState<DeliveryItem[]>([]);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
@@ -301,7 +339,9 @@ function WebhookCard({
           {webhook.name.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-medium text-text truncate">{webhook.name}</div>
+          <div className="text-sm font-medium text-text truncate">
+            {webhook.name}
+          </div>
           <div className="text-xs text-text-muted">Created {createdDate}</div>
         </div>
       </button>
@@ -353,7 +393,10 @@ function WebhookCard({
               <p className="text-xs text-text-muted">
                 New token generated. Copy it now — it won't be shown again.
               </p>
-              <CopyField value={`${getAppOrigin()}${showToken.url}`} label="Webhook URL" />
+              <CopyField
+                value={`${getAppOrigin()}${showToken.url}`}
+                label="Webhook URL"
+              />
             </div>
           )}
 
@@ -374,7 +417,11 @@ function WebhookCard({
               disabled={loadingDeliveries}
               className="rounded px-2 py-1 text-xs text-text-muted hover:text-text hover:bg-bg-tertiary"
             >
-              {loadingDeliveries ? 'Loading...' : showDeliveries ? 'Hide Logs' : 'Delivery Logs'}
+              {loadingDeliveries
+                ? 'Loading...'
+                : showDeliveries
+                  ? 'Hide Logs'
+                  : 'Delivery Logs'}
             </button>
             <button
               type="button"
