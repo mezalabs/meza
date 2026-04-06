@@ -26,7 +26,7 @@ export interface ReadStateActions {
     unreadCount: number,
   ) => void;
   incrementUnread: (channelId: string) => void;
-  incrementMentionOrDm: (channelId: string) => void;
+  incrementUnreadWithMention: (channelId: string) => void;
   getUnreadCount: (channelId: string) => number;
   hasUnread: (channelId: string) => boolean;
   getTotalUnreadCount: () => number;
@@ -42,14 +42,17 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
       set((state) => {
         // Replace the entire map so stale counts from a previous gateway
         // connection (within the same page session) are cleared.
-        // mentionCount resets to 0 — it's client-side only and rebuilds
-        // as new messages arrive.
+        // mentionOrDmCount is client-side only — preserve across reconnects
+        // so the badge doesn't flicker to 0 and rebuild.
         const fresh: Record<string, ReadStateData> = {};
         for (const s of states) {
           fresh[s.channelId] = {
             lastReadMessageId: s.lastReadMessageId,
             unreadCount: s.unreadCount,
-            mentionOrDmCount: 0,
+            mentionOrDmCount:
+              s.unreadCount === 0
+                ? 0
+                : (state.byChannel[s.channelId]?.mentionOrDmCount ?? 0),
           };
         }
         state.byChannel = fresh;
@@ -84,10 +87,11 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
       });
     },
 
-    incrementMentionOrDm: (channelId) => {
+    incrementUnreadWithMention: (channelId) => {
       set((state) => {
         const existing = state.byChannel[channelId];
         if (existing) {
+          existing.unreadCount++;
           existing.mentionOrDmCount++;
         } else {
           state.byChannel[channelId] = {

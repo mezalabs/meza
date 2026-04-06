@@ -9,6 +9,7 @@ let adapter: BadgeAdapter | null = null;
 let unsubReadState: (() => void) | null = null;
 let unsubSettings: (() => void) | null = null;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+let syncGeneration = 0;
 
 function computeBadgeCount(): number {
   const { badgeMode } = useNotificationSettingsStore.getState();
@@ -23,13 +24,16 @@ function computeBadgeCount(): number {
 
 function scheduleBadgeUpdate(): void {
   clearTimeout(debounceTimer);
+  const gen = syncGeneration;
   debounceTimer = setTimeout(() => {
-    adapter?.setBadgeCount(computeBadgeCount());
+    if (gen !== syncGeneration || !adapter) return;
+    adapter.setBadgeCount(computeBadgeCount());
   }, 150);
 }
 
 export function startBadgeSync(badgeAdapter: BadgeAdapter): void {
   stopBadgeSync();
+  syncGeneration++;
   adapter = badgeAdapter;
 
   // Set initial badge count immediately

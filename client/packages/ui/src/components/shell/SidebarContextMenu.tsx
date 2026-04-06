@@ -87,7 +87,9 @@ export function SidebarContextMenu({
       // Optimistically clear the unread count locally before the RPC round-trip,
       // matching the keybind mark-channel-read behavior.
       useReadStateStore.getState().updateReadState(channelId, lastMsg.id, 0);
-      ackMessage(channelId, lastMsg.id).catch(() => {});
+      ackMessage(channelId, lastMsg.id).catch((err) =>
+        console.warn('[MarkAsRead] ack failed:', err),
+      );
     }
   };
 

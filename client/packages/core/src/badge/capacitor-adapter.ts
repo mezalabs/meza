@@ -7,6 +7,7 @@ interface CapacitorBadgePlugin {
 
 export class CapacitorBadgeAdapter implements BadgeAdapter {
   private badgePromise: Promise<CapacitorBadgePlugin> | null = null;
+  private pendingOp: Promise<void> = Promise.resolve();
 
   private getBadge(): Promise<CapacitorBadgePlugin> {
     if (!this.badgePromise) {
@@ -29,13 +30,9 @@ export class CapacitorBadgeAdapter implements BadgeAdapter {
   }
 
   setBadgeCount(count: number): void {
-    this.getBadge()
-      .then((badge) => {
-        if (count > 0) {
-          return badge.set({ count });
-        }
-        return badge.clear();
-      })
+    this.pendingOp = this.pendingOp
+      .then(() => this.getBadge())
+      .then((badge) => (count > 0 ? badge.set({ count }) : badge.clear()))
       .catch((err: unknown) => {
         if (
           err instanceof Error &&

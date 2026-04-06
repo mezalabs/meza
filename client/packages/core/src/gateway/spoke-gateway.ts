@@ -315,14 +315,16 @@ function dispatchSpokeEvent(
     if (msg.authorId !== currentUserId) {
       const viewed = useGatewayStore.getState().viewedChannelIds;
       if (!viewed[msg.channelId]) {
-        useReadStateStore.getState().incrementUnread(msg.channelId);
-        // Track mentions for badge filtering (spoke channels are server
-        // channels, not DMs — only count explicit mentions).
+        // Spoke channels are server channels, not DMs — only count explicit mentions.
         if (
           msg.mentionedUserIds.includes(currentUserId ?? '') ||
           msg.mentionEveryone
         ) {
-          useReadStateStore.getState().incrementMentionOrDm(msg.channelId);
+          useReadStateStore
+            .getState()
+            .incrementUnreadWithMention(msg.channelId);
+        } else {
+          useReadStateStore.getState().incrementUnread(msg.channelId);
         }
       }
     }

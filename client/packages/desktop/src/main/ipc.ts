@@ -22,7 +22,8 @@ function createOverlayIcon(count: number): Electron.NativeImage | null {
       </text>
     </svg>`;
 
-  return nativeImage.createFromBuffer(Buffer.from(canvas.trim()));
+  const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(canvas.trim())}`;
+  return nativeImage.createFromDataURL(dataUrl);
 }
 
 export function registerIpcHandlers(win: BrowserWindow): void {
