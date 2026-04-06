@@ -102,6 +102,7 @@ export const WebhookMessage = memo(function WebhookMessage({
           {parsed.embeds && parsed.embeds.length > 0 && (
             <div className="flex flex-col gap-1">
               {parsed.embeds.map((embed, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: embeds are static per message
                 <WebhookEmbed key={i} embed={embed} serverId={serverId} />
               ))}
             </div>

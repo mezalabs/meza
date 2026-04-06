@@ -1695,11 +1695,13 @@ export async function createWebhook(
     name,
     avatarUrl,
   });
+  // biome-ignore lint/style/noNonNullAssertion: protobuf response always includes webhook on success
   return { webhook: res.webhook!, token: res.token, url: res.url };
 }
 
 export async function getWebhook(webhookId: string) {
   const res = await chatClient.getWebhook({ webhookId });
+  // biome-ignore lint/style/noNonNullAssertion: protobuf response always includes webhook on success
   return res.webhook!;
 }
 
@@ -1709,6 +1711,7 @@ export async function updateWebhook(
   avatarUrl?: string,
 ) {
   const res = await chatClient.updateWebhook({ webhookId, name, avatarUrl });
+  // biome-ignore lint/style/noNonNullAssertion: protobuf response always includes webhook on success
   return res.webhook!;
 }
 

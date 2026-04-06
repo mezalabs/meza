@@ -64,7 +64,7 @@ export const WebhookEmbed = memo(function WebhookEmbed({
         {hasDescription && (
           <div className="text-sm text-text-secondary">
             <MarkdownRenderer
-              content={embed.description!}
+              content={embed.description as string}
               serverId={serverId}
             />
           </div>
@@ -73,12 +73,13 @@ export const WebhookEmbed = memo(function WebhookEmbed({
           <div
             className="grid gap-1 mt-1"
             style={{
-              gridTemplateColumns: embed.fields!.some((f) => f.inline)
+              gridTemplateColumns: embed.fields?.some((f) => f.inline)
                 ? 'repeat(auto-fill, minmax(150px, 1fr))'
                 : '1fr',
             }}
           >
-            {embed.fields!.map((field, i) => (
+            {embed.fields?.map((field, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: embed fields are static
               <div key={i} className={field.inline ? '' : 'col-span-full'}>
                 <div className="text-xs font-semibold text-text-muted">
                   {field.name}

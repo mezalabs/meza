@@ -212,13 +212,13 @@ function CreateWebhookForm({
               Name
             </label>
             <input
+              ref={(el) => el?.focus()}
               id="webhook-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={80}
               placeholder="e.g. GitHub"
-              autoFocus
               className="w-full rounded-md border border-border bg-bg-base px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
             />
           </div>
