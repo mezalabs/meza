@@ -56,7 +56,7 @@ export const WebhookEmbed = memo(function WebhookEmbed({
 
   return (
     <div
-      className="mt-1 max-w-md rounded-lg border border-border bg-bg-secondary overflow-hidden"
+      className="mt-1 max-w-md md:max-w-lg lg:max-w-xl rounded-lg border border-border bg-bg-secondary overflow-hidden"
       style={
         borderColor
           ? { borderLeftWidth: '3px', borderLeftColor: borderColor }
