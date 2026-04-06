@@ -1868,13 +1868,10 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		}
 
 		// permissions_synced invariant: true iff the channel has a group AND
-		// has no per-channel overrides. Private channels with RoleNames get
-		// overrides created in the loop below, so they must land with
-		// permissions_synced = false even when grouped.
-		permSynced := groupIDStr != ""
-		if spec.IsPrivate && len(spec.RoleNames) > 0 {
-			permSynced = false
-		}
+		// has no per-channel overrides. Private channels always get at least a
+		// deny-@everyone ViewChannel override (see loop further below), so they
+		// must land with permissions_synced = false even when grouped.
+		permSynced := groupIDStr != "" && !spec.IsPrivate
 
 		if spec.Type == 2 { // CHANNEL_TYPE_VOICE — create with companion text channel.
 			textID := models.NewID()
@@ -1979,16 +1976,36 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		roleIDByName[r.Name] = r.ID
 	}
 
-	// Create permission overrides for private channels with role restrictions.
+	// Create permission overrides for private channels. Every private channel
+	// gets a deny-@everyone ViewChannel override so it is invisible by default,
+	// matching the behavior of UpdateChannelPrivacy for post-creation toggling.
+	// If RoleNames are specified, those roles additionally get allow overrides
+	// for ViewChannel + SendMessages. The owner bypass in the permission
+	// resolver ensures the creator can still see the channel even when no
+	// roles are named.
 	for _, ch := range channels {
 		spec := params.Channels[ch.Position]
-		if !spec.IsPrivate || len(spec.RoleNames) == 0 {
+		if !spec.IsPrivate {
+			continue
+		}
+		// @everyone role has id = serverID.
+		denyOverrideID := models.NewID()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO permission_overrides (id, channel_id, role_id, allow, deny)
+			 VALUES ($1, $2, $3, 0, $4)`,
+			denyOverrideID, ch.ID, serverID, permissions.ViewChannel,
+		)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("insert @everyone deny override for channel %q: %w", ch.Name, err)
+		}
+		if len(spec.RoleNames) == 0 {
 			continue
 		}
 		allow := permissions.ViewChannel | permissions.SendMessages
 		for _, roleName := range spec.RoleNames {
 			roleID, ok := roleIDByName[roleName]
 			if !ok {
+				// Handler-level validation should catch this; be defensive.
 				continue
 			}
 			overrideID := models.NewID()
