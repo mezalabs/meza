@@ -22,6 +22,12 @@ export type UpdateStatus =
     }
   | { state: 'error'; message: string };
 
+export interface ScreenSource {
+  id: string;
+  name: string;
+  thumbnail: string;
+}
+
 export interface ElectronAPI {
   window: {
     minimize: () => void;
@@ -51,7 +57,9 @@ export interface ElectronAPI {
     getAutoLaunch: () => Promise<boolean>;
   };
   screenShare?: {
-    pick: () => Promise<boolean>;
+    getSources: () => Promise<ScreenSource[] | null>;
+    select: (sourceId: string) => Promise<{ success: boolean }>;
+    openSettings: () => void;
   };
   settings: {
     getServerUrl: () => Promise<string>;
