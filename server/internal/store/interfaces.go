@@ -121,7 +121,7 @@ type ChatStorer interface {
 	CheckRulesAcknowledged(ctx context.Context, userID, serverID string) (bool, error)
 	GetDefaultChannels(ctx context.Context, serverID string) ([]*models.Channel, error)
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
-	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
+	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error)
 	SetPermissionsSynced(ctx context.Context, channelID string, synced bool) error
 	// SyncChannelToCategory atomically deletes all channel-level overrides,
 	// marks the channel as synced, and mirrors to the companion if non-empty.

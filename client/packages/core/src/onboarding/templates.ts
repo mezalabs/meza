@@ -7,6 +7,12 @@ export interface TemplateChannel {
   isDefault: boolean;
   isPrivate?: boolean;
   roleNames?: string[]; // roles (by name) that get access when private
+  /** Matches a TemplateChannelGroup.name. Empty/unset means ungrouped. */
+  groupName?: string;
+}
+
+export interface TemplateChannelGroup {
+  name: string;
 }
 
 export interface TemplateRole {
@@ -21,7 +27,13 @@ export interface ServerTemplate {
   name: string;
   description: string;
   icon: string;
+  /** If undefined, server uses DefaultEveryonePermissions. */
+  everyonePermissions?: bigint;
+  /** Channel categories created before channels. Empty = no categories. */
+  channelGroups: TemplateChannelGroup[];
   channels: TemplateChannel[];
+  /** Voice channels appended to the template when voice is available. */
+  voiceChannels?: TemplateChannel[];
   roles: TemplateRole[];
 }
 
@@ -29,7 +41,8 @@ const MOD_PERMISSIONS =
   Permissions.KICK_MEMBERS |
   Permissions.BAN_MEMBERS |
   Permissions.MANAGE_MESSAGES |
-  Permissions.TIMEOUT_MEMBERS;
+  Permissions.TIMEOUT_MEMBERS |
+  Permissions.VIEW_AUDIT_LOG;
 
 const MOD_ROLE: TemplateRole = {
   name: 'Mod',
@@ -38,86 +51,94 @@ const MOD_ROLE: TemplateRole = {
   isSelfAssignable: false,
 };
 
+// Friends servers grant everyone the "trusted friend" bit set: talking,
+// streaming, reacting, inviting, attaching files, using external emojis, and
+// pinging @everyone. Resource-management bits (webhooks, emojis, soundboard)
+// stay off because they're impersonation/upload footguns even among friends,
+// and all moderation/admin bits stay off so no one can nuke the place.
+const FRIENDS_EVERYONE_PERMISSIONS =
+  Permissions.VIEW_CHANNEL |
+  Permissions.SEND_MESSAGES |
+  Permissions.CONNECT |
+  Permissions.SPEAK |
+  Permissions.ADD_REACTIONS |
+  Permissions.READ_MESSAGE_HISTORY |
+  Permissions.EMBED_LINKS |
+  Permissions.ATTACH_FILES |
+  Permissions.USE_EXTERNAL_EMOJIS |
+  Permissions.CREATE_INVITE |
+  Permissions.CHANGE_NICKNAME |
+  Permissions.STREAM_VIDEO |
+  Permissions.EXEMPT_SLOW_MODE |
+  Permissions.MENTION_EVERYONE;
+
 export const SERVER_TEMPLATES: ServerTemplate[] = [
-  {
-    id: 'gaming',
-    name: 'Gaming',
-    description: 'For gaming communities with LFG and clips',
-    icon: 'gamepad-2',
-    channels: [
-      { name: 'general', type: ChannelType.TEXT, isDefault: true },
-      { name: 'looking-for-group', type: ChannelType.TEXT, isDefault: false },
-      { name: 'clips', type: ChannelType.TEXT, isDefault: false },
-      { name: 'off-topic', type: ChannelType.TEXT, isDefault: false },
-    ],
-    roles: [MOD_ROLE],
-  },
   {
     id: 'friends',
     name: 'Friends',
-    description: 'A chill space for you and your friends',
+    description: 'A simple server for hanging out with friends',
     icon: 'handshake',
-    channels: [
-      { name: 'general', type: ChannelType.TEXT, isDefault: true },
-      { name: 'memes', type: ChannelType.TEXT, isDefault: false },
-      { name: 'off-topic', type: ChannelType.TEXT, isDefault: false },
+    everyonePermissions: FRIENDS_EVERYONE_PERMISSIONS,
+    channelGroups: [],
+    channels: [{ name: 'general', type: ChannelType.TEXT, isDefault: true }],
+    voiceChannels: [
+      { name: 'Hangout', type: ChannelType.VOICE, isDefault: false },
     ],
     roles: [],
-  },
-  {
-    id: 'creator',
-    name: 'Creator',
-    description: 'For content creators and their audience',
-    icon: 'palette',
-    channels: [
-      { name: 'general', type: ChannelType.TEXT, isDefault: true },
-      { name: 'announcements', type: ChannelType.TEXT, isDefault: true },
-      { name: 'feedback', type: ChannelType.TEXT, isDefault: false },
-      { name: 'showcase', type: ChannelType.TEXT, isDefault: false },
-      {
-        name: 'mod-chat',
-        type: ChannelType.TEXT,
-        isDefault: false,
-        isPrivate: true,
-        roleNames: ['Mod'],
-      },
-    ],
-    roles: [MOD_ROLE],
   },
   {
     id: 'community',
     name: 'Community',
-    description: 'A general-purpose community server',
+    description: 'An organized server for larger groups',
     icon: 'globe',
+    channelGroups: [
+      { name: 'Information' },
+      { name: 'Chat' },
+      { name: 'Moderation' },
+      { name: 'Voice' },
+    ],
     channels: [
-      { name: 'general', type: ChannelType.TEXT, isDefault: true },
-      { name: 'announcements', type: ChannelType.TEXT, isDefault: true },
-      { name: 'introductions', type: ChannelType.TEXT, isDefault: false },
-      { name: 'off-topic', type: ChannelType.TEXT, isDefault: false },
+      {
+        name: 'announcements',
+        type: ChannelType.TEXT,
+        isDefault: true,
+        groupName: 'Information',
+      },
+      {
+        name: 'general',
+        type: ChannelType.TEXT,
+        isDefault: true,
+        groupName: 'Chat',
+      },
+      {
+        name: 'introductions',
+        type: ChannelType.TEXT,
+        isDefault: false,
+        groupName: 'Chat',
+      },
+      {
+        name: 'off-topic',
+        type: ChannelType.TEXT,
+        isDefault: false,
+        groupName: 'Chat',
+      },
       {
         name: 'mod-chat',
         type: ChannelType.TEXT,
         isDefault: false,
         isPrivate: true,
         roleNames: ['Mod'],
+        groupName: 'Moderation',
+      },
+    ],
+    voiceChannels: [
+      {
+        name: 'Voice Chat',
+        type: ChannelType.VOICE,
+        isDefault: false,
+        groupName: 'Voice',
       },
     ],
     roles: [MOD_ROLE],
   },
-  {
-    id: 'scratch',
-    name: 'Start from Scratch',
-    description: 'A blank slate — set it up your way',
-    icon: 'sparkles',
-    channels: [{ name: 'general', type: ChannelType.TEXT, isDefault: true }],
-    roles: [],
-  },
 ];
-
-// Voice channel additions per template (only applied if LiveKit is available).
-export const VOICE_CHANNELS: Record<string, Array<{ name: string }>> = {
-  gaming: [{ name: 'Voice Chat' }, { name: 'AFK' }],
-  friends: [{ name: 'Hangout' }],
-  creator: [{ name: 'Live' }, { name: 'Hangout' }],
-  community: [{ name: 'Voice Chat' }],
-};

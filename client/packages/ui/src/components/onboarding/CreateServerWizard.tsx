@@ -6,10 +6,10 @@ import {
   type Server,
   type ServerTemplate,
   type TemplateChannel,
+  type TemplateChannelGroup,
   type TemplateRole,
   useAuthStore,
   useChannelStore,
-  VOICE_CHANNELS,
 } from '@meza/core';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
@@ -43,39 +43,35 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
   const [iconUrl, setIconUrl] = useState<string | null>(null);
   const [channels, setChannels] = useState<TemplateChannel[]>([]);
   const [roles, setRoles] = useState<TemplateRole[]>([]);
+  const [channelGroups, setChannelGroups] = useState<TemplateChannelGroup[]>(
+    [],
+  );
+  const [everyonePermissions, setEveryonePermissions] = useState<
+    bigint | undefined
+  >(undefined);
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [rules, setRules] = useState('');
-  const [voiceAvailable] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdServer, setCreatedServer] = useState<Server | null>(null);
   const [createdInvite, setCreatedInvite] = useState<Invite | null>(null);
 
-  const handleTemplateSelect = useCallback(
-    (template: ServerTemplate) => {
-      setTemplateId(template.id);
+  const handleTemplateSelect = useCallback((template: ServerTemplate) => {
+    setTemplateId(template.id);
 
-      // Build channels from template + voice channels if available
-      const templateChannels = [...template.channels];
-      if (voiceAvailable) {
-        const voiceChans = VOICE_CHANNELS[template.id];
-        if (voiceChans) {
-          for (const vc of voiceChans) {
-            templateChannels.push({
-              name: vc.name,
-              type: ChannelType.VOICE,
-              isDefault: false,
-            });
-          }
-        }
-      }
+    // Build channels from template + voice channels. Voice additions already
+    // carry a groupName where applicable (Community).
+    const templateChannels: TemplateChannel[] = [...template.channels];
+    if (template.voiceChannels) {
+      templateChannels.push(...template.voiceChannels);
+    }
 
-      setChannels(templateChannels);
-      setRoles([...template.roles]);
-      setStep(1);
-    },
-    [voiceAvailable],
-  );
+    setChannels(templateChannels);
+    setRoles([...template.roles]);
+    setChannelGroups([...template.channelGroups]);
+    setEveryonePermissions(template.everyonePermissions);
+    setStep(1);
+  }, []);
 
   const handleCreate = useCallback(async () => {
     if (creating) return;
@@ -93,6 +89,15 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
       welcomeMessage.trim().length > 0 || rules.trim().length > 0;
     const rulesRequired = onboardingEnabled && rules.trim().length > 0;
 
+    // Drop channel groups that no longer contain any channels (the user may
+    // have removed every channel in a category during the Channels step).
+    const usedGroupNames = new Set(
+      channels.map((c) => c.groupName).filter((n): n is string => !!n),
+    );
+    const prunedGroups = channelGroups.filter((g) =>
+      usedGroupNames.has(g.name),
+    );
+
     try {
       const result = await createServerFromTemplate({
         name: name.trim(),
@@ -103,6 +108,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
           isDefault: ch.isDefault,
           isPrivate: ch.isPrivate ?? false,
           roleNames: ch.roleNames,
+          groupName: ch.groupName,
         })),
         roles: roles.map((r) => ({
           name: r.name,
@@ -114,6 +120,8 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
         rules: rules.trim() || undefined,
         onboardingEnabled,
         rulesRequired,
+        everyonePermissions,
+        channelGroups: prunedGroups.map((g) => ({ name: g.name })),
       });
 
       if (result.server) {
@@ -127,7 +135,17 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
     } finally {
       setCreating(false);
     }
-  }, [creating, name, iconUrl, channels, roles, welcomeMessage, rules]);
+  }, [
+    creating,
+    name,
+    iconUrl,
+    channels,
+    roles,
+    welcomeMessage,
+    rules,
+    everyonePermissions,
+    channelGroups,
+  ]);
 
   const handleDone = useCallback(() => {
     if (!createdServer) return;
@@ -228,7 +246,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
             <ChannelsStep
               channels={channels}
               onChannelsChange={setChannels}
-              voiceAvailable={voiceAvailable}
+              channelGroups={channelGroups}
             />
           )}
           {step === 3 && (

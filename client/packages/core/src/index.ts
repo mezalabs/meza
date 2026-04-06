@@ -353,8 +353,8 @@ export {
   SERVER_TEMPLATES,
   type ServerTemplate,
   type TemplateChannel,
+  type TemplateChannelGroup,
   type TemplateRole,
-  VOICE_CHANNELS,
 } from './onboarding/templates.ts';
 export { subscribeToPush } from './push/push-manager.ts';
 // Push notifications

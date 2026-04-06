@@ -1072,6 +1072,13 @@ message ChannelSpec {
   bool is_default = 3;
   bool is_private = 4;
   repeated string role_names = 5; // roles that get access to this private channel (matched by name against RoleSpec)
+  // Matches a ChannelGroupSpec.name on the same request. If empty or unmatched,
+  // the channel is created without a category.
+  optional string group_name = 6;
+}
+
+message ChannelGroupSpec {
+  string name = 1;
 }
 
 message RoleSpec {
@@ -1090,6 +1097,11 @@ message CreateServerFromTemplateRequest {
   optional string rules = 6;
   bool onboarding_enabled = 7;
   bool rules_required = 8;
+  // Override @everyone role permissions. If absent, the server applies
+  // permissions.DefaultEveryonePermissions. Administrator is rejected.
+  optional int64 everyone_permissions = 9;
+  // Channel categories created in declared order before channels are inserted.
+  repeated ChannelGroupSpec channel_groups = 10;
 }
 
 message CreateServerFromTemplateResponse {
@@ -1097,6 +1109,7 @@ message CreateServerFromTemplateResponse {
   repeated Channel channels = 2;
   repeated Role roles = 3;
   Invite invite = 4;
+  repeated ChannelGroup channel_groups = 5;
 }
 
 // Federation

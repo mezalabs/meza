@@ -1016,6 +1016,7 @@ export async function createServerFromTemplate(params: {
     isDefault: boolean;
     isPrivate: boolean;
     roleNames?: string[];
+    groupName?: string;
   }>;
   roles: Array<{
     name: string;
@@ -1027,11 +1028,16 @@ export async function createServerFromTemplate(params: {
   rules?: string;
   onboardingEnabled: boolean;
   rulesRequired: boolean;
+  everyonePermissions?: bigint;
+  channelGroups: Array<{ name: string }>;
 }) {
   try {
     const res = await chatClient.createServerFromTemplate(params);
     if (res.server) {
       useServerStore.getState().addServer(res.server);
+      useChannelGroupStore
+        .getState()
+        .setGroups(res.server.id, res.channelGroups);
       useChannelStore.getState().setChannels(res.server.id, res.channels);
       useRoleStore.getState().setRoles(res.server.id, res.roles);
       // Provision encryption keys for all template channels (universal E2EE)

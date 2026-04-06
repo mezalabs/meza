@@ -60,6 +60,15 @@ const (
 	DefaultEveryonePermissions = ViewChannel | SendMessages | Connect | Speak |
 		AddReactions | ReadMessageHistory | EmbedLinks | AttachFiles |
 		UseExternalEmojis | CreateInvite | ChangeNickname
+
+	// SafeEveryonePermissions is the whitelist of permission bits that may be
+	// granted to the @everyone role. Any bit outside this set is considered
+	// catastrophic to grant to all members (e.g. ManageRoles, ManageServer,
+	// KickMembers, BanMembers, ManageWebhooks, etc.), since @everyone applies
+	// to any random joiner. This is a strict superset of DefaultEveryonePermissions
+	// plus a few extras that are safe for everyone to have.
+	SafeEveryonePermissions = DefaultEveryonePermissions | StreamVideo |
+		MentionEveryone | ExemptSlowMode | ManageSoundboard
 )
 
 // Intentionally excluded Discord permissions (no corresponding Meza feature):
