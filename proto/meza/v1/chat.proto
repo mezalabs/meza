@@ -99,6 +99,15 @@ service ChatService {
   rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
   rpc GetSystemMessageConfig(GetSystemMessageConfigRequest) returns (GetSystemMessageConfigResponse);
   rpc UpdateSystemMessageConfig(UpdateSystemMessageConfigRequest) returns (UpdateSystemMessageConfigResponse);
+  // Webhooks
+  rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
+  rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse);
+  rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse);
+  rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
+  rpc ListChannelWebhooks(ListChannelWebhooksRequest) returns (ListChannelWebhooksResponse);
+  rpc ListServerWebhooks(ListServerWebhooksRequest) returns (ListServerWebhooksResponse);
+  rpc RegenerateWebhookToken(RegenerateWebhookTokenRequest) returns (RegenerateWebhookTokenResponse);
+  rpc ListWebhookDeliveries(ListWebhookDeliveriesRequest) returns (ListWebhookDeliveriesResponse);
 }
 
 // Messages
@@ -1309,4 +1318,76 @@ message UpdateSystemMessageConfigRequest {
 
 message UpdateSystemMessageConfigResponse {
   ServerSystemMessageConfig config = 1;
+}
+
+// Webhooks
+
+message CreateWebhookRequest {
+  string channel_id = 1;
+  string name = 2;
+  optional string avatar_url = 3;
+}
+
+message CreateWebhookResponse {
+  Webhook webhook = 1;
+  string token = 2;  // shown once, never retrievable again
+  string url = 3;    // full webhook execution URL
+}
+
+message GetWebhookRequest {
+  string webhook_id = 1;
+}
+
+message GetWebhookResponse {
+  Webhook webhook = 1;
+}
+
+message UpdateWebhookRequest {
+  string webhook_id = 1;
+  optional string name = 2;
+  optional string avatar_url = 3;
+}
+
+message UpdateWebhookResponse {
+  Webhook webhook = 1;
+}
+
+message DeleteWebhookRequest {
+  string webhook_id = 1;
+}
+
+message DeleteWebhookResponse {}
+
+message ListChannelWebhooksRequest {
+  string channel_id = 1;
+}
+
+message ListChannelWebhooksResponse {
+  repeated Webhook webhooks = 1;
+}
+
+message ListServerWebhooksRequest {
+  string server_id = 1;
+}
+
+message ListServerWebhooksResponse {
+  repeated Webhook webhooks = 1;
+}
+
+message RegenerateWebhookTokenRequest {
+  string webhook_id = 1;
+}
+
+message RegenerateWebhookTokenResponse {
+  string token = 1;  // shown once, never retrievable again
+  string url = 2;    // full webhook execution URL
+}
+
+message ListWebhookDeliveriesRequest {
+  string webhook_id = 1;
+  int32 limit = 2;  // default 25, max 25
+}
+
+message ListWebhookDeliveriesResponse {
+  repeated WebhookDelivery deliveries = 1;
 }

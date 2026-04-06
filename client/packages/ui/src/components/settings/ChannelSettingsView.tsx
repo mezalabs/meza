@@ -1,4 +1,5 @@
 import {
+  ChannelType,
   deleteChannel,
   getEffectivePermissions,
   hasPermission,
@@ -14,17 +15,20 @@ import { closeChannelPanes } from '../../stores/tiling.ts';
 import { ChannelOverrideEditor } from './ChannelOverrideEditor.tsx';
 import { ChannelOverviewSection } from './ChannelOverviewSection.tsx';
 import { EffectivePermissionsViewer } from './EffectivePermissionsViewer.tsx';
+import { WebhooksSection } from './WebhooksSection.tsx';
 
 interface SectionDef {
   id: string;
   label: string;
-  perm: 'manageChannels' | 'manageRoles';
+  perm: 'manageChannels' | 'manageRoles' | 'manageWebhooks';
+  textOnly?: boolean; // only show for text channels
 }
 
 const ALL_SECTIONS: SectionDef[] = [
   { id: 'overview', label: 'Overview', perm: 'manageChannels' },
   { id: 'permissions', label: 'Permissions', perm: 'manageRoles' },
   { id: 'effective', label: 'Effective Permissions', perm: 'manageRoles' },
+  { id: 'webhooks', label: 'Webhooks', perm: 'manageWebhooks', textOnly: true },
   { id: 'danger', label: 'Danger Zone', perm: 'manageChannels' },
 ];
 
@@ -60,13 +64,29 @@ export function ChannelSettingsView({
     isOwner || hasPermission(callerPerms, Permissions.MANAGE_CHANNELS);
   const canManageRoles =
     isOwner || hasPermission(callerPerms, Permissions.MANAGE_ROLES);
+  const canManageWebhooks =
+    isOwner || hasPermission(callerPerms, Permissions.MANAGE_WEBHOOKS);
+
+  const isTextChannel = channel
+    ? channels?.find((c) => c.id === channelId)?.type === ChannelType.TEXT
+    : false;
 
   const visibleSections = useMemo(
     () =>
-      ALL_SECTIONS.filter((s) =>
-        s.perm === 'manageChannels' ? canManageChannels : canManageRoles,
-      ),
-    [canManageChannels, canManageRoles],
+      ALL_SECTIONS.filter((s) => {
+        if (s.textOnly && !isTextChannel) return false;
+        switch (s.perm) {
+          case 'manageChannels':
+            return canManageChannels;
+          case 'manageRoles':
+            return canManageRoles;
+          case 'manageWebhooks':
+            return canManageWebhooks;
+          default:
+            return false;
+        }
+      }),
+    [canManageChannels, canManageRoles, canManageWebhooks, isTextChannel],
   );
 
   const [activeSection, setActiveSection] = useState<string>(
@@ -207,6 +227,8 @@ function renderChannelSettingsContent(
       return (
         <EffectivePermissionsViewer serverId={serverId} channelId={channelId} />
       );
+    case 'webhooks':
+      return <WebhooksSection serverId={serverId} channelId={channelId} />;
     case 'danger':
       return channel ? (
         <DangerZoneSection

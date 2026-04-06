@@ -279,6 +279,29 @@ const (
 	// ChatServiceUpdateSystemMessageConfigProcedure is the fully-qualified name of the ChatService's
 	// UpdateSystemMessageConfig RPC.
 	ChatServiceUpdateSystemMessageConfigProcedure = "/meza.v1.ChatService/UpdateSystemMessageConfig"
+	// ChatServiceCreateWebhookProcedure is the fully-qualified name of the ChatService's CreateWebhook
+	// RPC.
+	ChatServiceCreateWebhookProcedure = "/meza.v1.ChatService/CreateWebhook"
+	// ChatServiceGetWebhookProcedure is the fully-qualified name of the ChatService's GetWebhook RPC.
+	ChatServiceGetWebhookProcedure = "/meza.v1.ChatService/GetWebhook"
+	// ChatServiceUpdateWebhookProcedure is the fully-qualified name of the ChatService's UpdateWebhook
+	// RPC.
+	ChatServiceUpdateWebhookProcedure = "/meza.v1.ChatService/UpdateWebhook"
+	// ChatServiceDeleteWebhookProcedure is the fully-qualified name of the ChatService's DeleteWebhook
+	// RPC.
+	ChatServiceDeleteWebhookProcedure = "/meza.v1.ChatService/DeleteWebhook"
+	// ChatServiceListChannelWebhooksProcedure is the fully-qualified name of the ChatService's
+	// ListChannelWebhooks RPC.
+	ChatServiceListChannelWebhooksProcedure = "/meza.v1.ChatService/ListChannelWebhooks"
+	// ChatServiceListServerWebhooksProcedure is the fully-qualified name of the ChatService's
+	// ListServerWebhooks RPC.
+	ChatServiceListServerWebhooksProcedure = "/meza.v1.ChatService/ListServerWebhooks"
+	// ChatServiceRegenerateWebhookTokenProcedure is the fully-qualified name of the ChatService's
+	// RegenerateWebhookToken RPC.
+	ChatServiceRegenerateWebhookTokenProcedure = "/meza.v1.ChatService/RegenerateWebhookToken"
+	// ChatServiceListWebhookDeliveriesProcedure is the fully-qualified name of the ChatService's
+	// ListWebhookDeliveries RPC.
+	ChatServiceListWebhookDeliveriesProcedure = "/meza.v1.ChatService/ListWebhookDeliveries"
 )
 
 // ChatServiceClient is a client for the meza.v1.ChatService service.
@@ -376,6 +399,15 @@ type ChatServiceClient interface {
 	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
 	GetSystemMessageConfig(context.Context, *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error)
 	UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error)
+	// Webhooks
+	CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error)
+	GetWebhook(context.Context, *connect.Request[v1.GetWebhookRequest]) (*connect.Response[v1.GetWebhookResponse], error)
+	UpdateWebhook(context.Context, *connect.Request[v1.UpdateWebhookRequest]) (*connect.Response[v1.UpdateWebhookResponse], error)
+	DeleteWebhook(context.Context, *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error)
+	ListChannelWebhooks(context.Context, *connect.Request[v1.ListChannelWebhooksRequest]) (*connect.Response[v1.ListChannelWebhooksResponse], error)
+	ListServerWebhooks(context.Context, *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error)
+	RegenerateWebhookToken(context.Context, *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error)
+	ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the meza.v1.ChatService service. By default, it uses
@@ -947,6 +979,54 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("UpdateSystemMessageConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		createWebhook: connect.NewClient[v1.CreateWebhookRequest, v1.CreateWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceCreateWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("CreateWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		getWebhook: connect.NewClient[v1.GetWebhookRequest, v1.GetWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceGetWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("GetWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		updateWebhook: connect.NewClient[v1.UpdateWebhookRequest, v1.UpdateWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceUpdateWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("UpdateWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteWebhook: connect.NewClient[v1.DeleteWebhookRequest, v1.DeleteWebhookResponse](
+			httpClient,
+			baseURL+ChatServiceDeleteWebhookProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("DeleteWebhook")),
+			connect.WithClientOptions(opts...),
+		),
+		listChannelWebhooks: connect.NewClient[v1.ListChannelWebhooksRequest, v1.ListChannelWebhooksResponse](
+			httpClient,
+			baseURL+ChatServiceListChannelWebhooksProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListChannelWebhooks")),
+			connect.WithClientOptions(opts...),
+		),
+		listServerWebhooks: connect.NewClient[v1.ListServerWebhooksRequest, v1.ListServerWebhooksResponse](
+			httpClient,
+			baseURL+ChatServiceListServerWebhooksProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListServerWebhooks")),
+			connect.WithClientOptions(opts...),
+		),
+		regenerateWebhookToken: connect.NewClient[v1.RegenerateWebhookTokenRequest, v1.RegenerateWebhookTokenResponse](
+			httpClient,
+			baseURL+ChatServiceRegenerateWebhookTokenProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("RegenerateWebhookToken")),
+			connect.WithClientOptions(opts...),
+		),
+		listWebhookDeliveries: connect.NewClient[v1.ListWebhookDeliveriesRequest, v1.ListWebhookDeliveriesResponse](
+			httpClient,
+			baseURL+ChatServiceListWebhookDeliveriesProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListWebhookDeliveries")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -1045,6 +1125,14 @@ type chatServiceClient struct {
 	getMutualFriends          *connect.Client[v1.GetMutualFriendsRequest, v1.GetMutualFriendsResponse]
 	getSystemMessageConfig    *connect.Client[v1.GetSystemMessageConfigRequest, v1.GetSystemMessageConfigResponse]
 	updateSystemMessageConfig *connect.Client[v1.UpdateSystemMessageConfigRequest, v1.UpdateSystemMessageConfigResponse]
+	createWebhook             *connect.Client[v1.CreateWebhookRequest, v1.CreateWebhookResponse]
+	getWebhook                *connect.Client[v1.GetWebhookRequest, v1.GetWebhookResponse]
+	updateWebhook             *connect.Client[v1.UpdateWebhookRequest, v1.UpdateWebhookResponse]
+	deleteWebhook             *connect.Client[v1.DeleteWebhookRequest, v1.DeleteWebhookResponse]
+	listChannelWebhooks       *connect.Client[v1.ListChannelWebhooksRequest, v1.ListChannelWebhooksResponse]
+	listServerWebhooks        *connect.Client[v1.ListServerWebhooksRequest, v1.ListServerWebhooksResponse]
+	regenerateWebhookToken    *connect.Client[v1.RegenerateWebhookTokenRequest, v1.RegenerateWebhookTokenResponse]
+	listWebhookDeliveries     *connect.Client[v1.ListWebhookDeliveriesRequest, v1.ListWebhookDeliveriesResponse]
 }
 
 // SendMessage calls meza.v1.ChatService.SendMessage.
@@ -1512,6 +1600,46 @@ func (c *chatServiceClient) UpdateSystemMessageConfig(ctx context.Context, req *
 	return c.updateSystemMessageConfig.CallUnary(ctx, req)
 }
 
+// CreateWebhook calls meza.v1.ChatService.CreateWebhook.
+func (c *chatServiceClient) CreateWebhook(ctx context.Context, req *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error) {
+	return c.createWebhook.CallUnary(ctx, req)
+}
+
+// GetWebhook calls meza.v1.ChatService.GetWebhook.
+func (c *chatServiceClient) GetWebhook(ctx context.Context, req *connect.Request[v1.GetWebhookRequest]) (*connect.Response[v1.GetWebhookResponse], error) {
+	return c.getWebhook.CallUnary(ctx, req)
+}
+
+// UpdateWebhook calls meza.v1.ChatService.UpdateWebhook.
+func (c *chatServiceClient) UpdateWebhook(ctx context.Context, req *connect.Request[v1.UpdateWebhookRequest]) (*connect.Response[v1.UpdateWebhookResponse], error) {
+	return c.updateWebhook.CallUnary(ctx, req)
+}
+
+// DeleteWebhook calls meza.v1.ChatService.DeleteWebhook.
+func (c *chatServiceClient) DeleteWebhook(ctx context.Context, req *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error) {
+	return c.deleteWebhook.CallUnary(ctx, req)
+}
+
+// ListChannelWebhooks calls meza.v1.ChatService.ListChannelWebhooks.
+func (c *chatServiceClient) ListChannelWebhooks(ctx context.Context, req *connect.Request[v1.ListChannelWebhooksRequest]) (*connect.Response[v1.ListChannelWebhooksResponse], error) {
+	return c.listChannelWebhooks.CallUnary(ctx, req)
+}
+
+// ListServerWebhooks calls meza.v1.ChatService.ListServerWebhooks.
+func (c *chatServiceClient) ListServerWebhooks(ctx context.Context, req *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error) {
+	return c.listServerWebhooks.CallUnary(ctx, req)
+}
+
+// RegenerateWebhookToken calls meza.v1.ChatService.RegenerateWebhookToken.
+func (c *chatServiceClient) RegenerateWebhookToken(ctx context.Context, req *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error) {
+	return c.regenerateWebhookToken.CallUnary(ctx, req)
+}
+
+// ListWebhookDeliveries calls meza.v1.ChatService.ListWebhookDeliveries.
+func (c *chatServiceClient) ListWebhookDeliveries(ctx context.Context, req *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error) {
+	return c.listWebhookDeliveries.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the meza.v1.ChatService service.
 type ChatServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
@@ -1607,6 +1735,15 @@ type ChatServiceHandler interface {
 	GetMutualFriends(context.Context, *connect.Request[v1.GetMutualFriendsRequest]) (*connect.Response[v1.GetMutualFriendsResponse], error)
 	GetSystemMessageConfig(context.Context, *connect.Request[v1.GetSystemMessageConfigRequest]) (*connect.Response[v1.GetSystemMessageConfigResponse], error)
 	UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error)
+	// Webhooks
+	CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error)
+	GetWebhook(context.Context, *connect.Request[v1.GetWebhookRequest]) (*connect.Response[v1.GetWebhookResponse], error)
+	UpdateWebhook(context.Context, *connect.Request[v1.UpdateWebhookRequest]) (*connect.Response[v1.UpdateWebhookResponse], error)
+	DeleteWebhook(context.Context, *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error)
+	ListChannelWebhooks(context.Context, *connect.Request[v1.ListChannelWebhooksRequest]) (*connect.Response[v1.ListChannelWebhooksResponse], error)
+	ListServerWebhooks(context.Context, *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error)
+	RegenerateWebhookToken(context.Context, *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error)
+	ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -2174,6 +2311,54 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("UpdateSystemMessageConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceCreateWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceCreateWebhookProcedure,
+		svc.CreateWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("CreateWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceGetWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceGetWebhookProcedure,
+		svc.GetWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("GetWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceUpdateWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceUpdateWebhookProcedure,
+		svc.UpdateWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("UpdateWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceDeleteWebhookHandler := connect.NewUnaryHandler(
+		ChatServiceDeleteWebhookProcedure,
+		svc.DeleteWebhook,
+		connect.WithSchema(chatServiceMethods.ByName("DeleteWebhook")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListChannelWebhooksHandler := connect.NewUnaryHandler(
+		ChatServiceListChannelWebhooksProcedure,
+		svc.ListChannelWebhooks,
+		connect.WithSchema(chatServiceMethods.ByName("ListChannelWebhooks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListServerWebhooksHandler := connect.NewUnaryHandler(
+		ChatServiceListServerWebhooksProcedure,
+		svc.ListServerWebhooks,
+		connect.WithSchema(chatServiceMethods.ByName("ListServerWebhooks")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceRegenerateWebhookTokenHandler := connect.NewUnaryHandler(
+		ChatServiceRegenerateWebhookTokenProcedure,
+		svc.RegenerateWebhookToken,
+		connect.WithSchema(chatServiceMethods.ByName("RegenerateWebhookToken")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListWebhookDeliveriesHandler := connect.NewUnaryHandler(
+		ChatServiceListWebhookDeliveriesProcedure,
+		svc.ListWebhookDeliveries,
+		connect.WithSchema(chatServiceMethods.ByName("ListWebhookDeliveries")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceSendMessageProcedure:
@@ -2362,6 +2547,22 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceGetSystemMessageConfigHandler.ServeHTTP(w, r)
 		case ChatServiceUpdateSystemMessageConfigProcedure:
 			chatServiceUpdateSystemMessageConfigHandler.ServeHTTP(w, r)
+		case ChatServiceCreateWebhookProcedure:
+			chatServiceCreateWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceGetWebhookProcedure:
+			chatServiceGetWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceUpdateWebhookProcedure:
+			chatServiceUpdateWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceDeleteWebhookProcedure:
+			chatServiceDeleteWebhookHandler.ServeHTTP(w, r)
+		case ChatServiceListChannelWebhooksProcedure:
+			chatServiceListChannelWebhooksHandler.ServeHTTP(w, r)
+		case ChatServiceListServerWebhooksProcedure:
+			chatServiceListServerWebhooksHandler.ServeHTTP(w, r)
+		case ChatServiceRegenerateWebhookTokenProcedure:
+			chatServiceRegenerateWebhookTokenHandler.ServeHTTP(w, r)
+		case ChatServiceListWebhookDeliveriesProcedure:
+			chatServiceListWebhookDeliveriesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2741,4 +2942,36 @@ func (UnimplementedChatServiceHandler) GetSystemMessageConfig(context.Context, *
 
 func (UnimplementedChatServiceHandler) UpdateSystemMessageConfig(context.Context, *connect.Request[v1.UpdateSystemMessageConfigRequest]) (*connect.Response[v1.UpdateSystemMessageConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.UpdateSystemMessageConfig is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) CreateWebhook(context.Context, *connect.Request[v1.CreateWebhookRequest]) (*connect.Response[v1.CreateWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.CreateWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) GetWebhook(context.Context, *connect.Request[v1.GetWebhookRequest]) (*connect.Response[v1.GetWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.GetWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) UpdateWebhook(context.Context, *connect.Request[v1.UpdateWebhookRequest]) (*connect.Response[v1.UpdateWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.UpdateWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) DeleteWebhook(context.Context, *connect.Request[v1.DeleteWebhookRequest]) (*connect.Response[v1.DeleteWebhookResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.DeleteWebhook is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListChannelWebhooks(context.Context, *connect.Request[v1.ListChannelWebhooksRequest]) (*connect.Response[v1.ListChannelWebhooksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListChannelWebhooks is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListServerWebhooks(context.Context, *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListServerWebhooks is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) RegenerateWebhookToken(context.Context, *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.RegenerateWebhookToken is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListWebhookDeliveries is not implemented"))
 }

@@ -69,9 +69,10 @@ func TestValidate(t *testing.T) {
 		{"valid move_members", MoveMembers, true},
 		{"valid change_nickname", ChangeNickname, true},
 		{"valid manage_nicknames", ManageNicknames, true},
-		{"invalid unknown bit", 1 << 29, false},
+		{"valid manage_webhooks", ManageWebhooks, true},
+		{"invalid unknown bit", 1 << 30, false},
 		{"invalid high bit", 1 << 32, false},
-		{"mixed valid and invalid", KickMembers | (1 << 29), false},
+		{"mixed valid and invalid", KickMembers | (1 << 30), false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -407,6 +407,24 @@ type KeyEnvelopeStorer interface {
 	HasChannelKeyVersion(ctx context.Context, channelID string) (bool, error)
 }
 
+// WebhookStorer provides access to webhook data in Postgres.
+type WebhookStorer interface {
+	CreateWebhook(ctx context.Context, webhook *models.Webhook) error
+	GetWebhook(ctx context.Context, webhookID string) (*models.Webhook, error)
+	GetWebhookWithToken(ctx context.Context, webhookID string) (*models.Webhook, error)
+	UpdateWebhook(ctx context.Context, webhookID string, name, avatarURL *string) (*models.Webhook, error)
+	DeleteWebhook(ctx context.Context, webhookID string) error
+	ListByChannel(ctx context.Context, channelID string) ([]*models.Webhook, error)
+	ListByServer(ctx context.Context, serverID string) ([]*models.Webhook, error)
+	UpdateTokenHash(ctx context.Context, webhookID string, newHash []byte) error
+	CountByChannel(ctx context.Context, channelID string) (int, error)
+	CountByServer(ctx context.Context, serverID string) (int, error)
+	// Delivery logs
+	InsertDelivery(ctx context.Context, delivery *models.WebhookDelivery) error
+	ListDeliveries(ctx context.Context, webhookID string, limit int) ([]*models.WebhookDelivery, error)
+	CleanupOldDeliveries(ctx context.Context, webhookID string, keepCount int) error
+}
+
 // MediaAccessChecker verifies whether a user may access (download) an attachment.
 // Returns nil if access is allowed, store.ErrNotFound if denied (to avoid leaking
 // existence), or another error on unexpected failures.

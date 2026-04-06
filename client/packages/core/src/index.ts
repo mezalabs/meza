@@ -61,6 +61,8 @@ export {
   createServer,
   createServerFromTemplate,
   createSound,
+  // Webhooks
+  createWebhook,
   declineFriendRequest,
   declineMessageRequest,
   deleteChannel,
@@ -70,6 +72,7 @@ export {
   deletePermissionOverride,
   deleteRole,
   deleteSound,
+  deleteWebhook,
   editMessage,
   getEffectivePermissions,
   getMessages,
@@ -79,6 +82,7 @@ export {
   getReplies,
   getServer,
   getSystemMessageConfig,
+  getWebhook,
   joinServer,
   kickMember,
   listBans,
@@ -86,6 +90,7 @@ export {
   listChannelGroups,
   listChannelMembers,
   listChannels,
+  listChannelWebhooks,
   listDMChannels,
   listEmojis,
   listFriendRequests,
@@ -96,9 +101,12 @@ export {
   listRoles,
   listServerSounds,
   listServers,
+  listServerWebhooks,
   listUserEmojis,
   listUserSounds,
+  listWebhookDeliveries,
   pinMessage,
+  regenerateWebhookToken,
   removeChannelMember,
   removeFriend,
   removeReaction,
@@ -127,6 +135,7 @@ export {
   updateServer,
   updateSound,
   updateSystemMessageConfig,
+  updateWebhook,
 } from './api/chat.ts';
 // API — federation
 export {
