@@ -21,9 +21,21 @@ const SOUND_LABELS: { type: SoundType; label: string }[] = [
   { type: 'unmute', label: 'Unmute microphone' },
 ];
 
-const BADGE_OPTIONS: { value: BadgeMode; label: string; description: string }[] = [
-  { value: 'all', label: 'All unreads', description: 'Badge shows total unread messages' },
-  { value: 'mentions_dms', label: 'Mentions & DMs only', description: 'Badge shows only mentions and direct messages' },
+const BADGE_OPTIONS: {
+  value: BadgeMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'all',
+    label: 'All unreads',
+    description: 'Badge shows total unread messages',
+  },
+  {
+    value: 'mentions_dms',
+    label: 'Mentions & DMs only',
+    description: 'Badge shows only mentions and direct messages',
+  },
   { value: 'off', label: 'Off', description: 'No badge count on the app icon' },
 ];
 
@@ -43,7 +55,8 @@ export function NotificationsSection() {
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-text-muted">Badge</h3>
         <p className="text-xs text-text-muted">
-          Controls the unread count shown on the app icon in your dock or taskbar.
+          Controls the unread count shown on the app icon in your dock or
+          taskbar.
         </p>
         <div className="space-y-2">
           {BADGE_OPTIONS.map(({ value, label, description }) => (

@@ -39,13 +39,11 @@ export function startBadgeSync(badgeAdapter: BadgeAdapter): void {
   unsubReadState = useReadStateStore.subscribe(scheduleBadgeUpdate);
 
   // Subscribe to badge mode changes so switching settings takes effect immediately
-  unsubSettings = useNotificationSettingsStore.subscribe(
-    (state, prevState) => {
-      if (state.badgeMode !== prevState.badgeMode) {
-        scheduleBadgeUpdate();
-      }
-    },
-  );
+  unsubSettings = useNotificationSettingsStore.subscribe((state, prevState) => {
+    if (state.badgeMode !== prevState.badgeMode) {
+      scheduleBadgeUpdate();
+    }
+  });
 }
 
 export function stopBadgeSync(): void {

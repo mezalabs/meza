@@ -61,7 +61,10 @@ export const useReadStateStore = create<ReadStateState & ReadStateActions>()(
         state.byChannel[channelId] = {
           lastReadMessageId,
           unreadCount,
-          mentionOrDmCount: unreadCount === 0 ? 0 : (state.byChannel[channelId]?.mentionOrDmCount ?? 0),
+          mentionOrDmCount:
+            unreadCount === 0
+              ? 0
+              : (state.byChannel[channelId]?.mentionOrDmCount ?? 0),
         };
       });
     },

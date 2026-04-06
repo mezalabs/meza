@@ -2,8 +2,8 @@ import {
   app,
   type BrowserWindow,
   ipcMain,
-  nativeImage,
   Notification,
+  nativeImage,
 } from 'electron';
 import { getAutoLaunchEnabled, setAutoLaunch } from './autolaunch.js';
 import { DEFAULT_SERVER_URL } from './constants.js';
@@ -22,9 +22,7 @@ function createOverlayIcon(count: number): Electron.NativeImage | null {
       </text>
     </svg>`;
 
-  return nativeImage.createFromBuffer(
-    Buffer.from(canvas.trim()),
-  );
+  return nativeImage.createFromBuffer(Buffer.from(canvas.trim()));
 }
 
 export function registerIpcHandlers(win: BrowserWindow): void {

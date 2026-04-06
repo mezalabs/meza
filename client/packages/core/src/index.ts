@@ -21,11 +21,6 @@ export type {
 // Re-export protobuf enums used by UI
 export { ChannelType, MessageType } from '@meza/gen/meza/v1/models_pb.ts';
 export { PresenceStatus } from '@meza/gen/meza/v1/presence_pb.ts';
-// Badge
-export type { BadgeAdapter } from './badge/sync.ts';
-export { startBadgeSync, stopBadgeSync } from './badge/sync.ts';
-export { ElectronBadgeAdapter } from './badge/electron-adapter.ts';
-export { CapacitorBadgeAdapter } from './badge/capacitor-adapter.ts';
 // API — auth
 export {
   changePassword,
@@ -200,6 +195,11 @@ export {
   leaveVoiceChannel,
   mapVoiceError,
 } from './api/voice.ts';
+export { CapacitorBadgeAdapter } from './badge/capacitor-adapter.ts';
+export { ElectronBadgeAdapter } from './badge/electron-adapter.ts';
+// Badge
+export type { BadgeAdapter } from './badge/sync.ts';
+export { startBadgeSync, stopBadgeSync } from './badge/sync.ts';
 // Constants
 export { LOBBY_SERVER_ID } from './constants.ts';
 // Crypto — E2EE static channel key operations
