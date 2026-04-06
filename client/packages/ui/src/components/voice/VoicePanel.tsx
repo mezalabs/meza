@@ -40,15 +40,15 @@ import {
 } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { useScreenShareToggle } from '../../hooks/useScreenShareToggle.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { MAX_PANES, useTilingStore } from '../../stores/tiling.ts';
-import { useScreenShareToggle } from '../../hooks/useScreenShareToggle.ts';
 import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
-import { ScreenPickerDialog } from './ScreenPickerDialog.tsx';
 import { ChannelView } from '../chat/ChannelView.tsx';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { ScreenPickerDialog } from './ScreenPickerDialog.tsx';
 import { SoundboardPanel } from './SoundboardPanel.tsx';
 
 /* ——— Main component ——— */

@@ -1,6 +1,6 @@
+import { useLocalParticipant } from '@livekit/components-react';
 import type { ScreenSource } from '@meza/core';
 import { useStreamSettingsStore } from '@meza/core';
-import { useLocalParticipant } from '@livekit/components-react';
 import { useCallback, useState } from 'react';
 import {
   buildCaptureOptions,

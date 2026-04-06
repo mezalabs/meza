@@ -270,9 +270,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle(
     'screen-share:getSources',
-    async (event): Promise<
-      Array<{ id: string; name: string; thumbnail: string }> | null
-    > => {
+    async (
+      event,
+    ): Promise<Array<{
+      id: string;
+      name: string;
+      thumbnail: string;
+    }> | null> => {
       if (!mainWindow || event.sender.id !== mainWindow.webContents.id) {
         return null;
       }
@@ -305,9 +309,7 @@ app.whenReady().then(() => {
         const appWindowIds = BrowserWindow.getAllWindows().map((w) =>
           w.getMediaSourceId(),
         );
-        const filtered = sources.filter(
-          (s) => !appWindowIds.includes(s.id),
-        );
+        const filtered = sources.filter((s) => !appWindowIds.includes(s.id));
 
         enumeratedSources = filtered;
 

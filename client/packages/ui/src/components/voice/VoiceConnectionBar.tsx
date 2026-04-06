@@ -1,8 +1,4 @@
-import {
-  useChannelStore,
-  useServerStore,
-  useVoiceStore,
-} from '@meza/core';
+import { useChannelStore, useServerStore, useVoiceStore } from '@meza/core';
 import {
   LockKey,
   MonitorArrowUpIcon,
