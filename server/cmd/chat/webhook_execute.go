@@ -151,15 +151,6 @@ return count`
 		return
 	}
 
-	// Verify channel still exists.
-	ch, err := s.chatStore.GetChannel(r.Context(), webhook.ChannelID)
-	if err != nil {
-		s.logDelivery(r.Context(), webhookID, false, "channel_not_found", truncateString(string(body), 500), sourceIP, "", time.Since(start))
-		writeWebhookError(w, http.StatusNotFound, "channel_not_found", "channel no longer exists")
-		return
-	}
-	_ = ch
-
 	// Build webhook message content.
 	username := req.Username
 	if username == "" {
@@ -247,9 +238,13 @@ func (s *chatService) logDelivery(ctx context.Context, webhookID string, success
 	}
 
 	// Best-effort cleanup of old deliveries.
-	if err := s.webhookStore.CleanupOldDeliveries(ctx, webhookID, webhookDeliveryKeepCount); err != nil {
-		slog.Warn("failed to cleanup old deliveries", "err", err, "webhook_id", webhookID)
-	}
+	go func() {
+		cleanCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.webhookStore.CleanupOldDeliveries(cleanCtx, webhookID, webhookDeliveryKeepCount); err != nil {
+			slog.Warn("cleanup old deliveries", "err", err, "webhook_id", webhookID)
+		}
+	}()
 }
 
 func validateWebhookPayload(req *webhookExecuteRequest) error {
@@ -294,8 +289,13 @@ func validateWebhookPayload(req *webhookExecuteRequest) error {
 		if utf8.RuneCountInString(embed.Description) > webhookMaxDescriptionLen {
 			return fmt.Errorf("embed[%d].description exceeds %d characters", i, webhookMaxDescriptionLen)
 		}
-		if embed.URL != "" && !strings.HasPrefix(embed.URL, "https://") && !strings.HasPrefix(embed.URL, "http://") {
-			return fmt.Errorf("embed[%d].url must use HTTP or HTTPS", i)
+		if embed.URL != "" {
+			if len(embed.URL) > 2048 {
+				return fmt.Errorf("embed[%d].url exceeds 2048 characters", i)
+			}
+			if !strings.HasPrefix(embed.URL, "https://") {
+				return fmt.Errorf("embed[%d].url must use HTTPS", i)
+			}
 		}
 		if embed.Color > 0xFFFFFF {
 			return fmt.Errorf("embed[%d].color must be a 24-bit RGB value", i)

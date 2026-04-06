@@ -266,24 +266,35 @@ function WebhookCard({
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(webhook.name);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleDelete = async () => {
+    if (!window.confirm('Delete this webhook? This cannot be undone.')) return;
     setDeleting(true);
+    setError('');
     try {
       await deleteWebhook(webhook.id);
       onUpdate();
     } catch {
+      setError('Failed to delete webhook');
       setDeleting(false);
     }
   };
 
   const handleRegenerate = async () => {
+    if (
+      !window.confirm(
+        'Regenerate token? The current URL will stop working immediately.',
+      )
+    )
+      return;
     setRegenerating(true);
+    setError('');
     try {
       const res = await regenerateWebhookToken(webhook.id);
       setShowToken({ token: res.token, url: res.url });
     } catch {
-      // ignore
+      setError('Failed to regenerate token');
     } finally {
       setRegenerating(false);
     }
@@ -291,12 +302,13 @@ function WebhookCard({
 
   const handleSaveEdit = async () => {
     setSaving(true);
+    setError('');
     try {
       await updateWebhook(webhook.id, editName);
       onUpdate();
       setEditing(false);
     } catch {
-      // ignore
+      setError('Failed to save webhook');
     } finally {
       setSaving(false);
     }
@@ -308,12 +320,13 @@ function WebhookCard({
       return;
     }
     setLoadingDeliveries(true);
+    setError('');
     try {
       const result = await listWebhookDeliveries(webhook.id);
       setDeliveries(result);
       setShowDeliveries(true);
     } catch {
-      // ignore
+      setError('Failed to load delivery logs');
     } finally {
       setLoadingDeliveries(false);
     }
@@ -386,6 +399,8 @@ function WebhookCard({
               Edit Name
             </button>
           )}
+
+          {error && <p className="text-xs text-error">{error}</p>}
 
           {/* Show regenerated token */}
           {showToken && (

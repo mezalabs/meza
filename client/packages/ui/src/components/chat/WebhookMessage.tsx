@@ -23,7 +23,9 @@ interface WebhookMessageProps {
 function parseWebhookContent(raw: Uint8Array): WebhookMessageContent | null {
   try {
     const text = new TextDecoder().decode(raw);
-    return JSON.parse(text) as WebhookMessageContent;
+    const data = JSON.parse(text);
+    if (typeof data?.webhook_id !== 'string') return null;
+    return data as WebhookMessageContent;
   } catch {
     return null;
   }

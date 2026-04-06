@@ -6,7 +6,7 @@ CREATE TABLE webhooks (
     name        TEXT NOT NULL,
     avatar_url  TEXT NOT NULL DEFAULT '',
     token_hash  BYTEA NOT NULL,
-    created_by  TEXT NOT NULL REFERENCES users(id),
+    created_by  TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -27,4 +27,4 @@ CREATE TABLE webhook_deliveries (
     created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id);
+CREATE INDEX idx_webhook_deliveries_webhook_id ON webhook_deliveries(webhook_id, created_at DESC);
