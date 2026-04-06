@@ -1,11 +1,11 @@
 import {
   createWebhook,
   deleteWebhook,
+  getAppOrigin,
   listChannelWebhooks,
   listWebhookDeliveries,
   regenerateWebhookToken,
   updateWebhook,
-  getAppOrigin,
 } from '@meza/core';
 import {
   ArrowClockwiseIcon,
