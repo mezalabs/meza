@@ -11,8 +11,10 @@ export class CapacitorBadgeAdapter implements BadgeAdapter {
   private getBadge(): Promise<CapacitorBadgePlugin> {
     if (!this.badgePromise) {
       // Dynamic import — the actual module is installed only in the mobile package.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.badgePromise = (import('@capawesome/capacitor-badge' as any) as Promise<{ Badge: CapacitorBadgePlugin }>)
+      // The module specifier is built at runtime to prevent Vite from trying to
+      // resolve it during the web/desktop build where the package isn't installed.
+      const mod = ['@capawesome', 'capacitor-badge'].join('/');
+      this.badgePromise = (import(/* @vite-ignore */ mod) as Promise<{ Badge: CapacitorBadgePlugin }>)
         .then((m) => m.Badge)
         .catch(() => {
           this.badgePromise = null;
