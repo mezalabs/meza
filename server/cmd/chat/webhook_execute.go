@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -31,6 +32,7 @@ const (
 	webhookMaxFieldValueLen    = 1024
 	webhookMaxBodySize         = maxEncryptedContentSize // 64KB, same as messages
 	webhookDeliveryKeepCount   = 25
+	webhookMaxAuthorNameLen    = 256
 )
 
 // webhookExecuteRequest is the JSON body of a webhook POST.
@@ -45,8 +47,15 @@ type webhookEmbed struct {
 	Title       string              `json:"title,omitempty"`
 	Description string              `json:"description,omitempty"`
 	URL         string              `json:"url,omitempty"`
-	Color       uint32              `json:"color,omitempty"`
+	Color       *uint32             `json:"color,omitempty"` // nil = no color, 0 = black
+	Author      *webhookEmbedAuthor `json:"author,omitempty"`
 	Fields      []webhookEmbedField `json:"fields,omitempty"`
+}
+
+type webhookEmbedAuthor struct {
+	Name    string `json:"name"`
+	IconURL string `json:"icon_url,omitempty"`
+	URL     string `json:"url,omitempty"`
 }
 
 type webhookEmbedField struct {
@@ -247,6 +256,24 @@ func (s *chatService) logDelivery(ctx context.Context, webhookID string, success
 	}()
 }
 
+// validateExternalURL validates that a URL is a well-formed HTTPS URL.
+func validateExternalURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("must use HTTPS")
+	}
+	if u.Host == "" {
+		return fmt.Errorf("missing host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("userinfo not allowed")
+	}
+	return nil
+}
+
 func validateWebhookPayload(req *webhookExecuteRequest) error {
 	// Content length (use same limit as regular messages: count bytes, not runes).
 	if len(req.Content) > maxEncryptedContentSize {
@@ -273,8 +300,8 @@ func validateWebhookPayload(req *webhookExecuteRequest) error {
 		if len(req.AvatarURL) > 2048 {
 			return fmt.Errorf("avatar_url exceeds 2048 characters")
 		}
-		if !strings.HasPrefix(req.AvatarURL, "https://") {
-			return fmt.Errorf("avatar_url must use HTTPS")
+		if err := validateExternalURL(req.AvatarURL); err != nil {
+			return fmt.Errorf("avatar_url: %w", err)
 		}
 	}
 
@@ -283,6 +310,22 @@ func validateWebhookPayload(req *webhookExecuteRequest) error {
 		return fmt.Errorf("maximum %d embeds allowed", webhookMaxEmbeds)
 	}
 	for i, embed := range req.Embeds {
+		// Reject empty embeds.
+		if embed.Title == "" && embed.Description == "" && embed.URL == "" && len(embed.Fields) == 0 {
+			return fmt.Errorf("embed[%d] must have at least one of title, description, url, or fields", i)
+		}
+
+		// Null byte checks.
+		if strings.ContainsRune(embed.Title, 0) {
+			return fmt.Errorf("embed[%d].title contains invalid characters", i)
+		}
+		if strings.ContainsRune(embed.Description, 0) {
+			return fmt.Errorf("embed[%d].description contains invalid characters", i)
+		}
+		if strings.ContainsRune(embed.URL, 0) {
+			return fmt.Errorf("embed[%d].url contains invalid characters", i)
+		}
+
 		if utf8.RuneCountInString(embed.Title) > webhookMaxTitleLen {
 			return fmt.Errorf("embed[%d].title exceeds %d characters", i, webhookMaxTitleLen)
 		}
@@ -293,17 +336,62 @@ func validateWebhookPayload(req *webhookExecuteRequest) error {
 			if len(embed.URL) > 2048 {
 				return fmt.Errorf("embed[%d].url exceeds 2048 characters", i)
 			}
-			if !strings.HasPrefix(embed.URL, "https://") {
-				return fmt.Errorf("embed[%d].url must use HTTPS", i)
+			if err := validateExternalURL(embed.URL); err != nil {
+				return fmt.Errorf("embed[%d].url: %w", i, err)
 			}
 		}
-		if embed.Color > 0xFFFFFF {
+		if embed.Color != nil && *embed.Color > 0xFFFFFF {
 			return fmt.Errorf("embed[%d].color must be a 24-bit RGB value", i)
 		}
+
+		// Author validation.
+		if embed.Author != nil {
+			if embed.Author.Name == "" {
+				return fmt.Errorf("embed[%d].author.name is required", i)
+			}
+			if utf8.RuneCountInString(embed.Author.Name) > webhookMaxAuthorNameLen {
+				return fmt.Errorf("embed[%d].author.name exceeds %d characters", i, webhookMaxAuthorNameLen)
+			}
+			if strings.ContainsRune(embed.Author.Name, 0) {
+				return fmt.Errorf("embed[%d].author.name contains invalid characters", i)
+			}
+			if embed.Author.IconURL != "" {
+				if len(embed.Author.IconURL) > 2048 {
+					return fmt.Errorf("embed[%d].author.icon_url exceeds 2048 characters", i)
+				}
+				if strings.ContainsRune(embed.Author.IconURL, 0) {
+					return fmt.Errorf("embed[%d].author.icon_url contains invalid characters", i)
+				}
+				if err := validateExternalURL(embed.Author.IconURL); err != nil {
+					return fmt.Errorf("embed[%d].author.icon_url: %w", i, err)
+				}
+			}
+			if embed.Author.URL != "" {
+				if len(embed.Author.URL) > 2048 {
+					return fmt.Errorf("embed[%d].author.url exceeds 2048 characters", i)
+				}
+				if strings.ContainsRune(embed.Author.URL, 0) {
+					return fmt.Errorf("embed[%d].author.url contains invalid characters", i)
+				}
+				if err := validateExternalURL(embed.Author.URL); err != nil {
+					return fmt.Errorf("embed[%d].author.url: %w", i, err)
+				}
+			}
+		}
+
 		if len(embed.Fields) > webhookMaxEmbedFields {
 			return fmt.Errorf("embed[%d] exceeds maximum %d fields", i, webhookMaxEmbedFields)
 		}
 		for j, field := range embed.Fields {
+			if field.Name == "" {
+				return fmt.Errorf("embed[%d].fields[%d].name is required", i, j)
+			}
+			if strings.ContainsRune(field.Name, 0) {
+				return fmt.Errorf("embed[%d].fields[%d].name contains invalid characters", i, j)
+			}
+			if strings.ContainsRune(field.Value, 0) {
+				return fmt.Errorf("embed[%d].fields[%d].value contains invalid characters", i, j)
+			}
 			if utf8.RuneCountInString(field.Name) > webhookMaxFieldNameLen {
 				return fmt.Errorf("embed[%d].fields[%d].name exceeds %d characters", i, j, webhookMaxFieldNameLen)
 			}

@@ -312,14 +312,22 @@ message WebhookEmbed {
   string title = 1;
   string description = 2;  // supports markdown
   string url = 3;
-  uint32 color = 4;        // 24-bit RGB integer
+  uint32 color = 4;        // 24-bit RGB. 0 = black, absent = no color.
   repeated WebhookEmbedField fields = 5;
+  EmbedAuthor author = 6;  // optional author displayed at top of embed
 }
 
 message WebhookEmbedField {
   string name = 1;
-  string value = 2;   // supports markdown
+  string value = 2;
   bool inline = 3;
+}
+
+// Author information displayed at the top of an embed.
+message EmbedAuthor {
+  string name = 1;
+  string icon_url = 2;
+  string url = 3;
 }
 
 message WebhookDelivery {
