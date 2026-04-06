@@ -2700,17 +2700,18 @@ func (s *chatService) JoinServer(ctx context.Context, req *connect.Request[v1.Jo
 	}
 
 	now := time.Now()
+	memberProto := memberToProto(&models.Member{
+		UserID:   userID,
+		ServerID: consumed.ServerID,
+		JoinedAt: now,
+	})
+	memberProto.InviterUserId = inv.CreatorID
 	event := &v1.Event{
 		Id:        models.NewID(),
 		Type:      v1.EventType_EVENT_TYPE_MEMBER_JOIN,
 		Timestamp: timestamppb.New(now),
 		Payload: &v1.Event_MemberJoin{
-			MemberJoin: &v1.Member{
-				UserId:         userID,
-				ServerId:       consumed.ServerID,
-				JoinedAt:       timestamppb.New(now),
-				InviterUserId:  inv.CreatorID,
-			},
+			MemberJoin: memberProto,
 		},
 	}
 	eventData, err := proto.Marshal(event)

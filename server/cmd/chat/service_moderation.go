@@ -275,10 +275,13 @@ func (s *chatService) SetMemberRoles(ctx context.Context, req *connect.Request[v
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("cannot modify your own roles"))
 	}
 
-	// Deduplicate role IDs.
+	// Deduplicate role IDs and strip the implicit @everyone role (id = serverID).
 	seen := make(map[string]struct{}, len(req.Msg.RoleIds))
 	dedupedRoleIDs := make([]string, 0, len(req.Msg.RoleIds))
 	for _, id := range req.Msg.RoleIds {
+		if id == req.Msg.ServerId {
+			continue // @everyone is implicit, never stored in member_roles
+		}
 		if _, exists := seen[id]; !exists {
 			seen[id] = struct{}{}
 			dedupedRoleIDs = append(dedupedRoleIDs, id)
@@ -1039,10 +1042,16 @@ func banToProto(b *models.Ban) *v1.Ban {
 }
 
 func memberToProto(m *models.Member) *v1.Member {
+	// @everyone role ID = server ID; always include it since every member
+	// implicitly has this role, but it is not stored in member_roles.
+	roleIDs := make([]string, 0, len(m.RoleIDs)+1)
+	roleIDs = append(roleIDs, m.ServerID)
+	roleIDs = append(roleIDs, m.RoleIDs...)
+
 	pm := &v1.Member{
 		UserId:   m.UserID,
 		ServerId: m.ServerID,
-		RoleIds:  m.RoleIDs,
+		RoleIds:  roleIDs,
 		Nickname: m.Nickname,
 		JoinedAt: timestamppb.New(m.JoinedAt),
 	}

@@ -158,6 +158,9 @@ message Attachment {
 message Member {
   string user_id = 1;
   string server_id = 2;
+  // Roles assigned to this member. The implicit @everyone role (whose id
+  // equals server_id) is always included as the first element, even though
+  // it is not persisted in the member_roles table.
   repeated string role_ids = 3;
   string nickname = 4;
   google.protobuf.Timestamp joined_at = 5;
