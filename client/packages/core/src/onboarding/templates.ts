@@ -13,6 +13,13 @@ export interface TemplateChannel {
 
 export interface TemplateChannelGroup {
   name: string;
+  /**
+   * If non-empty, the category denies @everyone ViewChannel and allows these
+   * roles ViewChannel + SendMessages. Channels inside the category with
+   * permissions_synced=true inherit the gate automatically. Each name must
+   * reference a role in the same template's `roles` list.
+   */
+  allowedRoleNames?: string[];
 }
 
 export interface TemplateRole {
@@ -94,7 +101,10 @@ export const SERVER_TEMPLATES: ServerTemplate[] = [
     channelGroups: [
       { name: 'Information' },
       { name: 'Chat' },
-      { name: 'Moderation' },
+      // Moderation is gated: @everyone is denied ViewChannel at the category
+      // level and the Mod role is allowed. Any channel added to this category
+      // inherits the gate automatically.
+      { name: 'Moderation', allowedRoleNames: ['Mod'] },
       { name: 'Voice' },
     ],
     channels: [
@@ -123,11 +133,12 @@ export const SERVER_TEMPLATES: ServerTemplate[] = [
         groupName: 'Chat',
       },
       {
+        // Privacy comes from the Moderation category override; the channel
+        // has no per-channel overrides so it stays permissions_synced=true
+        // and inherits the deny-@everyone + allow-Mod gate.
         name: 'mod-chat',
         type: ChannelType.TEXT,
         isDefault: false,
-        isPrivate: true,
-        roleNames: ['Mod'],
         groupName: 'Moderation',
       },
     ],

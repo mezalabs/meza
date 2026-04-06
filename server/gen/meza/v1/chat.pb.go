@@ -9600,10 +9600,14 @@ func (x *ChannelSpec) GetGroupName() string {
 }
 
 type ChannelGroupSpec struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// If non-empty, the category denies @everyone ViewChannel and allows these
+	// roles ViewChannel + SendMessages. Roles must be declared in the same
+	// request's roles list. Mirrors ChannelSpec.role_names semantics.
+	AllowedRoleNames []string `protobuf:"bytes,2,rep,name=allowed_role_names,json=allowedRoleNames,proto3" json:"allowed_role_names,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ChannelGroupSpec) Reset() {
@@ -9641,6 +9645,13 @@ func (x *ChannelGroupSpec) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+func (x *ChannelGroupSpec) GetAllowedRoleNames() []string {
+	if x != nil {
+		return x.AllowedRoleNames
+	}
+	return nil
 }
 
 type RoleSpec struct {
@@ -13557,9 +13568,10 @@ const file_meza_v1_chat_proto_rawDesc = "" +
 	"role_names\x18\x05 \x03(\tR\troleNames\x12\"\n" +
 	"\n" +
 	"group_name\x18\x06 \x01(\tH\x00R\tgroupName\x88\x01\x01B\r\n" +
-	"\v_group_name\"&\n" +
+	"\v_group_name\"T\n" +
 	"\x10ChannelGroupSpec\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"\x84\x01\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12,\n" +
+	"\x12allowed_role_names\x18\x02 \x03(\tR\x10allowedRoleNames\"\x84\x01\n" +
 	"\bRoleSpec\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vpermissions\x18\x02 \x01(\x03R\vpermissions\x12\x14\n" +

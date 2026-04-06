@@ -121,7 +121,10 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
         onboardingEnabled,
         rulesRequired,
         everyonePermissions,
-        channelGroups: prunedGroups.map((g) => ({ name: g.name })),
+        channelGroups: prunedGroups.map((g) => ({
+          name: g.name,
+          allowedRoleNames: g.allowedRoleNames,
+        })),
       });
 
       if (result.server) {

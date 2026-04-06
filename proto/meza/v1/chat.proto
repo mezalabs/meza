@@ -1079,6 +1079,10 @@ message ChannelSpec {
 
 message ChannelGroupSpec {
   string name = 1;
+  // If non-empty, the category denies @everyone ViewChannel and allows these
+  // roles ViewChannel + SendMessages. Roles must be declared in the same
+  // request's roles list. Mirrors ChannelSpec.role_names semantics.
+  repeated string allowed_role_names = 2;
 }
 
 message RoleSpec {

@@ -1029,7 +1029,7 @@ export async function createServerFromTemplate(params: {
   onboardingEnabled: boolean;
   rulesRequired: boolean;
   everyonePermissions?: bigint;
-  channelGroups: Array<{ name: string }>;
+  channelGroups: Array<{ name: string; allowedRoleNames?: string[] }>;
 }) {
   try {
     const res = await chatClient.createServerFromTemplate(params);

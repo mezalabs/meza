@@ -1763,8 +1763,13 @@ type TemplateChannelSpec struct {
 }
 
 // TemplateChannelGroupSpec describes a channel category to create with the server.
+// When AllowedRoleNames is non-empty, the category is gated: @everyone is denied
+// ViewChannel and each named role is granted ViewChannel+SendMessages at the
+// category level. Channels with permissions_synced=true inside this category
+// inherit the gate automatically.
 type TemplateChannelGroupSpec struct {
-	Name string
+	Name             string
+	AllowedRoleNames []string
 }
 
 // TemplateRoleSpec describes a role to create with the server.
@@ -1994,6 +1999,44 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 			)
 			if err != nil {
 				return nil, nil, nil, nil, fmt.Errorf("insert permission override for channel %q role %q: %w", ch.Name, roleName, err)
+			}
+		}
+	}
+
+	// Create permission overrides for gated channel groups: deny @everyone
+	// ViewChannel at the category level and allow each named role
+	// ViewChannel + SendMessages. Any synced channel inside the group
+	// inherits the gate automatically.
+	for i, cg := range createdGroups {
+		spec := params.ChannelGroups[i]
+		if len(spec.AllowedRoleNames) == 0 {
+			continue
+		}
+		// @everyone role has id = serverID.
+		denyOverrideID := models.NewID()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO permission_overrides (id, channel_group_id, role_id, allow, deny)
+			 VALUES ($1, $2, $3, 0, $4)`,
+			denyOverrideID, cg.ID, serverID, permissions.ViewChannel,
+		)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("insert @everyone deny override for channel group %q: %w", cg.Name, err)
+		}
+		allow := permissions.ViewChannel | permissions.SendMessages
+		for _, roleName := range spec.AllowedRoleNames {
+			roleID, ok := roleIDByName[roleName]
+			if !ok {
+				// Handler-level validation should catch this; be defensive.
+				continue
+			}
+			overrideID := models.NewID()
+			_, err = tx.Exec(ctx,
+				`INSERT INTO permission_overrides (id, channel_group_id, role_id, allow, deny)
+				 VALUES ($1, $2, $3, $4, 0)`,
+				overrideID, cg.ID, roleID, allow,
+			)
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("insert permission override for channel group %q role %q: %w", cg.Name, roleName, err)
 			}
 		}
 	}

@@ -772,7 +772,10 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 		if len(g.Name) > maxTemplateNameLen {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_group %d: name exceeds %d characters", i, maxTemplateNameLen))
 		}
-		channelGroupSpecs[i] = store.TemplateChannelGroupSpec{Name: g.Name}
+		channelGroupSpecs[i] = store.TemplateChannelGroupSpec{
+			Name:             g.Name,
+			AllowedRoleNames: g.AllowedRoleNames,
+		}
 	}
 
 	// Reference validation: reject channels that reference unknown group_name
@@ -785,6 +788,13 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 	roleNamesSet := make(map[string]struct{}, len(req.Msg.Roles))
 	for _, r := range req.Msg.Roles {
 		roleNamesSet[r.Name] = struct{}{}
+	}
+	for i, g := range req.Msg.ChannelGroups {
+		for _, rn := range g.AllowedRoleNames {
+			if _, ok := roleNamesSet[rn]; !ok {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_group %d: unknown allowed_role_name %q", i, rn))
+			}
+		}
 	}
 	for i, ch := range req.Msg.Channels {
 		if ch.GroupName != nil && *ch.GroupName != "" {
