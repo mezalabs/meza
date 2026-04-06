@@ -1030,6 +1030,9 @@ func (m *mockPermissionOverrideStore) GetAllOverridesForChannel(_ context.Contex
 func (m *mockPermissionOverrideStore) GetAllOverridesForChannels(_ context.Context, _ []string, _ []string, _ string) (map[string]*store.ChannelOverrides, error) {
 	return map[string]*store.ChannelOverrides{}, nil
 }
+func (m *mockPermissionOverrideStore) GetOverridesForChannelGroups(_ context.Context, _ []string, _ []string, _ string) (map[string]*store.ChannelOverrides, error) {
+	return map[string]*store.ChannelOverrides{}, nil
+}
 func (m *mockPermissionOverrideStore) DeleteOverrideByUser(_ context.Context, _, _ string) error {
 	return nil
 }

@@ -216,12 +216,105 @@ func (s *chatService) ListChannelGroups(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
 
-	protoGroups := make([]*v1.ChannelGroup, len(groups))
-	for i, g := range groups {
+	// Filter out categories the caller cannot view. Resolve ViewChannel at the
+	// category level: apply only category-level overrides (no channel
+	// overrides) to the member's base role permissions. Gated categories
+	// (e.g. the Community template's Moderation category) must not leak to
+	// non-members.
+	visible, err := s.filterVisibleGroups(ctx, userID, req.Msg.ServerId, groups)
+	if err != nil {
+		return nil, err
+	}
+
+	protoGroups := make([]*v1.ChannelGroup, len(visible))
+	for i, g := range visible {
 		protoGroups[i] = channelGroupToProto(g)
 	}
 
 	return connect.NewResponse(&v1.ListChannelGroupsResponse{
 		ChannelGroups: protoGroups,
 	}), nil
+}
+
+// filterVisibleGroups returns the subset of groups for which the caller has
+// ViewChannel at the category level. Owners and Administrator-role members
+// see every group via the resolver's existing bypass logic. Empty groups
+// (no overrides) inherit the member's default ViewChannel from
+// @everyone/role permissions and are returned as-is.
+func (s *chatService) filterVisibleGroups(ctx context.Context, userID, serverID string, groups []*models.ChannelGroup) ([]*models.ChannelGroup, error) {
+	if len(groups) == 0 {
+		return groups, nil
+	}
+
+	srv, err := s.chatStore.GetServer(ctx, serverID)
+	if err != nil {
+		slog.Error("getting server for category filter", "err", err, "server", serverID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+	// Owner bypass short-circuits.
+	if srv.OwnerID == userID {
+		return groups, nil
+	}
+
+	everyoneRole, err := s.roleStore.GetRole(ctx, serverID)
+	if err != nil {
+		slog.Error("getting everyone role for category filter", "err", err, "server", serverID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	member, err := s.chatStore.GetMember(ctx, userID, serverID)
+	if err != nil {
+		slog.Error("getting member for category filter", "err", err, "user", userID, "server", serverID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	var rolePerms []int64
+	if len(member.RoleIDs) > 0 {
+		memberRoles, err := s.roleStore.GetRolesByIDs(ctx, member.RoleIDs, serverID)
+		if err != nil {
+			slog.Error("getting member roles for category filter", "err", err, "user", userID, "server", serverID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		rolePerms = make([]int64, len(memberRoles))
+		for i, r := range memberRoles {
+			rolePerms[i] = r.Permissions
+		}
+	}
+
+	var timedOutUntil int64
+	if member.TimedOutUntil != nil {
+		timedOutUntil = member.TimedOutUntil.Unix()
+	}
+
+	allRoleIDs := append([]string{serverID}, member.RoleIDs...)
+
+	groupIDs := make([]string, len(groups))
+	for i, g := range groups {
+		groupIDs[i] = g.ID
+	}
+	overridesByGroup, err := s.permissionOverrideStore.GetOverridesForChannelGroups(ctx, groupIDs, allRoleIDs, userID)
+	if err != nil {
+		slog.Error("getting group overrides for category filter", "err", err, "server", serverID)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+	}
+
+	nowUnix := time.Now().Unix()
+	visible := make([]*models.ChannelGroup, 0, len(groups))
+	for _, g := range groups {
+		input := permissions.ResolveInput{
+			EveryonePerms: everyoneRole.Permissions,
+			RolePerms:     rolePerms,
+			IsOwner:       false, // handled above
+			TimedOutUntil: timedOutUntil,
+		}
+		if overrides, ok := overridesByGroup[g.ID]; ok {
+			input.GroupRoleOverrides = overrides.GroupRoleOverrides
+			input.GroupUserOverride = overrides.GroupUserOverride
+		}
+		perms := permissions.ResolveEffective(input, nowUnix)
+		if permissions.Has(perms, permissions.ViewChannel) {
+			visible = append(visible, g)
+		}
+	}
+	return visible, nil
 }

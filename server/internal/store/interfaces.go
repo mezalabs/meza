@@ -362,6 +362,11 @@ type PermissionOverrideStorer interface {
 	// GetAllOverridesForChannels returns all overrides for multiple channels in a single
 	// query, keyed by channel ID. This avoids N+1 queries when resolving permissions in batch.
 	GetAllOverridesForChannels(ctx context.Context, channelIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error)
+	// GetOverridesForChannelGroups returns the role- and user-scoped overrides
+	// targeting each channel group, keyed by group ID. Only the Group* fields of
+	// ChannelOverrides are populated. Used to resolve ViewChannel at the
+	// category level so gated categories can be filtered from ListChannelGroups.
+	GetOverridesForChannelGroups(ctx context.Context, groupIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error)
 }
 
 // FederationStorer provides access to federation data in Postgres.
