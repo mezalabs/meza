@@ -51,9 +51,7 @@ export const WebhookEmbed = memo(function WebhookEmbed({
     embed.color !== undefined ? colorToHex(embed.color) : undefined;
 
   const visibleFields =
-    hasFields && !fieldsExpanded
-      ? fields.slice(0, MAX_VISIBLE_FIELDS)
-      : fields;
+    hasFields && !fieldsExpanded ? fields.slice(0, MAX_VISIBLE_FIELDS) : fields;
   const hiddenCount = fields.length - MAX_VISIBLE_FIELDS;
 
   return (
