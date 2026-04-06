@@ -88,15 +88,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
   },
 
-  // --- Screen sharing (Windows only) ---
-  ...(process.platform === 'win32'
-    ? {
-        screenShare: {
-          pick: () =>
-            ipcRenderer.invoke('screen-share:pick') as Promise<boolean>,
-        },
-      }
-    : {}),
+  // --- Screen sharing (all platforms) ---
+  screenShare: {
+    getSources: () =>
+      ipcRenderer.invoke('screen-share:getSources') as Promise<
+        Array<{ id: string; name: string; thumbnail: string }> | null
+      >,
+    select: (sourceId: string) =>
+      ipcRenderer.invoke(
+        'screen-share:select',
+        sourceId,
+      ) as Promise<{ success: boolean }>,
+    openSettings: () => ipcRenderer.send('screen-share:openSettings'),
+  },
 
   // --- App info ---
   app: {

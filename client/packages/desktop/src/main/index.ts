@@ -3,11 +3,13 @@ import path from 'node:path';
 import {
   app,
   BrowserWindow,
+  desktopCapturer,
   ipcMain,
   nativeImage,
   protocol,
   screen,
   session,
+  shell,
 } from 'electron';
 import { DEFAULT_SERVER_URL } from './constants.js';
 import {
@@ -16,7 +18,6 @@ import {
   setupDeepLinks,
 } from './deeplink.js';
 import { registerIpcHandlers } from './ipc.js';
-import { showScreenPicker } from './screenPicker.js';
 import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
@@ -247,14 +248,119 @@ app.whenReady().then(() => {
     },
   );
 
-  // Enable navigator.mediaDevices.getDisplayMedia() in the renderer.
-  // Without setDisplayMediaRequestHandler, getDisplayMedia is blocked entirely.
-  if (process.platform === 'linux') {
-    // On Linux (Wayland/PipeWire), desktopCapturer.getSources() causes double
-    // PipeWire portal dialogs: one for source enumeration, one for capture.
-    // Avoid getSources entirely — construct a source from Electron's screen API
-    // (which doesn't go through PipeWire) and let PipeWire fire only once
-    // when Electron creates the actual capture stream.
+  // ── Screen share: first-party picker ──────────────────────────────
+  // Unified flow across macOS, Windows, and Linux X11:
+  //   1. Renderer calls screen-share:getSources → main enumerates via desktopCapturer
+  //   2. Renderer shows picker dialog, user selects → screen-share:select
+  //   3. Renderer calls getDisplayMedia() → handler returns pre-selected source
+  //
+  // Linux Wayland keeps its existing synthetic-source handler because
+  // desktopCapturer.getSources() triggers a double PipeWire dialog.
+
+  const isWayland =
+    process.platform === 'linux' &&
+    (process.env.XDG_SESSION_TYPE === 'wayland' ||
+      !!process.env.WAYLAND_DISPLAY);
+
+  // Most recently enumerated sources (kept for source ID validation).
+  let enumeratedSources: Electron.DesktopCapturerSource[] = [];
+  let enumerating = false;
+  let pendingSource: Electron.DesktopCapturerSource | null = null;
+  let pendingSourceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  ipcMain.handle(
+    'screen-share:getSources',
+    async (event): Promise<
+      Array<{ id: string; name: string; thumbnail: string }> | null
+    > => {
+      if (!mainWindow || event.sender.id !== mainWindow.webContents.id) {
+        return null;
+      }
+
+      // Wayland: signal renderer to skip picker and use native path.
+      if (isWayland) return null;
+
+      // Prevent concurrent enumerations.
+      if (enumerating) return null;
+      enumerating = true;
+
+      // Clear any stale pending source from a previous picker session.
+      pendingSource = null;
+      if (pendingSourceTimeout) {
+        clearTimeout(pendingSourceTimeout);
+        pendingSourceTimeout = null;
+      }
+
+      try {
+        const scaleFactor = screen.getPrimaryDisplay().scaleFactor;
+        const sources = await desktopCapturer.getSources({
+          types: ['screen', 'window'],
+          thumbnailSize: {
+            width: 320 * scaleFactor,
+            height: 180 * scaleFactor,
+          },
+        });
+
+        // Filter out the app's own windows before serializing thumbnails.
+        const appWindowIds = BrowserWindow.getAllWindows().map((w) =>
+          w.getMediaSourceId(),
+        );
+        const filtered = sources.filter(
+          (s) => !appWindowIds.includes(s.id),
+        );
+
+        enumeratedSources = filtered;
+
+        return filtered.map((s) => ({
+          id: s.id,
+          name: s.name,
+          thumbnail: s.thumbnail.isEmpty()
+            ? ''
+            : s.thumbnail.toJPEG(80).toString('base64'),
+        }));
+      } catch {
+        return [];
+      } finally {
+        enumerating = false;
+      }
+    },
+  );
+
+  ipcMain.handle(
+    'screen-share:select',
+    (event, sourceId: string): { success: boolean } => {
+      if (!mainWindow || event.sender.id !== mainWindow.webContents.id) {
+        return { success: false };
+      }
+
+      // Validate sourceId against the most recently enumerated list.
+      const source = enumeratedSources.find((s) => s.id === sourceId);
+      if (!source) return { success: false };
+
+      pendingSource = source;
+
+      // Expire the pending source after 10 seconds if never consumed.
+      if (pendingSourceTimeout) clearTimeout(pendingSourceTimeout);
+      pendingSourceTimeout = setTimeout(() => {
+        pendingSource = null;
+        pendingSourceTimeout = null;
+      }, 10_000);
+
+      return { success: true };
+    },
+  );
+
+  // Open macOS Screen Recording settings from the renderer without
+  // window.open() (which creates a BrowserWindow in Electron).
+  ipcMain.on('screen-share:openSettings', () => {
+    shell.openExternal(
+      'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
+    );
+  });
+
+  if (isWayland) {
+    // Linux Wayland: construct a synthetic source from the primary display.
+    // PipeWire fires once for the actual capture — no picker dialog.
     session.defaultSession.setDisplayMediaRequestHandler(
       (_request, callback) => {
         const primary = screen.getPrimaryDisplay();
@@ -271,38 +377,21 @@ app.whenReady().then(() => {
         });
       },
     );
-  } else if (process.platform === 'win32') {
-    // Windows: desktopCapturer.getSources() and opening BrowserWindows both
-    // deadlock when called inside setDisplayMediaRequestHandler. Instead:
-    // 1. Renderer calls 'screen-share:pick' IPC → main shows picker (no deadlock)
-    // 2. User picks a source → main stores it in pendingSource
-    // 3. Renderer calls getDisplayMedia() → handler returns pendingSource instantly
-    let pendingSource: Electron.DesktopCapturerSource | null = null;
-
-    ipcMain.handle('screen-share:pick', async () => {
-      if (!mainWindow) return false;
-      const selected = await showScreenPicker(mainWindow);
-      pendingSource = selected;
-      return selected !== null;
-    });
-
+  } else {
+    // macOS, Windows, Linux X11: consume the pre-selected pending source.
     session.defaultSession.setDisplayMediaRequestHandler(
       (_request, callback) => {
         if (pendingSource) {
+          if (pendingSourceTimeout) {
+            clearTimeout(pendingSourceTimeout);
+            pendingSourceTimeout = null;
+          }
           callback({ video: pendingSource, audio: 'loopback' });
           pendingSource = null;
         } else {
           callback({});
         }
       },
-    );
-  } else {
-    // macOS: native system picker.
-    session.defaultSession.setDisplayMediaRequestHandler(
-      (_request, callback) => {
-        callback({});
-      },
-      { useSystemPicker: true },
     );
   }
 

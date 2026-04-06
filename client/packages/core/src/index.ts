@@ -496,6 +496,7 @@ export * from './tiling/index.ts';
 // Types — Electron API
 export type {
   ElectronAPI,
+  ScreenSource,
   UpdateStatus,
   UpdateUrgency,
 } from './types/electron.d.ts';

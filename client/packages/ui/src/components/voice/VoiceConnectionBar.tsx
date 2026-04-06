@@ -1,8 +1,6 @@
-import { useLocalParticipant } from '@livekit/components-react';
 import {
   useChannelStore,
   useServerStore,
-  useStreamSettingsStore,
   useVoiceStore,
 } from '@meza/core';
 import {
@@ -12,13 +10,10 @@ import {
   PhoneSlashIcon,
   UserSoundIcon,
 } from '@phosphor-icons/react';
-import { useRef } from 'react';
+import { useScreenShareToggle } from '../../hooks/useScreenShareToggle.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
-import {
-  buildCaptureOptions,
-  buildPublishOptions,
-} from '../../utils/streamPresets.ts';
+import { ScreenPickerDialog } from './ScreenPickerDialog.tsx';
 
 /**
  * Compact bar shown in the sidebar when connected to a voice channel.
@@ -111,10 +106,19 @@ function VoiceBarConnectedControls({
 }: {
   onDisconnect: () => void;
 }) {
-  const { localParticipant } = useLocalParticipant();
-  const isScreenSharing = localParticipant.isScreenShareEnabled;
   const canScreenShare = useVoiceStore((s) => s.canScreenShare);
-  const toggling = useRef(false);
+  const {
+    toggle,
+    isSharing,
+    pickerOpen,
+    sources,
+    selectedSourceId,
+    setSelectedSourceId,
+    confirmShare,
+    cancelPicker,
+    pickerError,
+    retryGetSources,
+  } = useScreenShareToggle(canScreenShare);
   const showScreenShare =
     canScreenShare &&
     typeof navigator.mediaDevices?.getDisplayMedia === 'function';
@@ -123,46 +127,38 @@ function VoiceBarConnectedControls({
     <div className="flex items-center gap-2">
       {/* Screen share toggle */}
       {showScreenShare && (
-        <button
-          type="button"
-          onClick={async () => {
-            if (toggling.current) return;
-            toggling.current = true;
-            try {
-              if (isScreenSharing) {
-                await localParticipant.setScreenShareEnabled(false);
-              } else {
-                if (window.electronAPI?.screenShare) {
-                  const picked = await window.electronAPI.screenShare.pick();
-                  if (!picked) return;
-                }
-                const state = useStreamSettingsStore.getState();
-                await localParticipant.setScreenShareEnabled(
-                  true,
-                  buildCaptureOptions(state),
-                  buildPublishOptions(state),
-                );
-              }
-            } catch {
-              // User cancelled the picker — no-op
-            } finally {
-              toggling.current = false;
-            }
-          }}
-          className={`p-1 transition-colors ${
-            isScreenSharing
-              ? 'text-success hover:text-success/80'
-              : 'text-text-muted hover:text-text'
-          }`}
-          aria-label={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
-          title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
-        >
-          {isScreenSharing ? (
-            <MonitorIcon size={22} aria-hidden="true" />
-          ) : (
-            <MonitorArrowUpIcon size={22} aria-hidden="true" />
-          )}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={toggle}
+            className={`p-1 transition-colors ${
+              isSharing
+                ? 'text-success hover:text-success/80'
+                : 'text-text-muted hover:text-text'
+            }`}
+            aria-label={isSharing ? 'Stop sharing screen' : 'Share screen'}
+            title={isSharing ? 'Stop sharing screen' : 'Share screen'}
+          >
+            {isSharing ? (
+              <MonitorIcon size={22} aria-hidden="true" />
+            ) : (
+              <MonitorArrowUpIcon size={22} aria-hidden="true" />
+            )}
+          </button>
+          <ScreenPickerDialog
+            open={pickerOpen}
+            onOpenChange={(open) => {
+              if (!open) cancelPicker();
+            }}
+            sources={sources}
+            selectedSourceId={selectedSourceId}
+            onSelectSource={setSelectedSourceId}
+            onShare={confirmShare}
+            onCancel={cancelPicker}
+            error={pickerError}
+            onRetry={retryGetSources}
+          />
+        </>
       )}
 
       {/* Disconnect */}
