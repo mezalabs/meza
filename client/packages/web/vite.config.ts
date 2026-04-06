@@ -98,6 +98,11 @@ export default defineConfig(async () => {
           target: 'http://localhost:8088',
           changeOrigin: true,
         },
+        // Webhook execute endpoint → server/cmd/chat (port 8082)
+        '/webhooks': {
+          target: 'http://localhost:8082',
+          changeOrigin: true,
+        },
         // Gateway WebSocket → server/cmd/gateway (port 8080)
         '/ws': {
           target: 'ws://localhost:8080',

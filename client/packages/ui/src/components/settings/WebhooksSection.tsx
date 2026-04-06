@@ -5,9 +5,11 @@ import {
   listWebhookDeliveries,
   regenerateWebhookToken,
   updateWebhook,
+  getAppOrigin,
 } from '@meza/core';
 import {
   ArrowClockwiseIcon,
+  CaretRightIcon,
   CopyIcon,
   PlusIcon,
   TrashIcon,
@@ -26,6 +28,7 @@ export function WebhooksSection({ channelId }: WebhooksSectionProps) {
   const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
 
   const loadWebhooks = useCallback(async () => {
     setLoading(true);
@@ -45,13 +48,30 @@ export function WebhooksSection({ channelId }: WebhooksSectionProps) {
   }, [loadWebhooks]);
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-lg space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-text-subtle">
           Webhooks
         </h2>
-        <CreateWebhookButton channelId={channelId} onCreated={loadWebhooks} />
+        {!showCreate && (
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover"
+          >
+            <PlusIcon size={16} aria-hidden="true" />
+            Create Webhook
+          </button>
+        )}
       </div>
+
+      {showCreate && (
+        <CreateWebhookForm
+          channelId={channelId}
+          onCreated={loadWebhooks}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
 
       {error && <p className="text-sm text-error">{error}</p>}
 
@@ -80,14 +100,15 @@ export function WebhooksSection({ channelId }: WebhooksSectionProps) {
   );
 }
 
-function CreateWebhookButton({
+function CreateWebhookForm({
   channelId,
   onCreated,
+  onClose,
 }: {
   channelId: string;
   onCreated: () => void;
+  onClose: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<{ token: string; url: string } | null>(null);
@@ -107,39 +128,44 @@ function CreateWebhookButton({
     }
   };
 
-  const handleClose = () => {
-    setOpen(false);
-    setName('');
-    setResult(null);
-    setError('');
-  };
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
-      >
-        <PlusIcon size={16} aria-hidden="true" />
-        Create Webhook
-      </button>
-    );
-  }
-
   return (
     <div className="rounded-lg border border-border bg-bg-surface p-4 space-y-3">
       {result ? (
         <>
           <p className="text-sm font-medium text-text">Webhook created!</p>
           <p className="text-xs text-text-muted">
-            Copy the URL below. It will only be shown once.
+            Copy the URL below. It won't be shown again.
           </p>
-          <CopyField value={result.url} label="Webhook URL" />
+          <CopyField value={`${getAppOrigin()}${result.url}`} label="Webhook URL" />
+
+          <div className="space-y-2 rounded-md border border-border bg-bg-base p-3">
+            <p className="text-xs font-medium text-text">Usage</p>
+            <p className="text-xs text-text-muted">
+              Send a <code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">POST</code> request
+              with a JSON body to the URL above.
+            </p>
+            <pre className="overflow-x-auto rounded bg-bg-tertiary px-3 py-2 text-xs text-text font-mono leading-relaxed">
+{`curl -X POST ${getAppOrigin()}${result.url} \\
+  -H "Content-Type: application/json" \\
+  -d '${JSON.stringify({ content: 'Hello from a webhook!' }, null, 2)}'`}
+            </pre>
+            <details className="group">
+              <summary className="cursor-pointer text-xs text-text-muted hover:text-text">
+                <span className="ml-0.5">All fields</span>
+              </summary>
+              <div className="mt-2 space-y-1 text-xs text-text-muted">
+                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">content</code> — message text (required if no embeds)</p>
+                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">username</code> — override display name</p>
+                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">avatar_url</code> — override avatar (HTTPS only)</p>
+                <p><code className="rounded bg-bg-tertiary px-1 py-0.5 text-text">embeds</code> — array of rich embeds (max 10)</p>
+              </div>
+            </details>
+          </div>
+
           <button
             type="button"
-            onClick={handleClose}
-            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80"
+            onClick={onClose}
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover"
           >
             Done
           </button>
@@ -158,7 +184,7 @@ function CreateWebhookButton({
               maxLength={80}
               placeholder="e.g. GitHub"
               autoFocus
-              className="w-full rounded-md border border-border bg-bg-surface px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
+              className="w-full rounded-md border border-border bg-bg-base px-3 py-2 text-sm text-text placeholder:text-text-subtle focus:border-accent focus:outline-none"
             />
           </div>
           {error && <p className="text-xs text-error">{error}</p>}
@@ -167,13 +193,13 @@ function CreateWebhookButton({
               type="button"
               disabled={!name.trim() || creating}
               onClick={handleCreate}
-              className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/80 disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-black hover:bg-accent-hover disabled:opacity-50"
             >
               {creating ? 'Creating...' : 'Create'}
             </button>
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text"
             >
               Cancel
@@ -261,21 +287,24 @@ function WebhookCard({
 
   return (
     <div className="rounded-lg border border-border bg-bg-surface overflow-hidden">
-      <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-bg-tertiary/30"
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-tertiary/30"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-accent text-xs font-bold flex-shrink-0">
-            {webhook.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-text truncate">{webhook.name}</div>
-            <div className="text-xs text-text-muted">Created {createdDate}</div>
-          </div>
+        <CaretRightIcon
+          size={16}
+          className={`shrink-0 text-text-muted transition-transform ${expanded ? 'rotate-90' : ''}`}
+          aria-hidden="true"
+        />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 text-accent text-xs font-bold shrink-0">
+          {webhook.name.charAt(0).toUpperCase()}
         </div>
-        <span className="text-xs text-text-subtle">{expanded ? 'Collapse' : 'Expand'}</span>
-      </div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-text truncate">{webhook.name}</div>
+          <div className="text-xs text-text-muted">Created {createdDate}</div>
+        </div>
+      </button>
 
       {expanded && (
         <div className="border-t border-border px-4 py-3 space-y-3">
@@ -287,13 +316,13 @@ function WebhookCard({
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 maxLength={80}
-                className="flex-1 rounded-md border border-border bg-bg-surface px-2 py-1 text-sm text-text focus:border-accent focus:outline-none"
+                className="flex-1 rounded-md border border-border bg-bg-base px-2 py-1 text-sm text-text focus:border-accent focus:outline-none"
               />
               <button
                 type="button"
                 disabled={!editName.trim() || saving}
                 onClick={handleSaveEdit}
-                className="rounded px-2 py-1 text-xs bg-accent text-white hover:bg-accent/80 disabled:opacity-50"
+                className="rounded px-2 py-1 text-xs bg-accent text-black hover:bg-accent-hover disabled:opacity-50"
               >
                 Save
               </button>
@@ -324,7 +353,7 @@ function WebhookCard({
               <p className="text-xs text-text-muted">
                 New token generated. Copy it now — it won't be shown again.
               </p>
-              <CopyField value={showToken.url} label="Webhook URL" />
+              <CopyField value={`${getAppOrigin()}${showToken.url}`} label="Webhook URL" />
             </div>
           )}
 
@@ -372,12 +401,12 @@ function WebhookCard({
                     <div
                       key={d.id}
                       className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                        d.success ? 'bg-green-500/10' : 'bg-error/10'
+                        d.success ? 'bg-success/10' : 'bg-error/10'
                       }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`font-mono ${d.success ? 'text-green-500' : 'text-error'}`}
+                          className={`font-mono ${d.success ? 'text-success' : 'text-error'}`}
                         >
                           {d.success ? 'OK' : d.errorCode}
                         </span>
@@ -389,7 +418,7 @@ function WebhookCard({
                             : ''}
                         </span>
                       </div>
-                      <span className="text-text-subtle flex-shrink-0">
+                      <span className="text-text-subtle shrink-0">
                         {d.latencyMs}ms
                       </span>
                     </div>
@@ -421,11 +450,11 @@ function CopyField({ value, label }: { value: string; label: string }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="flex-shrink-0 rounded p-1 text-text-muted hover:text-text hover:bg-bg-tertiary"
+        className="shrink-0 rounded p-1 text-text-muted hover:text-text hover:bg-bg-tertiary"
         title={label}
       >
         {copied ? (
-          <span className="text-xs text-green-500">Copied!</span>
+          <span className="text-xs text-success">Copied!</span>
         ) : (
           <CopyIcon size={16} aria-hidden="true" />
         )}
