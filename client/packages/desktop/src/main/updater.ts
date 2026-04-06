@@ -173,6 +173,10 @@ export function initAutoUpdater(win: BrowserWindow): void {
     // Only install if downloaded and not already triggered
     if (!updateDownloaded || installTriggered) return;
     installTriggered = true;
+    // Mark as quitting BEFORE quitAndInstall. On macOS, Squirrel's native
+    // quitAndInstall closes windows first, then fires before-quit — so the
+    // close-to-tray handler must see this flag before the window close event.
+    (globalThis as Record<string, unknown>).__mezaIsQuitting = true;
     // Release the single-instance lock so the relaunched app can acquire it.
     // Without this, the new process sees the lock held by the dying old process
     // and immediately quits itself.
