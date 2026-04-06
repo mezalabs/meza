@@ -668,6 +668,23 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("at least one channel is required"))
 	}
 
+	// Caps on template request size to prevent abuse.
+	const (
+		maxTemplateChannels      = 50
+		maxTemplateRoles         = 20
+		maxTemplateChannelGroups = 10
+		maxTemplateNameLen       = 100
+	)
+	if len(req.Msg.Channels) > maxTemplateChannels {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("too many channels"))
+	}
+	if len(req.Msg.Roles) > maxTemplateRoles {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("too many roles"))
+	}
+	if len(req.Msg.ChannelGroups) > maxTemplateChannelGroups {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("too many channel groups"))
+	}
+
 	// Validate onboarding fields.
 	if req.Msg.WelcomeMessage != nil && len(*req.Msg.WelcomeMessage) > 5000 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("welcome_message exceeds 5000 characters"))
@@ -688,26 +705,107 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 		if ch.Name == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %d: name is required", i))
 		}
+		if len(ch.Name) > maxTemplateNameLen {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %d: name exceeds %d characters", i, maxTemplateNameLen))
+		}
+		var groupName string
+		if ch.GroupName != nil {
+			groupName = *ch.GroupName
+		}
 		channelSpecs[i] = store.TemplateChannelSpec{
 			Name:      ch.Name,
 			Type:      int(ch.Type),
 			IsDefault: ch.IsDefault,
 			IsPrivate: ch.IsPrivate,
 			RoleNames: ch.RoleNames,
+			GroupName: groupName,
 		}
 	}
 
-	// Map proto role specs to store params.
+	// Map proto role specs to store params and validate permission bits to
+	// prevent clients from injecting unknown or forbidden permissions.
 	roleSpecs := make([]store.TemplateRoleSpec, len(req.Msg.Roles))
 	for i, r := range req.Msg.Roles {
 		if r.Name == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("role %d: name is required", i))
+		}
+		if len(r.Name) > maxTemplateNameLen {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("role %d: name exceeds %d characters", i, maxTemplateNameLen))
+		}
+		if !permissions.Validate(r.Permissions) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("role %d: invalid permission bits", i))
+		}
+		if r.Permissions&permissions.Administrator != 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("role %d: must not include Administrator", i))
 		}
 		roleSpecs[i] = store.TemplateRoleSpec{
 			Name:             r.Name,
 			Permissions:      r.Permissions,
 			Color:            int(r.Color),
 			IsSelfAssignable: r.IsSelfAssignable,
+		}
+	}
+
+	// Validate and extract the @everyone permission override. We enforce a
+	// strict whitelist (SafeEveryonePermissions): beyond the unknown-bit check
+	// from Validate, only bits considered safe to grant to every member are
+	// permitted. This rejects Administrator, ManageRoles, ManageServer,
+	// KickMembers, BanMembers, ManageWebhooks, and other catastrophic bits.
+	var everyonePerms *int64
+	if req.Msg.EveryonePermissions != nil {
+		p := *req.Msg.EveryonePermissions
+		if !permissions.Validate(p) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid everyone_permissions bits"))
+		}
+		if p & ^permissions.SafeEveryonePermissions != 0 {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("everyone_permissions contains disallowed bits"))
+		}
+		everyonePerms = &p
+	}
+
+	// Map proto channel groups to store params.
+	channelGroupSpecs := make([]store.TemplateChannelGroupSpec, len(req.Msg.ChannelGroups))
+	for i, g := range req.Msg.ChannelGroups {
+		if g.Name == "" {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_group %d: name is required", i))
+		}
+		if len(g.Name) > maxTemplateNameLen {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_group %d: name exceeds %d characters", i, maxTemplateNameLen))
+		}
+		channelGroupSpecs[i] = store.TemplateChannelGroupSpec{
+			Name:             g.Name,
+			AllowedRoleNames: g.AllowedRoleNames,
+		}
+	}
+
+	// Reference validation: reject channels that reference unknown group_name
+	// or role_names. The store would otherwise silently drop these and the
+	// resulting server would differ from what the client asked for.
+	groupNames := make(map[string]struct{}, len(req.Msg.ChannelGroups))
+	for _, g := range req.Msg.ChannelGroups {
+		groupNames[g.Name] = struct{}{}
+	}
+	roleNamesSet := make(map[string]struct{}, len(req.Msg.Roles))
+	for _, r := range req.Msg.Roles {
+		roleNamesSet[r.Name] = struct{}{}
+	}
+	for i, g := range req.Msg.ChannelGroups {
+		for _, rn := range g.AllowedRoleNames {
+			if _, ok := roleNamesSet[rn]; !ok {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel_group %d: unknown allowed_role_name %q", i, rn))
+			}
+		}
+	}
+	for i, ch := range req.Msg.Channels {
+		if ch.GroupName != nil && *ch.GroupName != "" {
+			if _, ok := groupNames[*ch.GroupName]; !ok {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %d: unknown group_name %q", i, *ch.GroupName))
+			}
+		}
+		for _, rn := range ch.RoleNames {
+			if _, ok := roleNamesSet[rn]; !ok {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("channel %d: unknown role_name %q", i, rn))
+			}
 		}
 	}
 
@@ -724,16 +822,18 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 		rules = req.Msg.Rules
 	}
 
-	srv, channels, roles, err := s.chatStore.CreateServerFromTemplate(ctx, store.CreateServerFromTemplateParams{
-		Name:              req.Msg.Name,
-		IconURL:           iconURL,
-		OwnerID:           userID,
-		WelcomeMessage:    welcomeMessage,
-		Rules:             rules,
-		OnboardingEnabled: req.Msg.OnboardingEnabled,
-		RulesRequired:     req.Msg.RulesRequired,
-		Channels:          channelSpecs,
-		Roles:             roleSpecs,
+	srv, channels, roles, channelGroups, err := s.chatStore.CreateServerFromTemplate(ctx, store.CreateServerFromTemplateParams{
+		Name:                req.Msg.Name,
+		IconURL:             iconURL,
+		OwnerID:             userID,
+		WelcomeMessage:      welcomeMessage,
+		Rules:               rules,
+		OnboardingEnabled:   req.Msg.OnboardingEnabled,
+		RulesRequired:       req.Msg.RulesRequired,
+		Channels:            channelSpecs,
+		Roles:               roleSpecs,
+		EveryonePermissions: everyonePerms,
+		ChannelGroups:       channelGroupSpecs,
 	})
 	if err != nil {
 		slog.Error("creating server from template", "err", err, "user", userID)
@@ -767,11 +867,16 @@ func (s *chatService) CreateServerFromTemplate(ctx context.Context, req *connect
 	for i, r := range roles {
 		protoRoles[i] = roleToProto(r)
 	}
+	protoChannelGroups := make([]*v1.ChannelGroup, len(channelGroups))
+	for i, g := range channelGroups {
+		protoChannelGroups[i] = channelGroupToProto(g)
+	}
 
 	resp := &v1.CreateServerFromTemplateResponse{
-		Server:   serverToProto(srv),
-		Channels: protoChannels,
-		Roles:    protoRoles,
+		Server:        serverToProto(srv),
+		Channels:      protoChannels,
+		Roles:         protoRoles,
+		ChannelGroups: protoChannelGroups,
 	}
 	if inv != nil {
 		resp.Invite = inviteToProto(inv)

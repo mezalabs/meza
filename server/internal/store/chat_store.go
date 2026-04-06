@@ -1732,16 +1732,22 @@ func (s *ChatStore) GetSelfAssignableRoles(ctx context.Context, serverID string)
 
 // CreateServerFromTemplateParams holds all parameters for creating a server from a template.
 type CreateServerFromTemplateParams struct {
-	Name                   string
-	IconURL                *string
-	OwnerID                string
-	WelcomeMessage         *string
-	Rules                  *string
-	OnboardingEnabled      bool
-	RulesRequired          bool
-	DefaultChannelPrivacy  bool
-	Channels               []TemplateChannelSpec
-	Roles                  []TemplateRoleSpec
+	Name                  string
+	IconURL               *string
+	OwnerID               string
+	WelcomeMessage        *string
+	Rules                 *string
+	OnboardingEnabled     bool
+	RulesRequired         bool
+	DefaultChannelPrivacy bool
+	Channels              []TemplateChannelSpec
+	Roles                 []TemplateRoleSpec
+	// EveryonePermissions overrides the default @everyone permission set when
+	// non-nil. A nil pointer means "use permissions.DefaultEveryonePermissions".
+	EveryonePermissions *int64
+	// ChannelGroups are created in declared order before channels. Each
+	// ChannelSpec.GroupName is resolved to a group ID at creation time.
+	ChannelGroups []TemplateChannelGroupSpec
 }
 
 // TemplateChannelSpec describes a channel to create with the server.
@@ -1751,6 +1757,19 @@ type TemplateChannelSpec struct {
 	IsDefault bool
 	IsPrivate bool
 	RoleNames []string // roles (by name) that get access to this private channel
+	// GroupName matches a TemplateChannelGroupSpec.Name declared on the same
+	// request. An empty string or unmatched name means the channel is ungrouped.
+	GroupName string
+}
+
+// TemplateChannelGroupSpec describes a channel category to create with the server.
+// When AllowedRoleNames is non-empty, the category is gated: @everyone is denied
+// ViewChannel and each named role is granted ViewChannel+SendMessages at the
+// category level. Channels with permissions_synced=true inside this category
+// inherit the gate automatically.
+type TemplateChannelGroupSpec struct {
+	Name             string
+	AllowedRoleNames []string
 }
 
 // TemplateRoleSpec describes a role to create with the server.
@@ -1761,13 +1780,13 @@ type TemplateRoleSpec struct {
 	IsSelfAssignable bool
 }
 
-func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
+func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("begin tx: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -1782,7 +1801,7 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		params.WelcomeMessage, params.Rules, params.OnboardingEnabled, params.RulesRequired, params.DefaultChannelPrivacy,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("insert server: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("insert server: %w", err)
 	}
 
 	// Insert creator as member.
@@ -1791,17 +1810,47 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		params.OwnerID, serverID, now,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("insert member: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("insert member: %w", err)
 	}
 
-	// Create @everyone role (id = serverID, position 0, default permissions).
+	// Create @everyone role (id = serverID, position 0). Use the template's
+	// override permission set if provided; otherwise fall back to the default.
+	everyonePerms := permissions.DefaultEveryonePermissions
+	if params.EveryonePermissions != nil {
+		everyonePerms = *params.EveryonePermissions
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO roles (id, server_id, name, permissions, color, position, created_at)
 		 VALUES ($1, $1, '@everyone', $2, 0, 0, $3)`,
-		serverID, permissions.DefaultEveryonePermissions, now,
+		serverID, everyonePerms, now,
 	)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("insert everyone role: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("insert everyone role: %w", err)
+	}
+
+	// Insert channel groups in declared order, building a name → ID lookup
+	// so channels can resolve their group assignment below.
+	groupIDByName := make(map[string]string, len(params.ChannelGroups))
+	createdGroups := make([]*models.ChannelGroup, 0, len(params.ChannelGroups))
+	for i, g := range params.ChannelGroups {
+		groupID := models.NewID()
+		cg := &models.ChannelGroup{
+			ID:        groupID,
+			ServerID:  serverID,
+			Name:      g.Name,
+			Position:  i,
+			CreatedAt: now,
+		}
+		_, err = tx.Exec(ctx,
+			`INSERT INTO channel_groups (id, server_id, name, position, created_at)
+			 VALUES ($1, $2, $3, $4, $5)`,
+			cg.ID, cg.ServerID, cg.Name, cg.Position, cg.CreatedAt,
+		)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("insert channel group %q: %w", g.Name, err)
+		}
+		groupIDByName[g.Name] = cg.ID
+		createdGroups = append(createdGroups, cg)
 	}
 
 	// Insert channels.
@@ -1809,26 +1858,41 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 	for i, spec := range params.Channels {
 		chID := models.NewID()
 
+		// Resolve group name → ID. An unmatched or empty name means the channel
+		// is ungrouped (NULL channel_group_id). Empty string = ungrouped,
+		// matching the existing convention elsewhere in this store.
+		groupIDStr := groupIDByName[spec.GroupName]
+		var groupIDSQL any // nil → SQL NULL via pgx
+		if groupIDStr != "" {
+			groupIDSQL = groupIDStr
+		}
+
+		// permissions_synced invariant: true iff the channel has a group AND
+		// has no per-channel overrides. Private channels always get at least a
+		// deny-@everyone ViewChannel override (see loop further below), so they
+		// must land with permissions_synced = false even when grouped.
+		permSynced := groupIDStr != "" && !spec.IsPrivate
+
 		if spec.Type == 2 { // CHANNEL_TYPE_VOICE — create with companion text channel.
 			textID := models.NewID()
 			// Create companion text channel FIRST so the FK reference from the voice channel is valid.
 			_, err = tx.Exec(ctx,
-				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
-				 VALUES ($1, $2, $3, 1, $4, $5, false, NULL, $6)`,
-				textID, serverID, spec.Name, i, spec.IsPrivate, now,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, permissions_synced, created_at)
+				 VALUES ($1, $2, $3, 1, $4, $5, false, $6, $7, $8)`,
+				textID, serverID, spec.Name, i, spec.IsPrivate, groupIDSQL, permSynced, now,
 			)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("insert companion text channel for %q: %w", spec.Name, err)
+				return nil, nil, nil, nil, fmt.Errorf("insert companion text channel for %q: %w", spec.Name, err)
 			}
 			_, err = tx.Exec(ctx,
-				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, voice_text_channel_id, created_at)
-				 VALUES ($1, $2, $3, 2, $4, $5, $6, NULL, $7, $8)`,
-				chID, serverID, spec.Name, i, spec.IsPrivate, spec.IsDefault, textID, now,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, voice_text_channel_id, permissions_synced, created_at)
+				 VALUES ($1, $2, $3, 2, $4, $5, $6, $7, $8, $9, $10)`,
+				chID, serverID, spec.Name, i, spec.IsPrivate, spec.IsDefault, groupIDSQL, textID, permSynced, now,
 			)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("insert voice channel %q: %w", spec.Name, err)
+				return nil, nil, nil, nil, fmt.Errorf("insert voice channel %q: %w", spec.Name, err)
 			}
-			channels = append(channels, &models.Channel{
+			voiceCh := &models.Channel{
 				ID:                 chID,
 				ServerID:           serverID,
 				Name:               spec.Name,
@@ -1836,52 +1900,63 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 				Position:           i,
 				IsPrivate:          spec.IsPrivate,
 				IsDefault:          spec.IsDefault,
+				ChannelGroupID:     groupIDStr,
 				VoiceTextChannelID: textID,
+				PermissionsSynced:  permSynced,
 				CreatedAt:          now,
-			})
+			}
+			channels = append(channels, voiceCh)
 			// Include companion in returned channels for key distribution.
-			channels = append(channels, &models.Channel{
-				ID:        textID,
-				ServerID:  serverID,
-				Name:      spec.Name,
-				Type:      1,
-				Position:  i,
-				IsPrivate: spec.IsPrivate,
-				CreatedAt: now,
-			})
+			textCh := &models.Channel{
+				ID:                textID,
+				ServerID:          serverID,
+				Name:              spec.Name,
+				Type:              1,
+				Position:          i,
+				IsPrivate:         spec.IsPrivate,
+				ChannelGroupID:    groupIDStr,
+				PermissionsSynced: permSynced,
+				CreatedAt:         now,
+			}
+			channels = append(channels, textCh)
 		} else {
 			_, err = tx.Exec(ctx,
-				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, created_at)
-				 VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8)`,
-				chID, serverID, spec.Name, spec.Type, i, spec.IsPrivate, spec.IsDefault, now,
+				`INSERT INTO channels (id, server_id, name, type, position, is_private, is_default, channel_group_id, permissions_synced, created_at)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+				chID, serverID, spec.Name, spec.Type, i, spec.IsPrivate, spec.IsDefault, groupIDSQL, permSynced, now,
 			)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("insert channel %q: %w", spec.Name, err)
+				return nil, nil, nil, nil, fmt.Errorf("insert channel %q: %w", spec.Name, err)
 			}
-			channels = append(channels, &models.Channel{
-				ID:        chID,
-				ServerID:  serverID,
-				Name:      spec.Name,
-				Type:      spec.Type,
-				Position:  i,
-				IsPrivate: spec.IsPrivate,
-				IsDefault: spec.IsDefault,
-				CreatedAt: now,
-			})
+			ch := &models.Channel{
+				ID:                chID,
+				ServerID:          serverID,
+				Name:              spec.Name,
+				Type:              spec.Type,
+				Position:          i,
+				IsPrivate:         spec.IsPrivate,
+				IsDefault:         spec.IsDefault,
+				ChannelGroupID:    groupIDStr,
+				PermissionsSynced: permSynced,
+				CreatedAt:         now,
+			}
+			channels = append(channels, ch)
 		}
 	}
 
-	// Insert roles.
+	// Insert roles. Position starts at 1 so custom roles don't collide with
+	// @everyone (position 0) under the roles_server_position_unique constraint.
 	var roles []*models.Role
 	for i, spec := range params.Roles {
+		pos := i + 1
 		roleID := models.NewID()
 		_, err = tx.Exec(ctx,
 			`INSERT INTO roles (id, server_id, name, permissions, color, position, is_self_assignable, created_at)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			roleID, serverID, spec.Name, spec.Permissions, spec.Color, i, spec.IsSelfAssignable, now,
+			roleID, serverID, spec.Name, spec.Permissions, spec.Color, pos, spec.IsSelfAssignable, now,
 		)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("insert role %q: %w", spec.Name, err)
+			return nil, nil, nil, nil, fmt.Errorf("insert role %q: %w", spec.Name, err)
 		}
 		roles = append(roles, &models.Role{
 			ID:               roleID,
@@ -1889,7 +1964,7 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 			Name:             spec.Name,
 			Permissions:      spec.Permissions,
 			Color:            spec.Color,
-			Position:         i,
+			Position:         pos,
 			IsSelfAssignable: spec.IsSelfAssignable,
 			CreatedAt:        now,
 		})
@@ -1901,16 +1976,36 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		roleIDByName[r.Name] = r.ID
 	}
 
-	// Create permission overrides for private channels with role restrictions.
+	// Create permission overrides for private channels. Every private channel
+	// gets a deny-@everyone ViewChannel override so it is invisible by default,
+	// matching the behavior of UpdateChannelPrivacy for post-creation toggling.
+	// If RoleNames are specified, those roles additionally get allow overrides
+	// for ViewChannel + SendMessages. The owner bypass in the permission
+	// resolver ensures the creator can still see the channel even when no
+	// roles are named.
 	for _, ch := range channels {
 		spec := params.Channels[ch.Position]
-		if !spec.IsPrivate || len(spec.RoleNames) == 0 {
+		if !spec.IsPrivate {
+			continue
+		}
+		// @everyone role has id = serverID.
+		denyOverrideID := models.NewID()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO permission_overrides (id, channel_id, role_id, allow, deny)
+			 VALUES ($1, $2, $3, 0, $4)`,
+			denyOverrideID, ch.ID, serverID, permissions.ViewChannel,
+		)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("insert @everyone deny override for channel %q: %w", ch.Name, err)
+		}
+		if len(spec.RoleNames) == 0 {
 			continue
 		}
 		allow := permissions.ViewChannel | permissions.SendMessages
 		for _, roleName := range spec.RoleNames {
 			roleID, ok := roleIDByName[roleName]
 			if !ok {
+				// Handler-level validation should catch this; be defensive.
 				continue
 			}
 			overrideID := models.NewID()
@@ -1920,13 +2015,51 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 				overrideID, ch.ID, roleID, allow,
 			)
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("insert permission override for channel %q role %q: %w", ch.Name, roleName, err)
+				return nil, nil, nil, nil, fmt.Errorf("insert permission override for channel %q role %q: %w", ch.Name, roleName, err)
+			}
+		}
+	}
+
+	// Create permission overrides for gated channel groups: deny @everyone
+	// ViewChannel at the category level and allow each named role
+	// ViewChannel + SendMessages. Any synced channel inside the group
+	// inherits the gate automatically.
+	for i, cg := range createdGroups {
+		spec := params.ChannelGroups[i]
+		if len(spec.AllowedRoleNames) == 0 {
+			continue
+		}
+		// @everyone role has id = serverID.
+		denyOverrideID := models.NewID()
+		_, err = tx.Exec(ctx,
+			`INSERT INTO permission_overrides (id, channel_group_id, role_id, allow, deny)
+			 VALUES ($1, $2, $3, 0, $4)`,
+			denyOverrideID, cg.ID, serverID, permissions.ViewChannel,
+		)
+		if err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("insert @everyone deny override for channel group %q: %w", cg.Name, err)
+		}
+		allow := permissions.ViewChannel | permissions.SendMessages
+		for _, roleName := range spec.AllowedRoleNames {
+			roleID, ok := roleIDByName[roleName]
+			if !ok {
+				// Handler-level validation should catch this; be defensive.
+				continue
+			}
+			overrideID := models.NewID()
+			_, err = tx.Exec(ctx,
+				`INSERT INTO permission_overrides (id, channel_group_id, role_id, allow, deny)
+				 VALUES ($1, $2, $3, $4, 0)`,
+				overrideID, cg.ID, roleID, allow,
+			)
+			if err != nil {
+				return nil, nil, nil, nil, fmt.Errorf("insert permission override for channel group %q role %q: %w", cg.Name, roleName, err)
 			}
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, nil, nil, fmt.Errorf("commit tx: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("commit tx: %w", err)
 	}
 
 	srv := &models.Server{
@@ -1942,7 +2075,7 @@ func (s *ChatStore) CreateServerFromTemplate(ctx context.Context, params CreateS
 		DefaultChannelPrivacy: params.DefaultChannelPrivacy,
 	}
 
-	return srv, channels, roles, nil
+	return srv, channels, roles, createdGroups, nil
 }
 
 // scanSystemMessageConfig is a helper column list for consistent scanning.

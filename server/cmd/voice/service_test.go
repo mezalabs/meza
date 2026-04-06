@@ -195,8 +195,8 @@ func (m *mockChatStore) GetDefaultChannels(context.Context, string) ([]*models.C
 func (m *mockChatStore) GetSelfAssignableRoles(context.Context, string) ([]*models.Role, error) {
 	panic("not implemented")
 }
-func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
-	return nil, nil, nil, nil
+func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error) {
+	return nil, nil, nil, nil, nil
 }
 func (m *mockChatStore) CountChannelMembers(_ context.Context, _ string) (int, error) {
 	return 0, nil
