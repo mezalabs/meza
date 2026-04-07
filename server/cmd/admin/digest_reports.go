@@ -25,21 +25,12 @@ import (
 func cmdDigestReports(ctx context.Context, args []string, reportStore store.ReportStorer) {
 	fs := flag.NewFlagSet("digest-reports", flag.ExitOnError)
 	limit := fs.Int("limit", 200, "max reports to scan")
-	includeServer := fs.Bool("include-server", false, "include server-scoped reports (default: platform queue only)")
 	fs.Parse(args)
 
-	var reports []*models.Report
-	var err error
-	if *includeServer {
-		// Walk all open reports across both queues. There is no
-		// ListAllOpenReports method (deliberately, to keep the store
-		// API narrow); for v1 we just call ListPlatformReports and
-		// note in the runbook that this command is platform-only by
-		// default.
-		reports, _, err = reportStore.ListPlatformReports(ctx, models.ReportStatusOpen, "", *limit)
-	} else {
-		reports, _, err = reportStore.ListPlatformReports(ctx, models.ReportStatusOpen, "", *limit)
-	}
+	// V1 only digests the platform queue (server_id IS NULL). Per-server
+	// digests are server-mod responsibility, surfaced via the in-app
+	// ReportsSection panel.
+	reports, _, err := reportStore.ListPlatformReports(ctx, models.ReportStatusOpen, "", *limit)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "list reports: %v\n", err)
 		os.Exit(1)

@@ -89,6 +89,7 @@ const (
 	MessageType_MESSAGE_TYPE_CHANNEL_UPDATE MessageType = 4 // content.field differentiates name/topic
 	MessageType_MESSAGE_TYPE_KEY_ROTATION   MessageType = 5
 	MessageType_MESSAGE_TYPE_WEBHOOK        MessageType = 6
+	MessageType_MESSAGE_TYPE_REPORT_FILED   MessageType = 7 // redacted notice in mod-log channel; never includes PII
 )
 
 // Enum value maps for MessageType.
@@ -101,6 +102,7 @@ var (
 		4: "MESSAGE_TYPE_CHANNEL_UPDATE",
 		5: "MESSAGE_TYPE_KEY_ROTATION",
 		6: "MESSAGE_TYPE_WEBHOOK",
+		7: "MESSAGE_TYPE_REPORT_FILED",
 	}
 	MessageType_value = map[string]int32{
 		"MESSAGE_TYPE_DEFAULT":        0,
@@ -110,6 +112,7 @@ var (
 		"MESSAGE_TYPE_CHANNEL_UPDATE": 4,
 		"MESSAGE_TYPE_KEY_ROTATION":   5,
 		"MESSAGE_TYPE_WEBHOOK":        6,
+		"MESSAGE_TYPE_REPORT_FILED":   7,
 	}
 )
 
@@ -3270,7 +3273,7 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x11CHANNEL_TYPE_TEXT\x10\x01\x12\x16\n" +
 	"\x12CHANNEL_TYPE_VOICE\x10\x02\x12\x13\n" +
 	"\x0fCHANNEL_TYPE_DM\x10\x03\x12\x19\n" +
-	"\x15CHANNEL_TYPE_GROUP_DM\x10\x04*\xdc\x01\n" +
+	"\x15CHANNEL_TYPE_GROUP_DM\x10\x04*\xfb\x01\n" +
 	"\vMessageType\x12\x18\n" +
 	"\x14MESSAGE_TYPE_DEFAULT\x10\x00\x12\x1c\n" +
 	"\x18MESSAGE_TYPE_MEMBER_JOIN\x10\x01\x12\x1d\n" +
@@ -3278,7 +3281,8 @@ const file_meza_v1_models_proto_rawDesc = "" +
 	"\x18MESSAGE_TYPE_MEMBER_KICK\x10\x03\x12\x1f\n" +
 	"\x1bMESSAGE_TYPE_CHANNEL_UPDATE\x10\x04\x12\x1d\n" +
 	"\x19MESSAGE_TYPE_KEY_ROTATION\x10\x05\x12\x18\n" +
-	"\x14MESSAGE_TYPE_WEBHOOK\x10\x06B\x84\x01\n" +
+	"\x14MESSAGE_TYPE_WEBHOOK\x10\x06\x12\x1d\n" +
+	"\x19MESSAGE_TYPE_REPORT_FILED\x10\aB\x84\x01\n" +
 	"\vcom.meza.v1B\vModelsProtoP\x01Z+github.com/mezalabs/meza/gen/meza/v1;mezav1\xa2\x02\x03MXX\xaa\x02\aMeza.V1\xca\x02\aMeza\\V1\xe2\x02\x13Meza\\V1\\GPBMetadata\xea\x02\bMeza::V1b\x06proto3"
 
 var (

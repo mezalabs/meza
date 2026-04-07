@@ -61,7 +61,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_reports_idempotency_unique
     WHERE idempotency_key IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_reports_platform_status_created
-    ON reports (status, created_at DESC)
+    ON reports (status, created_at DESC, id DESC)
     WHERE server_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_reports_retention_cleanup

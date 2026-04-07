@@ -28,6 +28,22 @@ func reasonString(r *string) string {
 	return *r
 }
 
+// truncateRunes returns s truncated to at most maxRunes Unicode code points.
+// Used for fields with rune-counted DB CHECK constraints (vs Go's byte slicing).
+func truncateRunes(s string, maxRunes int) string {
+	if utf8.RuneCountInString(s) <= maxRunes {
+		return s
+	}
+	count := 0
+	for i := range s {
+		if count == maxRunes {
+			return s[:i]
+		}
+		count++
+	}
+	return s
+}
+
 // reportRateLimitScript matches the pattern in system_messages.go:62 — INCR a
 // counter and set the TTL only on first increment, so the window is anchored
 // to the first request rather than reset by every call.
@@ -44,8 +60,10 @@ const (
 // reportNotificationContent is the redacted body posted to a server's mod-log
 // channel when a report is filed. Intentionally contains zero PII — no
 // reporter ID, no target ID, no category, no message ID. Mods click through
-// to the Reports panel for details.
-type reportNotificationContent struct{}
+// to the Reports panel for details. Renders as a banner via MESSAGE_TYPE_REPORT_FILED.
+type reportNotificationContent struct {
+	Message string `json:"message"`
+}
 
 // ReportMessage handles user-initiated reports against a chat message.
 func (s *chatService) ReportMessage(ctx context.Context, req *connect.Request[v1.ReportMessageRequest]) (*connect.Response[v1.ReportMessageResponse], error) {
@@ -65,14 +83,11 @@ func (s *chatService) ReportMessage(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 
-	// Rate-limit before any DB or Scylla work.
-	if err := s.checkReportRateLimits(ctx, userID, ""); err != nil {
-		return nil, err
-	}
-
 	// Resolve the message author and snapshot fields. We need to find the
 	// channel before the snapshot read because Scylla messages are partitioned
-	// by channel and we don't have the channel ID in the request.
+	// by channel and we don't have the channel ID in the request. Rate
+	// limiting happens after target resolution so we charge exactly once per
+	// validated submission, with both the global and pair counters.
 	channelID, err := s.findChannelForMessage(ctx, userID, req.Msg.MessageId)
 	if err != nil {
 		return nil, err
@@ -80,12 +95,12 @@ func (s *chatService) ReportMessage(ctx context.Context, req *connect.Request[v1
 
 	// Verify the reporter can read this channel — otherwise reporting becomes
 	// an enumeration channel for snapshots from private channels.
-	channel, _, err := s.chatStore.GetChannelAndCheckMembership(ctx, channelID, userID)
+	channel, isMember, err := s.chatStore.GetChannelAndCheckMembership(ctx, channelID, userID)
 	if err != nil {
 		slog.Error("report: channel access check", "err", err, "channel", channelID, "user", userID)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 	}
-	if channel == nil {
+	if channel == nil || !isMember {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("channel not found"))
 	}
 
@@ -105,9 +120,13 @@ func (s *chatService) ReportMessage(ctx context.Context, req *connect.Request[v1
 		attachments      = []byte("[]")
 	)
 	if msg != nil && !msg.Deleted {
-		snapshotContent = string(msg.EncryptedContent)
-		if len(snapshotContent) > 8000 {
-			snapshotContent = snapshotContent[:8000]
+		// Encrypted (E2EE) messages contain ciphertext bytes that may include
+		// NULs and invalid UTF-8 — Postgres TEXT rejects both. Store a sentinel
+		// instead so the rest of the report flow still works for E2EE channels.
+		if msg.KeyVersion > 0 {
+			snapshotContent = "[encrypted message]"
+		} else {
+			snapshotContent = truncateRunes(strings.ToValidUTF8(string(msg.EncryptedContent), ""), 8000)
 		}
 		authorID = msg.AuthorID
 		if !msg.EditedAt.IsZero() {
@@ -156,7 +175,8 @@ func (s *chatService) ReportMessage(ctx context.Context, req *connect.Request[v1
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot report system user"))
 	}
 
-	// Pair-level rate limit applies once we know the target.
+	// Rate limit AFTER input validation so failed submissions don't burn the
+	// reporter's budget. Charges global + pair counters exactly once.
 	if err := s.checkReportRateLimits(ctx, userID, targetUserID); err != nil {
 		return nil, err
 	}
@@ -216,6 +236,20 @@ func (s *chatService) ReportUser(ctx context.Context, req *connect.Request[v1.Re
 	reason, err := sanitizeReason(req.Msg.Reason)
 	if err != nil {
 		return nil, err
+	}
+
+	// If a server context was supplied, the reporter must actually be in it.
+	// Silently downgrading to platform queue would let bad actors flood the
+	// platform admin queue with arbitrary user reports.
+	if req.Msg.ServerId != "" {
+		isMember, mErr := s.chatStore.IsMember(ctx, userID, req.Msg.ServerId)
+		if mErr != nil {
+			slog.Error("report user: server membership check", "err", mErr, "user", userID, "server", req.Msg.ServerId)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		if !isMember {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("not a member of that server"))
+		}
 	}
 
 	if err := s.checkReportRateLimits(ctx, userID, req.Msg.UserId); err != nil {
@@ -364,9 +398,8 @@ func (s *chatService) ResolveReport(ctx context.Context, req *connect.Request[v1
 		if errors.Is(err, store.ErrAlreadyExists) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("an open report already exists for this message"))
 		}
-		// Transition errors come back as plain errors with "already" in the message.
-		if strings.Contains(err.Error(), "already") {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New(err.Error()))
+		if errors.Is(err, store.ErrInvalidTransition) {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("report is not in a state that supports this action"))
 		}
 		slog.Error("resolve report", "err", err, "report", req.Msg.ReportId)
 		return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
@@ -438,11 +471,12 @@ func (s *chatService) routeReport(ctx context.Context, reporterID, targetUserID,
 	if serverID == "" {
 		return ""
 	}
-	// Both must be members of the server.
-	reporterIsMember, err := s.chatStore.IsMember(ctx, reporterID, serverID)
-	if err != nil || !reporterIsMember {
-		return ""
-	}
+	// Both must be members of the server. The reporter is checked elsewhere
+	// for ReportMessage (channel access guarantees membership), but for
+	// ReportUser we may receive a server_id the reporter is not in — silently
+	// downgrading to platform queue would let bad actors flood the platform
+	// admin queue with arbitrary user reports, so we treat that as an error
+	// at the call site instead. Here we only verify target membership.
 	targetIsMember, err := s.chatStore.IsMember(ctx, targetUserID, serverID)
 	if err != nil || !targetIsMember {
 		return ""
@@ -467,7 +501,10 @@ func (s *chatService) notifyServerOfReport(ctx context.Context, serverID string)
 	if cfg == nil || cfg.ModLogChannelID == nil || *cfg.ModLogChannelID == "" {
 		return // no mod-log configured — fail silent, panel is source of truth
 	}
-	if err := s.publishSystemMessage(ctx, *cfg.ModLogChannelID, uint32(v1.MessageType_MESSAGE_TYPE_DEFAULT), reportNotificationContent{}); err != nil {
+	body := reportNotificationContent{
+		Message: "A new report was filed. Open the Reports panel to review.",
+	}
+	if err := s.publishSystemMessage(ctx, *cfg.ModLogChannelID, uint32(v1.MessageType_MESSAGE_TYPE_REPORT_FILED), body); err != nil {
 		slog.Warn("report: mod-log publish failed", "server", serverID, "err", err)
 	}
 }

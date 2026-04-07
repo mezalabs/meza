@@ -73,9 +73,16 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
     action: ResolveAction,
     note?: string,
   ) => {
+    setError(null);
     try {
       const updated = await resolveReport({ reportId, action, note });
-      setReports((prev) => prev.map((r) => (r.id === reportId ? updated : r)));
+      setReports((prev) =>
+        prev
+          .map((r) => (r.id === reportId ? updated : r))
+          // Drop the row if its new status no longer matches the active filter,
+          // so mods working through the queue can tell what they've actioned.
+          .filter((r) => r.status === statusFilter),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Action failed');
     }
@@ -183,6 +190,7 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
                         onClick={() =>
                           handleResolve(r.id, ResolveAction.RESOLVE)
                         }
+                        aria-label={`Resolve report against ${r.snapshotAuthorUsername || 'unknown user'}`}
                       >
                         Resolve
                       </button>
@@ -192,6 +200,7 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
                         onClick={() =>
                           handleResolve(r.id, ResolveAction.DISMISS)
                         }
+                        aria-label={`Dismiss report against ${r.snapshotAuthorUsername || 'unknown user'}`}
                       >
                         Dismiss
                       </button>
@@ -202,6 +211,7 @@ export function ReportsSection({ serverId }: ReportsSectionProps) {
                       type="button"
                       className="shrink-0 rounded-md bg-bg-elevated px-3 py-1 text-xs text-text-muted hover:text-text"
                       onClick={() => handleResolve(r.id, ResolveAction.REOPEN)}
+                      aria-label={`Reopen report against ${r.snapshotAuthorUsername || 'unknown user'}`}
                     >
                       Reopen
                     </button>

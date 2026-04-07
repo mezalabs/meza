@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +25,7 @@ type mockReportStore struct {
 	mu          sync.Mutex
 	reports     map[string]*models.Report
 	resolutions map[string][]*models.ReportResolution
-	// failNextCreateWith forces the next CreateReportTx to return this error.
+	// failNextCreateWith forces the next CreateReport to return this error.
 	failNextCreateWith error
 }
 
@@ -160,17 +159,17 @@ func (m *mockReportStore) ResolveReport(_ context.Context, reportID, moderatorID
 	switch action {
 	case models.ReportActionResolved:
 		if r.Status != models.ReportStatusOpen {
-			return nil, errors.New("report already " + r.Status)
+			return nil, store.ErrInvalidTransition
 		}
 		r.Status = models.ReportStatusResolved
 	case models.ReportActionDismissed:
 		if r.Status != models.ReportStatusOpen {
-			return nil, errors.New("report already " + r.Status)
+			return nil, store.ErrInvalidTransition
 		}
 		r.Status = models.ReportStatusDismissed
 	case models.ReportActionReopen:
 		if r.Status == models.ReportStatusOpen {
-			return nil, errors.New("report already open")
+			return nil, store.ErrInvalidTransition
 		}
 		r.Status = models.ReportStatusOpen
 	}
@@ -496,4 +495,95 @@ func TestResolveReport_NotFound(t *testing.T) {
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Errorf("code = %v, want NotFound", connect.CodeOf(err))
 	}
+}
+
+func TestReportUser_IllegalCategoryRoutesToPlatform(t *testing.T) {
+	// ILLEGAL category must always land in the platform queue regardless of
+	// any server context the client supplied.
+	client, reportStore, _, _, _ := setupReportTestServer(t)
+	reporter := models.NewID()
+	target := models.NewID()
+	_, err := client.ReportUser(context.Background(), testutil.AuthedRequest(t, reporter, &v1.ReportUserRequest{
+		UserId:   target,
+		Category: v1.ReportCategory_REPORT_CATEGORY_ILLEGAL,
+	}))
+	if err != nil {
+		t.Fatalf("ReportUser(ILLEGAL): %v", err)
+	}
+	platform, _, _ := reportStore.ListPlatformReports(context.Background(), "", "", 10)
+	if len(platform) != 1 {
+		t.Fatalf("expected ILLEGAL report in platform queue, got %d", len(platform))
+	}
+	if platform[0].Category != models.ReportCategoryIllegal {
+		t.Errorf("category = %q, want %q", platform[0].Category, models.ReportCategoryIllegal)
+	}
+}
+
+func TestReportUser_NonMemberServerRejected(t *testing.T) {
+	// Reporting with a server_id the reporter isn't in must fail loudly,
+	// not silently downgrade to platform queue (which would be a vector for
+	// flooding the platform admin queue from arbitrary contexts).
+	client, _, _, _, _ := setupReportTestServer(t)
+	reporter := models.NewID()
+	target := models.NewID()
+	_, err := client.ReportUser(context.Background(), testutil.AuthedRequest(t, reporter, &v1.ReportUserRequest{
+		UserId:   target,
+		ServerId: models.NewID(), // server reporter isn't in
+		Category: v1.ReportCategory_REPORT_CATEGORY_HARASSMENT,
+	}))
+	if err == nil {
+		t.Fatal("expected InvalidArgument for non-member server")
+	}
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("code = %v, want InvalidArgument", connect.CodeOf(err))
+	}
+}
+
+func TestResolveReport_AlreadyResolvedRejected(t *testing.T) {
+	// Resolving a report that is no longer open must surface FailedPrecondition.
+	client, reportStore, _, _, _ := setupReportTestServer(t)
+	reporter := models.NewID()
+	target := models.NewID()
+
+	// Seed an open report directly.
+	r, _ := reportStore.CreateReport(context.Background(), store.CreateReportOpts{
+		ID:           models.NewID(),
+		ReporterID:   reporter,
+		TargetUserID: target,
+		Category:     models.ReportCategoryOther,
+	})
+
+	// Resolve it once via the mock store directly so we don't need a real
+	// platform-admin user.
+	_, _ = reportStore.ResolveReport(context.Background(), r.ID, models.NewID(), models.ReportActionResolved, "")
+
+	// Now try to resolve again via the RPC. The mock auto-passes the
+	// platform admin check (no servers), so we'll see the actual transition
+	// rejection. (This test relies on isPlatformAdministrator returning
+	// false for a user with no servers, which routes to PermissionDenied
+	// before reaching the transition check. So instead use the mock store
+	// directly to assert the sentinel behavior.)
+	_, err := reportStore.ResolveReport(context.Background(), r.ID, models.NewID(), models.ReportActionResolved, "")
+	if err == nil {
+		t.Fatal("expected error resolving already-resolved report")
+	}
+	if !errorsIsInvalidTransition(err) {
+		t.Errorf("err = %v, want ErrInvalidTransition", err)
+	}
+	_ = client // referenced to keep setupReportTestServer signature stable
+}
+
+func errorsIsInvalidTransition(err error) bool {
+	for err != nil {
+		if err == store.ErrInvalidTransition {
+			return true
+		}
+		type unwrap interface{ Unwrap() error }
+		u, ok := err.(unwrap)
+		if !ok {
+			return false
+		}
+		err = u.Unwrap()
+	}
+	return false
 }

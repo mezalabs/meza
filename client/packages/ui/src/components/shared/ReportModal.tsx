@@ -5,7 +5,7 @@ import {
   reportUser,
 } from '@meza/core';
 import * as Dialog from '@radix-ui/react-dialog';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type ReportTarget =
   | { kind: 'message'; messageId: string; targetUserId: string }
@@ -79,12 +79,25 @@ export function ReportModal({ open, onClose, target }: ReportModalProps) {
   const [reason, setReason] = useState('');
   const [state, setState] = useState<SubmissionState>({ kind: 'idle' });
   const [blocking, setBlocking] = useState(false);
+  // Stable idempotency key for the lifetime of one modal opening, so retries
+  // of the same submission dedupe server-side instead of creating duplicate
+  // rows. Reset every time the modal closes.
+  const idempotencyKeyRef = useRef<string>('');
+  useEffect(() => {
+    if (open && !idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+  }, [open]);
 
   const reset = () => {
     setCategory(null);
     setReason('');
     setState({ kind: 'idle' });
     setBlocking(false);
+    idempotencyKeyRef.current = '';
   };
 
   const handleClose = () => {
@@ -115,7 +128,7 @@ export function ReportModal({ open, onClose, target }: ReportModalProps) {
           serverId: target.serverId,
           category,
           reason: reason.trim() || undefined,
-          idempotencyKey: `${target.userId}-${Date.now()}`,
+          idempotencyKey: idempotencyKeyRef.current,
         });
       }
       setState({ kind: 'success' });

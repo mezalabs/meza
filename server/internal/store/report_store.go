@@ -279,17 +279,17 @@ func (s *ReportStore) ResolveReport(ctx context.Context, reportID, moderatorID, 
 	switch action {
 	case models.ReportActionResolved:
 		if r.Status != models.ReportStatusOpen {
-			return nil, fmt.Errorf("report already %s", r.Status)
+			return nil, ErrInvalidTransition
 		}
 		newStatus = models.ReportStatusResolved
 	case models.ReportActionDismissed:
 		if r.Status != models.ReportStatusOpen {
-			return nil, fmt.Errorf("report already %s", r.Status)
+			return nil, ErrInvalidTransition
 		}
 		newStatus = models.ReportStatusDismissed
 	case models.ReportActionReopen:
 		if r.Status == models.ReportStatusOpen {
-			return nil, fmt.Errorf("report already open")
+			return nil, ErrInvalidTransition
 		}
 		newStatus = models.ReportStatusOpen
 	default:

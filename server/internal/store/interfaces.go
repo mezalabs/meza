@@ -16,6 +16,10 @@ var ErrNotFound = errors.New("not found")
 // ErrAlreadyExists is a sentinel error returned when a unique constraint is violated.
 var ErrAlreadyExists = errors.New("already exists")
 
+// ErrInvalidTransition is a sentinel error returned when a state-machine
+// transition is rejected (e.g. resolving an already-resolved report).
+var ErrInvalidTransition = errors.New("invalid state transition")
+
 // UpdateUserParams holds parameters for updating a user's profile.
 type UpdateUserParams struct {
 	UserID               string
