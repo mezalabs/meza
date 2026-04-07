@@ -500,6 +500,7 @@ export type {
   UpdateStatus,
   UpdateUrgency,
 } from './types/electron.d.ts';
+export { base64UrlToBytes, bytesToBase64Url } from './utils/base64url.ts';
 // Utils
 export type { DeepLinkInvite } from './utils/deep-link.ts';
 export {
@@ -518,6 +519,7 @@ export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export {
+  getApiOrigin,
   getAppOrigin,
   getBaseUrl,
   isCapacitor,

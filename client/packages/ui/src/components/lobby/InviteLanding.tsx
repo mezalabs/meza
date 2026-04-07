@@ -30,6 +30,7 @@ export function InviteLanding() {
       })
       .catch(() => {
         if (!cancelled) {
+          setPreview(null);
           setError('This invite is no longer valid.');
           useInviteStore.getState().clearPendingCode();
         }
@@ -51,10 +52,21 @@ export function InviteLanding() {
       secret: inviteSecret ?? undefined,
     });
     // Use a hidden <a> element instead of window.location.href to avoid
-    // ERR_UNKNOWN_URL_SCHEME errors on some Android browsers.
+    // ERR_UNKNOWN_URL_SCHEME errors on some Android browsers. The anchor
+    // must be attached to the document for the click to trigger the OS
+    // protocol handler reliably across browsers (Chrome/Safari otherwise
+    // drop orphan-anchor clicks to custom schemes on repeat attempts).
+    // Removal is deferred to the next tick so older Android WebViews —
+    // which post protocol-handler dispatch to the message loop — see the
+    // node still attached when they read the click event back.
     const a = document.createElement('a');
     a.href = url;
+    a.style.display = 'none';
+    document.body.appendChild(a);
     a.click();
+    setTimeout(() => {
+      a.remove();
+    }, 0);
   }, [pendingCode, inviteSecret]);
 
   return (
