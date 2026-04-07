@@ -673,6 +673,10 @@ export type Member = Message$1<"meza.v1.Member"> & {
   serverId: string;
 
   /**
+   * Roles assigned to this member. The implicit @everyone role (whose id
+   * equals server_id) is always included as the first element, even though
+   * it is not persisted in the member_roles table.
+   *
    * @generated from field: repeated string role_ids = 3;
    */
   roleIds: string[];

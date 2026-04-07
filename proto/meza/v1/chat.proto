@@ -108,6 +108,11 @@ service ChatService {
   rpc ListServerWebhooks(ListServerWebhooksRequest) returns (ListServerWebhooksResponse);
   rpc RegenerateWebhookToken(RegenerateWebhookTokenRequest) returns (RegenerateWebhookTokenResponse);
   rpc ListWebhookDeliveries(ListWebhookDeliveriesRequest) returns (ListWebhookDeliveriesResponse);
+  // Reports — in-app content reporting (Google Play UGC compliance).
+  rpc ReportMessage(ReportMessageRequest) returns (ReportMessageResponse);
+  rpc ReportUser(ReportUserRequest) returns (ReportUserResponse);
+  rpc ListReports(ListReportsRequest) returns (ListReportsResponse);
+  rpc ResolveReport(ResolveReportRequest) returns (ResolveReportResponse);
 }
 
 // Messages
@@ -1407,4 +1412,100 @@ message ListWebhookDeliveriesRequest {
 
 message ListWebhookDeliveriesResponse {
   repeated WebhookDelivery deliveries = 1;
+}
+
+// Reports
+
+enum ReportCategory {
+  REPORT_CATEGORY_UNSPECIFIED = 0;
+  REPORT_CATEGORY_SPAM = 1;
+  REPORT_CATEGORY_HARASSMENT = 2;
+  REPORT_CATEGORY_HATE = 3;
+  REPORT_CATEGORY_SEXUAL = 4;
+  REPORT_CATEGORY_VIOLENCE = 5;
+  REPORT_CATEGORY_SELF_HARM = 6;
+  REPORT_CATEGORY_ILLEGAL = 7;
+  REPORT_CATEGORY_OTHER = 99;
+}
+
+enum ReportStatus {
+  REPORT_STATUS_UNSPECIFIED = 0;
+  REPORT_STATUS_OPEN = 1;
+  REPORT_STATUS_RESOLVED = 2;
+  REPORT_STATUS_DISMISSED = 3;
+}
+
+enum ResolveAction {
+  RESOLVE_ACTION_UNSPECIFIED = 0;
+  RESOLVE_ACTION_RESOLVE = 1;
+  RESOLVE_ACTION_DISMISS = 2;
+  RESOLVE_ACTION_REOPEN = 3;
+}
+
+message Report {
+  string id = 1;
+  string reporter_id = 2;
+  string target_user_id = 3;
+  string target_message_id = 4;
+  string target_channel_id = 5;
+  string server_id = 6;
+  string snapshot_content = 7;
+  string snapshot_author_username = 8;
+  string snapshot_author_display_name = 9;
+  ReportCategory category = 10;
+  string reason = 11;
+  ReportStatus status = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp acknowledged_at = 14;
+}
+
+message ReportMessageRequest {
+  string message_id = 1;
+  ReportCategory category = 2;
+  string reason = 3;
+}
+
+message ReportMessageResponse {
+  Report report = 1;
+}
+
+message ReportUserRequest {
+  string user_id = 1;
+  // Optional server context — if both reporter and target belong, route to that
+  // server's mod queue. Otherwise (or for cross-server reports) route to the
+  // platform queue.
+  string server_id = 2;
+  ReportCategory category = 3;
+  string reason = 4;
+  // Optional client-supplied UUID for retry idempotency. ReportMessage is
+  // idempotent via the partial-unique guard on (reporter, message); ReportUser
+  // has no such natural guard so it relies on this key.
+  string idempotency_key = 5;
+}
+
+message ReportUserResponse {
+  Report report = 1;
+}
+
+message ListReportsRequest {
+  // Empty server_id means platform queue (only Administrator may list).
+  string server_id = 1;
+  ReportStatus status = 2;
+  string cursor = 3;
+  uint32 limit = 4;
+}
+
+message ListReportsResponse {
+  repeated Report reports = 1;
+  string next_cursor = 2;
+}
+
+message ResolveReportRequest {
+  string report_id = 1;
+  ResolveAction action = 2;
+  string note = 3;
+}
+
+message ResolveReportResponse {
+  Report report = 1;
 }

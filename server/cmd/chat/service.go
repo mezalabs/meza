@@ -111,6 +111,7 @@ type chatService struct {
 	channelGroupStore       store.ChannelGroupStorer
 	permissionOverrideStore store.PermissionOverrideStorer
 	webhookStore               store.WebhookStorer
+	reportStore                store.ReportStorer
 	encryptionChecker          EncryptionChecker
 	nc                         *nats.Conn
 	rdb                        *redis.Client
@@ -139,6 +140,7 @@ type chatServiceConfig struct {
 	ChannelGroupStore       store.ChannelGroupStorer
 	PermissionOverrideStore store.PermissionOverrideStorer
 	WebhookStore            store.WebhookStorer
+	ReportStore             store.ReportStorer
 	EncryptionChecker       EncryptionChecker
 	NC                      *nats.Conn
 	RDB                     *redis.Client
@@ -167,6 +169,7 @@ func newChatService(cfg chatServiceConfig) *chatService {
 		channelGroupStore:       cfg.ChannelGroupStore,
 		permissionOverrideStore: cfg.PermissionOverrideStore,
 		webhookStore:            cfg.WebhookStore,
+		reportStore:             cfg.ReportStore,
 		encryptionChecker:       cfg.EncryptionChecker,
 		nc:                      cfg.NC,
 		rdb:                     cfg.RDB,

@@ -1270,9 +1270,12 @@ func (x *Attachment) GetIsSpoiler() bool {
 }
 
 type Member struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	UserId                string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ServerId              string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	UserId   string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ServerId string                 `protobuf:"bytes,2,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
+	// Roles assigned to this member. The implicit @everyone role (whose id
+	// equals server_id) is always included as the first element, even though
+	// it is not persisted in the member_roles table.
 	RoleIds               []string               `protobuf:"bytes,3,rep,name=role_ids,json=roleIds,proto3" json:"role_ids,omitempty"`
 	Nickname              string                 `protobuf:"bytes,4,opt,name=nickname,proto3" json:"nickname,omitempty"`
 	JoinedAt              *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
