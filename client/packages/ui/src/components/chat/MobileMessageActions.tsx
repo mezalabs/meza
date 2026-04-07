@@ -2,6 +2,7 @@ import { memo, useEffect } from 'react';
 
 interface MobileMessageActionsProps {
   isOwn: boolean;
+  isSystem?: boolean;
   isPinned: boolean;
   canPin: boolean;
   canManageMessages: boolean;
@@ -13,6 +14,7 @@ interface MobileMessageActionsProps {
   onDelete: () => void;
   onPin: () => void;
   onUnpin: () => void;
+  onReport?: () => void;
   onViewProfile?: () => void;
   onViewReactions?: () => void;
 }
@@ -25,6 +27,7 @@ const decoder = new TextDecoder();
  */
 export const MobileMessageActions = memo(function MobileMessageActions({
   isOwn,
+  isSystem = false,
   isPinned,
   canPin,
   canManageMessages,
@@ -36,6 +39,7 @@ export const MobileMessageActions = memo(function MobileMessageActions({
   onDelete,
   onPin,
   onUnpin,
+  onReport,
   onViewProfile,
   onViewReactions,
 }: MobileMessageActionsProps) {
@@ -106,6 +110,10 @@ export const MobileMessageActions = memo(function MobileMessageActions({
           {isOwn && action('Edit Message', onEdit)}
           {(isOwn || canManageMessages) &&
             action('Delete Message', onDelete, true)}
+          {!isOwn &&
+            !isSystem &&
+            onReport &&
+            action('Report Message', onReport, true)}
         </div>
       </div>
     </>

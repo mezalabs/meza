@@ -1,6 +1,12 @@
 import { create } from '@bufbuild/protobuf';
 import { Code, ConnectError, createClient } from '@connectrpc/connect';
-import { ChatService } from '@meza/gen/meza/v1/chat_pb.ts';
+import {
+  ChatService,
+  type Report,
+  ReportCategory,
+  ReportStatus,
+  type ResolveAction,
+} from '@meza/gen/meza/v1/chat_pb.ts';
 import {
   AttachmentSchema,
   ChannelType,
@@ -1342,6 +1348,127 @@ export async function listBlocks() {
     return res.blockedUsers;
   } catch (err) {
     throw new Error(mapChatError(err));
+  }
+}
+
+// --- Report API ---
+
+export type ReportCategoryKey =
+  | 'spam'
+  | 'harassment'
+  | 'hate'
+  | 'sexual'
+  | 'violence'
+  | 'self_harm'
+  | 'illegal'
+  | 'other';
+
+export const reportCategoryEnum: Record<ReportCategoryKey, ReportCategory> = {
+  spam: ReportCategory.SPAM,
+  harassment: ReportCategory.HARASSMENT,
+  hate: ReportCategory.HATE,
+  sexual: ReportCategory.SEXUAL,
+  violence: ReportCategory.VIOLENCE,
+  self_harm: ReportCategory.SELF_HARM,
+  illegal: ReportCategory.ILLEGAL,
+  other: ReportCategory.OTHER,
+};
+
+function mapReportError(err: unknown): string {
+  if (err instanceof ConnectError) {
+    if (err.code === Code.AlreadyExists) {
+      return "You've already reported this — we're reviewing it.";
+    }
+    if (err.code === Code.ResourceExhausted) {
+      return "You've sent too many reports recently. Please try again later.";
+    }
+    if (err.code === Code.InvalidArgument) {
+      return err.message || 'Please pick a category before submitting.';
+    }
+  }
+  return mapChatError(err);
+}
+
+export async function reportMessage(args: {
+  messageId: string;
+  category: ReportCategoryKey;
+  reason?: string;
+}): Promise<Report> {
+  try {
+    const res = await chatClient.reportMessage({
+      messageId: args.messageId,
+      category: reportCategoryEnum[args.category],
+      reason: args.reason ?? '',
+    });
+    if (!res.report) {
+      throw new Error('Server did not return a report');
+    }
+    return res.report;
+  } catch (err) {
+    throw new Error(mapReportError(err), { cause: err });
+  }
+}
+
+export async function reportUser(args: {
+  userId: string;
+  serverId?: string;
+  category: ReportCategoryKey;
+  reason?: string;
+  idempotencyKey?: string;
+}): Promise<Report> {
+  try {
+    const res = await chatClient.reportUser({
+      userId: args.userId,
+      serverId: args.serverId ?? '',
+      category: reportCategoryEnum[args.category],
+      reason: args.reason ?? '',
+      idempotencyKey: args.idempotencyKey ?? '',
+    });
+    if (!res.report) {
+      throw new Error('Server did not return a report');
+    }
+    return res.report;
+  } catch (err) {
+    throw new Error(mapReportError(err), { cause: err });
+  }
+}
+
+export async function listReports(args: {
+  serverId?: string;
+  status?: ReportStatus;
+  cursor?: string;
+  limit?: number;
+}): Promise<{ reports: Report[]; nextCursor: string }> {
+  try {
+    const res = await chatClient.listReports({
+      serverId: args.serverId ?? '',
+      status: args.status ?? ReportStatus.UNSPECIFIED,
+      cursor: args.cursor ?? '',
+      limit: args.limit ?? 50,
+    });
+    return { reports: res.reports, nextCursor: res.nextCursor };
+  } catch (err) {
+    throw new Error(mapReportError(err), { cause: err });
+  }
+}
+
+export async function resolveReport(args: {
+  reportId: string;
+  action: ResolveAction;
+  note?: string;
+}): Promise<Report> {
+  try {
+    const res = await chatClient.resolveReport({
+      reportId: args.reportId,
+      action: args.action,
+      note: args.note ?? '',
+    });
+    if (!res.report) {
+      throw new Error('Server did not return a report');
+    }
+    return res.report;
+  } catch (err) {
+    throw new Error(mapReportError(err), { cause: err });
   }
 }
 

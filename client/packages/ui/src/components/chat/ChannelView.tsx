@@ -76,6 +76,7 @@ import { openProfilePane } from '../../stores/tiling.ts';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
+import { ReportModal } from '../shared/ReportModal.tsx';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { AttachmentRenderer } from './AttachmentRenderer.tsx';
 import { ContentWarningInterstitial } from './ContentWarningInterstitial.tsx';
@@ -1223,6 +1224,7 @@ const MessageItem = memo(function MessageItem({
     useState<DOMRect | null>(null);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [mobileEmojiPickerOpen, setMobileEmojiPickerOpen] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const editEditorRef = useRef<ComposerEditorHandle>(null);
 
   const longPressHandlers = useLongPress(
@@ -1557,6 +1559,7 @@ const MessageItem = memo(function MessageItem({
         <MessageContextMenu
           encryptedContent={msg.encryptedContent}
           isOwn={isOwn}
+          isSystem={msg.type !== 0}
           isPinned={isPinned}
           canPin
           hasReactions={hasReactions}
@@ -1565,6 +1568,7 @@ const MessageItem = memo(function MessageItem({
           onDelete={() => setDeleteDialogOpen(true)}
           onPin={() => pinMessage(msg.channelId, msg.id)}
           onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onReport={() => setReportModalOpen(true)}
           onViewProfile={() => openProfilePane(msg.authorId)}
           onViewReactions={() => setReactionsDialogOpen(true)}
         >
@@ -1588,6 +1592,7 @@ const MessageItem = memo(function MessageItem({
       {mobileActionsOpen && (
         <MobileMessageActions
           isOwn={isOwn}
+          isSystem={msg.type !== 0}
           isPinned={isPinned}
           canPin
           canManageMessages={canManageMessages}
@@ -1599,6 +1604,7 @@ const MessageItem = memo(function MessageItem({
           onDelete={() => setDeleteDialogOpen(true)}
           onPin={() => pinMessage(msg.channelId, msg.id)}
           onUnpin={() => unpinMessage(msg.channelId, msg.id)}
+          onReport={() => setReportModalOpen(true)}
           onViewProfile={() => openProfilePane(msg.authorId)}
           onViewReactions={() => setReactionsDialogOpen(true)}
         />
@@ -1642,6 +1648,16 @@ const MessageItem = memo(function MessageItem({
         serverId={serverId}
         open={reactionsDialogOpen}
         onOpenChange={setReactionsDialogOpen}
+      />
+
+      <ReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        target={{
+          kind: 'message',
+          messageId: msg.id,
+          targetUserId: msg.authorId,
+        }}
       />
     </>
   );

@@ -33,6 +33,7 @@ import { Avatar } from '../shared/Avatar.tsx';
 import { ImageCropper } from '../shared/ImageCropper.tsx';
 import { MarkdownRenderer } from '../shared/MarkdownRenderer.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { ReportModal } from '../shared/ReportModal.tsx';
 
 interface ProfileViewProps {
   userId: string;
@@ -55,6 +56,7 @@ export function ProfileView({ userId, initialEditing }: ProfileViewProps) {
   const isOwnProfile = currentUser?.id === userId;
   const isBlocked = useBlockStore((s) => s.isBlocked(userId));
   const [blockLoading, setBlockLoading] = useState(false);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const friendRelationship = useFriendStore((s) => s.getRelationship(userId));
   const [friendLoading, setFriendLoading] = useState(false);
   const [voiceActivity, setVoiceActivity] = useState<VoiceActivity[]>([]);
@@ -440,11 +442,24 @@ export function ProfileView({ userId, initialEditing }: ProfileViewProps) {
                     ? 'Unblock'
                     : 'Block'}
               </button>
+              <button
+                type="button"
+                className="rounded-md bg-bg-surface px-4 py-2 text-sm font-medium text-text-muted hover:text-error transition-colors"
+                onClick={() => setReportModalOpen(true)}
+                aria-label="Report user"
+              >
+                Report
+              </button>
               <VerificationBadge userId={userId} />
             </div>
           )}
         </div>
       </div>
+      <ReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        target={{ kind: 'user', userId }}
+      />
     </div>
   );
 }
