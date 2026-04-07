@@ -1,7 +1,6 @@
 import {
   ChannelType,
   createServerFromTemplate,
-  type Invite,
   type PaneId,
   type Server,
   type ServerTemplate,
@@ -54,7 +53,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createdServer, setCreatedServer] = useState<Server | null>(null);
-  const [createdInvite, setCreatedInvite] = useState<Invite | null>(null);
+  const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null);
 
   const handleTemplateSelect = useCallback((template: ServerTemplate) => {
     setTemplateId(template.id);
@@ -129,7 +128,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
 
       if (result.server) {
         setCreatedServer(result.server);
-        setCreatedInvite(result.invite ?? null);
+        setCreatedInviteUrl(result.inviteUrl ?? null);
         useNavigationStore.getState().selectServer(result.server.id);
         setStep(4);
       }
@@ -263,7 +262,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
             />
           )}
           {step === 4 && createdServer && (
-            <InviteStep server={createdServer} invite={createdInvite} />
+            <InviteStep server={createdServer} inviteUrl={createdInviteUrl} />
           )}
         </div>
 

@@ -1,7 +1,7 @@
 import {
   createWebhook,
   deleteWebhook,
-  getAppOrigin,
+  getApiOrigin,
   listChannelWebhooks,
   listWebhookDeliveries,
   regenerateWebhookToken,
@@ -143,7 +143,7 @@ function CreateWebhookForm({
             Copy the URL below. It won't be shown again.
           </p>
           <CopyField
-            value={`${getAppOrigin()}${result.url}`}
+            value={`${getApiOrigin()}${result.url}`}
             label="Webhook URL"
           />
 
@@ -157,7 +157,7 @@ function CreateWebhookForm({
               request with a JSON body to the URL above.
             </p>
             <pre className="overflow-x-auto rounded bg-bg-tertiary px-3 py-2 text-xs text-text font-mono leading-relaxed">
-              {`curl -X POST ${getAppOrigin()}${result.url} \\
+              {`curl -X POST ${getApiOrigin()}${result.url} \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify({ content: 'Hello from a webhook!' }, null, 2)}'`}
             </pre>
@@ -409,7 +409,7 @@ function WebhookCard({
                 New token generated. Copy it now — it won't be shown again.
               </p>
               <CopyField
-                value={`${getAppOrigin()}${showToken.url}`}
+                value={`${getApiOrigin()}${showToken.url}`}
                 label="Webhook URL"
               />
             </div>

@@ -10,8 +10,10 @@ import {
 } from '@meza/gen/meza/v1/models_pb.ts';
 import {
   createChannelKey,
+  createInviteKeyBundle,
   getIdentity,
   hasChannelKey,
+  importInviteKeyBundle,
   isSessionReady,
   provisionChannelKeyBatched,
   redistributeChannelKeys,
@@ -35,18 +37,13 @@ import { useRoleStore } from '../store/roles.ts';
 import { useServerStore } from '../store/servers.ts';
 import { useSoundStore } from '../store/sounds.ts';
 import { useUsersStore } from '../store/users.ts';
+import { base64UrlToBytes, bytesToBase64Url } from '../utils/base64url.ts';
+import { getAppOrigin } from '../utils/platform.ts';
 import { publicUserToStored, toStoredUser } from './auth.ts';
 import { transport } from './client.ts';
 import { getPublicKeys, storeKeyEnvelopes } from './keys.ts';
 
 const chatClient = createClient(ChatService, transport);
-
-/** Decode a base64url string (no padding) to bytes. */
-function base64UrlToBytes(b64url: string): Uint8Array {
-  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), '=');
-  return Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
-}
 
 /**
  * Provision the initial encryption key for a newly created encrypted channel.
@@ -248,6 +245,14 @@ export async function resolveInvite(code: string) {
   }
 }
 
+export async function revokeInvite(code: string) {
+  try {
+    await chatClient.revokeInvite({ code });
+  } catch (err) {
+    throw new Error(mapChatError(err), { cause: err });
+  }
+}
+
 export async function joinServer(inviteCode: string) {
   try {
     const res = await chatClient.joinServer({ inviteCode });
@@ -262,23 +267,18 @@ export async function joinServer(inviteCode: string) {
       res.encryptedChannelKeys.length > 0 &&
       res.channelKeysIv.length > 0
     ) {
+      const secretBytes = base64UrlToBytes(inviteSecret);
       try {
-        const { importInviteKeyBundle } = await import(
-          '../crypto/invite-keys.ts'
+        await importInviteKeyBundle(
+          secretBytes,
+          res.encryptedChannelKeys,
+          res.channelKeysIv,
         );
-        const secretBytes = base64UrlToBytes(inviteSecret);
-        try {
-          await importInviteKeyBundle(
-            secretBytes,
-            res.encryptedChannelKeys,
-            res.channelKeysIv,
-          );
-        } finally {
-          secretBytes.fill(0);
-        }
       } catch (err) {
         // Non-fatal: keys will be distributed by online members as fallback
         console.warn('[E2EE] Failed to import invite key bundle:', err);
+      } finally {
+        secretBytes.fill(0);
       }
       setInviteSecret(null);
     }
@@ -1033,31 +1033,106 @@ export async function createServerFromTemplate(params: {
 }) {
   try {
     const res = await chatClient.createServerFromTemplate(params);
-    if (res.server) {
-      useServerStore.getState().addServer(res.server);
-      useChannelGroupStore
-        .getState()
-        .setGroups(res.server.id, res.channelGroups);
-      useChannelStore.getState().setChannels(res.server.id, res.channels);
-      useRoleStore.getState().setRoles(res.server.id, res.roles);
-      // Provision encryption keys for all template channels (universal E2EE)
-      const userId = useAuthStore.getState().user?.id;
-      if (userId) {
-        for (const ch of res.channels) {
-          provisionChannelKey(ch.id, [userId]).catch((err) =>
-            console.error(
-              '[E2EE] Failed to provision key for template channel:',
-              err,
-            ),
+    if (!res.server) {
+      return {
+        server: res.server,
+        channels: res.channels,
+        roles: res.roles,
+        invite: res.invite,
+        inviteUrl: undefined,
+      };
+    }
+
+    useServerStore.getState().addServer(res.server);
+    useChannelGroupStore.getState().setGroups(res.server.id, res.channelGroups);
+    useChannelStore.getState().setChannels(res.server.id, res.channels);
+    useRoleStore.getState().setRoles(res.server.id, res.roles);
+
+    // Provision encryption keys for all template channels (universal E2EE).
+    // We must await each provisioning AND know which ones succeeded — a
+    // partial bundle that pretends to be whole would leave joiners decrypting
+    // some channels and seeing ciphertext gibberish in others.
+    const userId = useAuthStore.getState().user?.id;
+    const provisionFailed = new Set<string>();
+    if (userId) {
+      const results = await Promise.allSettled(
+        res.channels.map((ch) => provisionChannelKey(ch.id, [userId])),
+      );
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          const ch = res.channels[i];
+          if (ch) provisionFailed.add(ch.id);
+          console.error(
+            '[E2EE] Failed to provision key for template channel:',
+            r.reason,
           );
         }
+      });
+    }
+
+    // The server eagerly creates a default invite during template creation,
+    // but it can't include an encrypted key bundle (the channel keys didn't
+    // exist yet). Build a fresh invite with the bundle, revoke the orphan,
+    // and return a ready-to-share URL with the secret in the URL fragment.
+    // The raw 32-byte secret is zeroed before returning so it never leaves
+    // this function as live key material.
+    let invite = res.invite;
+    let inviteUrl: string | undefined;
+    const publicChannels = res.channels.filter(
+      (ch) => !ch.isPrivate && !provisionFailed.has(ch.id),
+    );
+    const allPublicProvisioned = res.channels
+      .filter((ch) => !ch.isPrivate)
+      .every((ch) => !provisionFailed.has(ch.id));
+    if (publicChannels.length > 0 && allPublicProvisioned && isSessionReady()) {
+      const inviteSecret = crypto.getRandomValues(new Uint8Array(32));
+      try {
+        const { ciphertext, iv } = await createInviteKeyBundle(
+          inviteSecret,
+          publicChannels.map((ch) => ch.id),
+        );
+        const e2eeInvite = await createInvite(res.server.id, {
+          encryptedChannelKeys: ciphertext,
+          channelKeysIv: iv,
+        });
+        if (e2eeInvite) {
+          inviteUrl = `${getAppOrigin()}/invite/${e2eeInvite.code}#${bytesToBase64Url(inviteSecret)}`;
+          // Retire the server's no-bundle invite so it doesn't sit in the
+          // DB as a parallel join path that bypasses the key bundle.
+          if (res.invite) {
+            revokeInvite(res.invite.code).catch((err) =>
+              console.error(
+                '[invite] Failed to revoke server-created initial invite:',
+                err,
+              ),
+            );
+          }
+          invite = e2eeInvite;
+        }
+      } catch (err) {
+        console.error(
+          '[E2EE] Failed to build key bundle invite for new server:',
+          err,
+        );
+      } finally {
+        inviteSecret.fill(0);
       }
     }
+
+    // Fall back to the server's plain invite URL when the bundle couldn't
+    // be built (no public channels, provisioning failed, or session not
+    // ready). The user still gets a working invite — just without offline
+    // key distribution.
+    if (!inviteUrl && invite) {
+      inviteUrl = `${getAppOrigin()}/invite/${invite.code}`;
+    }
+
     return {
       server: res.server,
       channels: res.channels,
       roles: res.roles,
-      invite: res.invite,
+      invite,
+      inviteUrl,
     };
   } catch (err) {
     throw new Error(mapChatError(err), { cause: err });
