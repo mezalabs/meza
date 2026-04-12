@@ -18,6 +18,7 @@ import { remarkMezaEmoji } from './remarkMezaEmoji.ts';
 import { remarkMezaMention } from './remarkMezaMention.ts';
 import { remarkMezaSpoiler } from './remarkMezaSpoiler.ts';
 import { remarkUnicodeEmoji } from './remarkUnicodeEmoji.ts';
+import { TwemojiImg } from './TwemojiImg.tsx';
 
 type MarkdownVariant = 'message' | 'full';
 
@@ -257,19 +258,19 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           />
         );
       },
-      // Native Unicode emoji wrapper
+      // Native Unicode emoji → Twemoji SVG
       'meza-unicode-emoji': ({
         children,
       }: ComponentPropsWithoutRef<'span'>) => {
         const size = EMOJI_BASE_SIZE_PX * emojiScale;
-        return (
-          <span
-            className="inline-block align-text-bottom leading-none"
-            style={{ fontSize: size }}
-          >
-            {children}
-          </span>
-        );
+        // Extract the raw emoji string from the children text node
+        const emoji =
+          typeof children === 'string'
+            ? children
+            : Array.isArray(children)
+              ? String(children[0] ?? '')
+              : String(children ?? '');
+        return <TwemojiImg emoji={emoji} size={size} />;
       },
       // Custom Meza mention elements
       'meza-mention': ({

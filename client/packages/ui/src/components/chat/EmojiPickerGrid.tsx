@@ -10,6 +10,7 @@ import {
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 
 // ----- Constants -----
@@ -662,16 +663,7 @@ const EmojiButton = memo(function EmojiButton({
           onError={handleImgError}
         />
       ) : (
-        <span
-          className="leading-none"
-          style={{
-            fontSize: es,
-            fontFamily:
-              "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
-          }}
-        >
-          {applySkinTone(item.emoji, skinTone)}
-        </span>
+        <TwemojiImg emoji={applySkinTone(item.emoji, skinTone)} size={es} />
       )}
     </button>
   );

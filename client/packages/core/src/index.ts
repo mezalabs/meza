@@ -359,6 +359,8 @@ export {
   getFrequentEmojis,
   recordUsage,
 } from './lib/frequentEmojis.ts';
+// Twemoji
+export { charToTwemojiFilename, getTwemojiUrl } from './lib/twemoji.ts';
 // Onboarding templates
 export {
   SERVER_TEMPLATES,

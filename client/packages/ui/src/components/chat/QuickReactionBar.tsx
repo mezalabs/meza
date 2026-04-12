@@ -1,6 +1,7 @@
 import { addReaction, useAuthStore, useReactionStore } from '@meza/core';
 import { DotsThreeIcon, PlusIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useRef } from 'react';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -88,10 +89,10 @@ export const QuickReactionBar = memo(function QuickReactionBar({
           <button
             key={emoji}
             type="button"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-bg-surface active:scale-90 transition-transform"
+            className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-bg-surface active:scale-90 transition-transform"
             onClick={() => handleReaction(emoji)}
           >
-            {emoji}
+            <TwemojiImg emoji={emoji} size={22} />
           </button>
         ))}
         <div className="mx-0.5 h-5 w-px bg-border" />
