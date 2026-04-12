@@ -354,6 +354,8 @@ export type {
 } from './lib/emojiSearch.ts';
 export { searchEmojis } from './lib/emojiSearch.ts';
 export type { FrequentEmojiEntry } from './lib/frequentEmojis.ts';
+// Twemoji
+export { charToTwemojiFilename, getTwemojiUrl } from './lib/twemoji.ts';
 export {
   clearFrequentEmojis,
   getFrequentEmojis,

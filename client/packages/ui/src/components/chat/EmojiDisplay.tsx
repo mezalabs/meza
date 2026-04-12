@@ -1,4 +1,5 @@
 import { getMediaURL, useEmojiStore } from '@meza/core';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 const CUSTOM_EMOJI_RE = /^<(a?):([a-z0-9_]{2,32}):([a-zA-Z0-9]+)>$/;
 
@@ -60,5 +61,5 @@ export function EmojiDisplay({
     return <span>:{name}:</span>;
   }
 
-  return <span style={{ fontSize }}>{emoji}</span>;
+  return <TwemojiImg emoji={emoji} size={fontSize} />;
 }

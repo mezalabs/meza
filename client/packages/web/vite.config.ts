@@ -53,6 +53,9 @@ export default defineConfig(async () => {
       host: true,
       https,
       allowedHosts: ['.share.zrok.io', '.ts.net'],
+      watch: {
+        ignored: ['**/public/twemoji/**'],
+      },
       proxy: {
         // Auth service → server/cmd/auth (port 8081)
         '/meza.v1.AuthService': {

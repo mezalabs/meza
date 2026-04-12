@@ -9,6 +9,7 @@ import {
   useEmojiStore,
 } from '@meza/core';
 import { useEffect, useMemo, useRef } from 'react';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 interface EmojiAutocompleteProps {
   query: string;
@@ -146,9 +147,7 @@ export function EmojiAutocomplete({
                 loading="lazy"
               />
             ) : (
-              <span className="h-6 w-6 flex items-center justify-center text-lg">
-                {item.emoji}
-              </span>
+              <TwemojiImg emoji={item.emoji} size={24} />
             )}
             <span className="truncate">
               {item.type === 'custom' ? `:${item.name}:` : item.label}
