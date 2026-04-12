@@ -182,6 +182,9 @@ importers:
       '@capacitor/status-bar':
         specifier: ^7
         version: 7.0.5(@capacitor/core@7.5.0)
+      '@capawesome/capacitor-badge':
+        specifier: ^7
+        version: 7.0.1(@capacitor/core@7.5.0)
     devDependencies:
       '@capacitor/android':
         specifier: ^7
@@ -625,6 +628,11 @@ packages:
 
   '@capacitor/status-bar@7.0.5':
     resolution: {integrity: sha512-d0DI/Usy4RrNiV5xfnypXNRLmWYMixC2yAUAwe6sCQQ0HF7oskDf4RpCxcZqbxnpc4H4A0qqiOSltfJLFAYshg==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
+
+  '@capawesome/capacitor-badge@7.0.1':
+    resolution: {integrity: sha512-jhVieRRVLgGO1NU7PW8uWZmf3WD4IsYUlkrJ82KuoRgLFx1tbJGwHU1ro0sUJmEwfLO9vldhBnJJ/J5nHrjbQQ==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -5511,6 +5519,10 @@ snapshots:
       '@capacitor/core': 7.5.0
 
   '@capacitor/status-bar@7.0.5(@capacitor/core@7.5.0)':
+    dependencies:
+      '@capacitor/core': 7.5.0
+
+  '@capawesome/capacitor-badge@7.0.1(@capacitor/core@7.5.0)':
     dependencies:
       '@capacitor/core': 7.5.0
 

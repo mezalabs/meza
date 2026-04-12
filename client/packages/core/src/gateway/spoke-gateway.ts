@@ -315,7 +315,17 @@ function dispatchSpokeEvent(
     if (msg.authorId !== currentUserId) {
       const viewed = useGatewayStore.getState().viewedChannelIds;
       if (!viewed[msg.channelId]) {
-        useReadStateStore.getState().incrementUnread(msg.channelId);
+        // Spoke channels are server channels, not DMs — only count explicit mentions.
+        if (
+          msg.mentionedUserIds.includes(currentUserId ?? '') ||
+          msg.mentionEveryone
+        ) {
+          useReadStateStore
+            .getState()
+            .incrementUnreadWithMention(msg.channelId);
+        } else {
+          useReadStateStore.getState().incrementUnread(msg.channelId);
+        }
       }
     }
   } else if (event.payload.case === 'messageUpdate' && event.payload.value) {

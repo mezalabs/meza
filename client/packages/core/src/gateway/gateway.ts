@@ -598,13 +598,20 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         if (!alreadySeen && msg.authorId !== currentUserId) {
           const viewed = useGatewayStore.getState().viewedChannelIds;
           if (!viewed[msg.channelId]) {
-            useReadStateStore.getState().incrementUnread(msg.channelId);
+            const isMention =
+              msg.mentionedUserIds.includes(currentUserId ?? '') ||
+              msg.mentionEveryone;
+            // Atomic increment — avoids firing subscribers twice per message
+            if (isMention || likelyDM) {
+              useReadStateStore
+                .getState()
+                .incrementUnreadWithMention(msg.channelId);
+            } else {
+              useReadStateStore.getState().incrementUnread(msg.channelId);
+            }
             // Notification sound: mention > dm > message
             let soundType: SoundType = 'message';
-            if (
-              msg.mentionedUserIds.includes(currentUserId ?? '') ||
-              msg.mentionEveryone
-            ) {
+            if (isMention) {
               soundType = 'mention';
             } else if (likelyDM) {
               soundType = 'dm';

@@ -215,6 +215,11 @@ export {
   leaveVoiceChannel,
   mapVoiceError,
 } from './api/voice.ts';
+export { CapacitorBadgeAdapter } from './badge/capacitor-adapter.ts';
+export { ElectronBadgeAdapter } from './badge/electron-adapter.ts';
+// Badge
+export type { BadgeAdapter } from './badge/sync.ts';
+export { startBadgeSync, stopBadgeSync } from './badge/sync.ts';
 // Constants
 export { LOBBY_SERVER_ID } from './constants.ts';
 // Crypto — E2EE static channel key operations
@@ -431,6 +436,7 @@ export { useMemberStore } from './store/members.ts';
 export type { MessageActions, MessageState } from './store/messages.ts';
 export { useMessageStore } from './store/messages.ts';
 export type {
+  BadgeMode,
   NotificationSettingsActions,
   NotificationSettingsState,
 } from './store/notificationSettings.ts';

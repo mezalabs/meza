@@ -41,6 +41,7 @@ export interface ElectronAPI {
   };
   tray: {
     setBadgeCount: (count: number) => void;
+    setOverlayIcon?: (count: number) => void;
   };
   updates: {
     check: () => Promise<void>;
