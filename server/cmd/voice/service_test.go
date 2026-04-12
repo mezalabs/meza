@@ -239,12 +239,18 @@ func (m *mockChatStore) DeleteChannelGroupWithSnapshot(_ context.Context, _ stri
 
 type mockRoleStore struct {
 	memberRoles map[string]map[string][]*models.Role // serverID -> userID -> roles
+	roles       map[string]*models.Role              // roleID -> role
 }
 
 func newMockRoleStore() *mockRoleStore {
 	return &mockRoleStore{
 		memberRoles: make(map[string]map[string][]*models.Role),
+		roles:       make(map[string]*models.Role),
 	}
+}
+
+func (m *mockRoleStore) addRole(role *models.Role) {
+	m.roles[role.ID] = role
 }
 
 func (m *mockRoleStore) setMemberRoles(serverID, userID string, roles []*models.Role) {
@@ -266,8 +272,11 @@ func (m *mockRoleStore) GetMemberRoles(_ context.Context, userID, serverID strin
 func (m *mockRoleStore) CreateRole(context.Context, *models.Role) (*models.Role, error) {
 	panic("not implemented")
 }
-func (m *mockRoleStore) GetRole(context.Context, string) (*models.Role, error) {
-	panic("not implemented")
+func (m *mockRoleStore) GetRole(_ context.Context, roleID string) (*models.Role, error) {
+	if r, ok := m.roles[roleID]; ok {
+		return r, nil
+	}
+	return nil, errors.New("role not found")
 }
 func (m *mockRoleStore) GetRolesByIDs(context.Context, []string, string) ([]*models.Role, error) {
 	panic("not implemented")
@@ -394,13 +403,14 @@ func setupVoiceTest(t *testing.T) (mezav1connect.VoiceServiceClient, *mockChatSt
 // ---------- tests ----------
 
 func TestJoinVoiceChannelSuccess(t *testing.T) {
-	client, cs, lk, _ := setupVoiceTest(t)
+	client, cs, lk, rs := setupVoiceTest(t)
 
 	userID := models.NewID()
 	serverID := models.NewID()
 	channelID := models.NewID()
 
 	cs.addServer(&models.Server{ID: serverID, OwnerID: models.NewID()})
+	rs.addRole(&models.Role{ID: serverID, Permissions: permissions.DefaultEveryonePermissions})
 	cs.addChannel(&models.Channel{
 		ID:       channelID,
 		ServerID: serverID,
@@ -641,7 +651,11 @@ func TestJoinVoiceChannelScreenSharePermission(t *testing.T) {
 	serverID := models.NewID()
 	channelID := models.NewID()
 
+	everyoneOnlyUser := models.NewID()
+
 	cs.addServer(&models.Server{ID: serverID, OwnerID: ownerID})
+	// @everyone role without StreamVideo — tests below verify explicit role grants.
+	rs.addRole(&models.Role{ID: serverID, Permissions: permissions.DefaultEveryonePermissions})
 	cs.addChannel(&models.Channel{
 		ID:       channelID,
 		ServerID: serverID,
@@ -651,6 +665,7 @@ func TestJoinVoiceChannelScreenSharePermission(t *testing.T) {
 	cs.addMember(serverID, ownerID)
 	cs.addMember(serverID, userWithPerm)
 	cs.addMember(serverID, userWithoutPerm)
+	cs.addMember(serverID, everyoneOnlyUser)
 
 	// Give userWithPerm a role with StreamVideo.
 	rs.setMemberRoles(serverID, userWithPerm, []*models.Role{
@@ -690,6 +705,20 @@ func TestJoinVoiceChannelScreenSharePermission(t *testing.T) {
 		}
 		if resp.Msg.CanScreenShare {
 			t.Error("user without StreamVideo should have CanScreenShare = false")
+		}
+	})
+
+	t.Run("everyone role with StreamVideo grants screen share", func(t *testing.T) {
+		// Update @everyone to include StreamVideo (as in the default SafeEveryonePermissions).
+		rs.addRole(&models.Role{ID: serverID, Permissions: permissions.SafeEveryonePermissions})
+		resp, err := client.JoinVoiceChannel(context.Background(), testutil.AuthedRequest(t, everyoneOnlyUser, &v1.JoinVoiceChannelRequest{
+			ChannelId: channelID,
+		}))
+		if err != nil {
+			t.Fatalf("JoinVoiceChannel: %v", err)
+		}
+		if !resp.Msg.CanScreenShare {
+			t.Error("user with only @everyone (which has StreamVideo) should have CanScreenShare = true")
 		}
 	})
 

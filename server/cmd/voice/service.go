@@ -105,12 +105,19 @@ func (s *voiceService) JoinVoiceChannel(ctx context.Context, req *connect.Reques
 	if srv.OwnerID == userID {
 		canScreenShare = true // Server owner has all permissions.
 	} else {
+		// Fetch the @everyone role (id = serverID) for its implicit permissions.
+		everyoneRole, evErr := s.roleStore.GetRole(ctx, channel.ServerID)
+		if evErr != nil {
+			slog.Error("get everyone role", "err", evErr, "server", channel.ServerID)
+			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
+		}
+		combined := everyoneRole.Permissions
+
 		roles, rolesErr := s.roleStore.GetMemberRoles(ctx, userID, channel.ServerID)
 		if rolesErr != nil {
 			slog.Error("get member roles", "err", rolesErr, "user", userID, "server", channel.ServerID)
 			return nil, connect.NewError(connect.CodeInternal, errors.New("internal error"))
 		}
-		var combined int64
 		for _, r := range roles {
 			combined |= r.Permissions
 		}
