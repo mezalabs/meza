@@ -91,14 +91,11 @@ export function ScreenSharePane({
           if ((viewerCounts.get(participantIdentity) ?? 0) > 0) return;
           if (room.state === 'connected' || room.state === 'reconnecting') {
             room.localParticipant
-              .publishData(
-                encoder.encode(JSON.stringify({ type: 'leave' })),
-                {
-                  reliable: true,
-                  topic: STREAM_VIEWER_TOPIC,
-                  destinationIdentities: [participantIdentity],
-                },
-              )
+              .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
+                reliable: true,
+                topic: STREAM_VIEWER_TOPIC,
+                destinationIdentities: [participantIdentity],
+              })
               .catch(() => {}); // best-effort — may fail during teardown
           }
         }, 100);
