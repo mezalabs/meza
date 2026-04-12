@@ -7,10 +7,10 @@ import {
   type StoredEmoji,
   type UnicodeEmoji,
 } from '@meza/core';
-import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 import type { PreviewEmoji } from './EmojiPickerPreview.tsx';
 
 // ----- Constants -----
@@ -663,10 +663,7 @@ const EmojiButton = memo(function EmojiButton({
           onError={handleImgError}
         />
       ) : (
-        <TwemojiImg
-          emoji={applySkinTone(item.emoji, skinTone)}
-          size={es}
-        />
+        <TwemojiImg emoji={applySkinTone(item.emoji, skinTone)} size={es} />
       )}
     </button>
   );

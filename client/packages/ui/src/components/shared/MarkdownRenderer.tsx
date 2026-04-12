@@ -14,11 +14,11 @@ import remarkGfm from 'remark-gfm';
 import { MentionBadge } from '../chat/MentionBadge.tsx';
 import { EMOJI_BASE_SIZE_PX } from './emojiConstants.ts';
 import { MEZA_SANITIZE_SCHEMA } from './markdownSanitizeSchema.ts';
-import { TwemojiImg } from './TwemojiImg.tsx';
 import { remarkMezaEmoji } from './remarkMezaEmoji.ts';
 import { remarkMezaMention } from './remarkMezaMention.ts';
 import { remarkMezaSpoiler } from './remarkMezaSpoiler.ts';
 import { remarkUnicodeEmoji } from './remarkUnicodeEmoji.ts';
+import { TwemojiImg } from './TwemojiImg.tsx';
 
 type MarkdownVariant = 'message' | 'full';
 

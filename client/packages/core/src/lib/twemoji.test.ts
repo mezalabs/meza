@@ -29,9 +29,7 @@ describe('charToTwemojiFilename', () => {
 
   it('preserves FE0F when ZWJ is present', () => {
     // ❤️‍🔥 heart on fire: U+2764 U+FE0F U+200D U+1F525
-    expect(charToTwemojiFilename('❤️‍🔥')).toBe(
-      '2764-fe0f-200d-1f525.svg',
-    );
+    expect(charToTwemojiFilename('❤️‍🔥')).toBe('2764-fe0f-200d-1f525.svg');
   });
 
   it('handles ZWJ sequence with FE0F (couple with heart)', () => {
@@ -88,8 +86,6 @@ describe('charToTwemojiFilename', () => {
 
   it('handles ZWJ profession sequence with skin tone and FE0F', () => {
     // 👨🏻‍💻 man technologist light skin: U+1F468 U+1F3FB U+200D U+1F4BB
-    expect(charToTwemojiFilename('👨🏻‍💻')).toBe(
-      '1f468-1f3fb-200d-1f4bb.svg',
-    );
+    expect(charToTwemojiFilename('👨🏻‍💻')).toBe('1f468-1f3fb-200d-1f4bb.svg');
   });
 });
