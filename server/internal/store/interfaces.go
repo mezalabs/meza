@@ -16,6 +16,10 @@ var ErrNotFound = errors.New("not found")
 // ErrAlreadyExists is a sentinel error returned when a unique constraint is violated.
 var ErrAlreadyExists = errors.New("already exists")
 
+// ErrInvalidTransition is a sentinel error returned when a state-machine
+// transition is rejected (e.g. resolving an already-resolved report).
+var ErrInvalidTransition = errors.New("invalid state transition")
+
 // UpdateUserParams holds parameters for updating a user's profile.
 type UpdateUserParams struct {
 	UserID               string
@@ -178,6 +182,52 @@ type BlockStorer interface {
 	IsBlockedEither(ctx context.Context, userA, userB string) (bool, error)
 	ListBlocks(ctx context.Context, blockerID string) ([]string, error)
 	ListBlocksWithUsers(ctx context.Context, blockerID string) ([]*models.User, error)
+}
+
+// CreateReportOpts holds inputs for inserting a report row.
+type CreateReportOpts struct {
+	ID                        string
+	ReporterID                string
+	TargetUserID              string
+	TargetMessageID           string
+	TargetChannelID           string
+	ServerID                  string
+	SnapshotContent           string
+	SnapshotAuthorUsername    string
+	SnapshotAuthorDisplayName string
+	SnapshotAttachments       []byte // marshaled JSONB
+	SnapshotMessageEditedAt   *time.Time
+	Category                  string
+	Reason                    string
+	IdempotencyKey            string
+}
+
+// AppendResolutionOpts holds inputs for appending a row to report_resolutions.
+type AppendResolutionOpts struct {
+	ID          string
+	ReportID    string
+	ModeratorID string
+	Action      string // resolved | dismissed | reopen
+	Note        string
+}
+
+// ReportStorer provides access to in-app content report data in Postgres.
+type ReportStorer interface {
+	// CreateReport inserts a single report row. Returns ErrAlreadyExists if
+	// the partial-unique guard on (reporter, target_message_id) WHERE status='open'
+	// is hit, OR if an idempotency_key collision is detected.
+	CreateReport(ctx context.Context, opts CreateReportOpts) (*models.Report, error)
+	GetReport(ctx context.Context, id string) (*models.Report, error)
+	ListReportsByServer(ctx context.Context, serverID, status, cursor string, limit int) ([]*models.Report, string, error)
+	ListPlatformReports(ctx context.Context, status, cursor string, limit int) ([]*models.Report, string, error)
+	ListReportsByReporter(ctx context.Context, reporterID, cursor string, limit int) ([]*models.Report, string, error)
+	// ResolveReport selects-for-update inside an internally-managed transaction,
+	// verifies the current status, updates the row to the new status (clearing
+	// claimed_by/claimed_at on resolve/dismiss), and appends a resolution audit row.
+	ResolveReport(ctx context.Context, reportID, moderatorID, action, note string) (*models.Report, error)
+	// AcknowledgeReport sets acknowledged_at to now if currently null.
+	AcknowledgeReport(ctx context.Context, reportID, moderatorID string) error
+	ListResolutions(ctx context.Context, reportID string) ([]*models.ReportResolution, error)
 }
 
 // FriendStorer provides access to friendship data in Postgres.

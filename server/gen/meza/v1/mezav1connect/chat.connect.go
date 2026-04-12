@@ -302,6 +302,16 @@ const (
 	// ChatServiceListWebhookDeliveriesProcedure is the fully-qualified name of the ChatService's
 	// ListWebhookDeliveries RPC.
 	ChatServiceListWebhookDeliveriesProcedure = "/meza.v1.ChatService/ListWebhookDeliveries"
+	// ChatServiceReportMessageProcedure is the fully-qualified name of the ChatService's ReportMessage
+	// RPC.
+	ChatServiceReportMessageProcedure = "/meza.v1.ChatService/ReportMessage"
+	// ChatServiceReportUserProcedure is the fully-qualified name of the ChatService's ReportUser RPC.
+	ChatServiceReportUserProcedure = "/meza.v1.ChatService/ReportUser"
+	// ChatServiceListReportsProcedure is the fully-qualified name of the ChatService's ListReports RPC.
+	ChatServiceListReportsProcedure = "/meza.v1.ChatService/ListReports"
+	// ChatServiceResolveReportProcedure is the fully-qualified name of the ChatService's ResolveReport
+	// RPC.
+	ChatServiceResolveReportProcedure = "/meza.v1.ChatService/ResolveReport"
 )
 
 // ChatServiceClient is a client for the meza.v1.ChatService service.
@@ -408,6 +418,11 @@ type ChatServiceClient interface {
 	ListServerWebhooks(context.Context, *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error)
 	RegenerateWebhookToken(context.Context, *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error)
 	ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error)
+	// Reports — in-app content reporting (Google Play UGC compliance).
+	ReportMessage(context.Context, *connect.Request[v1.ReportMessageRequest]) (*connect.Response[v1.ReportMessageResponse], error)
+	ReportUser(context.Context, *connect.Request[v1.ReportUserRequest]) (*connect.Response[v1.ReportUserResponse], error)
+	ListReports(context.Context, *connect.Request[v1.ListReportsRequest]) (*connect.Response[v1.ListReportsResponse], error)
+	ResolveReport(context.Context, *connect.Request[v1.ResolveReportRequest]) (*connect.Response[v1.ResolveReportResponse], error)
 }
 
 // NewChatServiceClient constructs a client for the meza.v1.ChatService service. By default, it uses
@@ -1027,6 +1042,30 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ListWebhookDeliveries")),
 			connect.WithClientOptions(opts...),
 		),
+		reportMessage: connect.NewClient[v1.ReportMessageRequest, v1.ReportMessageResponse](
+			httpClient,
+			baseURL+ChatServiceReportMessageProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ReportMessage")),
+			connect.WithClientOptions(opts...),
+		),
+		reportUser: connect.NewClient[v1.ReportUserRequest, v1.ReportUserResponse](
+			httpClient,
+			baseURL+ChatServiceReportUserProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ReportUser")),
+			connect.WithClientOptions(opts...),
+		),
+		listReports: connect.NewClient[v1.ListReportsRequest, v1.ListReportsResponse](
+			httpClient,
+			baseURL+ChatServiceListReportsProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ListReports")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveReport: connect.NewClient[v1.ResolveReportRequest, v1.ResolveReportResponse](
+			httpClient,
+			baseURL+ChatServiceResolveReportProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("ResolveReport")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -1133,6 +1172,10 @@ type chatServiceClient struct {
 	listServerWebhooks        *connect.Client[v1.ListServerWebhooksRequest, v1.ListServerWebhooksResponse]
 	regenerateWebhookToken    *connect.Client[v1.RegenerateWebhookTokenRequest, v1.RegenerateWebhookTokenResponse]
 	listWebhookDeliveries     *connect.Client[v1.ListWebhookDeliveriesRequest, v1.ListWebhookDeliveriesResponse]
+	reportMessage             *connect.Client[v1.ReportMessageRequest, v1.ReportMessageResponse]
+	reportUser                *connect.Client[v1.ReportUserRequest, v1.ReportUserResponse]
+	listReports               *connect.Client[v1.ListReportsRequest, v1.ListReportsResponse]
+	resolveReport             *connect.Client[v1.ResolveReportRequest, v1.ResolveReportResponse]
 }
 
 // SendMessage calls meza.v1.ChatService.SendMessage.
@@ -1640,6 +1683,26 @@ func (c *chatServiceClient) ListWebhookDeliveries(ctx context.Context, req *conn
 	return c.listWebhookDeliveries.CallUnary(ctx, req)
 }
 
+// ReportMessage calls meza.v1.ChatService.ReportMessage.
+func (c *chatServiceClient) ReportMessage(ctx context.Context, req *connect.Request[v1.ReportMessageRequest]) (*connect.Response[v1.ReportMessageResponse], error) {
+	return c.reportMessage.CallUnary(ctx, req)
+}
+
+// ReportUser calls meza.v1.ChatService.ReportUser.
+func (c *chatServiceClient) ReportUser(ctx context.Context, req *connect.Request[v1.ReportUserRequest]) (*connect.Response[v1.ReportUserResponse], error) {
+	return c.reportUser.CallUnary(ctx, req)
+}
+
+// ListReports calls meza.v1.ChatService.ListReports.
+func (c *chatServiceClient) ListReports(ctx context.Context, req *connect.Request[v1.ListReportsRequest]) (*connect.Response[v1.ListReportsResponse], error) {
+	return c.listReports.CallUnary(ctx, req)
+}
+
+// ResolveReport calls meza.v1.ChatService.ResolveReport.
+func (c *chatServiceClient) ResolveReport(ctx context.Context, req *connect.Request[v1.ResolveReportRequest]) (*connect.Response[v1.ResolveReportResponse], error) {
+	return c.resolveReport.CallUnary(ctx, req)
+}
+
 // ChatServiceHandler is an implementation of the meza.v1.ChatService service.
 type ChatServiceHandler interface {
 	SendMessage(context.Context, *connect.Request[v1.SendMessageRequest]) (*connect.Response[v1.SendMessageResponse], error)
@@ -1744,6 +1807,11 @@ type ChatServiceHandler interface {
 	ListServerWebhooks(context.Context, *connect.Request[v1.ListServerWebhooksRequest]) (*connect.Response[v1.ListServerWebhooksResponse], error)
 	RegenerateWebhookToken(context.Context, *connect.Request[v1.RegenerateWebhookTokenRequest]) (*connect.Response[v1.RegenerateWebhookTokenResponse], error)
 	ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error)
+	// Reports — in-app content reporting (Google Play UGC compliance).
+	ReportMessage(context.Context, *connect.Request[v1.ReportMessageRequest]) (*connect.Response[v1.ReportMessageResponse], error)
+	ReportUser(context.Context, *connect.Request[v1.ReportUserRequest]) (*connect.Response[v1.ReportUserResponse], error)
+	ListReports(context.Context, *connect.Request[v1.ListReportsRequest]) (*connect.Response[v1.ListReportsResponse], error)
+	ResolveReport(context.Context, *connect.Request[v1.ResolveReportRequest]) (*connect.Response[v1.ResolveReportResponse], error)
 }
 
 // NewChatServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -2359,6 +2427,30 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ListWebhookDeliveries")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceReportMessageHandler := connect.NewUnaryHandler(
+		ChatServiceReportMessageProcedure,
+		svc.ReportMessage,
+		connect.WithSchema(chatServiceMethods.ByName("ReportMessage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceReportUserHandler := connect.NewUnaryHandler(
+		ChatServiceReportUserProcedure,
+		svc.ReportUser,
+		connect.WithSchema(chatServiceMethods.ByName("ReportUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceListReportsHandler := connect.NewUnaryHandler(
+		ChatServiceListReportsProcedure,
+		svc.ListReports,
+		connect.WithSchema(chatServiceMethods.ByName("ListReports")),
+		connect.WithHandlerOptions(opts...),
+	)
+	chatServiceResolveReportHandler := connect.NewUnaryHandler(
+		ChatServiceResolveReportProcedure,
+		svc.ResolveReport,
+		connect.WithSchema(chatServiceMethods.ByName("ResolveReport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/meza.v1.ChatService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ChatServiceSendMessageProcedure:
@@ -2563,6 +2655,14 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceRegenerateWebhookTokenHandler.ServeHTTP(w, r)
 		case ChatServiceListWebhookDeliveriesProcedure:
 			chatServiceListWebhookDeliveriesHandler.ServeHTTP(w, r)
+		case ChatServiceReportMessageProcedure:
+			chatServiceReportMessageHandler.ServeHTTP(w, r)
+		case ChatServiceReportUserProcedure:
+			chatServiceReportUserHandler.ServeHTTP(w, r)
+		case ChatServiceListReportsProcedure:
+			chatServiceListReportsHandler.ServeHTTP(w, r)
+		case ChatServiceResolveReportProcedure:
+			chatServiceResolveReportHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2974,4 +3074,20 @@ func (UnimplementedChatServiceHandler) RegenerateWebhookToken(context.Context, *
 
 func (UnimplementedChatServiceHandler) ListWebhookDeliveries(context.Context, *connect.Request[v1.ListWebhookDeliveriesRequest]) (*connect.Response[v1.ListWebhookDeliveriesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListWebhookDeliveries is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ReportMessage(context.Context, *connect.Request[v1.ReportMessageRequest]) (*connect.Response[v1.ReportMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ReportMessage is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ReportUser(context.Context, *connect.Request[v1.ReportUserRequest]) (*connect.Response[v1.ReportUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ReportUser is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ListReports(context.Context, *connect.Request[v1.ListReportsRequest]) (*connect.Response[v1.ListReportsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ListReports is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) ResolveReport(context.Context, *connect.Request[v1.ResolveReportRequest]) (*connect.Response[v1.ResolveReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("meza.v1.ChatService.ResolveReport is not implemented"))
 }

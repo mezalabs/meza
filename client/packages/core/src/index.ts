@@ -2,6 +2,12 @@ export type { Device } from '@meza/gen/meza/v1/auth_pb.ts';
 export type {
   FriendRequestEntry,
   ReplyEntry,
+  Report,
+} from '@meza/gen/meza/v1/chat_pb.ts';
+export {
+  ReportCategory,
+  ReportStatus,
+  ResolveAction,
 } from '@meza/gen/meza/v1/chat_pb.ts';
 export { UploadPurpose } from '@meza/gen/meza/v1/media_pb.ts';
 export type {
@@ -98,6 +104,7 @@ export {
   listMembers,
   listMessageRequests,
   listPermissionOverrides,
+  listReports,
   listRoles,
   listServerSounds,
   listServers,
@@ -106,13 +113,17 @@ export {
   listUserSounds,
   listWebhookDeliveries,
   pinMessage,
+  type ReportCategoryKey,
   regenerateWebhookToken,
   removeChannelMember,
   removeFriend,
   removeReaction,
   removeTimeout,
   reorderRoles,
+  reportMessage,
+  reportUser,
   resolveInvite,
+  resolveReport,
   reverseDecline,
   type SearchMessagesParams,
   type SearchMessagesResult,

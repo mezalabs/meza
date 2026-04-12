@@ -81,6 +81,7 @@ func main() {
 	friendStore := store.NewFriendStore(pool)
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
 	webhookStore := store.NewWebhookStore(pool)
+	reportStore := store.NewReportStore(pool)
 	permCache := permissions.NewCache(rdb)
 
 	// Clean up key bundles on expired/revoked invites (best-effort, non-blocking).
@@ -111,6 +112,7 @@ func main() {
 		ChannelGroupStore:       channelGroupStore,
 		PermissionOverrideStore: permissionOverrideStore,
 		WebhookStore:            webhookStore,
+		ReportStore:             reportStore,
 		EncryptionChecker:       keyEnvelopeStore,
 		NC:                      nc,
 		RDB:                     rdb,

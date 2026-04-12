@@ -34,6 +34,7 @@ const (
 	ChangeNickname     int64 = 1 << 27 // self nickname
 	ManageNicknames    int64 = 1 << 28 // others' nicknames
 	ManageWebhooks     int64 = 1 << 29 // create/edit/delete webhooks
+	ManageReports      int64 = 1 << 30 // view + resolve in-app content reports
 
 	// AllPermissions is the union of all defined permissions.
 	AllPermissions = KickMembers | BanMembers | ManageRoles | Administrator |
@@ -43,7 +44,7 @@ const (
 		ManageServer | CreateInvite | EmbedLinks | AttachFiles |
 		ReadMessageHistory | UseExternalEmojis | Speak | MuteMembers |
 		DeafenMembers | MoveMembers | ChangeNickname | ManageNicknames |
-		ManageWebhooks
+		ManageWebhooks | ManageReports
 
 	// ChannelScopedPermissions contains the bits valid in permission overrides.
 	// Server-wide permissions (NOT overridable per-channel):

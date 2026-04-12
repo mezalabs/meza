@@ -102,6 +102,7 @@ enum MessageType {
   MESSAGE_TYPE_CHANNEL_UPDATE = 4; // content.field differentiates name/topic
   MESSAGE_TYPE_KEY_ROTATION   = 5;
   MESSAGE_TYPE_WEBHOOK        = 6;
+  MESSAGE_TYPE_REPORT_FILED   = 7; // redacted notice in mod-log channel; never includes PII
 }
 
 message DMChannel {

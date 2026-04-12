@@ -113,6 +113,7 @@ It supports text messaging, voice, and video — with end-to-end encryption by d
 - Custom emojis (CRUD per server)
 - Soundboard (CRUD for personal and server sounds)
 - Moderation (kick, ban, unban, timeout, list bans, audit log)
+- User reporting (in-app content reports for Google Play UGC compliance — see [`server/cmd/chat/service_reports.go`](../server/cmd/chat/service_reports.go) and [`docs/RUNBOOK_REPORTS.md`](RUNBOOK_REPORTS.md))
 - Read state tracking (ack messages, get read states)
 - Reply threading (get replies to a message)
 - Channel members (add, remove, list per channel)
