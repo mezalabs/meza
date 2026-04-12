@@ -109,10 +109,11 @@ export function SoundboardPanel({ serverId }: SoundboardPanelProps) {
             // biome-ignore lint/style/noNonNullAssertion: audio stream always has at least one track
             destRef.current.stream.getAudioTracks()[0]!,
             undefined,
-            false,
+            true,
           );
           await room.localParticipant.publishTrack(track, {
             source: Track.Source.Unknown,
+            dtx: false,
           });
           trackRef.current = track;
         }
