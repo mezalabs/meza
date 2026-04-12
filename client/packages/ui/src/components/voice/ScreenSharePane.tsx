@@ -20,6 +20,13 @@ import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
 const encoder = new TextEncoder();
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
 
+// Track how many ScreenSharePane instances exist per participant identity.
+// When a panel is moved/swapped, React unmounts then remounts the component
+// in the same commit — the deferred leave gets cancelled by the new mount,
+// preventing spurious join/leave sounds for the streamer.
+const viewerCounts = new Map<string, number>();
+const pendingLeaves = new Map<string, ReturnType<typeof setTimeout>>();
+
 interface ScreenSharePaneProps {
   paneId: PaneId;
   participantIdentity: string;
@@ -52,25 +59,50 @@ export function ScreenSharePane({
   const room = useRoomContext();
 
   useEffect(() => {
-    // Notify the streamer that we started watching
-    room.localParticipant
-      .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
-        reliable: true,
-        topic: STREAM_VIEWER_TOPIC,
-        destinationIdentities: [participantIdentity],
-      })
-      .catch(() => {}); // best-effort — may fail during teardown
+    // Cancel any pending leave for this participant (happens during panel moves)
+    const pendingLeave = pendingLeaves.get(participantIdentity);
+    if (pendingLeave) {
+      clearTimeout(pendingLeave);
+      pendingLeaves.delete(participantIdentity);
+    }
+
+    const prev = viewerCounts.get(participantIdentity) ?? 0;
+    viewerCounts.set(participantIdentity, prev + 1);
+
+    // Only notify the streamer if this is a genuinely new viewer, not a remount
+    if (prev === 0) {
+      room.localParticipant
+        .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
+          reliable: true,
+          topic: STREAM_VIEWER_TOPIC,
+          destinationIdentities: [participantIdentity],
+        })
+        .catch(() => {}); // best-effort — may fail during teardown
+    }
 
     return () => {
-      // Only send leave if room is still connected or reconnecting
-      if (room.state === 'connected' || room.state === 'reconnecting') {
-        room.localParticipant
-          .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
-            reliable: true,
-            topic: STREAM_VIEWER_TOPIC,
-            destinationIdentities: [participantIdentity],
-          })
-          .catch(() => {}); // best-effort — may fail during teardown
+      const count = (viewerCounts.get(participantIdentity) ?? 1) - 1;
+      viewerCounts.set(participantIdentity, count);
+
+      if (count === 0) {
+        // Defer the leave to allow panel-move remounts to cancel it
+        const timer = setTimeout(() => {
+          pendingLeaves.delete(participantIdentity);
+          if ((viewerCounts.get(participantIdentity) ?? 0) > 0) return;
+          if (room.state === 'connected' || room.state === 'reconnecting') {
+            room.localParticipant
+              .publishData(
+                encoder.encode(JSON.stringify({ type: 'leave' })),
+                {
+                  reliable: true,
+                  topic: STREAM_VIEWER_TOPIC,
+                  destinationIdentities: [participantIdentity],
+                },
+              )
+              .catch(() => {}); // best-effort — may fail during teardown
+          }
+        }, 100);
+        pendingLeaves.set(participantIdentity, timer);
       }
     };
   }, [room, participantIdentity]);
