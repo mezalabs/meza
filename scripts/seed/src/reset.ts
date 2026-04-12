@@ -55,7 +55,9 @@ export async function resetSeedData(config: SeedConfig): Promise<void> {
       await connectScylla(config);
       for (const channelId of allChannelIds) {
         await scyllaQuery('DELETE FROM messages WHERE channel_id = ?', [channelId]);
-        await scyllaQuery('DELETE FROM message_replies WHERE channel_id = ?', [channelId]);
+        // message_replies has partition key (channel_id, reply_to_id) so we
+        // can't delete by channel_id alone. Orphaned reply index rows are
+        // harmless — they reference deleted messages and will never be read.
       }
       logIndent(`scylla messages: cleaned ${allChannelIds.length} channels`);
       await disconnectScylla();
@@ -91,7 +93,7 @@ export async function resetSeedData(config: SeedConfig): Promise<void> {
     ['channel_groups', `DELETE FROM channel_groups WHERE server_id = ANY($1)`, [seedServerIdList]],
     ['members', `DELETE FROM members WHERE server_id = ANY($1)`, [seedServerIdList]],
     ['servers', `DELETE FROM servers WHERE id = ANY($1)`, [seedServerIdList]],
-    ['friendships', `DELETE FROM friendships WHERE requester_id = ANY($1) OR addressee_id = ANY($1)`, [seedUserIdList, seedUserIdList]],
+    ['friendships', `DELETE FROM friendships WHERE requester_id = ANY($1) OR addressee_id = ANY($1)`, [seedUserIdList]],
     ['devices', `DELETE FROM devices WHERE user_id = ANY($1)`, [seedUserIdList]],
     ['mls_key_packages', `DELETE FROM mls_key_packages WHERE user_id = ANY($1)`, [seedUserIdList]],
     ['user_auth', `DELETE FROM user_auth WHERE user_id = ANY($1)`, [seedUserIdList]],
