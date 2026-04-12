@@ -1,6 +1,6 @@
 module github.com/mezalabs/meza
 
-go 1.25.8
+go 1.25.9
 
 require (
 	connectrpc.com/connect v1.19.1
