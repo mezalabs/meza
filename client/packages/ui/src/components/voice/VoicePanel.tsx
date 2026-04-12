@@ -3,7 +3,6 @@ import {
   useIsSpeaking,
   useLocalParticipant,
   useParticipants,
-  useRemoteParticipants,
   useTracks,
   VideoTrack,
 } from '@livekit/components-react';
@@ -653,51 +652,6 @@ function ScreenShareThumbnail({
       <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
         {displayName}
       </span>
-      <ThumbnailAudioToggle participantIdentity={userId} />
     </div>
-  );
-}
-
-function ThumbnailAudioToggle({
-  participantIdentity,
-}: {
-  participantIdentity: string;
-}) {
-  const participants = useRemoteParticipants();
-  const participant = participants.find(
-    (p) => p.identity === participantIdentity,
-  );
-  const [isMuted, setIsMuted] = useState(true);
-
-  if (!participant) return null;
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newMuted = !isMuted;
-    try {
-      participant.setVolume(newMuted ? 0 : 1, Track.Source.ScreenShareAudio);
-    } catch {
-      // GainNode may not be ready if the track is still attaching
-    }
-    setIsMuted(newMuted);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      className={`absolute bottom-1 right-1 rounded p-0.5 text-xs transition-colors ${
-        isMuted
-          ? 'bg-black/70 text-white/70 hover:bg-black/90'
-          : 'bg-accent/80 text-black hover:bg-accent'
-      }`}
-      title={isMuted ? 'Unmute stream audio' : 'Mute stream audio'}
-    >
-      {isMuted ? (
-        <SpeakerSlashIcon size={14} aria-hidden="true" />
-      ) : (
-        <SpeakerHighIcon size={14} aria-hidden="true" />
-      )}
-    </button>
   );
 }
