@@ -144,14 +144,18 @@ export async function seedMessages(
       const replyToId =
         msg.replyToIndex !== undefined ? sentMessageIds[msg.replyToIndex] : undefined;
 
-      // Send via ChatService (use the sender's own token)
+      // Send via ChatService — match the client's sendMessage call exactly
       const chatClient = createChatClient(config, sender.accessToken);
       const res = await chatClient.sendMessage({
         channelId: conv.channelId,
         encryptedContent,
         keyVersion: keyInfo.version,
         nonce: crypto.randomUUID(),
+        attachmentIds: [],
         replyToId,
+        mentionedUserIds: [],
+        mentionedRoleIds: [],
+        mentionEveryone: false,
       });
 
       sentMessageIds.push(res.messageId);
