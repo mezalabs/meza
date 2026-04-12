@@ -90,6 +90,7 @@ export function useStreamPreview() {
               return;
 
             const el = track.attach() as HTMLVideoElement;
+            el.muted = true;
             setVideoElement(el);
             setStatus('connected');
           },
