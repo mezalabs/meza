@@ -10,7 +10,8 @@ import {
   deriveRecoveryVerifier,
   encryptRecoveryBundle,
 } from '../lib/crypto.ts';
-import type { IdentityKeypair } from '@meza/core/crypto/primitives.ts';
+import { aesGcmDecrypt } from '@meza/core/crypto/keys.ts';
+import { deserializeIdentity, type IdentityKeypair } from '@meza/core/crypto/primitives.ts';
 import type { SeedConfig } from '../lib/config.ts';
 import { SEED_USERS } from '../lib/ids.ts';
 import { log, logError, logIndent, logWarn } from '../lib/log.ts';
@@ -41,25 +42,27 @@ export async function seedUsers(config: SeedConfig): Promise<Record<string, Seed
     const salt = await deterministicSalt(userDef.username);
     const { masterKey, authKey } = await deriveKeys(userDef.password, salt);
 
-    // Generate Ed25519 identity keypair
-    const identity = generateIdentityKeypair();
-    const serialized = serializeIdentity(identity);
-
-    // Encrypt identity with master key → key bundle
-    const { ciphertext: encryptedKeyBundle, iv: keyBundleIv } =
-      await aesGcmEncrypt(masterKey, serialized);
-
-    // Generate recovery phrase and encrypt identity with recovery key
-    const recoveryPhrase = await generateRecoveryPhrase();
-    const recoveryKey = await deriveRecoveryKey(recoveryPhrase);
-    const recoveryVerifier = await deriveRecoveryVerifier(recoveryKey);
-    const { ciphertext: recoveryEncryptedKeyBundle, iv: recoveryKeyBundleIv } =
-      await encryptRecoveryBundle(recoveryKey, serialized);
-
     let userId: string;
     let accessToken: string;
+    let identity: IdentityKeypair;
+    let recoveryPhrase: string | undefined;
 
     try {
+      // Generate Ed25519 identity keypair
+      identity = generateIdentityKeypair();
+      const serialized = serializeIdentity(identity);
+
+      // Encrypt identity with master key → key bundle
+      const { ciphertext: encryptedKeyBundle, iv: keyBundleIv } =
+        await aesGcmEncrypt(masterKey, serialized);
+
+      // Generate recovery phrase and encrypt identity with recovery key
+      recoveryPhrase = await generateRecoveryPhrase();
+      const recoveryKey = await deriveRecoveryKey(recoveryPhrase);
+      const recoveryVerifier = await deriveRecoveryVerifier(recoveryKey);
+      const { ciphertext: recoveryEncryptedKeyBundle, iv: recoveryKeyBundleIv } =
+        await encryptRecoveryBundle(recoveryKey, serialized);
+
       const res = await authClient.register({
         email: userDef.email,
         username: userDef.username,
@@ -77,7 +80,7 @@ export async function seedUsers(config: SeedConfig): Promise<Record<string, Seed
       logIndent(`${userDef.username} (${userDef.email}) ... created (id: ${userId})`);
     } catch (err) {
       if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
-        // User already exists — log in to get a valid token
+        // User already exists — log in to get a valid token and recover identity
         const existing =
           (await lookupUser('email', userDef.email)) ??
           (await lookupUser('username', userDef.username));
@@ -90,12 +93,21 @@ export async function seedUsers(config: SeedConfig): Promise<Record<string, Seed
         }
         userId = existing.id;
 
-        // Log in to get a valid JWT (we need it for subsequent RPCs)
+        // Log in to get JWT + encrypted key bundle
         const loginRes = await authClient.login({
           identifier: userDef.email,
           authKey,
         });
         accessToken = loginRes.accessToken;
+
+        // Recover the original identity from the server's key bundle
+        const decrypted = await aesGcmDecrypt(
+          masterKey,
+          loginRes.encryptedKeyBundle,
+          loginRes.keyBundleIv,
+        );
+        identity = deserializeIdentity(decrypted);
+
         logIndent(`${userDef.username} (${existing.email}) ... exists (id: ${userId})`);
       } else {
         logError(
@@ -106,14 +118,16 @@ export async function seedUsers(config: SeedConfig): Promise<Record<string, Seed
       }
     }
 
-    // Register the Ed25519 public key with KeyService
+    // Register the Ed25519 public key with KeyService (idempotent)
     const keyClient = createKeyClient(config, accessToken);
     await keyClient.registerPublicKey({
       signingPublicKey: identity.publicKey,
     });
 
     result[name] = { id: userId, username: userDef.username, email: userDef.email, accessToken, identity };
-    recoveryPhrases.push([userDef.username, recoveryPhrase]);
+    if (recoveryPhrase) {
+      recoveryPhrases.push([userDef.username, recoveryPhrase]);
+    }
   }
 
   // Log recovery phrases for testing the recovery flow

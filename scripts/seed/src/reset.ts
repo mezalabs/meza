@@ -93,15 +93,13 @@ async function resetScyllaMessages(config: SeedConfig): Promise<void> {
   try {
     await connectScylla(config);
 
-    let totalDeleted = 0;
     for (const channelId of channelIds) {
       await scyllaQuery('DELETE FROM messages WHERE channel_id = ?', [channelId]);
       await scyllaQuery('DELETE FROM message_replies WHERE channel_id = ?', [channelId]);
-      totalDeleted++;
     }
 
-    if (totalDeleted > 0) {
-      logIndent(`scylla messages: cleaned ${totalDeleted} channels`);
+    if (channelIds.length > 0) {
+      logIndent(`scylla messages: cleaned ${channelIds.length} channels`);
     }
 
     await disconnectScylla();

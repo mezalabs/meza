@@ -28,6 +28,7 @@ export async function seedChannelKeys(
   log('Distributing channel keys...');
 
   const keyMap = new Map<string, ChannelKeyInfo>();
+  const keyClient = createKeyClient(config, users.alice.accessToken);
 
   for (const { channelId, memberNames } of channels) {
     const channelKey = generateChannelKey();
@@ -43,8 +44,6 @@ export async function seedChannelKeys(
       }),
     );
 
-    // Store envelopes via KeyService (use alice's token — she's admin on all servers)
-    const keyClient = createKeyClient(config, users.alice.accessToken);
     await keyClient.storeKeyEnvelopes({
       channelId,
       keyVersion,
