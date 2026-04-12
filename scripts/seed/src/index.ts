@@ -35,6 +35,17 @@ async function main() {
   await waitForService(config.authPort, 'Auth service');
   console.log(`ready (${((Date.now() - healthStart) / 1000).toFixed(1)}s)`);
 
+  // For full preset, also wait for Chat and Key services
+  if (preset === 'full') {
+    process.stdout.write(`\x1b[36m[seed]\x1b[0m Waiting for Chat service on :${config.chatPort}... `);
+    await waitForService(config.chatPort, 'Chat service');
+    console.log('ready');
+
+    process.stdout.write(`\x1b[36m[seed]\x1b[0m Waiting for Key service on :${config.keyPort}... `);
+    await waitForService(config.keyPort, 'Key service');
+    console.log('ready');
+  }
+
   // Connect to Postgres
   process.stdout.write('\x1b[36m[seed]\x1b[0m Connecting to Postgres... ');
   await connectDb(config);
@@ -42,7 +53,7 @@ async function main() {
 
   try {
     if (isReset) {
-      await resetSeedData();
+      await resetSeedData(config);
       logBlank();
     }
 
