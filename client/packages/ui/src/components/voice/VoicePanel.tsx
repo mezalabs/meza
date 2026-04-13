@@ -647,6 +647,7 @@ function ScreenShareThumbnail({
     >
       <VideoTrack
         trackRef={trackRef}
+        muted
         className="h-full w-full object-contain"
       />
       <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
