@@ -1,7 +1,10 @@
 import { getMediaURL, useAuthStore, useEmojiStore } from '@meza/core';
 import {
+  Children,
   type ComponentPropsWithoutRef,
+  isValidElement,
   memo,
+  type ReactNode,
   useCallback,
   useMemo,
   useState,
@@ -33,6 +36,18 @@ interface MarkdownRendererProps {
   serverId?: string;
   className?: string;
   variant?: MarkdownVariant;
+}
+
+/** Recursively extract text content from React children. */
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node;
+  if (typeof node === 'number') return String(node);
+  if (!node) return '';
+  if (Array.isArray(node)) return node.map(extractText).join('');
+  if (isValidElement(node))
+    return extractText((node.props as { children?: ReactNode }).children);
+  // Children.toArray handles iterables
+  return Children.toArray(node).map(extractText).join('');
 }
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
@@ -263,13 +278,9 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         children,
       }: ComponentPropsWithoutRef<'span'>) => {
         const size = EMOJI_BASE_SIZE_PX * emojiScale;
-        // Extract the raw emoji string from the children text node
-        const emoji =
-          typeof children === 'string'
-            ? children
-            : Array.isArray(children)
-              ? String(children[0] ?? '')
-              : String(children ?? '');
+        // Extract the raw emoji string — children may be a string, an array,
+        // or nested React elements depending on the react-markdown version.
+        const emoji = extractText(children);
         return <TwemojiImg emoji={emoji} size={size} />;
       },
       // Custom Meza mention elements
