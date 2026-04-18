@@ -163,6 +163,8 @@ jobs:
       - name: Sync Capacitor
         working-directory: client/packages/mobile
         run: npx cap sync ios
+        env:
+          CAPACITOR_DEBUG: ${{ secrets.CAPACITOR_DEBUG }}
 
       - name: Install CocoaPods
         working-directory: client/packages/mobile/ios/App
