@@ -166,6 +166,17 @@ jobs:
         env:
           CAPACITOR_DEBUG: ${{ secrets.CAPACITOR_DEBUG }}
 
+      - name: Register local iOS plugins
+        run: >
+          node -e "
+          const fs = require('fs');
+          const p = 'client/packages/mobile/ios/App/App/capacitor.config.json';
+          const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+          if (!c.packageClassList.includes('FCMTokenPlugin')) {
+            c.packageClassList.push('FCMTokenPlugin');
+            fs.writeFileSync(p, JSON.stringify(c, null, '\t') + '\n');
+          }"
+
       - name: Install CocoaPods
         working-directory: client/packages/mobile/ios/App
         run: pod install
