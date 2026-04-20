@@ -82,6 +82,28 @@ function applySoundboardVolume(participant: RemoteParticipant) {
   }
 }
 
+/**
+ * Sets ScreenShareAudio gain for a remote participant. Viewers opt in to
+ * listening, so muted is the default when they first see a stream.
+ *
+ * Mute uses 0.0001 (~-80 dB, inaudible) instead of 0: LiveKit's
+ * RemoteAudioTrack.setVolume stores the value and reapplies it on track
+ * attach via `if (this.elementVolume)`. 0 is falsy, so muting before the
+ * audio element attaches silently fails and the viewer hears full-volume
+ * audio. A near-zero gain passes the truthy check.
+ * See: livekit-client/src/room/track/RemoteAudioTrack.ts (attach, connectWebAudio).
+ */
+export function setScreenShareAudioVolume(
+  participant: RemoteParticipant,
+  muted: boolean,
+) {
+  try {
+    participant.setVolume(muted ? 0.0001 : 1, Track.Source.ScreenShareAudio);
+  } catch {
+    // GainNode may not be ready during track attach
+  }
+}
+
 /** Invisible component that listens to LiveKit room events and syncs them to the voice store. */
 function VoiceEventHandler() {
   const room = useRoomContext();
@@ -126,10 +148,13 @@ function VoiceEventHandler() {
           .switchActiveDevice('audiooutput', audioState.outputDeviceId)
           .catch(() => {});
       }
-      // Reapply output volumes
+      // Reapply output volumes. Reconnect can rebind the HTMLMediaElement
+      // and drop the ScreenShareAudio mute, so re-assert it to match the
+      // join-time invariant (viewers opt in before hearing a stream).
       for (const p of room.remoteParticipants.values()) {
         applyParticipantVolume(p);
         applySoundboardVolume(p);
+        setScreenShareAudioVolume(p, true);
       }
     };
 
@@ -141,11 +166,7 @@ function VoiceEventHandler() {
       participant: RemoteParticipant,
     ) => {
       if (track.source === Track.Source.ScreenShareAudio) {
-        try {
-          participant.setVolume(0, Track.Source.ScreenShareAudio);
-        } catch {
-          // GainNode may not be ready during track attach
-        }
+        setScreenShareAudioVolume(participant, true);
       }
       if (
         track.source === Track.Source.Unknown &&
