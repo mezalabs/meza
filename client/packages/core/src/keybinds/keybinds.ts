@@ -13,6 +13,12 @@ export interface Keybind {
   tilingOnly?: boolean;
   /** Only fires when connected to a voice channel */
   voiceOnly?: boolean;
+  /**
+   * Whether this binding can be promoted to an OS-level global hotkey
+   * (captured even when the app is unfocused). Default: !tilingOnly.
+   * Set explicitly to false for in-app-only bindings like `show-shortcuts`.
+   */
+  globalEligible?: boolean;
   /** Options passed to the key event handler */
   hotkeyOptions?: {
     /** Fire even when a form element (input/textarea/select) is focused */
@@ -20,6 +26,24 @@ export interface Keybind {
     /** Call e.preventDefault() on match (default: true) */
     preventDefault?: boolean;
   };
+}
+
+/** Status of a globally-registered keybind, surfaced in the settings UI. */
+export type KeybindGlobalStatus =
+  | 'active'
+  | 'failed'
+  | 'unsupported'
+  | 'permission';
+
+/**
+ * IPC payload shape: a snapshot of the bindings the renderer wants the main
+ * process to register/listen for. Validated at the IPC boundary in main.
+ */
+export interface SyncedBinding {
+  id: KeybindId;
+  keys: string;
+  type: 'press' | 'hold';
+  isGlobal: boolean;
 }
 
 export const KEYBINDS = {
@@ -98,6 +122,7 @@ export const KEYBINDS = {
     keys: 'shift+/',
     label: 'Show this help',
     category: 'navigation',
+    globalEligible: false,
     hotkeyOptions: { preventDefault: true, enableOnFormTags: false },
   },
   // --- Voice ---
@@ -229,4 +254,15 @@ export function shouldSuppressKeybind(
   // Default: suppress in form elements (same as react-hotkeys-hook default)
   if (enableOnFormTags !== true && isFormElement(e.target)) return true;
   return false;
+}
+
+/**
+ * Whether a keybind can be promoted to an OS-level global hotkey. Defaults
+ * derive from existing flags (tiling bindings are never useful out-of-app),
+ * with explicit `globalEligible: false` overriding for in-app-only bindings.
+ */
+export function isGlobalEligible(id: KeybindId): boolean {
+  const def = KEYBINDS[id];
+  if (def.globalEligible !== undefined) return def.globalEligible;
+  return !def.tilingOnly;
 }

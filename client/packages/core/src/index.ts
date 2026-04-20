@@ -424,6 +424,7 @@ export { useGatewayStore } from './store/gateway.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
 export type {
+  KeybindOverride,
   KeybindOverridesActions,
   KeybindOverridesState,
 } from './store/keybindOverrides.ts';

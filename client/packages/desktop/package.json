@@ -22,6 +22,7 @@
     "package:linux": "DESKTOP_BUILD=1 pnpm --filter @meza/web build && electron-vite build && mkdir -p out/renderer && cp -r ../web/dist/* out/renderer/ && electron-builder --linux"
   },
   "dependencies": {
+    "@meza/core": "workspace:*",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.3"
   },

@@ -18,14 +18,19 @@ import {
   setupDeepLinks,
 } from './deeplink.js';
 import { registerIpcHandlers } from './ipc.js';
+import { isWayland } from './platform.js';
 import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
 import { initAutoUpdater } from './updater.js';
 
-// On Linux, enable PipeWire-based screen capture so getDisplayMedia() goes
-// through xdg-desktop-portal natively (single dialog, no desktopCapturer).
+// On Linux: enable PipeWire-based screen capture (xdg-desktop-portal native
+// dialog) and enable the XDG GlobalShortcuts portal so globalShortcut.register
+// works under a Wayland session on compositors that implement the portal.
 if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('enable-features', 'WebRTCPipeWireCapturer');
+  app.commandLine.appendSwitch(
+    'enable-features',
+    'WebRTCPipeWireCapturer,GlobalShortcutsPortal',
+  );
 }
 
 // Register a custom scheme that behaves like https:// so bundled web files
@@ -257,10 +262,7 @@ app.whenReady().then(() => {
   // Linux Wayland keeps its existing synthetic-source handler because
   // desktopCapturer.getSources() triggers a double PipeWire dialog.
 
-  const isWayland =
-    process.platform === 'linux' &&
-    (process.env.XDG_SESSION_TYPE === 'wayland' ||
-      !!process.env.WAYLAND_DISPLAY);
+  const wayland = isWayland();
 
   // Most recently enumerated sources (kept for source ID validation).
   let enumeratedSources: Electron.DesktopCapturerSource[] = [];
@@ -282,7 +284,7 @@ app.whenReady().then(() => {
       }
 
       // Wayland: signal renderer to skip picker and use native path.
-      if (isWayland) return null;
+      if (wayland) return null;
 
       // Prevent concurrent enumerations.
       if (enumerating) return null;
@@ -360,7 +362,7 @@ app.whenReady().then(() => {
     );
   });
 
-  if (isWayland) {
+  if (wayland) {
     // Linux Wayland: construct a synthetic source from the primary display.
     // PipeWire fires once for the actual capture — no picker dialog.
     session.defaultSession.setDisplayMediaRequestHandler(
