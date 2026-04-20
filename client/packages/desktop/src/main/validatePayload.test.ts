@@ -59,9 +59,7 @@ describe('validatePayload', () => {
 
     it('non-string id', () => {
       expect(validatePayload([{ ...validBinding, id: 42 }])).toBeNull();
-      expect(
-        validatePayload([{ ...validBinding, id: undefined }]),
-      ).toBeNull();
+      expect(validatePayload([{ ...validBinding, id: undefined }])).toBeNull();
     });
 
     it('non-string keys', () => {
@@ -70,7 +68,9 @@ describe('validatePayload', () => {
 
     it('oversize keys (DoS guard)', () => {
       expect(
-        validatePayload([{ ...validBinding, keys: 'x'.repeat(MAX_KEYS_LEN + 1) }]),
+        validatePayload([
+          { ...validBinding, keys: 'x'.repeat(MAX_KEYS_LEN + 1) },
+        ]),
       ).toBeNull();
     });
 

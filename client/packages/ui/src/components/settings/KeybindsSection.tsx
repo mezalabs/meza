@@ -55,6 +55,9 @@ export function KeybindsSection() {
   const overrides = useKeybindOverridesStore((s) => s.overrides);
   const status = useKeybindGlobalStatusStore((s) => s.status);
   const [editingId, setEditingId] = useState<KeybindId | null>(null);
+  const [pendingHoldEnable, setPendingHoldEnable] = useState<Set<KeybindId>>(
+    () => new Set(),
+  );
   const showGlobalControls = isElectron();
 
   const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
@@ -123,30 +126,56 @@ export function KeybindsSection() {
                           {isGlobal && bindingStatus && (
                             <StatusPill status={bindingStatus} />
                           )}
-                          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-text-subtle hover:text-text">
+                          <label
+                            className={`flex items-center gap-1.5 text-xs text-text-subtle hover:text-text ${
+                              pendingHoldEnable.has(id)
+                                ? 'cursor-wait opacity-60'
+                                : 'cursor-pointer'
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               checked={isGlobal}
+                              disabled={pendingHoldEnable.has(id)}
                               onChange={async (e) => {
                                 const next = e.target.checked;
-                                // Hold-type globals require explicit OS-level
-                                // opt-in (Accessibility on macOS). Ask main
-                                // before flipping the flag so the prompt
-                                // fires only on user action.
-                                if (
+                                const needsOptIn =
                                   next &&
                                   def.type === 'hold' &&
-                                  window.electronAPI
-                                ) {
-                                  const result =
-                                    await window.electronAPI.keybinds.enableHoldGlobals();
-                                  if (!result.ok) return;
-                                }
+                                  !!window.electronAPI;
+                                // Optimistic apply: the user's last click is
+                                // immediately reflected. If the OS-level
+                                // opt-in fails, we roll back. The input is
+                                // disabled while pending so the user can't
+                                // click again mid-await and produce a stale
+                                // resolution that overwrites their intent.
                                 useKeybindOverridesStore
                                   .getState()
                                   .setGlobal(id, next);
+                                if (!needsOptIn) return;
+                                setPendingHoldEnable((prev) => {
+                                  const n = new Set(prev);
+                                  n.add(id);
+                                  return n;
+                                });
+                                try {
+                                  const result =
+                                    await window.electronAPI!.keybinds.enableHoldGlobals();
+                                  if (!result.ok) {
+                                    useKeybindOverridesStore
+                                      .getState()
+                                      .setGlobal(id, false);
+                                  }
+                                } finally {
+                                  setPendingHoldEnable((prev) => {
+                                    if (!prev.has(id)) return prev;
+                                    const n = new Set(prev);
+                                    n.delete(id);
+                                    return n;
+                                  });
+                                }
                               }}
-                              className="cursor-pointer"
+                              className="cursor-inherit"
                               aria-label={`Capture ${def.label} globally`}
                             />
                             Global

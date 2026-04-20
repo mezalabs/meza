@@ -26,6 +26,7 @@ import {
   globalShortcut,
   type IpcMainInvokeEvent,
   ipcMain,
+  powerMonitor,
   systemPreferences,
 } from 'electron';
 import { toElectronAccelerator } from './accelerator.js';
@@ -57,11 +58,11 @@ export function registerKeybindHandlers(window: BrowserWindow): void {
 
   ipcMain.handle('keybinds:sync', (e: IpcMainInvokeEvent, payload: unknown) => {
     if (!win || e.sender.id !== win.webContents.id) {
-      return { status: {} as Record<KeybindId, KeybindGlobalStatus> };
+      return { status: {} as Partial<Record<KeybindId, KeybindGlobalStatus>> };
     }
     const bindings = validatePayload(payload);
     if (!bindings) {
-      return { status: {} as Record<KeybindId, KeybindGlobalStatus> };
+      return { status: {} as Partial<Record<KeybindId, KeybindGlobalStatus>> };
     }
     return scheduleSync(bindings);
   });
@@ -93,17 +94,24 @@ export function disposeAll(): void {
 
 function scheduleSync(
   bindings: SyncedBinding[],
-): Promise<{ status: Record<KeybindId, KeybindGlobalStatus> }> {
+): Promise<{ status: Partial<Record<KeybindId, KeybindGlobalStatus>> }> {
   if (syncDebounce) clearTimeout(syncDebounce);
   return new Promise((resolve) => {
     syncDebounce = setTimeout(() => {
       syncDebounce = null;
-      syncInFlight = syncInFlight.then(() => doSync(bindings));
-      syncInFlight.then(() => {
+      // Catch rejections at every level: a single doSync error must not
+      // poison `syncInFlight` (which would silently hang every future sync)
+      // and must not skip the resolve() (which would hang the renderer's
+      // Promise from `electronAPI.keybinds.sync`).
+      syncInFlight = syncInFlight
+        .then(() => doSync(bindings))
+        .catch((err) => {
+          console.error('[keybinds] doSync failed:', err);
+        });
+      syncInFlight.finally(() => {
         resolve({
-          status: Object.fromEntries(status) as Record<
-            KeybindId,
-            KeybindGlobalStatus
+          status: Object.fromEntries(status) as Partial<
+            Record<KeybindId, KeybindGlobalStatus>
           >,
         });
       });
@@ -179,10 +187,17 @@ async function doSync(bindings: SyncedBinding[]): Promise<void> {
 //      keybinds.holdGlobalsOptIn=true); a sync alone never starts it.
 //   3. On macOS, Accessibility must be granted.
 
-type HoldState = 'idle' | 'starting' | 'active' | 'stopping';
-let holdState: HoldState = 'idle';
+// Lifecycle: a single in-flight start-or-stop op serialises everything.
+// Concurrent ensureHoldListener / teardownHoldListener calls await the
+// previous op before deciding what to do. This prevents the duplicate
+// native callback / X11 grab leak that arises when stop() is called
+// synchronously while the previous start()'s dynamic import is still
+// resolving.
+let holdActive = false;
+let holdOpInFlight: Promise<void> | null = null;
 let holdBindingsCache: SyncedBinding[] = [];
 const activeHolds = new Set<KeybindId>(); // bindings whose press has fired
+let uIOhookCached: typeof import('uiohook-napi') | null = null;
 
 // Reverse lookup from uiohook keycode → our hotkey-format primary-key string.
 // Built lazily on first listener init so we don't pay for the import unless
@@ -196,7 +211,7 @@ async function ensureHoldListener(
   holdBindingsCache = holdBindings;
 
   if (holdBindings.length === 0) {
-    if (holdState === 'active') teardownHoldListener();
+    await stopHold();
     return;
   }
 
@@ -210,72 +225,173 @@ async function ensureHoldListener(
     return;
   }
 
+  // Re-check Accessibility on every active sync; the user can revoke at
+  // any time and we want the next sync to downgrade status accordingly.
   if (
     process.platform === 'darwin' &&
     !systemPreferences.isTrustedAccessibilityClient(false)
   ) {
+    if (holdActive) await stopHold();
     for (const b of holdBindings) status.set(b.id, 'permission');
     return;
   }
 
-  if (holdState === 'active' || holdState === 'starting') {
+  // Drain any in-flight op (start or stop) before deciding.
+  if (holdOpInFlight) {
+    await holdOpInFlight.catch(() => {});
+  }
+
+  if (holdActive) {
     for (const b of holdBindings) status.set(b.id, 'active');
     return;
   }
 
-  holdState = 'starting';
-  try {
-    const { uIOhook, UiohookKey } = await import('uiohook-napi');
-    if (!keycodeToName) {
-      keycodeToName = new Map();
-      for (const [name, code] of Object.entries(UiohookKey)) {
-        if (typeof code === 'number') {
-          keycodeToName.set(code, normaliseKeyName(name));
-        }
-      }
-      MODIFIER_KEYCODES.add(UiohookKey.Ctrl);
-      MODIFIER_KEYCODES.add(UiohookKey.CtrlRight);
-      MODIFIER_KEYCODES.add(UiohookKey.Shift);
-      MODIFIER_KEYCODES.add(UiohookKey.ShiftRight);
-      MODIFIER_KEYCODES.add(UiohookKey.Alt);
-      MODIFIER_KEYCODES.add(UiohookKey.AltRight);
-      MODIFIER_KEYCODES.add(UiohookKey.Meta);
-      MODIFIER_KEYCODES.add(UiohookKey.MetaRight);
-    }
+  await startHold(holdBindings);
+}
 
-    uIOhook.on('keydown', onUiohookKeyDown);
-    uIOhook.on('keyup', onUiohookKeyUp);
-    uIOhook.start();
-    holdState = 'active';
-    for (const b of holdBindings) status.set(b.id, 'active');
-  } catch (err) {
-    console.error('[keybinds] failed to start uiohook:', err);
-    holdState = 'idle';
-    for (const b of holdBindings) status.set(b.id, 'unsupported');
+function buildKeycodeMap(UiohookKey: typeof import('uiohook-napi').UiohookKey) {
+  if (keycodeToName) return;
+  keycodeToName = new Map();
+  for (const [name, code] of Object.entries(UiohookKey)) {
+    if (typeof code === 'number') {
+      keycodeToName.set(code, normaliseKeyName(name));
+    }
+  }
+  MODIFIER_KEYCODES.add(UiohookKey.Ctrl);
+  MODIFIER_KEYCODES.add(UiohookKey.CtrlRight);
+  MODIFIER_KEYCODES.add(UiohookKey.Shift);
+  MODIFIER_KEYCODES.add(UiohookKey.ShiftRight);
+  MODIFIER_KEYCODES.add(UiohookKey.Alt);
+  MODIFIER_KEYCODES.add(UiohookKey.AltRight);
+  MODIFIER_KEYCODES.add(UiohookKey.Meta);
+  MODIFIER_KEYCODES.add(UiohookKey.MetaRight);
+}
+
+async function startHold(holdBindings: SyncedBinding[]): Promise<void> {
+  holdOpInFlight = (async () => {
+    try {
+      if (!uIOhookCached) uIOhookCached = await import('uiohook-napi');
+      const { uIOhook, UiohookKey } = uIOhookCached;
+      buildKeycodeMap(UiohookKey);
+      setupPowerMonitorOnce();
+      uIOhook.on('keydown', onUiohookKeyDown);
+      uIOhook.on('keyup', onUiohookKeyUp);
+      uIOhook.start();
+      holdActive = true;
+      for (const b of holdBindings) status.set(b.id, 'active');
+    } catch (err) {
+      console.error('[keybinds] failed to start uiohook:', err);
+      for (const b of holdBindings) status.set(b.id, 'unsupported');
+    }
+  })();
+  try {
+    await holdOpInFlight;
+  } finally {
+    holdOpInFlight = null;
   }
 }
 
-function teardownHoldListener(): void {
-  if (holdState !== 'active' && holdState !== 'starting') {
-    holdBindingsCache = [];
+async function stopHold(): Promise<void> {
+  // Drain any in-flight start before stopping; otherwise we race the
+  // start() that's mid-resolve.
+  if (holdOpInFlight) {
+    await holdOpInFlight.catch(() => {});
+  }
+  if (!holdActive) {
     activeHolds.clear();
     return;
   }
-  holdState = 'stopping';
+  holdOpInFlight = (async () => {
+    if (!uIOhookCached) return;
+    const { uIOhook } = uIOhookCached;
+    try {
+      uIOhook.off('keydown', onUiohookKeyDown);
+      uIOhook.off('keyup', onUiohookKeyUp);
+      uIOhook.stop();
+    } catch (err) {
+      console.error('[keybinds] uiohook stop failed:', err);
+    } finally {
+      holdActive = false;
+      activeHolds.clear();
+    }
+  })();
   try {
-    // Cheap dynamic require of the already-loaded module.
-    import('uiohook-napi')
-      .then(({ uIOhook }) => {
-        uIOhook.off('keydown', onUiohookKeyDown);
-        uIOhook.off('keyup', onUiohookKeyUp);
-        uIOhook.stop();
-      })
-      .catch(() => {});
+    await holdOpInFlight;
   } finally {
-    holdBindingsCache = [];
-    activeHolds.clear();
-    holdState = 'idle';
+    holdOpInFlight = null;
   }
+}
+
+/**
+ * Best-effort sync entry point used from disposeAll. Schedules a stop
+ * but does not wait — disposeAll is called from process signal handlers
+ * where awaiting is not reliable. The OS reaps any leftover hook on
+ * process exit anyway.
+ */
+function teardownHoldListener(): void {
+  void stopHold();
+  holdBindingsCache = [];
+  clearAllWatchdogs();
+}
+
+// ── stuck-hold protection ──────────────────────────────────────────────
+//
+// A hold binding stays "pressed" until the OS delivers a matching keyup.
+// The OS swallows keyups when: the screen locks mid-press, the system
+// suspends, or another window's modal swallows the event. A stuck hold
+// on push-to-mute leaves the user's mic open in voice — a privacy bug.
+//
+// Two safeguards: powerMonitor events for the predictable cases, and a
+// per-binding watchdog as a worst-case ceiling.
+
+const HOLD_WATCHDOG_MS = 30_000;
+const watchdogs = new Map<KeybindId, ReturnType<typeof setTimeout>>();
+let powerMonitorWired = false;
+
+function armWatchdog(id: KeybindId) {
+  clearWatchdog(id);
+  watchdogs.set(
+    id,
+    setTimeout(() => {
+      if (activeHolds.has(id)) {
+        activeHolds.delete(id);
+        send({ id, phase: 'release' });
+      }
+      watchdogs.delete(id);
+    }, HOLD_WATCHDOG_MS),
+  );
+}
+
+function clearWatchdog(id: KeybindId) {
+  const t = watchdogs.get(id);
+  if (t) {
+    clearTimeout(t);
+    watchdogs.delete(id);
+  }
+}
+
+function clearAllWatchdogs() {
+  for (const t of watchdogs.values()) clearTimeout(t);
+  watchdogs.clear();
+}
+
+function releaseAllHolds() {
+  for (const id of [...activeHolds]) {
+    activeHolds.delete(id);
+    clearWatchdog(id);
+    send({ id, phase: 'release' });
+  }
+}
+
+function setupPowerMonitorOnce() {
+  if (powerMonitorWired) return;
+  powerMonitorWired = true;
+  // 'suspend' fires on system sleep; 'lock-screen' on screen lock (macOS,
+  // Windows). Either can swallow the keyup that would normally end a
+  // press-and-hold. Synthesise releases so the renderer doesn't leave
+  // the user muted/unmuted incorrectly.
+  powerMonitor.on('suspend', releaseAllHolds);
+  powerMonitor.on('lock-screen', releaseAllHolds);
 }
 
 function onUiohookKeyDown(e: {
@@ -293,6 +409,7 @@ function onUiohookKeyDown(e: {
     if (activeHolds.has(b.id)) continue;
     if (!matchesUiohookEvent(b.keys, primary, e)) continue;
     activeHolds.add(b.id);
+    armWatchdog(b.id);
     send({ id: b.id, phase: 'press' });
   }
 }
@@ -308,6 +425,7 @@ function onUiohookKeyUp(e: { keycode: number }): void {
     const parts = b.keys.toLowerCase().split('+');
     if (parts[parts.length - 1] === primary) {
       activeHolds.delete(b.id);
+      clearWatchdog(b.id);
       send({ id: b.id, phase: 'release' });
     }
   }

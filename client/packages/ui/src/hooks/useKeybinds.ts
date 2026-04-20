@@ -138,6 +138,15 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
 
   const activeHolds = useRef(new Set<KeybindId>());
 
+  // Mirror the latest action maps into a ref on every render. The two
+  // effects below depend on [] (mount/unmount only), so reading from
+  // `actionsRef.current` lets them see the latest closures without
+  // tearing down + re-registering DOM/OS hotkeys on every parent render.
+  // (Without this, a parent re-render would briefly drop globalShortcut
+  // registrations during the 50ms debounce — undetectably flaky bug.)
+  const actionsRef = useRef({ pressActions, holdActions });
+  actionsRef.current = { pressActions, holdActions };
+
   useEffect(() => {
     const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
 
@@ -168,7 +177,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
           if (def.hotkeyOptions?.preventDefault !== false) {
             e.preventDefault();
           }
-          holdActions[id]?.onPress();
+          actionsRef.current.holdActions[id]?.onPress();
           return;
         }
 
@@ -176,7 +185,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
         if (def.hotkeyOptions?.preventDefault !== false) {
           e.preventDefault();
         }
-        pressActions[id]?.();
+        actionsRef.current.pressActions[id]?.();
         return;
       }
     }
@@ -186,6 +195,13 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
 
       for (const [id] of entries) {
         if (!activeHolds.current.has(id)) continue;
+        // Symmetric with keydownHandler: globally-registered bindings are
+        // released by the IPC release path, not by the DOM. Without this
+        // skip, a focused window with a global hold binding would fire
+        // both DOM keyup (release) AND IPC release — toggling mute twice.
+        if (useKeybindOverridesStore.getState().getEffectiveIsGlobal(id)) {
+          continue;
+        }
         const effectiveKeys = useKeybindOverridesStore
           .getState()
           .getEffectiveKeys(id);
@@ -195,7 +211,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
         const primaryKey = parts[parts.length - 1];
         if (e.key.toLowerCase() === primaryKey) {
           activeHolds.current.delete(id);
-          holdActions[id]?.onRelease();
+          actionsRef.current.holdActions[id]?.onRelease();
         }
       }
     }
@@ -203,7 +219,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
     function blurHandler() {
       // Release all held keys when window loses focus
       for (const id of activeHolds.current) {
-        holdActions[id]?.onRelease();
+        actionsRef.current.holdActions[id]?.onRelease();
       }
       activeHolds.current.clear();
     }
@@ -217,24 +233,26 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
       window.removeEventListener('blur', blurHandler);
       // Release any active holds on cleanup
       for (const id of activeHolds.current) {
-        holdActions[id]?.onRelease();
+        actionsRef.current.holdActions[id]?.onRelease();
       }
       activeHolds.current.clear();
     };
-  }, [pressActions, holdActions]);
+  }, []);
 
   // ── Bridge to the Electron main process for OS-level global keybinds ──
-  // - On the renderer side, we send a snapshot of the current binding state
-  //   to main whenever an override changes; main re-registers globalShortcut
-  //   accordingly.
-  // - When main fires a keybind, we dispatch it through the same action map
-  //   the in-window listener uses so behaviour stays symmetric.
+  // On override change, push the snapshot to main; main re-registers
+  // globalShortcut accordingly. When main fires, dispatch through the
+  // same action map the in-window listener uses.
   useEffect(() => {
     const api = window.electronAPI;
     if (!api) return; // Web/mobile: no-op
-    // E2E gate: tests run with VITE_E2E=1 so the host environment never
-    // sees an OS-level hotkey registered by the test harness.
     if (import.meta.env?.VITE_E2E === '1') return;
+
+    // Cancellation token for in-flight `keybind:fire` IPC events. After
+    // unsubscribe, microtasks already in the queue may still fire — they
+    // would dispatch into the previous closure's actionsRef. Setting
+    // `cancelled = true` on cleanup makes them a no-op.
+    const cancelled = { value: false };
 
     function buildSnapshot(): KeybindSyncedBinding[] {
       const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
@@ -260,6 +278,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
       api?.keybinds
         .sync(buildSnapshot())
         .then((result) => {
+          if (cancelled.value) return;
           useKeybindGlobalStatusStore
             .getState()
             .setStatus(
@@ -278,6 +297,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
     const unsubscribeStore = useKeybindOverridesStore.subscribe(pushSync);
 
     const unsubscribeFire = api.keybinds.onFire((event) => {
+      if (cancelled.value) return;
       const id = event.id as KeybindId;
       if (!(id in KEYBINDS)) return;
       const def: Keybind = KEYBINDS[id];
@@ -288,24 +308,27 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
         if (def.type === 'hold') {
           if (activeHolds.current.has(id)) return;
           activeHolds.current.add(id);
-          holdActions[id]?.onPress();
+          actionsRef.current.holdActions[id]?.onPress();
         } else {
-          pressActions[id]?.();
+          actionsRef.current.pressActions[id]?.();
         }
       } else if (event.phase === 'release') {
         if (def.type === 'hold' && activeHolds.current.has(id)) {
           activeHolds.current.delete(id);
-          holdActions[id]?.onRelease();
+          actionsRef.current.holdActions[id]?.onRelease();
         }
       }
     });
 
     return () => {
+      cancelled.value = true;
       unsubscribeStore();
       unsubscribeFire();
-      useKeybindGlobalStatusStore.getState().clear();
-      // Tell main to drop all global registrations on unmount.
+      // Tell main to drop all global registrations on unmount. Don't
+      // clear the global status store here — under React StrictMode the
+      // remount's pushSync will overwrite it; clearing produces an
+      // empty-frame flicker in the settings UI.
       api?.keybinds.sync([]).catch(() => {});
     };
-  }, [pressActions, holdActions]);
+  }, []);
 }
