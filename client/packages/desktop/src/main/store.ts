@@ -15,9 +15,19 @@ export interface AppSettings {
   serverUrl: string;
 }
 
+export interface KeybindsConfig {
+  /**
+   * User has explicitly opted into hold-type global keybinds (push-to-talk
+   * style). On macOS this is required before we may surface the
+   * Accessibility prompt or call uIOhook.start.
+   */
+  holdGlobalsOptIn: boolean;
+}
+
 interface StoreSchema {
   windowState: WindowState;
   settings: AppSettings;
+  keybinds: KeybindsConfig;
 }
 
 export const store = new Store<StoreSchema>({
@@ -34,6 +44,9 @@ export const store = new Store<StoreSchema>({
       minimizeToTray: true,
       autoLaunch: false,
       serverUrl: '',
+    },
+    keybinds: {
+      holdGlobalsOptIn: false,
     },
   },
 });

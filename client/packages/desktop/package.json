@@ -24,7 +24,8 @@
   "dependencies": {
     "@meza/core": "workspace:*",
     "electron-store": "^11.0.2",
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "uiohook-napi": "1.5.4"
   },
   "devDependencies": {
     "electron": "^35.0.0",

@@ -84,10 +84,7 @@ function debouncedSave(
   saveTimer = setTimeout(() => saveToStorage(get().overrides), 300);
 }
 
-function pruneIfEmpty(
-  state: KeybindOverridesState,
-  id: KeybindId,
-) {
+function pruneIfEmpty(state: KeybindOverridesState, id: KeybindId) {
   const entry = state.overrides[id];
   if (entry && entry.keys === undefined && entry.isGlobal === undefined) {
     delete state.overrides[id];

@@ -17,7 +17,7 @@ describe('toElectronAccelerator', () => {
           expect(result).toBeNull();
         } else {
           expect(result).not.toBeNull();
-          expect(result).toMatch(/^[A-Z][A-Za-z+0-9/.,;'\\\-=`\[\]]+$/);
+          expect(result).toMatch(/^[A-Z][A-Za-z+0-9/.,;'\\\-=`[\]]+$/);
         }
       });
     }
@@ -39,16 +39,16 @@ describe('toElectronAccelerator', () => {
 
   it.each([
     [''],
-    ['foo'],            // unknown key, no modifier
-    ['mod+'],           // empty primary
-    ['+k'],             // empty modifier
-    ['escape'],         // bare key, would steal system-wide
-    ['tab'],            // bare key
-    ['k'],              // bare letter
-    ['shift+xxxx'],     // unknown primary
-    ['weirdmod+k'],     // unknown modifier
-    ['mod+mod+k'],      // duplicate modifier
-    ['mod++k'],         // empty middle
+    ['foo'], // unknown key, no modifier
+    ['mod+'], // empty primary
+    ['+k'], // empty modifier
+    ['escape'], // bare key, would steal system-wide
+    ['tab'], // bare key
+    ['k'], // bare letter
+    ['shift+xxxx'], // unknown primary
+    ['weirdmod+k'], // unknown modifier
+    ['mod+mod+k'], // duplicate modifier
+    ['mod++k'], // empty middle
   ])('rejects %s → null', (input) => {
     expect(toElectronAccelerator(input)).toBeNull();
   });

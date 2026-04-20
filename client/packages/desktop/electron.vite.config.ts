@@ -1,8 +1,14 @@
 import { resolve } from 'node:path';
-import { defineConfig } from 'electron-vite';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 export default defineConfig({
   main: {
+    plugins: [
+      // Externalise everything in package.json EXCEPT @meza/core (workspace
+      // package shipped as TypeScript sources — needs to be bundled so the
+      // main process can load it at runtime).
+      externalizeDepsPlugin({ exclude: ['@meza/core'] }),
+    ],
     build: {
       outDir: 'out/main',
       rollupOptions: {

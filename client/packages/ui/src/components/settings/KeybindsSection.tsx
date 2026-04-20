@@ -127,11 +127,25 @@ export function KeybindsSection() {
                             <input
                               type="checkbox"
                               checked={isGlobal}
-                              onChange={(e) =>
+                              onChange={async (e) => {
+                                const next = e.target.checked;
+                                // Hold-type globals require explicit OS-level
+                                // opt-in (Accessibility on macOS). Ask main
+                                // before flipping the flag so the prompt
+                                // fires only on user action.
+                                if (
+                                  next &&
+                                  def.type === 'hold' &&
+                                  window.electronAPI
+                                ) {
+                                  const result =
+                                    await window.electronAPI.keybinds.enableHoldGlobals();
+                                  if (!result.ok) return;
+                                }
                                 useKeybindOverridesStore
                                   .getState()
-                                  .setGlobal(id, e.target.checked)
-                              }
+                                  .setGlobal(id, next);
+                              }}
                               className="cursor-pointer"
                               aria-label={`Capture ${def.label} globally`}
                             />

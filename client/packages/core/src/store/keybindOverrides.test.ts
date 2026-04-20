@@ -42,7 +42,9 @@ describe('keybind overrides store', () => {
     const store = useKeybindOverridesStore.getState();
     store.setGlobal('search', true);
     store.setGlobal('search', false);
-    expect(useKeybindOverridesStore.getState().overrides.search).toBeUndefined();
+    expect(
+      useKeybindOverridesStore.getState().overrides.search,
+    ).toBeUndefined();
   });
 
   it('getGloballyEnabled returns only ids with isGlobal=true', () => {

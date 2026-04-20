@@ -139,7 +139,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       }>,
     ) =>
       ipcRenderer.invoke('keybinds:sync', bindings) as Promise<{
-        status: Record<string, 'active' | 'failed' | 'unsupported' | 'permission'>;
+        status: Record<
+          string,
+          'active' | 'failed' | 'unsupported' | 'permission'
+        >;
       }>,
     enableHoldGlobals: () =>
       ipcRenderer.invoke('keybinds:enableHoldGlobals') as Promise<{
@@ -147,10 +150,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         reason?: 'permission' | 'wayland' | 'unsupported';
       }>,
     onFire: (
-      callback: (event: {
-        id: string;
-        phase: 'press' | 'release';
-      }) => void,
+      callback: (event: { id: string; phase: 'press' | 'release' }) => void,
     ) => {
       const handler = (_event: unknown, payload: unknown) => {
         // Runtime guard: drop anything that doesn't match the expected shape.

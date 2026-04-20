@@ -2,6 +2,11 @@ appId: com.meza.desktop
 productName: Meza
 artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 asar: true
+# uiohook-napi ships a prebuilt .node binary; it must live outside app.asar
+# so the OS loader can mmap it. On macOS the unpacked binary is signed by
+# electron-builder alongside the app bundle.
+asarUnpack:
+  - "**/node_modules/uiohook-napi/**"
 compression: normal
 
 directories:

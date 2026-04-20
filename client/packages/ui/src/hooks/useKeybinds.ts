@@ -245,9 +245,7 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
           .getState()
           .getEffectiveIsGlobal(id);
         if (!isGlobal) continue;
-        const keys = useKeybindOverridesStore
-          .getState()
-          .getEffectiveKeys(id);
+        const keys = useKeybindOverridesStore.getState().getEffectiveKeys(id);
         out.push({
           id,
           keys,
