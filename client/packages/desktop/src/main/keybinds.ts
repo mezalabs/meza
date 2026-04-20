@@ -16,11 +16,10 @@
 // future feature adds secondary windows that need keybinds, refactor to a
 // window registry rather than expanding the captured reference.
 
-import {
-  KEYBINDS,
-  type KeybindGlobalStatus,
-  type KeybindId,
-  type SyncedBinding,
+import type {
+  KeybindGlobalStatus,
+  KeybindId,
+  SyncedBinding,
 } from '@meza/core/keybinds';
 import {
   type BrowserWindow,
@@ -32,10 +31,8 @@ import {
 import { toElectronAccelerator } from './accelerator.js';
 import { isWayland } from './platform.js';
 import { store } from './store.js';
+import { validatePayload } from './validatePayload.js';
 
-const VALID_IDS = new Set<string>(Object.keys(KEYBINDS));
-const MAX_BINDINGS = 32;
-const MAX_KEYS_LEN = 32;
 const SYNC_DEBOUNCE_MS = 50;
 
 const status = new Map<KeybindId, KeybindGlobalStatus>();
@@ -44,25 +41,6 @@ const registered = new Set<string>(); // accelerators currently held
 let win: BrowserWindow | null = null;
 let syncInFlight: Promise<void> = Promise.resolve();
 let syncDebounce: ReturnType<typeof setTimeout> | null = null;
-
-// ── validation ───────────────────────────────────────────────────────────
-
-function validatePayload(p: unknown): SyncedBinding[] | null {
-  if (!Array.isArray(p)) return null;
-  if (p.length > MAX_BINDINGS) return null;
-  const out: SyncedBinding[] = [];
-  for (const item of p) {
-    if (typeof item !== 'object' || item === null) return null;
-    const obj = item as Record<string, unknown>;
-    const { id, keys, type, isGlobal } = obj;
-    if (typeof id !== 'string' || !VALID_IDS.has(id)) return null;
-    if (typeof keys !== 'string' || keys.length > MAX_KEYS_LEN) return null;
-    if (type !== 'press' && type !== 'hold') return null;
-    if (typeof isGlobal !== 'boolean') return null;
-    out.push({ id: id as KeybindId, keys, type, isGlobal });
-  }
-  return out;
-}
 
 // ── outbound IPC ─────────────────────────────────────────────────────────
 
