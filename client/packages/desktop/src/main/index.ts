@@ -18,6 +18,10 @@ import {
   setupDeepLinks,
 } from './deeplink.js';
 import { registerIpcHandlers } from './ipc.js';
+import {
+  disposeAll as disposeKeybinds,
+  registerKeybindHandlers,
+} from './keybinds.js';
 import { isWayland } from './platform.js';
 import { getSavedWindowState, store, trackWindowState } from './store.js';
 import { createTray, destroyTray } from './tray.js';
@@ -132,6 +136,21 @@ function createWindow(): BrowserWindow {
 
 app.on('before-quit', () => {
   (globalThis as Record<string, unknown>).__mezaIsQuitting = true;
+  disposeKeybinds();
+});
+
+// Belt-and-braces: globalShortcut registrations outlive the renderer, so
+// release them on every quit signal we can hook. disposeKeybinds is idempotent.
+app.on('will-quit', disposeKeybinds);
+for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(sig, () => {
+    disposeKeybinds();
+    app.quit();
+  });
+}
+process.on('uncaughtException', (err) => {
+  console.error('[main] uncaughtException:', err);
+  disposeKeybinds();
 });
 
 app.whenReady().then(() => {
@@ -401,6 +420,7 @@ app.whenReady().then(() => {
 
   mainWindow = createWindow();
   registerIpcHandlers(mainWindow);
+  registerKeybindHandlers(mainWindow);
   createTray(mainWindow);
   setupDeepLinks(mainWindow);
 

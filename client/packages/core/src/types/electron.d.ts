@@ -28,6 +28,24 @@ export interface ScreenSource {
   thumbnail: string;
 }
 
+export type KeybindGlobalStatus =
+  | 'active'
+  | 'failed'
+  | 'unsupported'
+  | 'permission';
+
+export interface KeybindSyncedBinding {
+  id: string;
+  keys: string;
+  type: 'press' | 'hold';
+  isGlobal: boolean;
+}
+
+export interface KeybindFireEvent {
+  id: string;
+  phase: 'press' | 'release';
+}
+
 export interface ElectronAPI {
   window: {
     minimize: () => void;
@@ -66,6 +84,16 @@ export interface ElectronAPI {
     setServerUrl: (url: string) => Promise<void>;
     getMinimizeToTray: () => Promise<boolean>;
     setMinimizeToTray: (enabled: boolean) => Promise<void>;
+  };
+  keybinds: {
+    sync: (
+      bindings: KeybindSyncedBinding[],
+    ) => Promise<{ status: Record<string, KeybindGlobalStatus> }>;
+    enableHoldGlobals: () => Promise<{
+      ok: boolean;
+      reason?: 'permission' | 'wayland' | 'unsupported';
+    }>;
+    onFire: (callback: (event: KeybindFireEvent) => void) => () => void;
   };
 }
 

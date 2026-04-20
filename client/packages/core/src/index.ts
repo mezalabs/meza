@@ -424,6 +424,11 @@ export { useGatewayStore } from './store/gateway.ts';
 export type { InviteState } from './store/invite.ts';
 export { useInviteStore } from './store/invite.ts';
 export type {
+  KeybindGlobalStatusActions,
+  KeybindGlobalStatusState,
+} from './store/keybindGlobalStatus.ts';
+export { useKeybindGlobalStatusStore } from './store/keybindGlobalStatus.ts';
+export type {
   KeybindOverride,
   KeybindOverridesActions,
   KeybindOverridesState,
@@ -510,6 +515,9 @@ export * from './tiling/index.ts';
 // Types — Electron API
 export type {
   ElectronAPI,
+  KeybindFireEvent,
+  KeybindGlobalStatus as ElectronKeybindGlobalStatus,
+  KeybindSyncedBinding,
   ScreenSource,
   UpdateStatus,
   UpdateUrgency,

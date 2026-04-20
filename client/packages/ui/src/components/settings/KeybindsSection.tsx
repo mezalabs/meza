@@ -1,8 +1,12 @@
 import {
+  type ElectronKeybindGlobalStatus,
+  isElectron,
+  isGlobalEligible,
   KEYBINDS,
   type Keybind,
   type KeybindCategory,
   type KeybindId,
+  useKeybindGlobalStatusStore,
   useKeybindOverridesStore,
 } from '@meza/core';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
@@ -23,9 +27,35 @@ const CATEGORY_ORDER: KeybindCategory[] = [
   'tiling',
 ];
 
+const STATUS_LABEL: Record<ElectronKeybindGlobalStatus, string> = {
+  active: 'Global',
+  failed: 'In use by another app',
+  unsupported: 'Unsupported combo',
+  permission: 'Permission needed',
+};
+
+const STATUS_CLASS: Record<ElectronKeybindGlobalStatus, string> = {
+  active: 'bg-success/15 text-success',
+  failed: 'bg-warning/15 text-warning',
+  unsupported: 'bg-bg-surface text-text-subtle',
+  permission: 'bg-warning/15 text-warning',
+};
+
+function StatusPill({ status }: { status: ElectronKeybindGlobalStatus }) {
+  return (
+    <span
+      className={`rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${STATUS_CLASS[status]}`}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
 export function KeybindsSection() {
   const overrides = useKeybindOverridesStore((s) => s.overrides);
+  const status = useKeybindGlobalStatusStore((s) => s.status);
   const [editingId, setEditingId] = useState<KeybindId | null>(null);
+  const showGlobalControls = isElectron();
 
   const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
   const grouped = new Map<KeybindCategory, [KeybindId, Keybind][]>();
@@ -42,6 +72,13 @@ export function KeybindsSection() {
         <h2 className="text-lg font-semibold text-text">Keybinds</h2>
         <p className="mt-1 text-sm text-text-muted">
           Customize keyboard shortcuts. Click "Edit" to record a new binding.
+          {showGlobalControls && (
+            <>
+              {' '}
+              Toggle <span className="font-medium">Global</span> to capture a
+              binding even when Meza isn't focused.
+            </>
+          )}
         </p>
       </div>
 
@@ -58,8 +95,13 @@ export function KeybindsSection() {
                 const effectiveKeys = useKeybindOverridesStore
                   .getState()
                   .getEffectiveKeys(id);
-                const isOverridden = overrides[id] !== undefined;
+                const isOverridden = overrides[id]?.keys !== undefined;
                 const isEditing = editingId === id;
+                const isGlobal = useKeybindOverridesStore
+                  .getState()
+                  .getEffectiveIsGlobal(id);
+                const eligible = showGlobalControls && isGlobalEligible(id);
+                const bindingStatus = status[id];
 
                 return (
                   <div
@@ -76,6 +118,27 @@ export function KeybindsSection() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {eligible && (
+                        <>
+                          {isGlobal && bindingStatus && (
+                            <StatusPill status={bindingStatus} />
+                          )}
+                          <label className="flex items-center gap-1.5 cursor-pointer text-xs text-text-subtle hover:text-text">
+                            <input
+                              type="checkbox"
+                              checked={isGlobal}
+                              onChange={(e) =>
+                                useKeybindOverridesStore
+                                  .getState()
+                                  .setGlobal(id, e.target.checked)
+                              }
+                              className="cursor-pointer"
+                              aria-label={`Capture ${def.label} globally`}
+                            />
+                            Global
+                          </label>
+                        </>
+                      )}
                       {isEditing ? (
                         <KeybindRecorder
                           keybindId={id}

@@ -262,7 +262,7 @@ export function shouldSuppressKeybind(
  * with explicit `globalEligible: false` overriding for in-app-only bindings.
  */
 export function isGlobalEligible(id: KeybindId): boolean {
-  const def = KEYBINDS[id];
+  const def: Keybind = KEYBINDS[id];
   if (def.globalEligible !== undefined) return def.globalEligible;
   return !def.tilingOnly;
 }

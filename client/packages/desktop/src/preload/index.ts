@@ -127,4 +127,43 @@ contextBridge.exposeInMainWorld('electronAPI', {
         enabled,
       ) as Promise<void>,
   },
+
+  // --- Global keybinds (OS-level capture) ---
+  keybinds: {
+    sync: (
+      bindings: Array<{
+        id: string;
+        keys: string;
+        type: 'press' | 'hold';
+        isGlobal: boolean;
+      }>,
+    ) =>
+      ipcRenderer.invoke('keybinds:sync', bindings) as Promise<{
+        status: Record<string, 'active' | 'failed' | 'unsupported' | 'permission'>;
+      }>,
+    enableHoldGlobals: () =>
+      ipcRenderer.invoke('keybinds:enableHoldGlobals') as Promise<{
+        ok: boolean;
+        reason?: 'permission' | 'wayland' | 'unsupported';
+      }>,
+    onFire: (
+      callback: (event: {
+        id: string;
+        phase: 'press' | 'release';
+      }) => void,
+    ) => {
+      const handler = (_event: unknown, payload: unknown) => {
+        // Runtime guard: drop anything that doesn't match the expected shape.
+        if (typeof payload !== 'object' || payload === null) return;
+        const p = payload as Record<string, unknown>;
+        if (typeof p.id !== 'string') return;
+        if (p.phase !== 'press' && p.phase !== 'release') return;
+        callback({ id: p.id, phase: p.phase });
+      };
+      ipcRenderer.on('keybind:fire', handler);
+      return () => {
+        ipcRenderer.removeListener('keybind:fire', handler);
+      };
+    },
+  },
 });

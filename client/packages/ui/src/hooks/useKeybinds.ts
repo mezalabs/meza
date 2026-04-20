@@ -1,12 +1,16 @@
 import {
   ackMessage,
+  type ElectronKeybindGlobalStatus,
+  isGlobalEligible,
   KEYBINDS,
   type Keybind,
   type KeybindId,
+  type KeybindSyncedBinding,
   matchesKeybind,
   shouldSuppressKeybind,
   soundManager,
   useChannelStore,
+  useKeybindGlobalStatusStore,
   useKeybindOverridesStore,
   useMessageStore,
   useNotificationSettingsStore,
@@ -139,6 +143,11 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
 
     function keydownHandler(e: KeyboardEvent) {
       for (const [id, def] of entries) {
+        // Globally-registered bindings are dispatched by the main process
+        // via electronAPI.keybinds.onFire — skip them here to avoid double-fire.
+        if (useKeybindOverridesStore.getState().getEffectiveIsGlobal(id)) {
+          continue;
+        }
         const effectiveKeys = useKeybindOverridesStore
           .getState()
           .getEffectiveKeys(id);
@@ -211,6 +220,94 @@ export function useKeybinds({ onShowShortcuts }: UseKeybindsOptions) {
         holdActions[id]?.onRelease();
       }
       activeHolds.current.clear();
+    };
+  }, [pressActions, holdActions]);
+
+  // ── Bridge to the Electron main process for OS-level global keybinds ──
+  // - On the renderer side, we send a snapshot of the current binding state
+  //   to main whenever an override changes; main re-registers globalShortcut
+  //   accordingly.
+  // - When main fires a keybind, we dispatch it through the same action map
+  //   the in-window listener uses so behaviour stays symmetric.
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api) return; // Web/mobile: no-op
+    // E2E gate: tests run with VITE_E2E=1 so the host environment never
+    // sees an OS-level hotkey registered by the test harness.
+    if (import.meta.env?.VITE_E2E === '1') return;
+
+    function buildSnapshot(): KeybindSyncedBinding[] {
+      const entries = Object.entries(KEYBINDS) as [KeybindId, Keybind][];
+      const out: KeybindSyncedBinding[] = [];
+      for (const [id, def] of entries) {
+        if (!isGlobalEligible(id)) continue;
+        const isGlobal = useKeybindOverridesStore
+          .getState()
+          .getEffectiveIsGlobal(id);
+        if (!isGlobal) continue;
+        const keys = useKeybindOverridesStore
+          .getState()
+          .getEffectiveKeys(id);
+        out.push({
+          id,
+          keys,
+          type: def.type ?? 'press',
+          isGlobal: true,
+        });
+      }
+      return out;
+    }
+
+    function pushSync() {
+      api?.keybinds
+        .sync(buildSnapshot())
+        .then((result) => {
+          useKeybindGlobalStatusStore
+            .getState()
+            .setStatus(
+              result.status as Partial<
+                Record<KeybindId, ElectronKeybindGlobalStatus>
+              >,
+            );
+        })
+        .catch(() => {
+          // Main process should never throw, but if the IPC fails we leave
+          // the in-window listener as the fallback.
+        });
+    }
+
+    pushSync();
+    const unsubscribeStore = useKeybindOverridesStore.subscribe(pushSync);
+
+    const unsubscribeFire = api.keybinds.onFire((event) => {
+      const id = event.id as KeybindId;
+      if (!(id in KEYBINDS)) return;
+      const def: Keybind = KEYBINDS[id];
+      if (def.voiceOnly && useVoiceStore.getState().status !== 'connected') {
+        return;
+      }
+      if (event.phase === 'press') {
+        if (def.type === 'hold') {
+          if (activeHolds.current.has(id)) return;
+          activeHolds.current.add(id);
+          holdActions[id]?.onPress();
+        } else {
+          pressActions[id]?.();
+        }
+      } else if (event.phase === 'release') {
+        if (def.type === 'hold' && activeHolds.current.has(id)) {
+          activeHolds.current.delete(id);
+          holdActions[id]?.onRelease();
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeStore();
+      unsubscribeFire();
+      useKeybindGlobalStatusStore.getState().clear();
+      // Tell main to drop all global registrations on unmount.
+      api?.keybinds.sync([]).catch(() => {});
     };
   }, [pressActions, holdActions]);
 }

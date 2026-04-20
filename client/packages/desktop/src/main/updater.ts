@@ -1,5 +1,6 @@
 import { app, type BrowserWindow, ipcMain, powerMonitor } from 'electron';
 import pkg from 'electron-updater';
+import { disposeAll as disposeKeybinds } from './keybinds.js';
 
 const { autoUpdater } = pkg;
 
@@ -181,6 +182,9 @@ export function initAutoUpdater(win: BrowserWindow): void {
     // Without this, the new process sees the lock held by the dying old process
     // and immediately quits itself.
     app.releaseSingleInstanceLock();
+    // Squirrel can quit synchronously without before-quit listeners firing,
+    // leaving global accelerators wedged briefly. Dispose explicitly first.
+    disposeKeybinds();
     autoUpdater.quitAndInstall(false, true);
   });
 
