@@ -34,7 +34,7 @@ import {
 } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { navigateToChannel } from './navigate.ts';
+import { navigateToChannel, requestChannelNavigation } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -76,10 +76,11 @@ if (window.electronAPI?.deepLink) {
     }
 
     // Handle channel deep links: meza://channel/{channelId}
-    // (sent by notification tap handler in ipc.ts)
+    // (sent by notification tap handler in ipc.ts). Use requestChannelNavigation
+    // so a tap during cold start buffers until session-ready instead of being lost.
     const channelMatch = url.match(/^meza:\/\/channel\/([a-zA-Z0-9_-]+)$/);
     if (channelMatch?.[1]) {
-      navigateToChannel(channelMatch[1]);
+      requestChannelNavigation(channelMatch[1]);
     }
   });
 }
@@ -169,7 +170,7 @@ if (isElectron()) {
 // Handle PUSH_NAVIGATE messages from the push service worker (web).
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
-    navigateToChannel(event.data.channelId);
+    requestChannelNavigation(event.data.channelId);
   }
 });
 
@@ -193,11 +194,8 @@ function App() {
     return onSessionReady(() => setSessionReady(true));
   }, [sessionReady, isAuthenticated]);
 
-  // Drain any channel id buffered by a deep link or push notification tap
-  // that arrived before the UI was ready. Runs on first mount if both
-  // conditions are already true (persisted-auth cold start) and again if
-  // they transition to true (fresh login). navigateToChannel is safe to
-  // call here because Shell is rendered as soon as both flags are true.
+  // Drain a channel id buffered by a notification or deep-link tap that
+  // arrived before Shell could mount. Re-runs on fresh login.
   useEffect(() => {
     if (!sessionReady || !isAuthenticated) return;
     const channelId = consumePendingChannel();

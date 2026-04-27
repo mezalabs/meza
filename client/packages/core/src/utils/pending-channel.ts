@@ -1,33 +1,24 @@
-/**
- * Buffers a channel ID requested by a deep link or push notification when
- * the UI is not yet ready to receive navigation (e.g. during a cold start
- * before the auth/E2EE session has bootstrapped). The consumer drains the
- * buffer once it can act on it.
- *
- * Module-level state (not Zustand) because writers run before React mounts
- * and the single consumer drains synchronously — a listener API would add
- * complexity without callers.
- *
- * Not persisted to localStorage: a fresh app launch with no notification
- * tap must NOT replay an old buffered channel ID.
- */
+// Buffers a channel id requested before the UI is ready to receive
+// navigation (cold-start tap fires before auth/E2EE session bootstraps).
+// Module-level state matches the onSessionReady pattern: writers run
+// before React mounts and the consumer drains synchronously. Not persisted
+// — a fresh launch with no tap must not replay a stale id. Last write wins.
 
 let pendingChannelId: string | null = null;
 
+/** Buffer a channel id for the next drain. Overwrites any previous value. */
 export function setPendingChannel(channelId: string): void {
   pendingChannelId = channelId;
 }
 
+/** Read and clear the buffered channel id (returns null if empty). */
 export function consumePendingChannel(): string | null {
   const out = pendingChannelId;
   pendingChannelId = null;
   return out;
 }
 
-export function getPendingChannel(): string | null {
-  return pendingChannelId;
-}
-
+/** Discard the buffer without reading it (used on logout teardown). */
 export function clearPendingChannel(): void {
   pendingChannelId = null;
 }

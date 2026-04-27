@@ -13,14 +13,18 @@ export function navigateToChannel(channelId: string): void {
 /**
  * Request navigation to a channel from a deep link or push notification.
  *
- * If the auth + E2EE session are ready, navigates immediately. Otherwise
- * buffers the channel id so the consumer in main.tsx can apply it once
- * `sessionReady && isAuthenticated` flips true. This bridges the cold-start
- * gap between a notification tap firing very early and Shell being ready
- * to render the channel pane.
+ * - Drops the request if no user is authenticated. Without server-side
+ *   `user_id` in the payload we can't tell which account a notification was
+ *   intended for, so a tap during the logged-out window must not buffer a
+ *   channel id that the next user to log in would inherit.
+ * - If auth + E2EE session are ready, navigates immediately.
+ * - Otherwise buffers the channel id for `main.tsx` to drain once
+ *   `sessionReady && isAuthenticated` flips true (cold start with persisted
+ *   auth, where bootstrap is in-flight when the tap arrives).
  */
 export function requestChannelNavigation(channelId: string): void {
-  if (useAuthStore.getState().isAuthenticated && isSessionReady()) {
+  if (!useAuthStore.getState().isAuthenticated) return;
+  if (isSessionReady()) {
     navigateToChannel(channelId);
     return;
   }

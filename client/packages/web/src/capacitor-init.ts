@@ -26,10 +26,10 @@ import { requestChannelNavigation } from './navigate.ts';
 const pushAdapter = new CapacitorPushAdapter();
 
 export async function initCapacitor(): Promise<void> {
-  // Attach the push tap listener FIRST. Capacitor delivers the cold-start
-  // notification tap event very early in launch, and the listener must be
-  // registered before that delivery happens — otherwise the event is lost
-  // and the user lands on the dashboard instead of the channel.
+  // Attach the tap listener before any awaits so it registers as early as
+  // possible in launch. The pending-channel buffer is what actually closes
+  // the cold-start race; this just shrinks the window where Capacitor's
+  // internal queue would have to hold the event.
   setupNotificationNavigation();
 
   const { App } = await import('@capacitor/app');

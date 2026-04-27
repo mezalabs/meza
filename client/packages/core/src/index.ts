@@ -534,7 +534,6 @@ export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export {
   clearPendingChannel,
   consumePendingChannel,
-  getPendingChannel,
   setPendingChannel,
 } from './utils/pending-channel.ts';
 export {
