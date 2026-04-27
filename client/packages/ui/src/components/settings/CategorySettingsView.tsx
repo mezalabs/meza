@@ -234,7 +234,11 @@ function DangerZoneSection({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
 
-  const canDelete = confirmName === categoryName;
+  // Trim + NFC-normalize both sides so a stored name with stray whitespace or
+  // unicode form differences doesn't lock the user out of confirming.
+  const canDelete =
+    confirmName.trim().normalize('NFC') ===
+    categoryName.trim().normalize('NFC');
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
