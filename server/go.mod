@@ -4,7 +4,7 @@ go 1.25.9
 
 require (
 	connectrpc.com/connect v1.19.1
-	firebase.google.com/go/v4 v4.19.0
+	firebase.google.com/go/v4 v4.18.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/alicebob/miniredis/v2 v2.36.1
 	github.com/coder/websocket v1.8.14
