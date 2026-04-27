@@ -326,14 +326,15 @@ export function openChannelSettingsPane(serverId: string, channelId: string) {
 }
 
 /**
- * Open category permission settings as an overlay on top of all panes.
+ * Open category settings (overview, permissions, danger zone) as an overlay
+ * on top of all panes.
  */
-export function openCategoryPermissionsPane(
+export function openCategorySettingsPane(
   serverId: string,
   channelGroupId: string,
 ) {
   useTilingStore.getState().setOverlay({
-    type: 'categoryPermissions',
+    type: 'categorySettings',
     serverId,
     channelGroupId,
   });
@@ -354,6 +355,26 @@ export function closeChannelPanes(channelId: string) {
         (content.type === 'voice' && content.channelId === channelId) ||
         (content.type === 'screenShare' && content.channelId === channelId),
     );
+}
+
+/**
+ * Close any panes or overlay showing a specific category's settings.
+ * Used when a category is deleted to clean up stale UI.
+ */
+export function closeCategoryPanes(channelGroupId: string) {
+  const store = useTilingStore.getState();
+  const overlay = store.overlayContent;
+  if (
+    overlay?.type === 'categorySettings' &&
+    overlay.channelGroupId === channelGroupId
+  ) {
+    store.closeOverlay();
+  }
+  store.closePanesMatching(
+    (content) =>
+      content.type === 'categorySettings' &&
+      content.channelGroupId === channelGroupId,
+  );
 }
 
 /**
