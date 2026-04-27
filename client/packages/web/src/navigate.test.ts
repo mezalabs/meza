@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSetPaneContent = vi.fn();
 const mockSetPendingChannel = vi.fn();
-const mockIsSessionReady = vi.fn<[], boolean>();
-const mockIsAuthenticated = vi.fn<[], boolean>();
+const mockIsSessionReady = vi.fn<() => boolean>();
+const mockIsAuthenticated = vi.fn<() => boolean>();
 
 vi.mock('@meza/ui', () => ({
   useTilingStore: {
