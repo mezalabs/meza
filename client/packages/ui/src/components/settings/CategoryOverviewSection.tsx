@@ -1,5 +1,5 @@
 import { updateChannelGroup, useChannelGroupStore } from '@meza/core';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface CategoryOverviewSectionProps {
   serverId: string;
@@ -22,11 +22,20 @@ export function CategoryOverviewSection({
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const lastSyncedName = useRef<string | null>(null);
 
+  // Sync the input from the store, but don't clobber unsaved local edits when
+  // a remote rename arrives mid-typing. We accept a remote update only if the
+  // user hasn't diverged from the last value we wrote to the input.
   useEffect(() => {
     if (!group) return;
-    setName(group.name);
-  }, [group]);
+    if (lastSyncedName.current === null || name === lastSyncedName.current) {
+      setName(group.name);
+      lastSyncedName.current = group.name;
+    } else {
+      lastSyncedName.current = group.name;
+    }
+  }, [group, name]);
 
   if (!group) {
     return <div className="text-sm text-text-muted">Category not found</div>;
