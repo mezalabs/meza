@@ -215,7 +215,7 @@ export function CreateServerWizard({ paneId }: CreateServerWizardProps) {
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0 flex-col items-center">
-      <div className="flex w-full max-w-xl flex-1 flex-col px-6 py-8">
+      <div className="flex w-full max-w-xl flex-1 min-h-0 flex-col px-6 py-8">
         {/* Step indicator */}
         <div className="mb-6 flex items-center justify-center gap-2">
           {STEP_LABELS.map((label, i) => (
