@@ -532,6 +532,12 @@ export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
 export {
+  clearPendingChannel,
+  consumePendingChannel,
+  getPendingChannel,
+  setPendingChannel,
+} from './utils/pending-channel.ts';
+export {
   getApiOrigin,
   getAppOrigin,
   getBaseUrl,

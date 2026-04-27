@@ -5,6 +5,8 @@ import './index.css';
 import {
   applyDeepLinkInvite,
   bootstrapSession,
+  clearPendingChannel,
+  consumePendingChannel,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,
@@ -118,6 +120,10 @@ useAuthStore.subscribe((state, prevState) => {
     resetE2EEKeyProvider();
     useNavigationStore.getState().reset();
     useTilingStore.getState().resetLayout();
+    // Discard any buffered deep-link channel — it belonged to the previous
+    // session and would otherwise navigate the next user into a stranger's
+    // channel after re-login.
+    clearPendingChannel();
   }
 });
 
@@ -185,6 +191,17 @@ function App() {
       return;
     }
     return onSessionReady(() => setSessionReady(true));
+  }, [sessionReady, isAuthenticated]);
+
+  // Drain any channel id buffered by a deep link or push notification tap
+  // that arrived before the UI was ready. Runs on first mount if both
+  // conditions are already true (persisted-auth cold start) and again if
+  // they transition to true (fresh login). navigateToChannel is safe to
+  // call here because Shell is rendered as soon as both flags are true.
+  useEffect(() => {
+    if (!sessionReady || !isAuthenticated) return;
+    const channelId = consumePendingChannel();
+    if (channelId) navigateToChannel(channelId);
   }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,
