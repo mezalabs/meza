@@ -73,6 +73,11 @@ func main() {
 			slog.Error("init fcm messaging client", "err", err)
 			os.Exit(1)
 		}
+		if err := probeFCMAuth(ctx, fcmClient); err != nil {
+			slog.Error("FCM startup probe failed", "err", err)
+			os.Exit(1)
+		}
+		slog.Info("FCM startup probe ok")
 		slog.Info("FCM push notifications enabled")
 	} else {
 		slog.Info("FCM not configured (MEZA_FCM_CREDENTIALS_FILE not set), mobile push disabled")
