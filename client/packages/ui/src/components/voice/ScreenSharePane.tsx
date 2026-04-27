@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
+import { setScreenShareAudioVolume } from './PersistentVoiceConnection.tsx';
 
 const encoder = new TextEncoder();
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
@@ -144,11 +145,7 @@ function StreamAudioToggle({
   // Start muted — sync initial volume with the muted state
   useEffect(() => {
     if (participant) {
-      try {
-        participant.setVolume(0, Track.Source.ScreenShareAudio);
-      } catch {
-        // GainNode may not be ready if the track is still attaching
-      }
+      setScreenShareAudioVolume(participant, true);
     }
   }, [participant]);
 
@@ -156,11 +153,7 @@ function StreamAudioToggle({
 
   const toggle = () => {
     const newMuted = !isMuted;
-    try {
-      participant.setVolume(newMuted ? 0 : 1, Track.Source.ScreenShareAudio);
-    } catch {
-      // GainNode may not be ready if the track is still attaching
-    }
+    setScreenShareAudioVolume(participant, newMuted);
     setIsMuted(newMuted);
   };
 
