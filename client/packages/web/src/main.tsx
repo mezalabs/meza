@@ -5,6 +5,8 @@ import './index.css';
 import {
   applyDeepLinkInvite,
   bootstrapSession,
+  clearPendingChannel,
+  consumePendingChannel,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,
@@ -32,7 +34,7 @@ import {
 } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { navigateToChannel } from './navigate.ts';
+import { navigateToChannel, requestChannelNavigation } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -74,10 +76,11 @@ if (window.electronAPI?.deepLink) {
     }
 
     // Handle channel deep links: meza://channel/{channelId}
-    // (sent by notification tap handler in ipc.ts)
+    // (sent by notification tap handler in ipc.ts). Use requestChannelNavigation
+    // so a tap during cold start buffers until session-ready instead of being lost.
     const channelMatch = url.match(/^meza:\/\/channel\/([a-zA-Z0-9_-]+)$/);
     if (channelMatch?.[1]) {
-      navigateToChannel(channelMatch[1]);
+      requestChannelNavigation(channelMatch[1]);
     }
   });
 }
@@ -118,6 +121,10 @@ useAuthStore.subscribe((state, prevState) => {
     resetE2EEKeyProvider();
     useNavigationStore.getState().reset();
     useTilingStore.getState().resetLayout();
+    // Discard any buffered deep-link channel — it belonged to the previous
+    // session and would otherwise navigate the next user into a stranger's
+    // channel after re-login.
+    clearPendingChannel();
   }
 });
 
@@ -163,7 +170,7 @@ if (isElectron()) {
 // Handle PUSH_NAVIGATE messages from the push service worker (web).
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
-    navigateToChannel(event.data.channelId);
+    requestChannelNavigation(event.data.channelId);
   }
 });
 
@@ -185,6 +192,14 @@ function App() {
       return;
     }
     return onSessionReady(() => setSessionReady(true));
+  }, [sessionReady, isAuthenticated]);
+
+  // Drain a channel id buffered by a notification or deep-link tap that
+  // arrived before Shell could mount. Re-runs on fresh login.
+  useEffect(() => {
+    if (!sessionReady || !isAuthenticated) return;
+    const channelId = consumePendingChannel();
+    if (channelId) navigateToChannel(channelId);
   }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,

@@ -21,11 +21,17 @@ import {
   useAuthStore,
 } from '@meza/core';
 import { CapacitorPushAdapter } from './capacitor-push-adapter.ts';
-import { navigateToChannel } from './navigate.ts';
+import { requestChannelNavigation } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
 
 export async function initCapacitor(): Promise<void> {
+  // Attach the tap listener before any awaits so it registers as early as
+  // possible in launch. The pending-channel buffer is what actually closes
+  // the cold-start race; this just shrinks the window where Capacitor's
+  // internal queue would have to hold the event.
+  setupNotificationNavigation();
+
   const { App } = await import('@capacitor/app');
 
   // Dismiss keyboard if the WebView auto-focused an input on launch.
@@ -37,7 +43,6 @@ export async function initCapacitor(): Promise<void> {
   setupAppLifecycle(App);
   setupDeepLinkHandler(App);
   setupPushNotifications();
-  setupNotificationNavigation();
   setupBackButton(App);
 }
 
@@ -95,7 +100,7 @@ function setupNotificationNavigation(): void {
   pushAdapter.onNotificationTap((data) => {
     const channelId = data.channel_id;
     if (!channelId) return;
-    navigateToChannel(channelId);
+    requestChannelNavigation(channelId);
   });
 }
 
