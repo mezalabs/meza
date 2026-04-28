@@ -21,7 +21,7 @@ import {
   useAuthStore,
 } from '@meza/core';
 import { CapacitorPushAdapter } from './capacitor-push-adapter.ts';
-import { navigateToChannel } from './navigate.ts';
+import { navigateFromPush } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
 
@@ -93,9 +93,11 @@ function setupPushNotifications(): void {
 
 function setupNotificationNavigation(): void {
   pushAdapter.onNotificationTap((data) => {
-    const channelId = data.channel_id;
-    if (!channelId) return;
-    navigateToChannel(channelId);
+    navigateFromPush({
+      type: data.type,
+      channel_id: data.channel_id,
+      user_id: data.user_id,
+    });
   });
 }
 

@@ -83,7 +83,7 @@ func main() {
 		slog.Info("FCM not configured (MEZA_FCM_CREDENTIALS_FILE not set), mobile push disabled")
 	}
 
-	svc := newNotificationService(deviceStore, prefStore, chatStore, rdb, nc, cfg, fcmClient)
+	svc := newNotificationService(deviceStore, prefStore, chatStore, authStore, rdb, nc, cfg, fcmClient)
 
 	// Start NATS consumers for device connectivity tracking and event processing.
 	if err := svc.StartConsumers(ctx); err != nil {

@@ -47,10 +47,17 @@ const (
 	everyoneConcurrency = 8
 )
 
+// userLooker is the narrow slice of AuthStorer the notification service
+// needs for enriching DM push titles with the sender's display name.
+type userLooker interface {
+	GetUserByID(ctx context.Context, userID string) (*models.User, error)
+}
+
 type notificationService struct {
 	deviceStore store.DeviceStorer
 	prefStore   store.NotificationPreferenceStorer
 	chatStore   store.ChatStorer
+	userStore   userLooker
 	rdb         *redis.Client
 	nc          *nats.Conn
 	cfg         *config.Config
@@ -61,6 +68,7 @@ func newNotificationService(
 	deviceStore store.DeviceStorer,
 	prefStore store.NotificationPreferenceStorer,
 	chatStore store.ChatStorer,
+	userStore userLooker,
 	rdb *redis.Client,
 	nc *nats.Conn,
 	cfg *config.Config,
@@ -70,6 +78,7 @@ func newNotificationService(
 		deviceStore: deviceStore,
 		prefStore:   prefStore,
 		chatStore:   chatStore,
+		userStore:   userStore,
 		rdb:         rdb,
 		nc:          nc,
 		cfg:         cfg,
@@ -301,11 +310,22 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 			slog.Error("list channel participant IDs", "err", err, "channel", channelID)
 			return
 		}
+		// Resolve sender display name once per DM event for the notification Title.
+		// E2EE-respecting — display name is public and already returned by
+		// GetUserPublicProfile; Body stays generic.
+		title := dmTitle(ctx, s.userStore, senderID)
 		for _, uid := range participantIDs {
 			if uid == senderID {
 				continue
 			}
-			s.notifyOfflineDevices(ctx, uid, channelID, "message")
+			s.notifyOfflineDevices(ctx, uid, pushTrigger{
+				Kind:      "dm",
+				ChannelID: channelID,
+				SenderID:  senderID,
+				MessageID: mc.MessageCreate.Id,
+				Title:     title,
+				Body:      "New message",
+			})
 		}
 		return
 	}
@@ -350,21 +370,34 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 		return
 	}
 
+	// Build the trigger template for this server-channel event. The per-user
+	// IsMention flag and Body/Title stay constant — IsMention is overridden
+	// per target inside processServerNotifications based on mention status.
+	base := pushTrigger{
+		Kind:      "message",
+		ChannelID: channelID,
+		SenderID:  senderID,
+		MessageID: mc.MessageCreate.Id,
+		ServerID:  serverID,
+		Title:     "New message",
+		Body:      "You have a new message",
+	}
+
 	// For @everyone mentions, dispatch asynchronously with bounded concurrency
 	// so the NATS handler is not blocked during large fan-outs.
 	if mentionEveryone {
-		go s.processEveryoneMention(ctx, targetIDs, mentionedSet, serverID, channelID)
+		go s.processEveryoneMention(ctx, targetIDs, mentionedSet, base)
 		return
 	}
 
 	// Non-@everyone: batch the preference query and notify.
-	s.processServerNotifications(ctx, targetIDs, mentionedSet, false, serverID, channelID)
+	s.processServerNotifications(ctx, targetIDs, mentionedSet, false, base)
 }
 
 // processEveryoneMention handles @everyone fan-out asynchronously with
 // bounded concurrency, processing users in batches to avoid overwhelming
 // the database and Redis.
-func (s *notificationService) processEveryoneMention(ctx context.Context, targetIDs []string, mentionedSet map[string]struct{}, serverID, channelID string) {
+func (s *notificationService) processEveryoneMention(ctx context.Context, targetIDs []string, mentionedSet map[string]struct{}, base pushTrigger) {
 	sem := make(chan struct{}, everyoneConcurrency)
 	var wg sync.WaitGroup
 
@@ -380,18 +413,21 @@ func (s *notificationService) processEveryoneMention(ctx context.Context, target
 		go func(batch []string) {
 			defer wg.Done()
 			defer func() { <-sem }() // Release semaphore slot.
-			s.processServerNotifications(ctx, batch, mentionedSet, true, serverID, channelID)
+			s.processServerNotifications(ctx, batch, mentionedSet, true, base)
 		}(batch)
 	}
 
 	wg.Wait()
-	slog.Debug("@everyone fan-out complete", "server", serverID, "channel", channelID, "users", len(targetIDs))
+	slog.Debug("@everyone fan-out complete", "server", base.ServerID, "channel", base.ChannelID, "users", len(targetIDs))
 }
 
 // processServerNotifications resolves notification preferences in bulk and
 // dispatches push notifications, using Redis pipelining for device lookups
-// and throttle checks.
-func (s *notificationService) processServerNotifications(ctx context.Context, userIDs []string, mentionedSet map[string]struct{}, mentionEveryone bool, serverID, channelID string) {
+// and throttle checks. The base trigger carries Kind/SenderID/MessageID/
+// ServerID/ChannelID; per-user mention status is layered on top.
+func (s *notificationService) processServerNotifications(ctx context.Context, userIDs []string, mentionedSet map[string]struct{}, mentionEveryone bool, base pushTrigger) {
+	channelID := base.ChannelID
+	serverID := base.ServerID
 	if len(userIDs) == 0 {
 		return
 	}
@@ -403,10 +439,10 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 		return
 	}
 
-	// Classify each user into their push type based on preference and mention status.
+	// Classify each user into their push kind based on preference and mention status.
 	type pushTarget struct {
-		userID   string
-		pushType string // "message" or "mention"
+		userID    string
+		isMention bool // True for both explicit @mention and @everyone targets.
 	}
 	var targets []pushTarget
 
@@ -423,15 +459,15 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 			if !isMentioned && !mentionEveryone {
 				continue
 			}
-			targets = append(targets, pushTarget{userID: uid, pushType: "mention"})
+			targets = append(targets, pushTarget{userID: uid, isMention: true})
 			continue
 		}
 
 		// level == "all": always notify.
 		if isMentioned || mentionEveryone {
-			targets = append(targets, pushTarget{userID: uid, pushType: "mention"})
+			targets = append(targets, pushTarget{userID: uid, isMention: true})
 		} else {
-			targets = append(targets, pushTarget{userID: uid, pushType: "message"})
+			targets = append(targets, pushTarget{userID: uid, isMention: false})
 		}
 	}
 
@@ -501,8 +537,12 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 	// Throttle: 1 push per channel per user per type within the throttle window.
 	throttlePipe := s.rdb.Pipeline()
 	throttleCmds := make([]*redis.BoolCmd, len(offlineTargets))
+	throttleTriggers := make([]pushTrigger, len(offlineTargets))
 	for i, ot := range offlineTargets {
-		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", ot.pushType, ot.userID, channelID)
+		t := base
+		t.IsMention = ot.isMention
+		throttleTriggers[i] = t
+		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), ot.userID, channelID)
 		throttleCmds[i] = throttlePipe.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second)
 	}
 	if _, err := throttlePipe.Exec(ctx); err != nil && err != redis.Nil {
@@ -520,8 +560,9 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 			continue // Already sent a push for this channel recently.
 		}
 
+		t := throttleTriggers[i]
 		for _, device := range ot.devices {
-			if err := s.sendPush(ctx, device, channelID); err != nil {
+			if err := s.sendPush(ctx, device, t); err != nil {
 				slog.Error("send push", "err", err, "user", ot.userID, "device", device.ID, "platform", device.Platform)
 			}
 		}
@@ -530,10 +571,9 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 
 // notifyOfflineDevices finds push-enabled devices for a user that are not
 // currently connected via WebSocket, and dispatches push notifications to them.
-// pushType differentiates throttle keys: "message" for regular pushes, "mention"
-// for mention pushes, preventing mention notifications from being suppressed by
-// regular message throttling.
-func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, channelID, pushType string) {
+// The trigger's Kind/IsMention drives the throttle key namespace ("message",
+// "mention", "dm") so distinct push reasons cannot suppress one another.
+func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID string, t pushTrigger) {
 	// Get all push-enabled devices for this user.
 	devices, err := s.deviceStore.GetPushEnabledDevices(ctx, userID)
 	if err != nil {
@@ -561,8 +601,9 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, 
 		}
 
 		// Throttle: 1 push per channel per user per type within the throttle window.
-		// Separate key for mentions so they aren't suppressed by regular pushes.
-		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", pushType, userID, channelID)
+		// Separate key per kind so DM and mention pushes are not suppressed by
+		// regular server-channel pushes.
+		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), userID, t.ChannelID)
 		throttleSec := defaultThrottleSeconds
 		set, err := s.rdb.SetNX(ctx, throttleKey, "1", time.Duration(throttleSec)*time.Second).Result()
 		if err != nil {
@@ -574,42 +615,143 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID, 
 		}
 
 		// Dispatch push notification.
-		if err := s.sendPush(ctx, device, channelID); err != nil {
+		if err := s.sendPush(ctx, device, t); err != nil {
 			slog.Error("send push", "err", err, "user", userID, "device", device.ID, "platform", device.Platform)
 		}
 	}
 }
 
+// dmTitle resolves the sender's display name (or username fallback) for use
+// as a DM push notification Title. E2EE-respecting — display name is public
+// and already returned by GetUserPublicProfile. Returns "Direct message" if
+// the lookup fails or no human-readable name is available, so the user still
+// gets a usable notification.
+func dmTitle(ctx context.Context, store userLooker, senderID string) string {
+	const fallback = "Direct message"
+	if store == nil {
+		return fallback
+	}
+	user, err := store.GetUserByID(ctx, senderID)
+	if err != nil || user == nil {
+		slog.Warn("dm push: sender lookup failed, using generic title", "err", err, "sender", senderID)
+		return fallback
+	}
+	if user.DisplayName != "" {
+		return user.DisplayName
+	}
+	if user.Username != "" {
+		return user.Username
+	}
+	return fallback
+}
+
+// pushSchemaVersion is the schema version embedded in every push payload so
+// future client builds can reason about what fields to expect. Bump only on
+// breaking shape changes — additive fields keep the same version.
+const pushSchemaVersion = "1"
+
 // pushPayload is the JSON sent inside the push notification.
 // The service worker on the client reads this to display the notification.
+//
+// Field semantics:
+//   - Type: "message" (server channel, no mention), "mention" (server channel
+//     with mention), "dm" (direct message — 1:1 or group), "device_recovery"
+//     (account recovery request). Clients use this to pick the correct pane
+//     shape on tap.
+//   - UserID: recipient user ID. Clients drop the tap if it does not match
+//     the currently signed-in user (multi-account leak prevention).
+//   - SenderID / MessageID: enables client-side blocked-user filtering and
+//     scroll-to-message UX on tap.
+//   - ServerID: populated for server-channel pushes only (empty for DMs).
+//   - IsMention: surfaced for the client even for the "dm" Type, so future
+//     work can render mention styling without a value-space tweak.
 type pushPayload struct {
-	Type      string `json:"type"`                 // "message", "mention", "dm", "device_recovery", etc.
-	ChannelID string `json:"channel_id"`           // For navigation on click.
+	V         string `json:"v"`                    // Schema version, currently "1".
+	Type      string `json:"type"`                 // See field semantics above.
+	ChannelID string `json:"channel_id"`           // Conversation/channel identifier.
+	UserID    string `json:"user_id,omitempty"`    // Recipient — for cross-account leak filter.
+	SenderID  string `json:"sender_id,omitempty"`
+	MessageID string `json:"message_id,omitempty"`
+	ServerID  string `json:"server_id,omitempty"`  // Empty for DMs.
+	IsMention string `json:"is_mention,omitempty"` // "true" or empty (string for FCM data-map parity).
 	Title     string `json:"title"`
 	Body      string `json:"body"`
-	Tag       string `json:"tag"`                  // Collapse key — same tag replaces previous notification.
+	Tag       string `json:"tag"` // Collapse key — same tag replaces previous notification.
 	SessionID string `json:"session_id,omitempty"` // Recovery session identifier.
 }
 
-// sendPush dispatches a push notification to a single device.
-func (s *notificationService) sendPush(ctx context.Context, device *models.Device, channelID string) error {
-	payload := pushPayload{
-		Type:      "message",
-		ChannelID: channelID,
-		Title:     "New message",
-		Body:      "You have a new message", // Generic — E2EE means no content in push.
-		Tag:       "channel:" + channelID,
-	}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshal push payload: %w", err)
-	}
+// pushTrigger captures everything needed to build and dispatch a push
+// notification for a single (user, conversation) pair: payload contents,
+// throttle key inputs, and per-platform render arguments.
+type pushTrigger struct {
+	Kind      string // "message" | "mention" | "dm" — also used as Type and (for "dm") as tag prefix.
+	ChannelID string
+	SenderID  string
+	MessageID string
+	ServerID  string // Empty for DMs.
+	IsMention bool
+	Title     string
+	Body      string
+}
 
+// throttleKeyType returns the prefix used for the per-conversation Redis
+// throttle key. DMs get their own throttle namespace so a busy server channel
+// does not suppress an unrelated DM notification.
+func (t pushTrigger) throttleKeyType() string {
+	if t.Kind == "dm" {
+		return "dm"
+	}
+	if t.IsMention {
+		return "mention"
+	}
+	return "message"
+}
+
+// tag returns the OS-level collapse identifier. Tag namespace splits by Kind
+// so DM and channel notifications never collide on tag and the user can mute
+// per-conversation cleanly.
+func (t pushTrigger) tag() string {
+	prefix := "channel"
+	if t.Kind == "dm" {
+		prefix = "dm"
+	}
+	return prefix + ":" + t.ChannelID
+}
+
+// buildPushPayload assembles the JSON web-push payload for a device + trigger.
+// Pure function — exposed for testing.
+func buildPushPayload(device *models.Device, t pushTrigger) pushPayload {
+	mention := ""
+	if t.IsMention {
+		mention = "true"
+	}
+	return pushPayload{
+		V:         pushSchemaVersion,
+		Type:      t.Kind,
+		ChannelID: t.ChannelID,
+		UserID:    device.UserID,
+		SenderID:  t.SenderID,
+		MessageID: t.MessageID,
+		ServerID:  t.ServerID,
+		IsMention: mention,
+		Title:     t.Title,
+		Body:      t.Body,
+		Tag:       t.tag(),
+	}
+}
+
+// sendPush dispatches a push notification to a single device.
+func (s *notificationService) sendPush(ctx context.Context, device *models.Device, t pushTrigger) error {
 	switch device.Platform {
 	case "web":
+		payload := buildPushPayload(device, t)
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return fmt.Errorf("marshal push payload: %w", err)
+		}
 		return s.sendWebPush(ctx, device, payloadBytes)
 	case "android", "ios":
-		return s.sendFCMPush(ctx, device, channelID)
+		return s.sendFCMPush(ctx, device, t)
 	default:
 		return nil
 	}
@@ -657,46 +799,68 @@ func (s *notificationService) sendWebPush(ctx context.Context, device *models.De
 	return nil
 }
 
-// sendFCMPush sends a push notification via Firebase Cloud Messaging.
-// Works for both Android (FCM direct) and iOS (FCM proxied to APNs).
-func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, channelID string) error {
-	if s.fcmClient == nil {
-		slog.Debug("fcm push skipped (not configured)", "user", device.UserID, "device", device.ID)
-		return nil
+// buildFCMMessage assembles the Firebase Cloud Messaging message for a
+// device + trigger. Pure function — exposed for testing the data map and
+// per-platform payload shape without making API calls.
+func buildFCMMessage(device *models.Device, t pushTrigger) *messaging.Message {
+	tag := t.tag()
+	data := map[string]string{
+		"v":          pushSchemaVersion,
+		"type":       t.Kind,
+		"channel_id": t.ChannelID,
+		"user_id":    device.UserID,
+		"tag":        tag,
 	}
-
-	msg := &messaging.Message{
+	if t.SenderID != "" {
+		data["sender_id"] = t.SenderID
+	}
+	if t.MessageID != "" {
+		data["message_id"] = t.MessageID
+	}
+	if t.ServerID != "" {
+		data["server_id"] = t.ServerID
+	}
+	if t.IsMention {
+		data["is_mention"] = "true"
+	}
+	return &messaging.Message{
 		Token: device.PushToken,
-		Data: map[string]string{
-			"type":       "message",
-			"channel_id": channelID,
-			"tag":        "channel:" + channelID,
-		},
+		Data:  data,
 		Android: &messaging.AndroidConfig{
 			Priority: "high",
 			Notification: &messaging.AndroidNotification{
-				Title: "New message",
-				Body:  "You have a new message",
-				Tag:   "channel:" + channelID,
+				Title: t.Title,
+				Body:  t.Body,
+				Tag:   tag,
 			},
 		},
 		APNS: &messaging.APNSConfig{
 			Headers: map[string]string{
 				"apns-priority":    "10",
-				"apns-collapse-id": "channel:" + channelID,
+				"apns-collapse-id": tag,
 			},
 			Payload: &messaging.APNSPayload{
 				Aps: &messaging.Aps{
 					Alert: &messaging.ApsAlert{
-						Title: "New message",
-						Body:  "You have a new message",
+						Title: t.Title,
+						Body:  t.Body,
 					},
 					Sound: "default",
 				},
 			},
 		},
 	}
+}
 
+// sendFCMPush sends a push notification via Firebase Cloud Messaging.
+// Works for both Android (FCM direct) and iOS (FCM proxied to APNs).
+func (s *notificationService) sendFCMPush(ctx context.Context, device *models.Device, t pushTrigger) error {
+	if s.fcmClient == nil {
+		slog.Debug("fcm push skipped (not configured)", "user", device.UserID, "device", device.ID)
+		return nil
+	}
+
+	msg := buildFCMMessage(device, t)
 	_, err := s.fcmClient.Send(ctx, msg)
 	if err != nil {
 		if messaging.IsUnregistered(err) {
@@ -782,7 +946,9 @@ func (s *notificationService) handleRecoveryEvent(ctx context.Context, msg *nats
 // sendRecoveryPush sends a push notification for a device recovery request.
 func (s *notificationService) sendRecoveryPush(ctx context.Context, device *models.Device, sessionID string) error {
 	payload := pushPayload{
+		V:         pushSchemaVersion,
 		Type:      "device_recovery",
+		UserID:    device.UserID,
 		Title:     "Account Recovery Request",
 		Body:      "Another device is requesting access to your account",
 		SessionID: sessionID,
@@ -812,7 +978,9 @@ func (s *notificationService) sendFCMRecoveryPush(ctx context.Context, device *m
 	msg := &messaging.Message{
 		Token: device.PushToken,
 		Data: map[string]string{
+			"v":          pushSchemaVersion,
 			"type":       "device_recovery",
+			"user_id":    device.UserID,
 			"session_id": sessionID,
 		},
 		Android: &messaging.AndroidConfig{

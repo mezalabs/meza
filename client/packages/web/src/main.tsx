@@ -32,7 +32,7 @@ import {
 } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { navigateToChannel } from './navigate.ts';
+import { navigateFromPush } from './navigate.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -73,11 +73,23 @@ if (window.electronAPI?.deepLink) {
       return;
     }
 
-    // Handle channel deep links: meza://channel/{channelId}
-    // (sent by notification tap handler in ipc.ts)
-    const channelMatch = url.match(/^meza:\/\/channel\/([a-zA-Z0-9_-]+)$/);
-    if (channelMatch?.[1]) {
-      navigateToChannel(channelMatch[1]);
+    // Handle channel/DM deep links from notification taps:
+    //   meza://channel/{channelId}?user_id={recipientUserId}
+    //   meza://dm/{conversationId}?user_id={recipientUserId}
+    // The user_id query param is forwarded to navigateFromPush so the
+    // cross-account leak filter applies on Electron tap.
+    const navMatch = url.match(
+      /^meza:\/\/(channel|dm)\/([a-zA-Z0-9_-]+)(?:\?(.+))?$/,
+    );
+    if (navMatch) {
+      const kind = navMatch[1] === 'dm' ? 'dm' : 'message';
+      const channelId = navMatch[2];
+      const params = new URLSearchParams(navMatch[3] ?? '');
+      navigateFromPush({
+        type: kind,
+        channel_id: channelId,
+        user_id: params.get('user_id') ?? undefined,
+      });
     }
   });
 }
@@ -163,7 +175,11 @@ if (isElectron()) {
 // Handle PUSH_NAVIGATE messages from the push service worker (web).
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
-    navigateToChannel(event.data.channelId);
+    navigateFromPush({
+      type: event.data.kind,
+      channel_id: event.data.channelId,
+      user_id: event.data.userId,
+    });
   }
 });
 
