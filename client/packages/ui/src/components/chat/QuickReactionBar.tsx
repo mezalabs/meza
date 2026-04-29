@@ -1,5 +1,10 @@
-import { addReaction, useAuthStore, useReactionStore } from '@meza/core';
-import { DotsThreeIcon, PlusIcon } from '@phosphor-icons/react';
+import {
+  addReaction,
+  safeParseMessageText,
+  useAuthStore,
+  useReactionStore,
+} from '@meza/core';
+import { CopyIcon, DotsThreeIcon, PlusIcon } from '@phosphor-icons/react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
@@ -8,6 +13,7 @@ const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 interface QuickReactionBarProps {
   messageId: string;
   channelId: string;
+  encryptedContent: Uint8Array;
   anchorRect: DOMRect;
   onClose: () => void;
   onOpenContextMenu: () => void;
@@ -17,6 +23,7 @@ interface QuickReactionBarProps {
 export const QuickReactionBar = memo(function QuickReactionBar({
   messageId,
   channelId,
+  encryptedContent,
   anchorRect,
   onClose,
   onOpenContextMenu,
@@ -39,6 +46,13 @@ export const QuickReactionBar = memo(function QuickReactionBar({
     [channelId, messageId, onClose],
   );
 
+  const handleCopy = useCallback(() => {
+    navigator.clipboard
+      .writeText(safeParseMessageText(encryptedContent))
+      .catch(() => {});
+    onClose();
+  }, [encryptedContent, onClose]);
+
   // Dismiss on outside tap
   useEffect(() => {
     function handleTouch(e: TouchEvent) {
@@ -57,7 +71,7 @@ export const QuickReactionBar = memo(function QuickReactionBar({
   }, [onClose]);
 
   // Position above the message, centered horizontally, clamped to viewport
-  const barWidth = 320; // approximate width
+  const barWidth = 360; // approximate width
   const gap = 8;
   let top = anchorRect.top - 44 - gap;
   let left = anchorRect.left + anchorRect.width / 2 - barWidth / 2;
@@ -106,6 +120,14 @@ export const QuickReactionBar = memo(function QuickReactionBar({
           title="More emojis"
         >
           <PlusIcon size={16} weight="bold" />
+        </button>
+        <button
+          type="button"
+          className="flex h-8 w-8 items-center justify-center rounded-full text-text-muted hover:bg-bg-surface hover:text-text"
+          onClick={handleCopy}
+          title="Copy text"
+        >
+          <CopyIcon size={16} weight="bold" />
         </button>
         <button
           type="button"

@@ -1581,6 +1581,7 @@ const MessageItem = memo(function MessageItem({
         <QuickReactionBar
           messageId={msg.id}
           channelId={msg.channelId}
+          encryptedContent={msg.encryptedContent}
           anchorRect={quickReactionAnchor}
           onClose={() => setQuickReactionAnchor(null)}
           onOpenContextMenu={() => setMobileActionsOpen(true)}

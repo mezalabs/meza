@@ -25,14 +25,13 @@ import { navigateFromPush } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
 
-// Buffer for taps that arrive before the dispatcher is wired. iOS does not
-// reliably replay the launch-tap action (capacitor-plugins#1488), so the
-// listener must register at module load — before any `await` in
-// initCapacitor — to give the Capacitor plugin a sink as early as possible.
-const pendingTaps: Record<string, string>[] = [];
-let dispatchReady = false;
-
-function dispatchTap(data: Record<string, string>): void {
+// Register the tap handler at module load so it attaches before any await
+// in initCapacitor. iOS does not reliably replay the launch-tap action
+// (capacitor-plugins#1488), so the listener must be present as early as
+// possible to give the Capacitor plugin a sink. navigateFromPush itself
+// buffers via setPendingPushNav when the session is not yet ready, so
+// taps that arrive during bootstrap are drained in main.tsx.
+pushAdapter.onNotificationTap((data) => {
   // Server emits `type` ("dm" | "message" | "mention"); decode to client-side
   // `kind` here so navigateFromPush sees a single name. See navigate.ts.
   navigateFromPush({
@@ -40,18 +39,6 @@ function dispatchTap(data: Record<string, string>): void {
     channel_id: data.channel_id,
     user_id: data.user_id,
   });
-}
-
-// Register the tap handler at module load. navigateFromPush itself drops
-// any tap whose user_id does not match the current session, so a tap that
-// fires before bootstrap is safely no-ops; a tap that fires during bootstrap
-// is buffered and drained once auth is hydrated.
-pushAdapter.onNotificationTap((data) => {
-  if (dispatchReady) {
-    dispatchTap(data);
-  } else {
-    pendingTaps.push(data);
-  }
 });
 
 export async function initCapacitor(): Promise<void> {
@@ -67,10 +54,6 @@ export async function initCapacitor(): Promise<void> {
   setupDeepLinkHandler(App);
   setupPushNotifications();
   setupBackButton(App);
-
-  // Mark the dispatcher ready and drain any taps captured during bootstrap.
-  dispatchReady = true;
-  for (const data of pendingTaps.splice(0)) dispatchTap(data);
 }
 
 async function setupStatusBar(): Promise<void> {

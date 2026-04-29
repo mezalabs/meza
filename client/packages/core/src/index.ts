@@ -531,6 +531,12 @@ export {
 export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
+export type { PendingPushNav } from './utils/pending-channel.ts';
+export {
+  clearPendingPushNav,
+  consumePendingPushNav,
+  setPendingPushNav,
+} from './utils/pending-channel.ts';
 export {
   getApiOrigin,
   getAppOrigin,

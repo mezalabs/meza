@@ -5,6 +5,8 @@ import './index.css';
 import {
   applyDeepLinkInvite,
   bootstrapSession,
+  clearPendingPushNav,
+  consumePendingPushNav,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,
@@ -67,23 +69,19 @@ if (inviteMatch) {
 // Consume cold-window push-navigation params written by sw-push.js when no
 // Meza window was open at notification-click time. Format: /?channel_id=…
 // &kind=…&user_id=…  Scrub the URL immediately so the params do not bleed
-// into the address bar or future history reads, then defer the actual
-// navigation until the E2EE session is ready — navigateFromPush requires a
-// hydrated user.id to enforce the cross-account filter.
+// into the address bar or future history reads, then hand the intent to
+// navigateFromPush — it will buffer when the session is not yet ready and
+// the App's drain effect replays it once `sessionReady && isAuthenticated`.
 const pushNavParams = new URLSearchParams(window.location.search);
 const pushNavChannelId = pushNavParams.get('channel_id');
 if (pushNavChannelId) {
-  const pendingPushNav = {
+  const intent = {
     kind: pushNavParams.get('kind') ?? undefined,
     channel_id: pushNavChannelId,
     user_id: pushNavParams.get('user_id') ?? undefined,
   };
   history.replaceState(null, '', '/');
-  if (isSessionReady()) {
-    navigateFromPush(pendingPushNav);
-  } else {
-    onSessionReady(() => navigateFromPush(pendingPushNav));
-  }
+  navigateFromPush(intent);
 }
 
 // Register deep link handler for Electron — before React render so it's ready
@@ -157,8 +155,12 @@ useAuthStore.subscribe((state, prevState) => {
     resetE2EEKeyProvider();
     useNavigationStore.getState().reset();
     useTilingStore.getState().resetLayout();
-    // On logout, clear delivered notifications so they don't persist into
-    // the next user's session on a shared device.
+    // Discard any buffered push-nav intent — it belonged to the previous
+    // session and would otherwise navigate the next user into a stranger's
+    // channel after re-login.
+    clearPendingPushNav();
+    // Clear delivered notifications so they don't persist into the next
+    // user's session on a shared device.
     void clearAllDeliveredNotifications();
   }
 });
@@ -231,6 +233,16 @@ function App() {
       return;
     }
     return onSessionReady(() => setSessionReady(true));
+  }, [sessionReady, isAuthenticated]);
+
+  // Drain a push-nav intent buffered by a notification or deep-link tap
+  // that arrived before Shell could mount. The buffer carries kind +
+  // channel_id + user_id; navigateFromPush re-runs the cross-account
+  // user_id check at drain time. Re-runs on fresh login.
+  useEffect(() => {
+    if (!sessionReady || !isAuthenticated) return;
+    const intent = consumePendingPushNav();
+    if (intent) navigateFromPush(intent);
   }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,

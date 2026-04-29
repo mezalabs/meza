@@ -1,3 +1,4 @@
+import { safeParseMessageText } from '@meza/core';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import type { ReactNode } from 'react';
 
@@ -18,8 +19,6 @@ interface MessageContextMenuProps {
   onViewProfile?: () => void;
   onViewReactions?: () => void;
 }
-
-const decoder = new TextDecoder();
 
 export function MessageContextMenu({
   encryptedContent,
@@ -72,8 +71,9 @@ export function MessageContextMenu({
           <ContextMenu.Item
             className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
             onSelect={() => {
-              const text = decoder.decode(encryptedContent);
-              navigator.clipboard.writeText(text);
+              navigator.clipboard
+                .writeText(safeParseMessageText(encryptedContent))
+                .catch(() => {});
             }}
           >
             Copy Text

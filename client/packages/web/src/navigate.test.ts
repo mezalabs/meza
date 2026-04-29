@@ -6,10 +6,18 @@ const tilingState = {
   setPaneContent: vi.fn(),
 };
 let authUserId: string | undefined;
+let authIsAuthenticated = true;
+let sessionReady = true;
+const setPendingPushNav = vi.fn();
 
 vi.mock('@meza/core', () => ({
+  isSessionReady: () => sessionReady,
+  setPendingPushNav: (data: unknown) => setPendingPushNav(data),
   useAuthStore: {
-    getState: () => ({ user: authUserId ? { id: authUserId } : undefined }),
+    getState: () => ({
+      isAuthenticated: authIsAuthenticated,
+      user: authUserId ? { id: authUserId } : undefined,
+    }),
   },
 }));
 
@@ -28,7 +36,10 @@ import {
 describe('navigateFromPush — cross-account filter', () => {
   beforeEach(() => {
     tilingState.setPaneContent.mockReset();
+    setPendingPushNav.mockReset();
     authUserId = 'u_current';
+    authIsAuthenticated = true;
+    sessionReady = true;
   });
 
   it('routes to channel pane when kind != dm and ids match', () => {
@@ -42,6 +53,7 @@ describe('navigateFromPush — cross-account filter', () => {
       type: 'channel',
       channelId: 'c_42',
     });
+    expect(setPendingPushNav).not.toHaveBeenCalled();
   });
 
   it('routes to DM pane when kind === "dm" and ids match', () => {
@@ -64,6 +76,7 @@ describe('navigateFromPush — cross-account filter', () => {
       user_id: 'u_other',
     });
     expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).not.toHaveBeenCalled();
   });
 
   it('drops when user_id is missing (forged or stripped payload)', () => {
@@ -72,24 +85,51 @@ describe('navigateFromPush — cross-account filter', () => {
       channel_id: 'c_dm',
     });
     expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).not.toHaveBeenCalled();
   });
 
   it('drops when channel_id is missing', () => {
     navigateFromPush({
       kind: 'dm',
       user_id: 'u_current',
-    });
+    } as Parameters<typeof navigateFromPush>[0]);
     expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).not.toHaveBeenCalled();
   });
 
-  it('drops when no user is signed in (cold-start window)', () => {
-    authUserId = undefined;
+  it('drops when not authenticated (no buffer either)', () => {
+    authIsAuthenticated = false;
     navigateFromPush({
       kind: 'dm',
       channel_id: 'c_dm',
       user_id: 'u_current',
     });
     expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).not.toHaveBeenCalled();
+  });
+
+  it('buffers when authenticated but session is not ready', () => {
+    sessionReady = false;
+    const intent = {
+      kind: 'dm',
+      channel_id: 'c_dm',
+      user_id: 'u_current',
+    };
+    navigateFromPush(intent);
+    expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).toHaveBeenCalledWith(intent);
+  });
+
+  it('buffers when currentUserId not yet hydrated (cold-start window)', () => {
+    authUserId = undefined;
+    const intent = {
+      kind: 'dm',
+      channel_id: 'c_dm',
+      user_id: 'u_current',
+    };
+    navigateFromPush(intent);
+    expect(tilingState.setPaneContent).not.toHaveBeenCalled();
+    expect(setPendingPushNav).toHaveBeenCalledWith(intent);
   });
 
   it('falls back to channel pane for unknown kind values', () => {
