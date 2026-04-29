@@ -190,8 +190,8 @@ importers:
         specifier: ^7
         version: 7.5.0
       '@capacitor/ios':
-        specifier: ^7
-        version: 7.5.0(@capacitor/core@7.5.0)
+        specifier: ^8
+        version: 8.2.0(@capacitor/core@7.5.0)
 
   packages/ui:
     dependencies:
@@ -603,10 +603,10 @@ packages:
   '@capacitor/core@7.5.0':
     resolution: {integrity: sha512-4Y4trISe2Bp3lwsoGFoQIvgX4hiZO8S1Slmbz6oFaMxAuEc4noipQGCQx974PF4glwVVe/8+H3P9iEmCXtrUgA==}
 
-  '@capacitor/ios@7.5.0':
-    resolution: {integrity: sha512-HlEWLjmPMSyjD8pM2FSTYF7a7aoYDdrlUoA3Ybm8OnmOaby3R7L8jpzJr96igh/i2SpsHvDI7v3sO2FhSNKCKA==}
+  '@capacitor/ios@8.2.0':
+    resolution: {integrity: sha512-X2/VtM4qP/R1SM0VQ5W/VotEc6PS/KTooD33EijsfAHWBdee+xmBapW8SeNLnu16wJ+tsfWlvtipaJEyfKbRKQ==}
     peerDependencies:
-      '@capacitor/core': ^7.5.0
+      '@capacitor/core': ^8.2.0
 
   '@capacitor/keyboard@7.0.4':
     resolution: {integrity: sha512-kKHsuDOC0q9iC1XANhQBK35S+hFKx4EfY9I+SEMPR6RuUAIuXQXYaA3+D0LkdRdHIf3OrlTDznPvXQ5Dg2WrCA==}
@@ -2990,6 +2990,10 @@ packages:
 
   fs-extra@11.3.3:
     resolution: {integrity: sha512-VWSRii4t0AFm6ixFFmLLx1t7wS1gh+ckoa84aOeapGum0h+EZd1EhEumSB+ZdDLnEPuucsVB9oB7cxJHap6Afg==}
+    engines: {node: '>=14.14'}
+
+  fs-extra@11.3.4:
+    resolution: {integrity: sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA==}
     engines: {node: '>=14.14'}
 
   fs-extra@7.0.1:
@@ -5494,7 +5498,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@capacitor/ios@7.5.0(@capacitor/core@7.5.0)':
+  '@capacitor/ios@8.2.0(@capacitor/core@7.5.0)':
     dependencies:
       '@capacitor/core': 7.5.0
 
@@ -5650,7 +5654,7 @@ snapshots:
     dependencies:
       cross-dirname: 0.1.0
       debug: 4.4.3
-      fs-extra: 11.3.3
+      fs-extra: 11.3.4
       minimist: 1.2.8
       postject: 1.0.0-alpha.6
     transitivePeerDependencies:
@@ -7942,6 +7946,13 @@ snapshots:
       graceful-fs: 4.2.11
       jsonfile: 6.2.0
       universalify: 2.0.1
+
+  fs-extra@11.3.4:
+    dependencies:
+      graceful-fs: 4.2.11
+      jsonfile: 6.2.0
+      universalify: 2.0.1
+    optional: true
 
   fs-extra@7.0.1:
     dependencies:
