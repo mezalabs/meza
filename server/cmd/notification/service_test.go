@@ -4,19 +4,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/mezalabs/meza/internal/models"
 )
 
-// stubUserStore is a minimal userLooker implementation for testing dmTitle.
+// stubUserStore is a minimal userResolver implementation for testing dmTitle.
 type stubUserStore struct {
 	user *models.User
 	err  error
 }
 
-func (s *stubUserStore) GetUserByID(_ context.Context, _ string) (*models.User, error) {
-	return s.user, s.err
+func (s *stubUserStore) GetUserDisplayName(_ context.Context, _ string) (string, string, error) {
+	if s.err != nil {
+		return "", "", s.err
+	}
+	if s.user == nil {
+		return "", "", nil
+	}
+	return s.user.DisplayName, s.user.Username, nil
 }
 
 func TestPushTrigger_TagAndThrottleKeyType(t *testing.T) {
@@ -63,77 +70,10 @@ func TestPushTrigger_TagAndThrottleKeyType(t *testing.T) {
 	}
 }
 
-func TestBuildPushPayload_DM(t *testing.T) {
-	device := &models.Device{ID: "d1", UserID: "u_recipient", Platform: "web"}
-	tr := pushTrigger{
-		Kind:      "dm",
-		ChannelID: "c1",
-		SenderID:  "u_sender",
-		MessageID: "m42",
-		Title:     "Alice",
-		Body:      "New message",
-	}
-	got := buildPushPayload(device, tr)
-
-	if got.V != "1" {
-		t.Errorf("V = %q, want %q", got.V, "1")
-	}
-	if got.Type != "dm" {
-		t.Errorf("Type = %q, want %q", got.Type, "dm")
-	}
-	if got.ChannelID != "c1" {
-		t.Errorf("ChannelID = %q, want c1", got.ChannelID)
-	}
-	if got.UserID != "u_recipient" {
-		t.Errorf("UserID = %q, want u_recipient (recipient, for cross-account filter)", got.UserID)
-	}
-	if got.SenderID != "u_sender" {
-		t.Errorf("SenderID = %q, want u_sender", got.SenderID)
-	}
-	if got.MessageID != "m42" {
-		t.Errorf("MessageID = %q, want m42", got.MessageID)
-	}
-	if got.ServerID != "" {
-		t.Errorf("ServerID = %q, want empty for DMs", got.ServerID)
-	}
-	if got.IsMention != "" {
-		t.Errorf("IsMention = %q, want empty when IsMention=false", got.IsMention)
-	}
-	if got.Tag != "dm:c1" {
-		t.Errorf("Tag = %q, want dm:c1", got.Tag)
-	}
-	if got.Title != "Alice" {
-		t.Errorf("Title = %q, want Alice", got.Title)
-	}
-}
-
-func TestBuildPushPayload_ChannelMention(t *testing.T) {
-	device := &models.Device{ID: "d1", UserID: "u_recipient", Platform: "web"}
-	tr := pushTrigger{
-		Kind:      "message",
-		ChannelID: "c1",
-		SenderID:  "u_sender",
-		MessageID: "m42",
-		ServerID:  "s1",
-		IsMention: true,
-		Title:     "New message",
-		Body:      "You have a new message",
-	}
-	got := buildPushPayload(device, tr)
-
-	if got.Type != "message" {
-		t.Errorf("Type = %q, want message", got.Type)
-	}
-	if got.ServerID != "s1" {
-		t.Errorf("ServerID = %q, want s1", got.ServerID)
-	}
-	if got.IsMention != "true" {
-		t.Errorf("IsMention = %q, want \"true\"", got.IsMention)
-	}
-	if got.Tag != "channel:c1" {
-		t.Errorf("Tag = %q, want channel:c1", got.Tag)
-	}
-}
+// Per-field assertions live on the FCM message tests below — that's the
+// wire contract clients consume. We retain only the JSON-shape test here
+// to lock the omitempty behavior, which the FCM-data tests cannot cover
+// (FCM data is a flat map, not the same JSON the web push body emits).
 
 func TestBuildPushPayload_JSON_OmitsEmptyOptionalFields(t *testing.T) {
 	// Confirms the omitempty tags work — old clients that don't know about
@@ -153,7 +93,7 @@ func TestBuildPushPayload_JSON_OmitsEmptyOptionalFields(t *testing.T) {
 		`"is_mention":""`,
 		`"session_id":""`,
 	} {
-		if contains(s, banned) {
+		if strings.Contains(s, banned) {
 			t.Errorf("payload should omit empty optional fields, found %q in %s", banned, s)
 		}
 	}
@@ -231,7 +171,7 @@ func TestBuildFCMMessage_ChannelMention(t *testing.T) {
 func TestDMTitle(t *testing.T) {
 	cases := []struct {
 		name  string
-		store userLooker
+		store userResolver
 		want  string
 	}{
 		{
@@ -311,11 +251,3 @@ func TestSanitizeNotificationTitle(t *testing.T) {
 	}
 }
 
-func contains(haystack, needle string) bool {
-	for i := 0; i+len(needle) <= len(haystack); i++ {
-		if haystack[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
-}

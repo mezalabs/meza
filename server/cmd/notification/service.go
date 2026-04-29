@@ -48,17 +48,19 @@ const (
 	everyoneConcurrency = 8
 )
 
-// userLooker is the narrow slice of AuthStorer the notification service
-// needs for enriching DM push titles with the sender's display name.
-type userLooker interface {
-	GetUserByID(ctx context.Context, userID string) (*models.User, error)
+// userResolver is the narrow slice of AuthStorer the notification service
+// needs for enriching DM push titles. Uses GetUserDisplayName (a two-column
+// PK lookup) rather than the full GetUserByID with its JSONB decode — DM
+// pushes are a hot path where only display name + username matter.
+type userResolver interface {
+	GetUserDisplayName(ctx context.Context, userID string) (displayName, username string, err error)
 }
 
 type notificationService struct {
 	deviceStore store.DeviceStorer
 	prefStore   store.NotificationPreferenceStorer
 	chatStore   store.ChatStorer
-	userStore   userLooker
+	userStore   userResolver
 	rdb         *redis.Client
 	nc          *nats.Conn
 	cfg         *config.Config
@@ -69,7 +71,7 @@ func newNotificationService(
 	deviceStore store.DeviceStorer,
 	prefStore store.NotificationPreferenceStorer,
 	chatStore store.ChatStorer,
-	userStore userLooker,
+	userStore userResolver,
 	rdb *redis.Client,
 	nc *nats.Conn,
 	cfg *config.Config,
@@ -627,20 +629,20 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID s
 // and already returned by GetUserPublicProfile. Returns "Direct message" if
 // the lookup fails or no human-readable name is available, so the user still
 // gets a usable notification.
-func dmTitle(ctx context.Context, store userLooker, senderID string) string {
+func dmTitle(ctx context.Context, store userResolver, senderID string) string {
 	const fallback = "Direct message"
 	if store == nil {
 		return fallback
 	}
-	user, err := store.GetUserByID(ctx, senderID)
-	if err != nil || user == nil {
+	displayName, username, err := store.GetUserDisplayName(ctx, senderID)
+	if err != nil {
 		slog.Warn("dm push: sender lookup failed, using generic title", "err", err, "sender", senderID)
 		return fallback
 	}
-	if name := sanitizeNotificationTitle(user.DisplayName); name != "" {
+	if name := sanitizeNotificationTitle(displayName); name != "" {
 		return name
 	}
-	if name := sanitizeNotificationTitle(user.Username); name != "" {
+	if name := sanitizeNotificationTitle(username); name != "" {
 		return name
 	}
 	return fallback
@@ -680,34 +682,50 @@ func sanitizeNotificationTitle(s string) string {
 // breaking shape changes — additive fields keep the same version.
 const pushSchemaVersion = "1"
 
-// pushPayload is the JSON sent inside the push notification.
-// The service worker on the client reads this to display the notification.
+// basePushPayload holds fields shared by every push notification kind. The
+// embedded form (used by messagePushPayload and recoveryPushPayload) flattens
+// at JSON marshal time, so the wire format is the union of base fields and
+// the embedding type's own fields.
 //
 // Field semantics:
-//   - Type: "message" (server channel, no mention), "mention" (server channel
-//     with mention), "dm" (direct message — 1:1 or group), "device_recovery"
-//     (account recovery request). Clients use this to pick the correct pane
-//     shape on tap.
+//   - V: schema version, currently "1". Bumped only on breaking shape changes.
+//   - Type: "message" | "mention" | "dm" | "device_recovery". Clients use this
+//     to pick the correct pane shape on tap.
 //   - UserID: recipient user ID. Clients drop the tap if it does not match
 //     the currently signed-in user (multi-account leak prevention).
+type basePushPayload struct {
+	V      string `json:"v"`
+	Type   string `json:"type"`
+	UserID string `json:"user_id,omitempty"`
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+}
+
+// messagePushPayload is the JSON shape for a chat-message push (server
+// channel or DM). The service worker on the client reads this to display
+// the notification.
+//
 //   - SenderID / MessageID: enables client-side blocked-user filtering and
 //     scroll-to-message UX on tap.
 //   - ServerID: populated for server-channel pushes only (empty for DMs).
-//   - IsMention: surfaced for the client even for the "dm" Type, so future
-//     work can render mention styling without a value-space tweak.
-type pushPayload struct {
-	V         string `json:"v"`                    // Schema version, currently "1".
-	Type      string `json:"type"`                 // See field semantics above.
-	ChannelID string `json:"channel_id"`           // Conversation/channel identifier.
-	UserID    string `json:"user_id,omitempty"`    // Recipient — for cross-account leak filter.
+//   - IsMention: surfaced even for the "dm" Type so future mention styling
+//     does not need a value-space tweak.
+type messagePushPayload struct {
+	basePushPayload
+	ChannelID string `json:"channel_id"`
 	SenderID  string `json:"sender_id,omitempty"`
 	MessageID string `json:"message_id,omitempty"`
-	ServerID  string `json:"server_id,omitempty"`  // Empty for DMs.
+	ServerID  string `json:"server_id,omitempty"`
 	IsMention string `json:"is_mention,omitempty"` // "true" or empty (string for FCM data-map parity).
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	Tag       string `json:"tag"` // Collapse key — same tag replaces previous notification.
-	SessionID string `json:"session_id,omitempty"` // Recovery session identifier.
+	Tag       string `json:"tag"`                  // OS collapse key.
+}
+
+// recoveryPushPayload is the JSON shape for a device-recovery push. Distinct
+// from messagePushPayload because it does not navigate to a conversation —
+// the only routing field is SessionID.
+type recoveryPushPayload struct {
+	basePushPayload
+	SessionID string `json:"session_id"`
 }
 
 // pushTrigger captures everything needed to build and dispatch a push
@@ -750,22 +768,24 @@ func (t pushTrigger) tag() string {
 
 // buildPushPayload assembles the JSON web-push payload for a device + trigger.
 // Pure function — exposed for testing.
-func buildPushPayload(device *models.Device, t pushTrigger) pushPayload {
+func buildPushPayload(device *models.Device, t pushTrigger) messagePushPayload {
 	mention := ""
 	if t.IsMention {
 		mention = "true"
 	}
-	return pushPayload{
-		V:         pushSchemaVersion,
-		Type:      t.Kind,
+	return messagePushPayload{
+		basePushPayload: basePushPayload{
+			V:      pushSchemaVersion,
+			Type:   t.Kind,
+			UserID: device.UserID,
+			Title:  t.Title,
+			Body:   t.Body,
+		},
 		ChannelID: t.ChannelID,
-		UserID:    device.UserID,
 		SenderID:  t.SenderID,
 		MessageID: t.MessageID,
 		ServerID:  t.ServerID,
 		IsMention: mention,
-		Title:     t.Title,
-		Body:      t.Body,
 		Tag:       t.tag(),
 	}
 }
@@ -834,13 +854,15 @@ func (s *notificationService) sendWebPush(ctx context.Context, device *models.De
 // per-platform payload shape without making API calls.
 func buildFCMMessage(device *models.Device, t pushTrigger) *messaging.Message {
 	tag := t.tag()
-	data := map[string]string{
-		"v":          pushSchemaVersion,
-		"type":       t.Kind,
-		"channel_id": t.ChannelID,
-		"user_id":    device.UserID,
-		"tag":        tag,
-	}
+	// Capacity hint covers the worst case (server-channel mention with all
+	// optional fields populated): 5 always-on + sender_id, message_id,
+	// server_id, is_mention. Avoids a rehash on map grow.
+	data := make(map[string]string, 9)
+	data["v"] = pushSchemaVersion
+	data["type"] = t.Kind
+	data["channel_id"] = t.ChannelID
+	data["user_id"] = device.UserID
+	data["tag"] = tag
 	if t.SenderID != "" {
 		data["sender_id"] = t.SenderID
 	}
@@ -975,12 +997,14 @@ func (s *notificationService) handleRecoveryEvent(ctx context.Context, msg *nats
 
 // sendRecoveryPush sends a push notification for a device recovery request.
 func (s *notificationService) sendRecoveryPush(ctx context.Context, device *models.Device, sessionID string) error {
-	payload := pushPayload{
-		V:         pushSchemaVersion,
-		Type:      "device_recovery",
-		UserID:    device.UserID,
-		Title:     "Account Recovery Request",
-		Body:      "Another device is requesting access to your account",
+	payload := recoveryPushPayload{
+		basePushPayload: basePushPayload{
+			V:      pushSchemaVersion,
+			Type:   "device_recovery",
+			UserID: device.UserID,
+			Title:  "Account Recovery Request",
+			Body:   "Another device is requesting access to your account",
+		},
 		SessionID: sessionID,
 	}
 	payloadBytes, err := json.Marshal(payload)

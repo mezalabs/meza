@@ -38,6 +38,11 @@ export function registerIpcHandlers(win: BrowserWindow): void {
           // Pick the URL scheme based on the push kind so the renderer can
           // route to a DM pane vs a channel pane. user_id is forwarded as a
           // query param so the cross-account leak filter applies on Electron.
+          //
+          // SYNC: this URL must match the format consumed by parsePushDeepLink
+          // in client/packages/web/src/push-deeplink.ts. @meza/desktop does
+          // not depend on @meza/core/web, so we re-implement the build here.
+          // If you change the format, update push-deeplink.ts to match.
           const navData = data as {
             channelId: string;
             kind?: string;
