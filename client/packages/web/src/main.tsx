@@ -62,6 +62,28 @@ if (inviteMatch) {
   history.replaceState(null, '', '/');
 }
 
+// Consume cold-window push-navigation params written by sw-push.js when no
+// Meza window was open at notification-click time. Format: /?channel_id=…
+// &kind=…&user_id=…  Scrub the URL immediately so the params do not bleed
+// into the address bar or future history reads, then defer the actual
+// navigation until the E2EE session is ready — navigateFromPush requires a
+// hydrated user.id to enforce the cross-account filter.
+const pushNavParams = new URLSearchParams(window.location.search);
+const pushNavChannelId = pushNavParams.get('channel_id');
+if (pushNavChannelId) {
+  const pendingPushNav = {
+    kind: pushNavParams.get('kind') ?? undefined,
+    channel_id: pushNavChannelId,
+    user_id: pushNavParams.get('user_id') ?? undefined,
+  };
+  history.replaceState(null, '', '/');
+  if (isSessionReady()) {
+    navigateFromPush(pendingPushNav);
+  } else {
+    onSessionReady(() => navigateFromPush(pendingPushNav));
+  }
+}
+
 // Register deep link handler for Electron — before React render so it's ready
 // when the main process sends the buffered cold-start deep link on did-finish-load.
 if (window.electronAPI?.deepLink) {
@@ -84,9 +106,12 @@ if (window.electronAPI?.deepLink) {
     if (navMatch) {
       const kind = navMatch[1] === 'dm' ? 'dm' : 'message';
       const channelId = navMatch[2];
-      const params = new URLSearchParams(navMatch[3] ?? '');
+      // Bound the query string before parsing — defensive against a hostile
+      // notification handler emitting megabyte payloads.
+      const rawParams = (navMatch[3] ?? '').slice(0, 1024);
+      const params = new URLSearchParams(rawParams);
       navigateFromPush({
-        type: kind,
+        kind,
         channel_id: channelId,
         user_id: params.get('user_id') ?? undefined,
       });
@@ -176,7 +201,7 @@ if (isElectron()) {
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
     navigateFromPush({
-      type: event.data.kind,
+      kind: event.data.kind,
       channel_id: event.data.channelId,
       user_id: event.data.userId,
     });

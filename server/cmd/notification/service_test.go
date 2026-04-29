@@ -259,11 +259,53 @@ func TestDMTitle(t *testing.T) {
 			store: nil,
 			want:  "Direct message",
 		},
+		{
+			name:  "control chars stripped from display name",
+			store: &stubUserStore{user: &models.User{DisplayName: "Alice\nNotification"}},
+			want:  "Alice Notification",
+		},
+		{
+			name:  "RTL override stripped",
+			store: &stubUserStore{user: &models.User{DisplayName: "Alice‮ecila"}},
+			want:  "Aliceecila",
+		},
+		{
+			name:  "all-bidi falls through to username",
+			store: &stubUserStore{user: &models.User{DisplayName: "‮‭", Username: "alice"}},
+			want:  "alice",
+		},
+		{
+			name:  "all-control falls through to fallback",
+			store: &stubUserStore{user: &models.User{DisplayName: "\n\t\r"}},
+			want:  "Direct message",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := dmTitle(context.Background(), tc.store, "u1"); got != tc.want {
 				t.Errorf("dmTitle = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSanitizeNotificationTitle(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"Alice", "Alice"},
+		{"Alice\nWilson", "Alice Wilson"},
+		{"  Alice  ", "Alice"},
+		{"Alice‎Notification", "AliceNotification"}, // LRM stripped
+		{"Alice‮ecila", "Aliceecila"},          // RTL override stripped
+		{"\uFEFFAlice", "Alice"},                    // BOM stripped
+		{"\n\t\r", ""},                              // all-control empty
+		{"Alice⁦pwn⁩", "Alicepwn"},             // bidi isolate stripped
+	}
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			if got := sanitizeNotificationTitle(tc.in); got != tc.want {
+				t.Errorf("sanitizeNotificationTitle(%q) = %q, want %q", tc.in, got, tc.want)
 			}
 		})
 	}

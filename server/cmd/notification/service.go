@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 	"connectrpc.com/connect"
@@ -636,13 +637,42 @@ func dmTitle(ctx context.Context, store userLooker, senderID string) string {
 		slog.Warn("dm push: sender lookup failed, using generic title", "err", err, "sender", senderID)
 		return fallback
 	}
-	if user.DisplayName != "" {
-		return user.DisplayName
+	if name := sanitizeNotificationTitle(user.DisplayName); name != "" {
+		return name
 	}
-	if user.Username != "" {
-		return user.Username
+	if name := sanitizeNotificationTitle(user.Username); name != "" {
+		return name
 	}
 	return fallback
+}
+
+// sanitizeNotificationTitle strips characters that can be used to inject
+// fake chrome into an OS push notification — control characters (newlines,
+// tabs) become a space so adjacent words stay separated, while Unicode bidi
+// controls (RTL override, isolates), direction marks, and the byte-order
+// mark are dropped entirely. Internal whitespace runs collapse to a single
+// space. The result is safe to render as the Title of a DM notification
+// where the source string is an attacker-controllable display name.
+func sanitizeNotificationTitle(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch {
+		case r >= 0x202A && r <= 0x202E: // bidi embeddings + RTL override
+			continue
+		case r >= 0x2066 && r <= 0x2069: // bidi isolate marks
+			continue
+		case r == 0x200E || r == 0x200F: // LRM / RLM direction marks
+			continue
+		case r == 0xFEFF: // zero-width no-break space / BOM
+			continue
+		case unicode.IsControl(r):
+			b.WriteRune(' ') // collapse below by Fields
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
 }
 
 // pushSchemaVersion is the schema version embedded in every push payload so

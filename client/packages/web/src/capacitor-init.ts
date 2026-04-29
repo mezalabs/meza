@@ -25,6 +25,35 @@ import { navigateFromPush } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
 
+// Buffer for taps that arrive before the dispatcher is wired. iOS does not
+// reliably replay the launch-tap action (capacitor-plugins#1488), so the
+// listener must register at module load — before any `await` in
+// initCapacitor — to give the Capacitor plugin a sink as early as possible.
+const pendingTaps: Record<string, string>[] = [];
+let dispatchReady = false;
+
+function dispatchTap(data: Record<string, string>): void {
+  // Server emits `type` ("dm" | "message" | "mention"); decode to client-side
+  // `kind` here so navigateFromPush sees a single name. See navigate.ts.
+  navigateFromPush({
+    kind: data.type,
+    channel_id: data.channel_id,
+    user_id: data.user_id,
+  });
+}
+
+// Register the tap handler at module load. navigateFromPush itself drops
+// any tap whose user_id does not match the current session, so a tap that
+// fires before bootstrap is safely no-ops; a tap that fires during bootstrap
+// is buffered and drained once auth is hydrated.
+pushAdapter.onNotificationTap((data) => {
+  if (dispatchReady) {
+    dispatchTap(data);
+  } else {
+    pendingTaps.push(data);
+  }
+});
+
 export async function initCapacitor(): Promise<void> {
   const { App } = await import('@capacitor/app');
 
@@ -37,8 +66,11 @@ export async function initCapacitor(): Promise<void> {
   setupAppLifecycle(App);
   setupDeepLinkHandler(App);
   setupPushNotifications();
-  setupNotificationNavigation();
   setupBackButton(App);
+
+  // Mark the dispatcher ready and drain any taps captured during bootstrap.
+  dispatchReady = true;
+  for (const data of pendingTaps.splice(0)) dispatchTap(data);
 }
 
 async function setupStatusBar(): Promise<void> {
@@ -88,16 +120,6 @@ function setupPushNotifications(): void {
         console.error('Push subscription failed:', err),
       );
     }
-  });
-}
-
-function setupNotificationNavigation(): void {
-  pushAdapter.onNotificationTap((data) => {
-    navigateFromPush({
-      type: data.type,
-      channel_id: data.channel_id,
-      user_id: data.user_id,
-    });
   });
 }
 

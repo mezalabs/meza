@@ -21,11 +21,13 @@ export function navigateToDMConversation(conversationId: string): void {
 
 /**
  * Shape of the navigation data carried by every push notification entry
- * point — Capacitor tap, web service worker postMessage, and Electron
- * deep-link URL. Field names mirror the server pushPayload exactly.
+ * point — Capacitor tap, web service worker postMessage, Electron deep-link
+ * URL, and the cold-window URL fallback. `kind` is the client-side name for
+ * the server's `pushPayload.Type` value (`"dm" | "message" | "mention"`); the
+ * wire decode happens at each entry-point boundary.
  */
 export interface PushNavigationData {
-  type?: string;
+  kind?: string;
   channel_id?: string;
   user_id?: string;
 }
@@ -34,23 +36,29 @@ export interface PushNavigationData {
  * Single dispatch helper used by all four push entry points (Capacitor,
  * Web SW, Electron, and the cold-start launch path).
  *
- *   1. Drops the tap if `user_id` does not match the currently signed-in
- *      user — prevents cross-account leak when a stale tray notification
- *      from a previous session is tapped after user switch (Case B).
- *   2. Routes to the DM pane shape when `type === 'dm'`, otherwise to the
- *      channel pane. Falling through to channel preserves the legacy
- *      behavior for older server payloads with no `type` field.
+ * Security guarantee — strict deny:
+ *   1. The payload MUST carry both `channel_id` and `user_id`. The server
+ *      always emits these post-T-57; missing values mean either an old
+ *      payload (drop — DM panes were already broken for those clients) or
+ *      a forged/stripped payload (drop).
+ *   2. The current session's user.id MUST be defined and equal to
+ *      `data.user_id`. On cold start, between auth-store hydration and
+ *      `bootstrapSession()` resolving, `user?.id` is undefined — taps in
+ *      that window are dropped rather than allowed through (re-tap after
+ *      bootstrap works).
+ *
+ * Routing: `kind === 'dm'` → DM pane; anything else → channel pane.
+ *
+ * `setPaneContent` with identical args is intentionally idempotent; multi-tap
+ * does not need a dedupe map.
  */
 export function navigateFromPush(data: PushNavigationData): void {
-  if (!data.channel_id) return;
+  if (!data.channel_id || !data.user_id) return;
 
   const currentUserId = useAuthStore.getState().user?.id;
-  if (data.user_id && currentUserId && data.user_id !== currentUserId) {
-    // Notification belongs to a different signed-in account — drop.
-    return;
-  }
+  if (!currentUserId || currentUserId !== data.user_id) return;
 
-  if (data.type === 'dm') {
+  if (data.kind === 'dm') {
     navigateToDMConversation(data.channel_id);
   } else {
     navigateToChannel(data.channel_id);
