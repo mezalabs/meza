@@ -351,6 +351,15 @@ func (s *idorMockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) (
 	return users, nil
 }
 
+func (s *idorMockAuthStore) GetUserDisplayName(_ context.Context, userID string) (string, string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if u, ok := s.users[userID]; ok {
+		return u.DisplayName, u.Username, nil
+	}
+	return "", "", fmt.Errorf("user not found")
+}
+
 func (s *idorMockAuthStore) CreateUser(context.Context, *models.User, string, []byte, models.EncryptedBundle) (*models.User, error) {
 	panic("not implemented")
 }

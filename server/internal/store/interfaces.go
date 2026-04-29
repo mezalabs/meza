@@ -44,6 +44,10 @@ type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	GetUsersByIDs(ctx context.Context, userIDs []string) ([]*models.User, error)
+	// GetUserDisplayName returns just display name and username for a user — a
+	// narrow PK lookup that skips the JSONB decodes GetUserByID does. Used on
+	// the notification hot path where only these fields are needed.
+	GetUserDisplayName(ctx context.Context, userID string) (displayName, username string, err error)
 	UpdateUser(ctx context.Context, params UpdateUserParams) (*models.User, error)
 	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)

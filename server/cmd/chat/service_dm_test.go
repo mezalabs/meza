@@ -52,6 +52,14 @@ func (s *dmMockAuthStore) CreateUser(context.Context, *models.User, string, []by
 func (s *dmMockAuthStore) GetUsersByIDs(context.Context, []string) ([]*models.User, error) {
 	return nil, nil
 }
+func (s *dmMockAuthStore) GetUserDisplayName(_ context.Context, userID string) (string, string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if u, ok := s.users[userID]; ok {
+		return u.DisplayName, u.Username, nil
+	}
+	return "", "", pgx.ErrNoRows
+}
 func (s *dmMockAuthStore) UpdateUser(context.Context, store.UpdateUserParams) (*models.User, error) {
 	return nil, nil
 }

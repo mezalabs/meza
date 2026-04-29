@@ -118,6 +118,17 @@ func (m *mockAuthStore) GetUserByID(_ context.Context, userID string) (*models.U
 	return u, nil
 }
 
+func (m *mockAuthStore) GetUserDisplayName(_ context.Context, userID string) (string, string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	u, ok := m.users[userID]
+	if !ok {
+		return "", "", fmt.Errorf("user not found")
+	}
+	return u.DisplayName, u.Username, nil
+}
+
 func (m *mockAuthStore) GetUsersByIDs(_ context.Context, userIDs []string) ([]*models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
