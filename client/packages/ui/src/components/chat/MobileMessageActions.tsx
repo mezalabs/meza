@@ -1,3 +1,4 @@
+import { safeParseMessageText } from '@meza/core';
 import { memo, useEffect } from 'react';
 
 interface MobileMessageActionsProps {
@@ -18,8 +19,6 @@ interface MobileMessageActionsProps {
   onViewProfile?: () => void;
   onViewReactions?: () => void;
 }
-
-const decoder = new TextDecoder();
 
 /**
  * Mobile bottom sheet for message context actions.
@@ -100,8 +99,9 @@ export const MobileMessageActions = memo(function MobileMessageActions({
             onViewReactions &&
             action('View Reactions', onViewReactions)}
           {action('Copy Text', () => {
-            const text = decoder.decode(encryptedContent);
-            navigator.clipboard.writeText(text);
+            navigator.clipboard
+              .writeText(safeParseMessageText(encryptedContent))
+              .catch(() => {});
           })}
           {canPin &&
             (isPinned
