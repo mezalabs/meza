@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@capacitor/app": "^7",
-    "@capacitor/core": "^7",
+    "@capacitor/core": "^8",
     "@capacitor/keyboard": "^7.0.4",
     "@capacitor/push-notifications": "^7",
     "@capacitor/splash-screen": "^7",
