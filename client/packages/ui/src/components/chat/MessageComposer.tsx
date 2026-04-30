@@ -620,6 +620,10 @@ export function MessageComposer({
           />
         )}
 
+        {/* No `accept=`: chat attachments are E2EE, so the server can't
+            constrain MIME and any file type is valid. Other file inputs
+            (avatars, banners, emoji, soundboard) keep their allowlists
+            because their server-side pipelines are purpose-specific. */}
         <input
           ref={fileInputRef}
           type="file"
