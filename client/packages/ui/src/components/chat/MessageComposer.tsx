@@ -63,8 +63,6 @@ function extractMentions(text: string) {
 
 const MAX_FILES = 10;
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
-const ACCEPTED_TYPES =
-  'image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm,application/pdf,application/zip,text/plain,audio/mpeg,audio/ogg,audio/wav';
 
 interface PendingFile {
   id: string;
@@ -625,7 +623,6 @@ export function MessageComposer({
         <input
           ref={fileInputRef}
           type="file"
-          accept={ACCEPTED_TYPES}
           multiple
           className="hidden"
           onChange={handleFileChange}
