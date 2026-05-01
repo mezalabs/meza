@@ -6,7 +6,7 @@
     "seed": "tsx src/index.ts"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.0.0",
+    "@bufbuild/protobuf": "^2.12.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-node": "^2.0.0",
     "@noble/curves": "^1.8.0",
