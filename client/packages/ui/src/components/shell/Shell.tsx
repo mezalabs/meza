@@ -28,6 +28,7 @@ import {
   useTilingStore,
 } from '../../stores/tiling.ts';
 import { useVerificationStore } from '../../stores/verification.ts';
+import { DangerousDownloadDialog } from '../chat/DangerousDownloadDialog.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { PersistentVoiceConnection } from '../voice/PersistentVoiceConnection.tsx';
 import { AppUpdateOverlay } from './AppUpdateOverlay.tsx';
@@ -336,6 +337,7 @@ function DesktopShell() {
         </div>
         <ShortcutHelpOverlay open={helpOpen} onOpenChange={setHelpOpen} />
         <ImageViewer />
+        <DangerousDownloadDialog />
         <ToastContainer />
         <AppUpdateOverlay />
       </div>
