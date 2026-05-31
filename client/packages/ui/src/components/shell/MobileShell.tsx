@@ -12,6 +12,7 @@ import { useMobileHistory } from '../../hooks/useMobileHistory.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
+import { DangerousDownloadDialog } from '../chat/DangerousDownloadDialog.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { MemberList } from '../chat/MemberList.tsx';
@@ -200,6 +201,7 @@ export function MobileShell() {
         </MobileOverlay>
 
         <ImageViewer />
+        <DangerousDownloadDialog />
         <ToastContainer />
       </div>
     </IconContext.Provider>
