@@ -49,7 +49,7 @@ import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
 import { KeyChangeNotice } from '../security/KeyChangeNotice.tsx';
 import { VerificationBadge } from '../security/VerificationBadge.tsx';
-import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
+import { CategorySettingsView } from '../settings/CategorySettingsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
@@ -149,11 +149,11 @@ function paneMeta(
         serverId: content.serverId,
       };
     }
-    case 'categoryPermissions': {
+    case 'categorySettings': {
       const cgs = channelGroupsByServer?.[content.serverId];
       const cg = cgs?.find((g) => g.id === content.channelGroupId);
       return {
-        label: cg ? `${cg.name} — Settings` : 'Category Settings',
+        label: cg ? `${cg.name} — Category Settings` : 'Category Settings',
         serverName: servers[content.serverId]?.name,
         serverIconUrl: servers[content.serverId]?.iconUrl,
         serverId: content.serverId,
@@ -215,10 +215,10 @@ function renderPaneContent(
           />
         </div>
       );
-    case 'categoryPermissions':
+    case 'categorySettings':
       return (
         <div className="flex min-h-0 min-w-0 flex-1">
-          <CategoryPermissionsView
+          <CategorySettingsView
             serverId={content.serverId}
             channelGroupId={content.channelGroupId}
           />
@@ -290,7 +290,7 @@ function paneIcon(
     case 'settings':
     case 'serverSettings':
     case 'channelSettings':
-    case 'categoryPermissions':
+    case 'categorySettings':
       return <GearIcon {...sm} aria-hidden="true" />;
     case 'profile':
       return <UserIcon {...sm} aria-hidden="true" />;

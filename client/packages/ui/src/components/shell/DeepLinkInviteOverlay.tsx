@@ -1,5 +1,5 @@
 import { joinServer, resolveInvite, useInviteStore } from '@meza/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 
@@ -16,16 +16,56 @@ interface ServerPreview {
 export function DeepLinkInviteOverlay() {
   const pendingCode = useInviteStore((s) => s.pendingCode);
   const pendingHost = useInviteStore((s) => s.pendingHost);
+  // Subscribed for its side effect: any setPendingCode call (even with the
+  // same value as before) bumps this counter, so the reset effect below can
+  // detect a re-click of the same invite that Zustand's Object.is equality
+  // would otherwise hide.
+  const pendingNonce = useInviteStore((s) => s.pendingNonce);
 
   const [preview, setPreview] = useState<ServerPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [joining, setJoining] = useState(false);
   const [dismissing, setDismissing] = useState(false);
+  // Tracks which invite code the current dismiss animation applies to so a
+  // freshly-arrived deep link isn't stomped by the previous animation's clear.
+  const dismissingCodeRef = useRef<string | null>(null);
+  // Holds the active fallback timer so we can cancel it on unmount or when
+  // the dismiss completes via animationend (whichever fires first).
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Only render when there's a deep-link invite (pendingHost distinguishes
   // deep links from web URL invites which only set pendingCode).
   const visible = !!pendingCode && !!pendingHost;
+
+  // Reset the dismiss animation whenever setPendingCode is called with a
+  // non-null value, including when the same code is re-clicked after "Not
+  // now". We key on pendingNonce (not pendingCode) so React fires this
+  // effect even when the value of pendingCode is unchanged — Zustand's
+  // Object.is equality would otherwise hide a same-value re-set.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pendingNonce is the trigger; pendingCode is read inside but its identity doesn't matter for re-running
+  useEffect(() => {
+    if (pendingCode) {
+      setDismissing(false);
+      dismissingCodeRef.current = null;
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    }
+  }, [pendingNonce]);
+
+  // Cancel any in-flight dismiss timer on unmount so we don't run zustand
+  // mutations after the component is gone.
+  useEffect(
+    () => () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!pendingCode || !pendingHost) return;
@@ -84,20 +124,43 @@ export function DeepLinkInviteOverlay() {
   }, [pendingCode]);
 
   const handleDecline = useCallback(() => {
+    const codeToDismiss = pendingCode;
+    dismissingCodeRef.current = codeToDismiss;
     setDismissing(true);
     // Fallback: if animation doesn't fire (e.g. prefers-reduced-motion),
-    // clear the store after the animation duration.
-    setTimeout(() => {
-      useInviteStore.getState().clearPendingCode();
+    // clear the store after the animation duration. Only clear if the
+    // store still holds the same invite — otherwise a new link arrived.
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
+      dismissTimerRef.current = null;
+      const current = useInviteStore.getState().pendingCode;
+      if (current === codeToDismiss) {
+        useInviteStore.getState().clearPendingCode();
+      }
+      dismissingCodeRef.current = null;
     }, 200);
-  }, []);
+  }, [pendingCode]);
 
-  // After the exit animation completes, clear the store.
-  const handleAnimationEnd = useCallback(() => {
-    if (dismissing) {
-      useInviteStore.getState().clearPendingCode();
-    }
-  }, [dismissing]);
+  // After the exit animation completes, clear the store — but only if the
+  // invite being dismissed is still the one in the store. Filter on
+  // currentTarget so a future finite animation on a child element can't
+  // bubble up and trip this handler mid-fade.
+  const handleAnimationEnd = useCallback(
+    (e: React.AnimationEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget) return;
+      if (!dismissing) return;
+      const current = useInviteStore.getState().pendingCode;
+      if (current === dismissingCodeRef.current) {
+        useInviteStore.getState().clearPendingCode();
+      }
+      dismissingCodeRef.current = null;
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    },
+    [dismissing],
+  );
 
   if (!visible) return null;
 

@@ -2,6 +2,12 @@ export type { Device } from '@meza/gen/meza/v1/auth_pb.ts';
 export type {
   FriendRequestEntry,
   ReplyEntry,
+  Report,
+} from '@meza/gen/meza/v1/chat_pb.ts';
+export {
+  ReportCategory,
+  ReportStatus,
+  ResolveAction,
 } from '@meza/gen/meza/v1/chat_pb.ts';
 export { UploadPurpose } from '@meza/gen/meza/v1/media_pb.ts';
 export type {
@@ -61,6 +67,8 @@ export {
   createServer,
   createServerFromTemplate,
   createSound,
+  // Webhooks
+  createWebhook,
   declineFriendRequest,
   declineMessageRequest,
   deleteChannel,
@@ -70,6 +78,7 @@ export {
   deletePermissionOverride,
   deleteRole,
   deleteSound,
+  deleteWebhook,
   editMessage,
   getEffectivePermissions,
   getMessages,
@@ -79,6 +88,7 @@ export {
   getReplies,
   getServer,
   getSystemMessageConfig,
+  getWebhook,
   joinServer,
   kickMember,
   listBans,
@@ -86,6 +96,7 @@ export {
   listChannelGroups,
   listChannelMembers,
   listChannels,
+  listChannelWebhooks,
   listDMChannels,
   listEmojis,
   listFriendRequests,
@@ -93,18 +104,26 @@ export {
   listMembers,
   listMessageRequests,
   listPermissionOverrides,
+  listReports,
   listRoles,
   listServerSounds,
   listServers,
+  listServerWebhooks,
   listUserEmojis,
   listUserSounds,
+  listWebhookDeliveries,
   pinMessage,
+  type ReportCategoryKey,
+  regenerateWebhookToken,
   removeChannelMember,
   removeFriend,
   removeReaction,
   removeTimeout,
   reorderRoles,
+  reportMessage,
+  reportUser,
   resolveInvite,
+  resolveReport,
   reverseDecline,
   type SearchMessagesParams,
   type SearchMessagesResult,
@@ -127,6 +146,7 @@ export {
   updateServer,
   updateSound,
   updateSystemMessageConfig,
+  updateWebhook,
 } from './api/chat.ts';
 // API — federation
 export {
@@ -344,13 +364,15 @@ export {
   getFrequentEmojis,
   recordUsage,
 } from './lib/frequentEmojis.ts';
+// Twemoji
+export { charToTwemojiFilename, getTwemojiUrl } from './lib/twemoji.ts';
 // Onboarding templates
 export {
   SERVER_TEMPLATES,
   type ServerTemplate,
   type TemplateChannel,
+  type TemplateChannelGroup,
   type TemplateRole,
-  VOICE_CHANNELS,
 } from './onboarding/templates.ts';
 export { subscribeToPush } from './push/push-manager.ts';
 // Push notifications
@@ -493,9 +515,11 @@ export * from './tiling/index.ts';
 // Types — Electron API
 export type {
   ElectronAPI,
+  ScreenSource,
   UpdateStatus,
   UpdateUrgency,
 } from './types/electron.d.ts';
+export { base64UrlToBytes, bytesToBase64Url } from './utils/base64url.ts';
 // Utils
 export type { DeepLinkInvite } from './utils/deep-link.ts';
 export {
@@ -513,7 +537,14 @@ export {
 export { resolveMediaUrl } from './utils/media-url.ts';
 export type { DetectedOS } from './utils/os-detection.ts';
 export { detectOS, isMobileOS } from './utils/os-detection.ts';
+export type { PendingPushNav } from './utils/pending-channel.ts';
 export {
+  clearPendingPushNav,
+  consumePendingPushNav,
+  setPendingPushNav,
+} from './utils/pending-channel.ts';
+export {
+  getApiOrigin,
   getAppOrigin,
   getBaseUrl,
   isCapacitor,

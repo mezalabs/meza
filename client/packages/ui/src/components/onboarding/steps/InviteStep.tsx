@@ -1,22 +1,19 @@
-import {
-  getAppOrigin,
-  type Invite,
-  resolveIconUrl,
-  type Server,
-} from '@meza/core';
+import { resolveIconUrl, type Server } from '@meza/core';
 import { useCallback, useState } from 'react';
 
 interface InviteStepProps {
   server: Server;
-  invite: Invite | null;
+  /**
+   * Pre-built invite URL (already includes the E2EE key-bundle secret as a
+   * URL fragment when one was generated). Null when invite creation failed.
+   */
+  inviteUrl: string | null;
 }
 
-export function InviteStep({ server, invite }: InviteStepProps) {
+export function InviteStep({ server, inviteUrl }: InviteStepProps) {
   const [copied, setCopied] = useState(false);
 
-  const inviteUrl = invite ? `${getAppOrigin()}/invite/${invite.code}` : '';
-
-  const shareMessage = invite
+  const shareMessage = inviteUrl
     ? `Join ${server.name} on Meza! ${inviteUrl}`
     : '';
 
@@ -52,7 +49,7 @@ export function InviteStep({ server, invite }: InviteStepProps) {
         </p>
       </div>
 
-      {invite && (
+      {inviteUrl && (
         <div className="space-y-4">
           {/* Invite link */}
           <div>

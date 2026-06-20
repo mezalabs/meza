@@ -12,6 +12,7 @@ import { useMobileHistory } from '../../hooks/useMobileHistory.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
+import { DangerousDownloadDialog } from '../chat/DangerousDownloadDialog.tsx';
 import { FriendsPane } from '../chat/FriendsPane.tsx';
 import { ImageViewer } from '../chat/ImageViewer.tsx';
 import { MemberList } from '../chat/MemberList.tsx';
@@ -21,7 +22,7 @@ import { CreateServerWizard } from '../onboarding/CreateServerWizard.tsx';
 import { GetStartedView } from '../onboarding/GetStartedView.tsx';
 import { ServerOnboardingView } from '../onboarding/ServerOnboardingView.tsx';
 import { ProfileView } from '../profile/ProfileView.tsx';
-import { CategoryPermissionsView } from '../settings/CategoryPermissionsView.tsx';
+import { CategorySettingsView } from '../settings/CategorySettingsView.tsx';
 import { ChannelSettingsView } from '../settings/ChannelSettingsView.tsx';
 import { ServerSettingsView } from '../settings/ServerSettingsView.tsx';
 import { SettingsView } from '../settings/SettingsView.tsx';
@@ -108,7 +109,7 @@ export function MobileShell() {
           state.overlayContent.type === 'profile' ||
           state.overlayContent.type === 'channelSettings' ||
           state.overlayContent.type === 'serverSettings' ||
-          state.overlayContent.type === 'categoryPermissions'
+          state.overlayContent.type === 'categorySettings'
         ) {
           openMobileChannel(state.overlayContent);
           useTilingStore.getState().closeOverlay();
@@ -200,6 +201,7 @@ export function MobileShell() {
         </MobileOverlay>
 
         <ImageViewer />
+        <DangerousDownloadDialog />
         <ToastContainer />
       </div>
     </IconContext.Provider>
@@ -374,9 +376,9 @@ function renderMobileContent(
           channelId={content.channelId}
         />
       );
-    case 'categoryPermissions':
+    case 'categorySettings':
       return (
-        <CategoryPermissionsView
+        <CategorySettingsView
           serverId={content.serverId}
           channelGroupId={content.channelGroupId}
         />
@@ -439,8 +441,8 @@ function useContentLabel(content: PaneContent): string {
       return 'Server Settings';
     case 'channelSettings':
       return 'Channel Settings';
-    case 'categoryPermissions':
-      return 'Category Permissions';
+    case 'categorySettings':
+      return 'Category Settings';
     case 'profile':
       return 'Profile';
     case 'search':

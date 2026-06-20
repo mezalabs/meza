@@ -53,6 +53,9 @@ export default defineConfig(async () => {
       host: true,
       https,
       allowedHosts: ['.share.zrok.io', '.ts.net'],
+      watch: {
+        ignored: ['**/public/twemoji/**'],
+      },
       proxy: {
         // Auth service → server/cmd/auth (port 8081)
         '/meza.v1.AuthService': {
@@ -96,6 +99,11 @@ export default defineConfig(async () => {
         // Key distribution service → server/cmd/keys (port 8088)
         '/meza.v1.KeyService': {
           target: 'http://localhost:8088',
+          changeOrigin: true,
+        },
+        // Webhook execute endpoint → server/cmd/chat (port 8082)
+        '/webhooks': {
+          target: 'http://localhost:8082',
           changeOrigin: true,
         },
         // Gateway WebSocket → server/cmd/gateway (port 8080)

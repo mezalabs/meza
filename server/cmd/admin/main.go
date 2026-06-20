@@ -54,6 +54,7 @@ func main() {
 	chatStore := store.NewChatStore(pool)
 	inviteStore := store.NewInviteStore(pool)
 	banStore := store.NewBanStore(pool)
+	reportStore := store.NewReportStore(pool)
 
 	cmd := os.Args[1]
 	args := os.Args[2:]
@@ -77,6 +78,8 @@ func main() {
 		cmdUnban(ctx, args, banStore)
 	case "status":
 		cmdStatus(ctx, pool, cfg)
+	case "digest-reports":
+		cmdDigestReports(ctx, args, reportStore)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
 		usage()
@@ -99,6 +102,7 @@ Commands:
   ban             Ban a user from a server
   unban           Remove a ban
   status          Show spoke federation status
+  digest-reports  Print a summary of open reports in the platform queue
 
 Environment:
   MEZA_POSTGRES_URL   PostgreSQL connection string (required)

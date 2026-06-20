@@ -8,6 +8,12 @@ export interface InviteState {
   pendingCode: string | null;
   pendingHost: string | null; // instance domain from deep link (e.g. "coolgroup.org")
   inviteSecret: string | null; // base64url-encoded 32-byte secret from URL fragment
+  /**
+   * Monotonic counter incremented on every setPendingCode call. Lets
+   * subscribers detect that the user re-clicked the same invite link, which
+   * Zustand's default Object.is equality would otherwise hide.
+   */
+  pendingNonce: number;
   setPendingCode: (code: string | null) => void;
   setPendingHost: (host: string | null) => void;
   setInviteSecret: (secret: string | null) => void;
@@ -27,10 +33,11 @@ export const useInviteStore = create<InviteState>()((set) => ({
     typeof sessionStorage !== 'undefined'
       ? sessionStorage.getItem(INVITE_SECRET_KEY)
       : null,
+  pendingNonce: 0,
   setPendingCode: (code) => {
     if (code) sessionStorage.setItem(PENDING_INVITE_KEY, code);
     else sessionStorage.removeItem(PENDING_INVITE_KEY);
-    set({ pendingCode: code });
+    set((s) => ({ pendingCode: code, pendingNonce: s.pendingNonce + 1 }));
   },
   setPendingHost: (host) => {
     if (host) sessionStorage.setItem(PENDING_HOST_KEY, host);

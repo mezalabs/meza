@@ -12,7 +12,9 @@ import {
 import { EyeSlashIcon, FileTextIcon } from '@phosphor-icons/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContentWarningStore } from '../../stores/contentWarnings.ts';
+import { useDangerousDownloadStore } from '../../stores/dangerousDownload.ts';
 import { useImageViewerStore } from '../../stores/imageViewer.ts';
+import { isDangerousFile } from '../../utils/dangerousFiles.ts';
 
 function formatFileSize(bytes: bigint): string {
   const n = Number(bytes);
@@ -277,12 +279,24 @@ function VideoAttachment({ attachment }: { attachment: Attachment }) {
 
 function FileAttachment({ attachment }: { attachment: Attachment }) {
   const src = getMediaURL(attachment.id);
+  const requestDangerousDownload = useDangerousDownloadStore((s) => s.request);
 
   return (
     <a
       href={src}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(e) => {
+        // Native anchor handles safe files (preserves middle-click etc.); for
+        // risky types, intercept and re-open from the confirm button — that
+        // click is a fresh user gesture, so window.open isn't popup-blocked.
+        if (isDangerousFile(attachment.filename)) {
+          e.preventDefault();
+          requestDangerousDownload(attachment.filename, () => {
+            window.open(src, '_blank', 'noopener,noreferrer');
+          });
+        }
+      }}
       className="flex items-center gap-3 rounded-md border border-border bg-bg-elevated px-3 py-2 hover:bg-bg-surface transition-colors max-w-[300px]"
     >
       <FileTextIcon
@@ -521,6 +535,7 @@ function EncryptedFileAttachment({
   const [error, setError] = useState(false);
   const busyRef = useRef(false);
   const mountedRef = useRef(true);
+  const requestDangerousDownload = useDangerousDownloadStore((s) => s.request);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -529,7 +544,18 @@ function EncryptedFileAttachment({
     };
   }, []);
 
-  async function handleDownload() {
+  // Decrypt is deferred until the user confirms a risky download, so we don't
+  // spend work fetching/decrypting a file they then decline.
+  function handleDownload() {
+    if (busyRef.current || !isSessionReady()) return;
+    if (isDangerousFile(attachment.filename)) {
+      requestDangerousDownload(attachment.filename, performDownload);
+    } else {
+      performDownload();
+    }
+  }
+
+  async function performDownload() {
     if (busyRef.current || !isSessionReady()) return;
     busyRef.current = true;
     setLoading(true);

@@ -24,9 +24,25 @@ import {
   useAuthStore,
 } from '@meza/core';
 import { CapacitorPushAdapter } from './capacitor-push-adapter.ts';
-import { navigateToChannel } from './navigate.ts';
+import { navigateFromPush } from './navigate.ts';
 
 const pushAdapter = new CapacitorPushAdapter();
+
+// Register the tap handler at module load so it attaches before any await
+// in initCapacitor. iOS does not reliably replay the launch-tap action
+// (capacitor-plugins#1488), so the listener must be present as early as
+// possible to give the Capacitor plugin a sink. navigateFromPush itself
+// buffers via setPendingPushNav when the session is not yet ready, so
+// taps that arrive during bootstrap are drained in main.tsx.
+pushAdapter.onNotificationTap((data) => {
+  // Server emits `type` ("dm" | "message" | "mention"); decode to client-side
+  // `kind` here so navigateFromPush sees a single name. See navigate.ts.
+  navigateFromPush({
+    kind: data.type,
+    channel_id: data.channel_id,
+    user_id: data.user_id,
+  });
+});
 
 export async function initCapacitor(): Promise<void> {
   const { App } = await import('@capacitor/app');
@@ -40,7 +56,6 @@ export async function initCapacitor(): Promise<void> {
   setupAppLifecycle(App);
   setupDeepLinkHandler(App);
   setupPushNotifications();
-  setupNotificationNavigation();
   setupBackButton(App);
   setupBadgeSync();
 }
@@ -92,14 +107,6 @@ function setupPushNotifications(): void {
         console.error('Push subscription failed:', err),
       );
     }
-  });
-}
-
-function setupNotificationNavigation(): void {
-  pushAdapter.onNotificationTap((data) => {
-    const channelId = data.channel_id;
-    if (!channelId) return;
-    navigateToChannel(channelId);
   });
 }
 

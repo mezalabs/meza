@@ -16,6 +16,10 @@ var ErrNotFound = errors.New("not found")
 // ErrAlreadyExists is a sentinel error returned when a unique constraint is violated.
 var ErrAlreadyExists = errors.New("already exists")
 
+// ErrInvalidTransition is a sentinel error returned when a state-machine
+// transition is rejected (e.g. resolving an already-resolved report).
+var ErrInvalidTransition = errors.New("invalid state transition")
+
 // UpdateUserParams holds parameters for updating a user's profile.
 type UpdateUserParams struct {
 	UserID               string
@@ -40,6 +44,10 @@ type AuthStorer interface {
 	CreateUser(ctx context.Context, user *models.User, authKeyHash string, salt []byte, encryptedBundle models.EncryptedBundle) (*models.User, error)
 	GetUserByID(ctx context.Context, userID string) (*models.User, error)
 	GetUsersByIDs(ctx context.Context, userIDs []string) ([]*models.User, error)
+	// GetUserDisplayName returns just display name and username for a user — a
+	// narrow PK lookup that skips the JSONB decodes GetUserByID does. Used on
+	// the notification hot path where only these fields are needed.
+	GetUserDisplayName(ctx context.Context, userID string) (displayName, username string, err error)
 	UpdateUser(ctx context.Context, params UpdateUserParams) (*models.User, error)
 	GetAuthDataByUserID(ctx context.Context, userID string) (*models.AuthData, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, *models.AuthData, error)
@@ -121,7 +129,7 @@ type ChatStorer interface {
 	CheckRulesAcknowledged(ctx context.Context, userID, serverID string) (bool, error)
 	GetDefaultChannels(ctx context.Context, serverID string) ([]*models.Channel, error)
 	GetSelfAssignableRoles(ctx context.Context, serverID string) ([]*models.Role, error)
-	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error)
+	CreateServerFromTemplate(ctx context.Context, params CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error)
 	SetPermissionsSynced(ctx context.Context, channelID string, synced bool) error
 	// SyncChannelToCategory atomically deletes all channel-level overrides,
 	// marks the channel as synced, and mirrors to the companion if non-empty.
@@ -178,6 +186,52 @@ type BlockStorer interface {
 	IsBlockedEither(ctx context.Context, userA, userB string) (bool, error)
 	ListBlocks(ctx context.Context, blockerID string) ([]string, error)
 	ListBlocksWithUsers(ctx context.Context, blockerID string) ([]*models.User, error)
+}
+
+// CreateReportOpts holds inputs for inserting a report row.
+type CreateReportOpts struct {
+	ID                        string
+	ReporterID                string
+	TargetUserID              string
+	TargetMessageID           string
+	TargetChannelID           string
+	ServerID                  string
+	SnapshotContent           string
+	SnapshotAuthorUsername    string
+	SnapshotAuthorDisplayName string
+	SnapshotAttachments       []byte // marshaled JSONB
+	SnapshotMessageEditedAt   *time.Time
+	Category                  string
+	Reason                    string
+	IdempotencyKey            string
+}
+
+// AppendResolutionOpts holds inputs for appending a row to report_resolutions.
+type AppendResolutionOpts struct {
+	ID          string
+	ReportID    string
+	ModeratorID string
+	Action      string // resolved | dismissed | reopen
+	Note        string
+}
+
+// ReportStorer provides access to in-app content report data in Postgres.
+type ReportStorer interface {
+	// CreateReport inserts a single report row. Returns ErrAlreadyExists if
+	// the partial-unique guard on (reporter, target_message_id) WHERE status='open'
+	// is hit, OR if an idempotency_key collision is detected.
+	CreateReport(ctx context.Context, opts CreateReportOpts) (*models.Report, error)
+	GetReport(ctx context.Context, id string) (*models.Report, error)
+	ListReportsByServer(ctx context.Context, serverID, status, cursor string, limit int) ([]*models.Report, string, error)
+	ListPlatformReports(ctx context.Context, status, cursor string, limit int) ([]*models.Report, string, error)
+	ListReportsByReporter(ctx context.Context, reporterID, cursor string, limit int) ([]*models.Report, string, error)
+	// ResolveReport selects-for-update inside an internally-managed transaction,
+	// verifies the current status, updates the row to the new status (clearing
+	// claimed_by/claimed_at on resolve/dismiss), and appends a resolution audit row.
+	ResolveReport(ctx context.Context, reportID, moderatorID, action, note string) (*models.Report, error)
+	// AcknowledgeReport sets acknowledged_at to now if currently null.
+	AcknowledgeReport(ctx context.Context, reportID, moderatorID string) error
+	ListResolutions(ctx context.Context, reportID string) ([]*models.ReportResolution, error)
 }
 
 // FriendStorer provides access to friendship data in Postgres.
@@ -362,6 +416,11 @@ type PermissionOverrideStorer interface {
 	// GetAllOverridesForChannels returns all overrides for multiple channels in a single
 	// query, keyed by channel ID. This avoids N+1 queries when resolving permissions in batch.
 	GetAllOverridesForChannels(ctx context.Context, channelIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error)
+	// GetOverridesForChannelGroups returns the role- and user-scoped overrides
+	// targeting each channel group, keyed by group ID. Only the Group* fields of
+	// ChannelOverrides are populated. Used to resolve ViewChannel at the
+	// category level so gated categories can be filtered from ListChannelGroups.
+	GetOverridesForChannelGroups(ctx context.Context, groupIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error)
 }
 
 // FederationStorer provides access to federation data in Postgres.
@@ -405,6 +464,24 @@ type KeyEnvelopeStorer interface {
 	// HasChannelKeyVersion reports whether the channel has at least one key version
 	// entry, meaning it has been set up for E2EE encryption.
 	HasChannelKeyVersion(ctx context.Context, channelID string) (bool, error)
+}
+
+// WebhookStorer provides access to webhook data in Postgres.
+type WebhookStorer interface {
+	CreateWebhook(ctx context.Context, webhook *models.Webhook) error
+	GetWebhook(ctx context.Context, webhookID string) (*models.Webhook, error)
+	GetWebhookWithToken(ctx context.Context, webhookID string) (*models.Webhook, error)
+	UpdateWebhook(ctx context.Context, webhookID string, name, avatarURL *string) (*models.Webhook, error)
+	DeleteWebhook(ctx context.Context, webhookID string) error
+	ListByChannel(ctx context.Context, channelID string) ([]*models.Webhook, error)
+	ListByServer(ctx context.Context, serverID string) ([]*models.Webhook, error)
+	UpdateTokenHash(ctx context.Context, webhookID string, newHash []byte) error
+	CountByChannel(ctx context.Context, channelID string) (int, error)
+	CountByServer(ctx context.Context, serverID string) (int, error)
+	// Delivery logs
+	InsertDelivery(ctx context.Context, delivery *models.WebhookDelivery) error
+	ListDeliveries(ctx context.Context, webhookID string, limit int) ([]*models.WebhookDelivery, error)
+	CleanupOldDeliveries(ctx context.Context, webhookID string, keepCount int) error
 }
 
 // MediaAccessChecker verifies whether a user may access (download) an attachment.

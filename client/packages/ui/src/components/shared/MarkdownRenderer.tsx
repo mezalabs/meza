@@ -1,7 +1,10 @@
 import { getMediaURL, useAuthStore, useEmojiStore } from '@meza/core';
 import {
+  Children,
   type ComponentPropsWithoutRef,
+  isValidElement,
   memo,
+  type ReactNode,
   useCallback,
   useMemo,
   useState,
@@ -18,6 +21,7 @@ import { remarkMezaEmoji } from './remarkMezaEmoji.ts';
 import { remarkMezaMention } from './remarkMezaMention.ts';
 import { remarkMezaSpoiler } from './remarkMezaSpoiler.ts';
 import { remarkUnicodeEmoji } from './remarkUnicodeEmoji.ts';
+import { TwemojiImg } from './TwemojiImg.tsx';
 
 type MarkdownVariant = 'message' | 'full';
 
@@ -32,6 +36,18 @@ interface MarkdownRendererProps {
   serverId?: string;
   className?: string;
   variant?: MarkdownVariant;
+}
+
+/** Recursively extract text content from React children. */
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node;
+  if (typeof node === 'number') return String(node);
+  if (!node) return '';
+  if (Array.isArray(node)) return node.map(extractText).join('');
+  if (isValidElement(node))
+    return extractText((node.props as { children?: ReactNode }).children);
+  // Children.toArray handles iterables
+  return Children.toArray(node).map(extractText).join('');
 }
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
@@ -257,19 +273,15 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           />
         );
       },
-      // Native Unicode emoji wrapper
+      // Native Unicode emoji → Twemoji SVG
       'meza-unicode-emoji': ({
         children,
       }: ComponentPropsWithoutRef<'span'>) => {
         const size = EMOJI_BASE_SIZE_PX * emojiScale;
-        return (
-          <span
-            className="inline-block align-text-bottom leading-none"
-            style={{ fontSize: size }}
-          >
-            {children}
-          </span>
-        );
+        // Extract the raw emoji string — children may be a string, an array,
+        // or nested React elements depending on the react-markdown version.
+        const emoji = extractText(children);
+        return <TwemojiImg emoji={emoji} size={size} />;
       },
       // Custom Meza mention elements
       'meza-mention': ({

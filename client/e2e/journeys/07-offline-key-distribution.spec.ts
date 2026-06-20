@@ -51,9 +51,7 @@ test('Journey 7: Offline Key Distribution', async ({ browser }, testInfo) => {
 
       // Create server
       await alicePage.getByLabel('Create server').click();
-      await alicePage
-        .getByRole('button', { name: /Start from Scratch/ })
-        .click();
+      await alicePage.getByRole('button', { name: /Friends/ }).click();
       await alicePage.getByLabel('Server name').fill(serverName);
       await alicePage.getByRole('button', { name: 'Next' }).click();
       await alicePage.getByRole('button', { name: 'Next' }).click();

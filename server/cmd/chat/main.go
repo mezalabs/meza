@@ -80,6 +80,8 @@ func main() {
 	blockStore := store.NewBlockStore(pool)
 	friendStore := store.NewFriendStore(pool)
 	keyEnvelopeStore := store.NewKeyEnvelopeStore(pool)
+	webhookStore := store.NewWebhookStore(pool)
+	reportStore := store.NewReportStore(pool)
 	permCache := permissions.NewCache(rdb)
 
 	// Clean up key bundles on expired/revoked invites (best-effort, non-blocking).
@@ -109,6 +111,8 @@ func main() {
 		LinkPreviewStore:        linkPreviewStore,
 		ChannelGroupStore:       channelGroupStore,
 		PermissionOverrideStore: permissionOverrideStore,
+		WebhookStore:            webhookStore,
+		ReportStore:             reportStore,
 		EncryptionChecker:       keyEnvelopeStore,
 		NC:                      nc,
 		RDB:                     rdb,
@@ -161,6 +165,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer keyRotSub.Drain()
+
+	// Webhook execution endpoint — plain HTTP, not ConnectRPC, no JWT auth.
+	// Uses token-in-URL authentication. Per-IP rate limit: 5 req/s burst 10.
+	webhookLimiter := ratelimit.New(5, 10)
+	mux.Handle("/webhooks/", webhookLimiter.Wrap(http.HandlerFunc(svc.handleWebhookExecute)))
 
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/metrics", observability.MetricsHandler())

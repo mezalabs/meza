@@ -6,6 +6,8 @@ import {
   applyDeepLinkInvite,
   bootstrapSession,
   ElectronBadgeAdapter,
+  clearPendingPushNav,
+  consumePendingPushNav,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,
@@ -35,7 +37,9 @@ import {
 } from '@meza/ui';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { navigateToChannel } from './navigate.ts';
+import { navigateFromPush } from './navigate.ts';
+import { clearAllDeliveredNotifications } from './notifications-cleanup.ts';
+import { parsePushDeepLink } from './push-deeplink.ts';
 
 // One-time migration: clear stale anonymous sessions from localStorage.
 // Previous versions stored anonymous user sessions that are no longer valid.
@@ -65,8 +69,30 @@ if (inviteMatch) {
   history.replaceState(null, '', '/');
 }
 
+// Consume cold-window push-navigation params written by sw-push.js when no
+// Meza window was open at notification-click time. Format: /?channel_id=…
+// &kind=…&user_id=…  Scrub the URL immediately so the params do not bleed
+// into the address bar or future history reads, then hand the intent to
+// navigateFromPush — it will buffer when the session is not yet ready and
+// the App's drain effect replays it once `sessionReady && isAuthenticated`.
+const pushNavParams = new URLSearchParams(window.location.search);
+const pushNavChannelId = pushNavParams.get('channel_id');
+if (pushNavChannelId) {
+  const intent = {
+    kind: pushNavParams.get('kind') ?? undefined,
+    channel_id: pushNavChannelId,
+    user_id: pushNavParams.get('user_id') ?? undefined,
+  };
+  history.replaceState(null, '', '/');
+  navigateFromPush(intent);
+}
+
 // Register deep link handler for Electron — before React render so it's ready
 // when the main process sends the buffered cold-start deep link on did-finish-load.
+//
+// HMR caveat: this listener has no unsubscribe API, so dev-mode hot reloads
+// can register additional copies. In production (no HMR) it is registered
+// exactly once at module load.
 if (window.electronAPI?.deepLink) {
   window.electronAPI.deepLink.onNavigate((url: string) => {
     // Handle invite deep links: meza://i/{host}/{code}?s={secret}
@@ -76,11 +102,17 @@ if (window.electronAPI?.deepLink) {
       return;
     }
 
-    // Handle channel deep links: meza://channel/{channelId}
-    // (sent by notification tap handler in ipc.ts)
-    const channelMatch = url.match(/^meza:\/\/channel\/([a-zA-Z0-9_-]+)$/);
-    if (channelMatch?.[1]) {
-      navigateToChannel(channelMatch[1]);
+    // Handle channel/DM deep links from notification taps. URL format is
+    // documented in push-deeplink.ts (the canonical spec). Translate the
+    // parsed `kind: "channel"` to the navigation `"message"` value used by
+    // navigateFromPush — same routing in either case.
+    const link = parsePushDeepLink(url);
+    if (link) {
+      navigateFromPush({
+        kind: link.kind === 'dm' ? 'dm' : 'message',
+        channel_id: link.channelId,
+        user_id: link.userId,
+      });
     }
   });
 }
@@ -115,12 +147,24 @@ useAuthStore.subscribe((state, prevState) => {
     !prevState.isAuthenticated
   ) {
     gatewayConnect(state.accessToken);
+    // On login, clear any tray notifications left over from a prior session
+    // on this device. Defensive — the symmetric cleanup on logout below
+    // already covers the common case, but logout can be killed mid-flight
+    // (browser tab close, force quit on mobile).
+    void clearAllDeliveredNotifications();
   } else if (!state.isAuthenticated && prevState.isAuthenticated) {
     gatewayDisconnect();
     teardownSession();
     resetE2EEKeyProvider();
     useNavigationStore.getState().reset();
     useTilingStore.getState().resetLayout();
+    // Discard any buffered push-nav intent — it belonged to the previous
+    // session and would otherwise navigate the next user into a stranger's
+    // channel after re-login.
+    clearPendingPushNav();
+    // Clear delivered notifications so they don't persist into the next
+    // user's session on a shared device.
+    void clearAllDeliveredNotifications();
   }
 });
 
@@ -181,7 +225,11 @@ if (isElectron()) {
 // Handle PUSH_NAVIGATE messages from the push service worker (web).
 navigator.serviceWorker?.addEventListener('message', (event) => {
   if (event.data?.type === 'PUSH_NAVIGATE' && event.data.channelId) {
-    navigateToChannel(event.data.channelId);
+    navigateFromPush({
+      kind: event.data.kind,
+      channel_id: event.data.channelId,
+      user_id: event.data.userId,
+    });
   }
 });
 
@@ -203,6 +251,16 @@ function App() {
       return;
     }
     return onSessionReady(() => setSessionReady(true));
+  }, [sessionReady, isAuthenticated]);
+
+  // Drain a push-nav intent buffered by a notification or deep-link tap
+  // that arrived before Shell could mount. The buffer carries kind +
+  // channel_id + user_id; navigateFromPush re-runs the cross-account
+  // user_id check at drain time. Re-runs on fresh login.
+  useEffect(() => {
+    if (!sessionReady || !isAuthenticated) return;
+    const intent = consumePendingPushNav();
+    if (intent) navigateFromPush(intent);
   }, [sessionReady, isAuthenticated]);
 
   // If authenticated but session hasn't become ready after a timeout,

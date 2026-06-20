@@ -76,7 +76,7 @@ import { useVoiceChannelParticipants } from '../../hooks/useVoiceChannelParticip
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { useNavigationStore } from '../../stores/navigation.ts';
 import {
-  openCategoryPermissionsPane,
+  openCategorySettingsPane,
   openChannelSettingsPane,
   openProfilePane,
   useTilingStore,
@@ -923,10 +923,10 @@ export function Sidebar({ style }: { style?: React.CSSProperties }) {
                         setCreateChannelGroupId(group.id);
                         setCreateChannelOpen(true);
                       }}
-                      onEditPermissions={
+                      onEditSettings={
                         showSyncIndicators && selectedServerId
                           ? () =>
-                              openCategoryPermissionsPane(
+                              openCategorySettingsPane(
                                 selectedServerId,
                                 group.id,
                               )
@@ -1335,7 +1335,7 @@ function SidebarChannelGroup({
   channels,
   serverId,
   onCreateChannel,
-  onEditPermissions,
+  onEditSettings,
   showSyncIndicators,
 }: {
   groupId: string;
@@ -1349,7 +1349,7 @@ function SidebarChannelGroup({
   }[];
   serverId?: string;
   onCreateChannel?: () => void;
-  onEditPermissions?: () => void;
+  onEditSettings?: () => void;
   showSyncIndicators?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -1373,13 +1373,13 @@ function SidebarChannelGroup({
             {groupName}
           </span>
         </button>
-        {onEditPermissions && (
+        {onEditSettings && (
           <button
             type="button"
-            onClick={onEditPermissions}
+            onClick={onEditSettings}
             className="flex h-7 w-7 items-center justify-center rounded text-text-subtle opacity-0 transition-all hover:bg-bg-surface hover:text-text group-hover:opacity-100"
-            aria-label={`Edit permissions for ${groupName}`}
-            title="Edit permissions"
+            aria-label={`Edit settings for ${groupName}`}
+            title="Category settings"
           >
             <GearIcon size={14} aria-hidden="true" />
           </button>

@@ -165,8 +165,8 @@ func (m *mockChatStoreGW) GetDefaultChannels(_ context.Context, _ string) ([]*mo
 func (m *mockChatStoreGW) GetSelfAssignableRoles(_ context.Context, _ string) ([]*models.Role, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (m *mockChatStoreGW) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
-	return nil, nil, nil, fmt.Errorf("not implemented")
+func (m *mockChatStoreGW) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error) {
+	return nil, nil, nil, nil, fmt.Errorf("not implemented")
 }
 func (m *mockChatStoreGW) CountChannelMembers(_ context.Context, _ string) (int, error) {
 	return 0, nil

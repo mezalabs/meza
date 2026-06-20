@@ -3,7 +3,6 @@ import {
   useIsSpeaking,
   useLocalParticipant,
   useParticipants,
-  useRemoteParticipants,
   useTracks,
   VideoTrack,
 } from '@livekit/components-react';
@@ -14,7 +13,6 @@ import {
   useAudioSettingsStore,
   useChannelStore,
   useNotificationSettingsStore,
-  useStreamSettingsStore,
   useUsersStore,
   useVoiceParticipantsStore,
   useVoiceStore,
@@ -41,17 +39,15 @@ import {
 } from '../../hooks/useDisplayName.ts';
 import { useLocalSpeaking } from '../../hooks/useLocalSpeaking.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { useScreenShareToggle } from '../../hooks/useScreenShareToggle.ts';
 import { useVoiceConnection } from '../../hooks/useVoiceConnection.ts';
 import { MAX_PANES, useTilingStore } from '../../stores/tiling.ts';
-import {
-  buildCaptureOptions,
-  buildPublishOptions,
-} from '../../utils/streamPresets.ts';
 import { toggleDeafen, toggleMute } from '../../utils/voiceControls.ts';
 import { ChannelView } from '../chat/ChannelView.tsx';
 import { ProfilePopoverCard } from '../profile/ProfilePopoverCard.tsx';
 import { Avatar } from '../shared/Avatar.tsx';
 import { PresenceDot } from '../shared/PresenceDot.tsx';
+import { ScreenPickerDialog } from './ScreenPickerDialog.tsx';
 import { SoundboardPanel } from './SoundboardPanel.tsx';
 
 /* ——— Main component ——— */
@@ -501,10 +497,19 @@ function DisconnectButton() {
 }
 
 function ScreenShareButton({ canScreenShare }: { canScreenShare: boolean }) {
-  const { localParticipant } = useLocalParticipant();
-  const isSharing = localParticipant.isScreenShareEnabled;
-  const isToggling = useRef(false);
   const isMobile = useMobile();
+  const {
+    toggle,
+    isSharing,
+    pickerOpen,
+    sources,
+    selectedSourceId,
+    setSelectedSourceId,
+    confirmShare,
+    cancelPicker,
+    pickerError,
+    retryGetSources,
+  } = useScreenShareToggle(canScreenShare);
 
   // Hide on mobile or if getDisplayMedia is not available.
   if (
@@ -513,35 +518,6 @@ function ScreenShareButton({ canScreenShare }: { canScreenShare: boolean }) {
   ) {
     return null;
   }
-
-  const toggle = async () => {
-    if (!canScreenShare || isToggling.current) return;
-    isToggling.current = true;
-    try {
-      if (isSharing) {
-        await localParticipant.setScreenShareEnabled(false);
-      } else {
-        // On Windows (Electron), show the source picker via IPC before
-        // calling getDisplayMedia — the handler returns the pre-selected
-        // source instantly, avoiding the deadlock that occurs when
-        // desktopCapturer.getSources() is called inside the handler.
-        if (window.electronAPI?.screenShare) {
-          const picked = await window.electronAPI.screenShare.pick();
-          if (!picked) return;
-        }
-        const state = useStreamSettingsStore.getState();
-        await localParticipant.setScreenShareEnabled(
-          true,
-          buildCaptureOptions(state),
-          buildPublishOptions(state),
-        );
-      }
-    } catch {
-      // User cancelled the picker or getDisplayMedia failed — no-op.
-    } finally {
-      isToggling.current = false;
-    }
-  };
 
   if (!canScreenShare) {
     return (
@@ -557,20 +533,35 @@ function ScreenShareButton({ canScreenShare }: { canScreenShare: boolean }) {
   }
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      className={`px-4 py-3 transition-colors hover:bg-bg-elevated ${
-        isSharing ? 'text-success' : 'text-text-muted'
-      }`}
-      title={isSharing ? 'Stop sharing' : 'Share screen'}
-    >
-      {isSharing ? (
-        <MonitorIcon size={22} aria-hidden="true" />
-      ) : (
-        <MonitorArrowUpIcon size={22} aria-hidden="true" />
-      )}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={toggle}
+        className={`px-4 py-3 transition-colors hover:bg-bg-elevated ${
+          isSharing ? 'text-success' : 'text-text-muted'
+        }`}
+        title={isSharing ? 'Stop sharing' : 'Share screen'}
+      >
+        {isSharing ? (
+          <MonitorIcon size={22} aria-hidden="true" />
+        ) : (
+          <MonitorArrowUpIcon size={22} aria-hidden="true" />
+        )}
+      </button>
+      <ScreenPickerDialog
+        open={pickerOpen}
+        onOpenChange={(open) => {
+          if (!open) cancelPicker();
+        }}
+        sources={sources}
+        selectedSourceId={selectedSourceId}
+        onSelectSource={setSelectedSourceId}
+        onShare={confirmShare}
+        onCancel={cancelPicker}
+        error={pickerError}
+        onRetry={retryGetSources}
+      />
+    </>
   );
 }
 
@@ -656,56 +647,12 @@ function ScreenShareThumbnail({
     >
       <VideoTrack
         trackRef={trackRef}
+        muted
         className="h-full w-full object-contain"
       />
       <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
         {displayName}
       </span>
-      <ThumbnailAudioToggle participantIdentity={userId} />
     </div>
-  );
-}
-
-function ThumbnailAudioToggle({
-  participantIdentity,
-}: {
-  participantIdentity: string;
-}) {
-  const participants = useRemoteParticipants();
-  const participant = participants.find(
-    (p) => p.identity === participantIdentity,
-  );
-  const [isMuted, setIsMuted] = useState(true);
-
-  if (!participant) return null;
-
-  const toggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newMuted = !isMuted;
-    try {
-      participant.setVolume(newMuted ? 0 : 1, Track.Source.ScreenShareAudio);
-    } catch {
-      // GainNode may not be ready if the track is still attaching
-    }
-    setIsMuted(newMuted);
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      className={`absolute bottom-1 right-1 rounded p-0.5 text-xs transition-colors ${
-        isMuted
-          ? 'bg-black/70 text-white/70 hover:bg-black/90'
-          : 'bg-accent/80 text-black hover:bg-accent'
-      }`}
-      title={isMuted ? 'Unmute stream audio' : 'Mute stream audio'}
-    >
-      {isMuted ? (
-        <SpeakerSlashIcon size={14} aria-hidden="true" />
-      ) : (
-        <SpeakerHighIcon size={14} aria-hidden="true" />
-      )}
-    </button>
   );
 }

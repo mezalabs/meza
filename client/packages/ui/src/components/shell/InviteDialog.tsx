@@ -1,4 +1,5 @@
 import {
+  bytesToBase64Url,
   createInvite,
   createInviteKeyBundle,
   getAppOrigin,
@@ -9,18 +10,6 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
 
 type InviteResult = Awaited<ReturnType<typeof createInvite>>;
-
-/** Encode bytes to base64url (no padding). */
-function bytesToBase64Url(bytes: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 export function InviteDialog({
   open,

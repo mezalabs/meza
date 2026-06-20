@@ -9,6 +9,10 @@
 		reverse_proxy gateway:8080
 	}
 
+	handle /webhooks/* {
+		reverse_proxy chat:8082
+	}
+
 	handle {
 		reverse_proxy localhost:5173
 	}

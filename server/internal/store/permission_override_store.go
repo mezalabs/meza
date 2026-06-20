@@ -220,6 +220,60 @@ func (s *PermissionOverrideStore) GetAllOverridesForChannel(ctx context.Context,
 	return result, rows.Err()
 }
 
+// GetOverridesForChannelGroups returns all role- and user-scoped overrides
+// targeting each channel group, filtered to rows relevant to the given
+// roleIDs / userID. Only the Group* fields of ChannelOverrides are populated;
+// channel-level fields are always empty because the query targets
+// channel_group_id directly. Used by ListChannelGroups to resolve a member's
+// ViewChannel permission at the category level.
+func (s *PermissionOverrideStore) GetOverridesForChannelGroups(ctx context.Context, groupIDs []string, roleIDs []string, userID string) (map[string]*ChannelOverrides, error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	result := make(map[string]*ChannelOverrides, len(groupIDs))
+	if len(groupIDs) == 0 {
+		return result, nil
+	}
+
+	rows, err := s.pool.Query(ctx,
+		`SELECT
+		   po.channel_group_id,
+		   CASE WHEN po.role_id IS NOT NULL THEN 'role' ELSE 'user' END AS kind,
+		   po.allow, po.deny
+		 FROM permission_overrides po
+		 WHERE po.channel_group_id = ANY($1)
+		   AND (
+		     po.role_id = ANY($2)
+		     OR po.user_id = $3
+		   )`,
+		groupIDs, roleIDs, userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get overrides for channel groups: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var groupID, kind string
+		var allow, deny int64
+		if err := rows.Scan(&groupID, &kind, &allow, &deny); err != nil {
+			return nil, fmt.Errorf("scan group override: %w", err)
+		}
+		co := result[groupID]
+		if co == nil {
+			co = &ChannelOverrides{}
+			result[groupID] = co
+		}
+		ovr := permissions.Override{Allow: allow, Deny: deny}
+		if kind == "role" {
+			co.GroupRoleOverrides = append(co.GroupRoleOverrides, ovr)
+		} else {
+			co.GroupUserOverride = &ovr
+		}
+	}
+	return result, rows.Err()
+}
+
 // GetAllOverridesForChannels returns all overrides for multiple channels in a single
 // query, keyed by channel ID. Each channel's overrides include both direct channel-level
 // and inherited channel-group-level overrides, for both roles and the specific user.

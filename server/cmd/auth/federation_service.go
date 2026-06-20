@@ -321,10 +321,14 @@ func (s *federationService) FederationJoin(ctx context.Context, req *connect.Req
 
 	protoMembers := make([]*v1.Member, len(members))
 	for i, m := range members {
+		// @everyone role ID = server ID; always include it.
+		roleIDs := make([]string, 0, len(m.RoleIDs)+1)
+		roleIDs = append(roleIDs, m.ServerID)
+		roleIDs = append(roleIDs, m.RoleIDs...)
 		protoMembers[i] = &v1.Member{
 			UserId:   m.UserID,
 			ServerId: m.ServerID,
-			RoleIds:  m.RoleIDs,
+			RoleIds:  roleIDs,
 			Nickname: m.Nickname,
 			JoinedAt: timestamppb.New(m.JoinedAt),
 		}

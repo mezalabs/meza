@@ -1,0 +1,2 @@
+# Twemoji SVG assets — vendored, exclude from language stats
+client/packages/web/public/twemoji/** linguist-vendored

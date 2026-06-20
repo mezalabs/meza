@@ -449,8 +449,8 @@ func (m *mockChatStore) GetDefaultChannels(_ context.Context, _ string) ([]*mode
 func (m *mockChatStore) GetSelfAssignableRoles(_ context.Context, _ string) ([]*models.Role, error) {
 	return nil, nil
 }
-func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, error) {
-	return nil, nil, nil, nil
+func (m *mockChatStore) CreateServerFromTemplate(_ context.Context, _ store.CreateServerFromTemplateParams) (*models.Server, []*models.Channel, []*models.Role, []*models.ChannelGroup, error) {
+	return nil, nil, nil, nil, nil
 }
 func (m *mockChatStore) CreateVoiceChannelWithCompanion(_ context.Context, _, _ string, _ bool, _ string) (*models.Channel, *models.Channel, error) {
 	return nil, nil, nil
@@ -1028,6 +1028,9 @@ func (m *mockPermissionOverrideStore) GetAllOverridesForChannel(_ context.Contex
 	return &store.ChannelOverrides{}, nil
 }
 func (m *mockPermissionOverrideStore) GetAllOverridesForChannels(_ context.Context, _ []string, _ []string, _ string) (map[string]*store.ChannelOverrides, error) {
+	return map[string]*store.ChannelOverrides{}, nil
+}
+func (m *mockPermissionOverrideStore) GetOverridesForChannelGroups(_ context.Context, _ []string, _ []string, _ string) (map[string]*store.ChannelOverrides, error) {
 	return map[string]*store.ChannelOverrides{}, nil
 }
 func (m *mockPermissionOverrideStore) DeleteOverrideByUser(_ context.Context, _, _ string) error {

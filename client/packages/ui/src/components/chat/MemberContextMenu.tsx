@@ -70,23 +70,25 @@ export function MemberContextMenu({
     if (currentUserId === ownerId) return Infinity;
     let maxPos = 0;
     for (const roleId of currentMember?.roleIds ?? []) {
+      if (roleId === serverId) continue; // @everyone is implicit
       const role = roleMap.get(roleId);
       if (role && role.position > maxPos) maxPos = role.position;
     }
     return maxPos;
-  }, [currentMember, currentUserId, ownerId, roleMap]);
+  }, [currentMember, currentUserId, ownerId, roleMap, serverId]);
 
   const assignableRoles = useMemo(
-    () => roles.filter((r) => r.position < myMaxPosition),
-    [roles, myMaxPosition],
+    () => roles.filter((r) => r.id !== serverId && r.position < myMaxPosition),
+    [roles, serverId, myMaxPosition],
   );
 
   const displayedRoleIds = useMemo(() => {
     const base = new Set(targetMember?.roleIds ?? []);
+    base.delete(serverId); // @everyone is implicit, never toggleable
     for (const id of pendingAdds) base.add(id);
     for (const id of pendingRemoves) base.delete(id);
     return base;
-  }, [targetMember?.roleIds, pendingAdds, pendingRemoves]);
+  }, [targetMember?.roleIds, pendingAdds, pendingRemoves, serverId]);
 
   // Clear pending state when the gateway event confirms the change
   const prevRoleIdsRef = useRef(targetMember?.roleIds);
@@ -130,6 +132,7 @@ export function MemberContextMenu({
     if (!current) return;
 
     const currentSet = new Set(current.roleIds);
+    currentSet.delete(serverId); // @everyone is implicit, never send to API
     const adding = !currentSet.has(roleId);
     if (adding) currentSet.add(roleId);
     else currentSet.delete(roleId);

@@ -89,6 +89,25 @@ func (s *AuthStore) UserExists(ctx context.Context, userID string) (bool, error)
 	return exists, nil
 }
 
+// GetUserDisplayName returns the display name and username for a user.
+// Narrow PK lookup — two columns, no JSONB decode — for the notification hot
+// path where the heavier GetUserByID would just throw most of its work away.
+func (s *AuthStore) GetUserDisplayName(ctx context.Context, userID string) (displayName, username string, err error) {
+	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+	defer cancel()
+
+	err = s.pool.QueryRow(ctx,
+		`SELECT COALESCE(display_name,''), username FROM users WHERE id = $1`, userID,
+	).Scan(&displayName, &username)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", fmt.Errorf("user not found")
+		}
+		return "", "", fmt.Errorf("query user display name: %w", err)
+	}
+	return displayName, username, nil
+}
+
 func (s *AuthStore) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
 	defer cancel()

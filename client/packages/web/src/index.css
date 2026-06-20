@@ -187,6 +187,40 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* On touch devices, suppress long-press text selection and the iOS callout
+   menu. Selection is re-enabled below for editable fields. */
+@media (pointer: coarse) {
+  *,
+  *::before,
+  *::after {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Preserve iOS long-press URL preview (anti-phishing) and image
+     inspect/save callouts. */
+  a,
+  img {
+    -webkit-touch-callout: default;
+  }
+
+  /* Override the desktop .markdown-body selectability — on touch we
+     surface copy through the long-press menu instead. */
+  .markdown-body,
+  .markdown-body .spoiler-revealed {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
 input:focus,
 textarea:focus,
 select:focus {

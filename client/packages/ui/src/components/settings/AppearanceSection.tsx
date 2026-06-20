@@ -2,6 +2,7 @@ import { updateProfile, useAuthStore } from '@meza/core';
 import { useState } from 'react';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { EMOJI_BASE_SIZE_PX } from '../shared/emojiConstants.ts';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 export function AppearanceSection() {
   const user = useAuthStore((s) => s.user);
@@ -125,11 +126,8 @@ export function AppearanceSection() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span
-            className="inline-block rounded bg-bg-surface px-2 py-1 text-center"
-            style={{ fontSize: previewSize }}
-          >
-            🔥
+          <span className="inline-block rounded bg-bg-surface px-2 py-1 text-center">
+            <TwemojiImg emoji="🔥" size={previewSize} />
           </span>
           <span className="text-xs text-text-subtle">
             Preview ({Math.round(previewSize)}px)

@@ -1,6 +1,7 @@
 import { getMediaURL } from '@meza/core';
 import { memo } from 'react';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 export interface PreviewEmoji {
   type: 'custom' | 'unicode';
@@ -32,15 +33,7 @@ export const EmojiPickerPreview = memo(function EmojiPickerPreview({
                 className="h-7 w-7 object-contain"
               />
             ) : (
-              <span
-                className="text-2xl leading-none"
-                style={{
-                  fontFamily:
-                    "'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif",
-                }}
-              >
-                {emoji.display}
-              </span>
+              <TwemojiImg emoji={emoji.display} size={28} />
             )}
           </div>
           <div className="min-w-0 flex-1">

@@ -123,7 +123,7 @@ test('Journey 1: Setup', async ({ browser }, testInfo) => {
   // ---- Chapter: Server Creation ----
   await chapter(alicePage, testInfo, 'Server Creation', async () => {
     await alicePage.getByLabel('Create server').click();
-    await alicePage.getByRole('button', { name: /Start from Scratch/ }).click();
+    await alicePage.getByRole('button', { name: /Friends/ }).click();
     await alicePage.getByLabel('Server name').fill('Test Server');
     await alicePage.getByRole('button', { name: 'Next' }).click();
     await alicePage.getByRole('button', { name: 'Next' }).click(); // Keep default channels

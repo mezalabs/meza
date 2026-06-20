@@ -1,5 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { memo, useState } from 'react';
+import { TwemojiImg } from '../shared/TwemojiImg.tsx';
 
 const SKIN_TONES = [
   { label: 'Default', emoji: '👋' },
@@ -29,9 +30,9 @@ export const EmojiPickerSkinTone = memo(function EmojiPickerSkinTone({
           type="button"
           aria-label={`Skin tone: ${current.label}`}
           title="Change skin tone"
-          className="flex items-center justify-center w-8 h-8 mb-1 rounded-md hover:bg-bg-surface transition-colors text-lg"
+          className="flex items-center justify-center w-8 h-8 mb-1 rounded-md hover:bg-bg-surface transition-colors"
         >
-          {current.emoji}
+          <TwemojiImg emoji={current.emoji} size={22} />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -46,7 +47,7 @@ export const EmojiPickerSkinTone = memo(function EmojiPickerSkinTone({
               key={tone.label}
               type="button"
               aria-label={`Skin tone: ${tone.label}`}
-              className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors text-lg ${
+              className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors ${
                 index === value
                   ? 'bg-accent/20 ring-1 ring-accent'
                   : 'hover:bg-bg-surface'
@@ -56,7 +57,7 @@ export const EmojiPickerSkinTone = memo(function EmojiPickerSkinTone({
                 setOpen(false);
               }}
             >
-              {tone.emoji}
+              <TwemojiImg emoji={tone.emoji} size={22} />
             </button>
           ))}
         </Popover.Content>

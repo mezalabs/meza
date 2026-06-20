@@ -28,9 +28,10 @@ export const Permissions = {
   MOVE_MEMBERS: 1n << 26n,
   CHANGE_NICKNAME: 1n << 27n,
   MANAGE_NICKNAMES: 1n << 28n,
+  MANAGE_WEBHOOKS: 1n << 29n,
 } as const;
 
-/** OR of all 29 permission bits. */
+/** OR of all 30 permission bits. */
 export const ALL_PERMISSIONS = Object.values(Permissions).reduce(
   (acc, v) => acc | v,
   0n,
@@ -54,7 +55,8 @@ export const CHANNEL_SCOPED_PERMISSIONS =
   Permissions.SPEAK |
   Permissions.MUTE_MEMBERS |
   Permissions.DEAFEN_MEMBERS |
-  Permissions.MOVE_MEMBERS;
+  Permissions.MOVE_MEMBERS |
+  Permissions.MANAGE_WEBHOOKS;
 
 export function hasPermission(combined: bigint, perm: bigint): boolean {
   if ((combined & Permissions.ADMINISTRATOR) !== 0n) return true;
@@ -250,6 +252,11 @@ export const PERMISSION_INFO = {
     description: "Allows changing other members' nicknames",
     category: 'moderation',
   },
+  MANAGE_WEBHOOKS: {
+    name: 'Manage Webhooks',
+    description: 'Allows creating, editing, and deleting webhooks',
+    category: 'server',
+  },
 } as const satisfies Record<string, PermInfo>;
 
 /** Group permission keys by category for UI rendering. */
@@ -287,6 +294,7 @@ export const PERMISSIONS_BY_CATEGORY: Record<PermCategory, PermissionKey[]> = {
     'MANAGE_CHANNELS',
     'MANAGE_ROLES',
     'MANAGE_EMOJIS',
+    'MANAGE_WEBHOOKS',
     'VIEW_AUDIT_LOG',
   ],
 };

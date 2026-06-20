@@ -402,6 +402,7 @@ function SameChannelPreview({ trackRef }: { trackRef: TrackReference }) {
       <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-bg-overlay via-bg-hover to-bg-overlay bg-[length:200%_100%]" />
       <VideoTrack
         trackRef={trackRef}
+        muted
         className="absolute inset-0 h-full w-full object-contain"
       />
     </div>
@@ -422,6 +423,7 @@ function CrossChannelPreview({
     if (!container || !videoElement) return;
 
     videoElement.className = 'absolute inset-0 h-full w-full object-contain';
+    videoElement.muted = true;
     container.appendChild(videoElement);
 
     return () => {

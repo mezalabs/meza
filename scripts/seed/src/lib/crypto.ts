@@ -1,64 +1,42 @@
 /**
- * Crypto utilities for seed user registration.
+ * Crypto utilities for seed data.
  *
- * Replicates the exact key derivation from packages/core/src/crypto/keys.ts
- * so that seed users are fully loginable through the normal browser UI.
+ * Imports key derivation and encryption from packages/core to stay in sync
+ * with the client's actual crypto implementation. Only imports from modules
+ * that are Node.js-compatible (no browser-only deps).
  */
 
-const HKDF_INFO_MASTER = new TextEncoder().encode('meza-master-key');
-const HKDF_INFO_AUTH = new TextEncoder().encode('meza-auth-key');
-const HKDF_SALT = new Uint8Array(32); // Zero-salt (input is already high-entropy Argon2id output)
+export { deriveKeys, aesGcmEncrypt } from '@meza/core/crypto/keys.ts';
+export {
+  generateIdentityKeypair,
+  serializeIdentity,
+  generateChannelKey,
+  wrapChannelKey,
+  signMessage,
+  encryptPayload,
+} from '@meza/core/crypto/primitives.ts';
+export {
+  generateRecoveryPhrase,
+  deriveRecoveryKey,
+  deriveRecoveryVerifier,
+  encryptRecoveryBundle,
+} from '@meza/core/crypto/recovery.ts';
+export {
+  buildContextAAD,
+  buildKeyWrapAAD,
+  PURPOSE_MESSAGE,
+} from '@meza/core/crypto/aad.ts';
 
-export interface DerivedKeys {
-  masterKey: Uint8Array;
-  authKey: Uint8Array;
-}
+// buildMessageContent is inlined here because messages.ts imports browser-only
+// modules (channel-keys.ts → session.ts). The format is simple: 0x01 || JSON({t: text}).
+const FORMAT_V1 = 0x01;
 
-/**
- * Derive master_key and auth_key from password + salt.
- * Matches packages/core/src/crypto/keys.ts exactly.
- */
-export async function deriveKeys(
-  password: string,
-  salt: Uint8Array,
-): Promise<DerivedKeys> {
-  const { argon2id } = await import('hash-wasm');
-
-  const argonHex = await argon2id({
-    password,
-    salt,
-    parallelism: 4,
-    iterations: 2,
-    memorySize: 65536,
-    hashLength: 64,
-    outputType: 'hex',
-  });
-  const argonOutput = hexToBytes(argonHex);
-
-  const hkdfKey = await crypto.subtle.importKey(
-    'raw',
-    argonOutput,
-    'HKDF',
-    false,
-    ['deriveBits'],
-  );
-
-  const masterBits = await crypto.subtle.deriveBits(
-    { name: 'HKDF', hash: 'SHA-256', salt: HKDF_SALT, info: HKDF_INFO_MASTER },
-    hkdfKey,
-    256,
-  );
-
-  const authBits = await crypto.subtle.deriveBits(
-    { name: 'HKDF', hash: 'SHA-256', salt: HKDF_SALT, info: HKDF_INFO_AUTH },
-    hkdfKey,
-    256,
-  );
-
-  return {
-    masterKey: new Uint8Array(masterBits),
-    authKey: new Uint8Array(authBits),
-  };
+export function buildMessageContent(text: string): Uint8Array {
+  const jsonBytes = new TextEncoder().encode(JSON.stringify({ t: text }));
+  const result = new Uint8Array(1 + jsonBytes.length);
+  result[0] = FORMAT_V1;
+  result.set(jsonBytes, 1);
+  return result;
 }
 
 /**
@@ -72,12 +50,4 @@ export async function deterministicSalt(username: string): Promise<Uint8Array> {
     new TextEncoder().encode(`meza-seed-salt:${username}`),
   );
   return new Uint8Array(hash).slice(0, 16);
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
 }

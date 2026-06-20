@@ -114,7 +114,10 @@ function ProfileCardContent({
   const serverRoles = useRoleStore(
     (s) => (serverId ? s.byServer[serverId] : undefined) ?? EMPTY_ROLES,
   );
-  const memberRoles = serverRoles.filter((r) => memberRoleIds.includes(r.id));
+  // Exclude @everyone (id === serverId) from the displayed role list.
+  const memberRoles = serverRoles.filter(
+    (r) => r.id !== serverId && memberRoleIds.includes(r.id),
+  );
 
   // Track the userId that initiated the fetch so we can discard stale results.
   const fetchIdRef = useRef(0);

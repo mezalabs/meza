@@ -13,9 +13,15 @@ class FCMTokenPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     @objc func getToken(_ call: CAPPluginCall) {
+        let apnsToken = Messaging.messaging().apnsToken
         Messaging.messaging().token { token, error in
             if let error = error {
-                call.reject("Failed to get FCM token", nil, error)
+                let nsError = error as NSError
+                call.reject(
+                    "Failed to get FCM token: \(nsError.localizedDescription) (domain=\(nsError.domain) code=\(nsError.code), apnsToken=\(apnsToken != nil ? "set" : "nil"))",
+                    nil,
+                    error
+                )
                 return
             }
             guard let token = token else {

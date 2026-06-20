@@ -11,14 +11,28 @@ import {
   SpeakerHighIcon,
   SpeakerSlashIcon,
 } from '@phosphor-icons/react';
-import { type RemoteParticipant, Track, VideoQuality } from 'livekit-client';
+import {
+  ConnectionState,
+  type RemoteParticipant,
+  Track,
+  VideoQuality,
+} from 'livekit-client';
 import { useEffect, useState } from 'react';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useTilingStore } from '../../stores/tiling.ts';
 import { viewerQualityToVideoQuality } from '../../utils/streamPresets.ts';
+import { setScreenShareAudioVolume } from './PersistentVoiceConnection.tsx';
 
 const encoder = new TextEncoder();
 const STREAM_VIEWER_TOPIC = 'meza:stream-viewer';
+const LEAVE_DEFER_MS = 100;
+const JOIN_MESSAGE = encoder.encode(JSON.stringify({ type: 'join' }));
+const LEAVE_MESSAGE = encoder.encode(JSON.stringify({ type: 'leave' }));
+
+// When a panel is moved/swapped, React unmounts then remounts the component
+// in the same commit — the deferred leave gets cancelled by the new mount,
+// preventing spurious join/leave sounds for the streamer.
+const pendingLeaves = new Map<string, ReturnType<typeof setTimeout>>();
 
 interface ScreenSharePaneProps {
   paneId: PaneId;
@@ -52,26 +66,40 @@ export function ScreenSharePane({
   const room = useRoomContext();
 
   useEffect(() => {
-    // Notify the streamer that we started watching
-    room.localParticipant
-      .publishData(encoder.encode(JSON.stringify({ type: 'join' })), {
-        reliable: true,
-        topic: STREAM_VIEWER_TOPIC,
-        destinationIdentities: [participantIdentity],
-      })
-      .catch(() => {}); // best-effort — may fail during teardown
+    // Cancel any pending leave for this participant (happens during panel moves)
+    const pendingLeave = pendingLeaves.get(participantIdentity);
+    if (pendingLeave) {
+      clearTimeout(pendingLeave);
+      pendingLeaves.delete(participantIdentity);
+    } else {
+      // Genuinely new viewer — notify the streamer
+      room.localParticipant
+        .publishData(JOIN_MESSAGE, {
+          reliable: true,
+          topic: STREAM_VIEWER_TOPIC,
+          destinationIdentities: [participantIdentity],
+        })
+        .catch(() => {}); // best-effort — may fail during teardown
+    }
 
     return () => {
-      // Only send leave if room is still connected or reconnecting
-      if (room.state === 'connected' || room.state === 'reconnecting') {
-        room.localParticipant
-          .publishData(encoder.encode(JSON.stringify({ type: 'leave' })), {
-            reliable: true,
-            topic: STREAM_VIEWER_TOPIC,
-            destinationIdentities: [participantIdentity],
-          })
-          .catch(() => {}); // best-effort — may fail during teardown
-      }
+      // Defer the leave to allow panel-move remounts to cancel it
+      const timer = setTimeout(() => {
+        pendingLeaves.delete(participantIdentity);
+        if (
+          room.state === ConnectionState.Connected ||
+          room.state === ConnectionState.Reconnecting
+        ) {
+          room.localParticipant
+            .publishData(LEAVE_MESSAGE, {
+              reliable: true,
+              topic: STREAM_VIEWER_TOPIC,
+              destinationIdentities: [participantIdentity],
+            })
+            .catch(() => {}); // best-effort — may fail during teardown
+        }
+      }, LEAVE_DEFER_MS);
+      pendingLeaves.set(participantIdentity, timer);
     };
   }, [room, participantIdentity]);
 
@@ -117,11 +145,7 @@ function StreamAudioToggle({
   // Start muted — sync initial volume with the muted state
   useEffect(() => {
     if (participant) {
-      try {
-        participant.setVolume(0, Track.Source.ScreenShareAudio);
-      } catch {
-        // GainNode may not be ready if the track is still attaching
-      }
+      setScreenShareAudioVolume(participant, true);
     }
   }, [participant]);
 
@@ -129,11 +153,7 @@ function StreamAudioToggle({
 
   const toggle = () => {
     const newMuted = !isMuted;
-    try {
-      participant.setVolume(newMuted ? 0 : 1, Track.Source.ScreenShareAudio);
-    } catch {
-      // GainNode may not be ready if the track is still attaching
-    }
+    setScreenShareAudioVolume(participant, newMuted);
     setIsMuted(newMuted);
   };
 

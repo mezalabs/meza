@@ -101,6 +101,8 @@ enum MessageType {
   MESSAGE_TYPE_MEMBER_KICK    = 3; // content.action differentiates kick/ban/timeout
   MESSAGE_TYPE_CHANNEL_UPDATE = 4; // content.field differentiates name/topic
   MESSAGE_TYPE_KEY_ROTATION   = 5;
+  MESSAGE_TYPE_WEBHOOK        = 6;
+  MESSAGE_TYPE_REPORT_FILED   = 7; // redacted notice in mod-log channel; never includes PII
 }
 
 message DMChannel {
@@ -157,6 +159,9 @@ message Attachment {
 message Member {
   string user_id = 1;
   string server_id = 2;
+  // Roles assigned to this member. The implicit @everyone role (whose id
+  // equals server_id) is always included as the first element, even though
+  // it is not persisted in the member_roles table.
   repeated string role_ids = 3;
   string nickname = 4;
   google.protobuf.Timestamp joined_at = 5;
@@ -292,6 +297,53 @@ message ServerSystemMessageConfig {
   optional string ban_template = 11;
   bool timeout_enabled = 12;
   optional string timeout_template = 13;
+}
+
+// Webhooks
+
+message Webhook {
+  string id = 1;
+  string channel_id = 2;
+  string server_id = 3;
+  string name = 4;
+  string avatar_url = 5;
+  string created_by = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message WebhookEmbed {
+  string title = 1;
+  string description = 2;  // supports markdown
+  string url = 3;
+  uint32 color = 4;        // 24-bit RGB. 0 = black, absent = no color.
+  repeated WebhookEmbedField fields = 5;
+  EmbedAuthor author = 6;  // optional author displayed at top of embed
+}
+
+message WebhookEmbedField {
+  string name = 1;
+  string value = 2;
+  bool inline = 3;
+}
+
+// Author information displayed at the top of an embed.
+message EmbedAuthor {
+  string name = 1;
+  string icon_url = 2;
+  string url = 3;
+}
+
+message WebhookDelivery {
+  string id = 1;
+  string webhook_id = 2;
+  bool success = 3;
+  string error_code = 4;
+  string request_body_preview = 5;
+  string message_id = 6;
+  string source_ip = 7;
+  int32 latency_ms = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 // PublicUser is a safe subset of User for broadcasting to other users.

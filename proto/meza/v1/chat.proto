@@ -99,6 +99,20 @@ service ChatService {
   rpc GetMutualFriends(GetMutualFriendsRequest) returns (GetMutualFriendsResponse);
   rpc GetSystemMessageConfig(GetSystemMessageConfigRequest) returns (GetSystemMessageConfigResponse);
   rpc UpdateSystemMessageConfig(UpdateSystemMessageConfigRequest) returns (UpdateSystemMessageConfigResponse);
+  // Webhooks
+  rpc CreateWebhook(CreateWebhookRequest) returns (CreateWebhookResponse);
+  rpc GetWebhook(GetWebhookRequest) returns (GetWebhookResponse);
+  rpc UpdateWebhook(UpdateWebhookRequest) returns (UpdateWebhookResponse);
+  rpc DeleteWebhook(DeleteWebhookRequest) returns (DeleteWebhookResponse);
+  rpc ListChannelWebhooks(ListChannelWebhooksRequest) returns (ListChannelWebhooksResponse);
+  rpc ListServerWebhooks(ListServerWebhooksRequest) returns (ListServerWebhooksResponse);
+  rpc RegenerateWebhookToken(RegenerateWebhookTokenRequest) returns (RegenerateWebhookTokenResponse);
+  rpc ListWebhookDeliveries(ListWebhookDeliveriesRequest) returns (ListWebhookDeliveriesResponse);
+  // Reports — in-app content reporting (Google Play UGC compliance).
+  rpc ReportMessage(ReportMessageRequest) returns (ReportMessageResponse);
+  rpc ReportUser(ReportUserRequest) returns (ReportUserResponse);
+  rpc ListReports(ListReportsRequest) returns (ListReportsResponse);
+  rpc ResolveReport(ResolveReportRequest) returns (ResolveReportResponse);
 }
 
 // Messages
@@ -1063,6 +1077,17 @@ message ChannelSpec {
   bool is_default = 3;
   bool is_private = 4;
   repeated string role_names = 5; // roles that get access to this private channel (matched by name against RoleSpec)
+  // Matches a ChannelGroupSpec.name on the same request. If empty or unmatched,
+  // the channel is created without a category.
+  optional string group_name = 6;
+}
+
+message ChannelGroupSpec {
+  string name = 1;
+  // If non-empty, the category denies @everyone ViewChannel and allows these
+  // roles ViewChannel + SendMessages. Roles must be declared in the same
+  // request's roles list. Mirrors ChannelSpec.role_names semantics.
+  repeated string allowed_role_names = 2;
 }
 
 message RoleSpec {
@@ -1081,6 +1106,11 @@ message CreateServerFromTemplateRequest {
   optional string rules = 6;
   bool onboarding_enabled = 7;
   bool rules_required = 8;
+  // Override @everyone role permissions. If absent, the server applies
+  // permissions.DefaultEveryonePermissions. Administrator is rejected.
+  optional int64 everyone_permissions = 9;
+  // Channel categories created in declared order before channels are inserted.
+  repeated ChannelGroupSpec channel_groups = 10;
 }
 
 message CreateServerFromTemplateResponse {
@@ -1088,6 +1118,7 @@ message CreateServerFromTemplateResponse {
   repeated Channel channels = 2;
   repeated Role roles = 3;
   Invite invite = 4;
+  repeated ChannelGroup channel_groups = 5;
 }
 
 // Federation
@@ -1309,4 +1340,172 @@ message UpdateSystemMessageConfigRequest {
 
 message UpdateSystemMessageConfigResponse {
   ServerSystemMessageConfig config = 1;
+}
+
+// Webhooks
+
+message CreateWebhookRequest {
+  string channel_id = 1;
+  string name = 2;
+  optional string avatar_url = 3;
+}
+
+message CreateWebhookResponse {
+  Webhook webhook = 1;
+  string token = 2;  // shown once, never retrievable again
+  string url = 3;    // full webhook execution URL
+}
+
+message GetWebhookRequest {
+  string webhook_id = 1;
+}
+
+message GetWebhookResponse {
+  Webhook webhook = 1;
+}
+
+message UpdateWebhookRequest {
+  string webhook_id = 1;
+  optional string name = 2;
+  optional string avatar_url = 3;
+}
+
+message UpdateWebhookResponse {
+  Webhook webhook = 1;
+}
+
+message DeleteWebhookRequest {
+  string webhook_id = 1;
+}
+
+message DeleteWebhookResponse {}
+
+message ListChannelWebhooksRequest {
+  string channel_id = 1;
+}
+
+message ListChannelWebhooksResponse {
+  repeated Webhook webhooks = 1;
+}
+
+message ListServerWebhooksRequest {
+  string server_id = 1;
+}
+
+message ListServerWebhooksResponse {
+  repeated Webhook webhooks = 1;
+}
+
+message RegenerateWebhookTokenRequest {
+  string webhook_id = 1;
+}
+
+message RegenerateWebhookTokenResponse {
+  string token = 1;  // shown once, never retrievable again
+  string url = 2;    // full webhook execution URL
+}
+
+message ListWebhookDeliveriesRequest {
+  string webhook_id = 1;
+  int32 limit = 2;  // default 25, max 25
+}
+
+message ListWebhookDeliveriesResponse {
+  repeated WebhookDelivery deliveries = 1;
+}
+
+// Reports
+
+enum ReportCategory {
+  REPORT_CATEGORY_UNSPECIFIED = 0;
+  REPORT_CATEGORY_SPAM = 1;
+  REPORT_CATEGORY_HARASSMENT = 2;
+  REPORT_CATEGORY_HATE = 3;
+  REPORT_CATEGORY_SEXUAL = 4;
+  REPORT_CATEGORY_VIOLENCE = 5;
+  REPORT_CATEGORY_SELF_HARM = 6;
+  REPORT_CATEGORY_ILLEGAL = 7;
+  REPORT_CATEGORY_OTHER = 99;
+}
+
+enum ReportStatus {
+  REPORT_STATUS_UNSPECIFIED = 0;
+  REPORT_STATUS_OPEN = 1;
+  REPORT_STATUS_RESOLVED = 2;
+  REPORT_STATUS_DISMISSED = 3;
+}
+
+enum ResolveAction {
+  RESOLVE_ACTION_UNSPECIFIED = 0;
+  RESOLVE_ACTION_RESOLVE = 1;
+  RESOLVE_ACTION_DISMISS = 2;
+  RESOLVE_ACTION_REOPEN = 3;
+}
+
+message Report {
+  string id = 1;
+  string reporter_id = 2;
+  string target_user_id = 3;
+  string target_message_id = 4;
+  string target_channel_id = 5;
+  string server_id = 6;
+  string snapshot_content = 7;
+  string snapshot_author_username = 8;
+  string snapshot_author_display_name = 9;
+  ReportCategory category = 10;
+  string reason = 11;
+  ReportStatus status = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp acknowledged_at = 14;
+}
+
+message ReportMessageRequest {
+  string message_id = 1;
+  ReportCategory category = 2;
+  string reason = 3;
+}
+
+message ReportMessageResponse {
+  Report report = 1;
+}
+
+message ReportUserRequest {
+  string user_id = 1;
+  // Optional server context — if both reporter and target belong, route to that
+  // server's mod queue. Otherwise (or for cross-server reports) route to the
+  // platform queue.
+  string server_id = 2;
+  ReportCategory category = 3;
+  string reason = 4;
+  // Optional client-supplied UUID for retry idempotency. ReportMessage is
+  // idempotent via the partial-unique guard on (reporter, message); ReportUser
+  // has no such natural guard so it relies on this key.
+  string idempotency_key = 5;
+}
+
+message ReportUserResponse {
+  Report report = 1;
+}
+
+message ListReportsRequest {
+  // Empty server_id means platform queue (only Administrator may list).
+  string server_id = 1;
+  ReportStatus status = 2;
+  string cursor = 3;
+  uint32 limit = 4;
+}
+
+message ListReportsResponse {
+  repeated Report reports = 1;
+  string next_cursor = 2;
+}
+
+message ResolveReportRequest {
+  string report_id = 1;
+  ResolveAction action = 2;
+  string note = 3;
+}
+
+message ResolveReportResponse {
+  Report report = 1;
 }

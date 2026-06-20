@@ -1,9 +1,11 @@
+import { safeParseMessageText } from '@meza/core';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import type { ReactNode } from 'react';
 
 interface MessageContextMenuProps {
   encryptedContent: Uint8Array;
   isOwn: boolean;
+  isSystem?: boolean;
   isPinned: boolean;
   canPin: boolean;
   hasReactions: boolean;
@@ -13,15 +15,15 @@ interface MessageContextMenuProps {
   onDelete: () => void;
   onPin: () => void;
   onUnpin: () => void;
+  onReport?: () => void;
   onViewProfile?: () => void;
   onViewReactions?: () => void;
 }
 
-const decoder = new TextDecoder();
-
 export function MessageContextMenu({
   encryptedContent,
   isOwn,
+  isSystem = false,
   isPinned,
   canPin,
   hasReactions,
@@ -31,6 +33,7 @@ export function MessageContextMenu({
   onDelete,
   onPin,
   onUnpin,
+  onReport,
   onViewProfile,
   onViewReactions,
 }: MessageContextMenuProps) {
@@ -68,8 +71,9 @@ export function MessageContextMenu({
           <ContextMenu.Item
             className="cursor-default rounded-md px-3 py-1.5 text-sm text-text outline-none data-[highlighted]:bg-accent-subtle"
             onSelect={() => {
-              const text = decoder.decode(encryptedContent);
-              navigator.clipboard.writeText(text);
+              navigator.clipboard
+                .writeText(safeParseMessageText(encryptedContent))
+                .catch(() => {});
             }}
           >
             Copy Text
@@ -99,6 +103,18 @@ export function MessageContextMenu({
                 onSelect={onDelete}
               >
                 Delete Message
+              </ContextMenu.Item>
+            </>
+          )}
+          {!isOwn && !isSystem && onReport && (
+            <>
+              <ContextMenu.Separator className="my-1 h-px bg-border" />
+              <ContextMenu.Item
+                className="cursor-default rounded-md px-3 py-1.5 text-sm text-error outline-none data-[highlighted]:bg-error/10"
+                onSelect={onReport}
+                aria-label="Report message"
+              >
+                Report Message
               </ContextMenu.Item>
             </>
           )}

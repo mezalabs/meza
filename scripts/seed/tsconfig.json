@@ -9,7 +9,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@meza/gen/*": ["../../client/gen/*"]
+      "@meza/gen/*": ["../../client/gen/*"],
+      "@meza/core/*": ["../../client/packages/core/src/*"]
     }
   },
   "include": ["src"]
