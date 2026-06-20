@@ -1,16 +1,44 @@
+import { renderToStaticMarkup } from 'react-dom/server';
+import Markdown from 'react-markdown';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
 import { describe, expect, it } from 'vitest';
-import { countOccurrences, renderMarkdown } from './markdownTestUtils.tsx';
+import { markdownListComponents } from './markdownListComponents.tsx';
 
 /**
- * Behavioral contract for how MarkdownRenderer renders text.
+ * Render markdown to a static HTML string using the *production* list handlers
+ * (`markdownListComponents`) plus the structural remark plugins that govern how
+ * lists parse: remark-gfm (ordered/unordered/task lists) and remark-breaks
+ * (line handling). That's exactly the slice of MarkdownRenderer's pipeline this
+ * module owns.
  *
- * The visible numbers in an ordered list are produced by the browser/CSS
- * counter, not by literal text in the HTML. So these tests assert on the
- * structure the renderer emits: the `start` attribute on <ol> (which seeds the
- * counter) and the number of <li> items. From those two facts the visible
- * numbering is fully determined.
+ * It deliberately does NOT wire up sanitization, syntax highlighting, or the
+ * custom Meza element plugins. Those are independent concerns covered elsewhere,
+ * and folding them in here would turn this helper into a second, drifting copy
+ * of the production pipeline (the very thing that made the old broad "spec" and
+ * "sanitization" suites assert third-party defaults rather than Meza behavior).
+ *
+ * The visible ordered-list numbers come from the CSS counter seeded by the
+ * `<ol start>` attribute, not from literal text — so the assertions target the
+ * `start` attribute and the <li> count, from which the numbering is determined.
  */
-describe('MarkdownRenderer ordered lists', () => {
+function renderMarkdown(content: string): string {
+  return renderToStaticMarkup(
+    <Markdown
+      remarkPlugins={[remarkGfm, remarkBreaks]}
+      components={markdownListComponents}
+    >
+      {content}
+    </Markdown>,
+  );
+}
+
+/** Count non-overlapping occurrences of `needle` in `haystack`. */
+function countOccurrences(haystack: string, needle: string): number {
+  return needle ? haystack.split(needle).length - 1 : 0;
+}
+
+describe('markdownListComponents ordered lists', () => {
   const countListItems = (html: string) => countOccurrences(html, '<li');
 
   it('preserves the author-typed starting number (regression: "4." became "1.")', () => {
@@ -54,7 +82,7 @@ describe('MarkdownRenderer ordered lists', () => {
   });
 });
 
-describe('MarkdownRenderer non-list text', () => {
+describe('markdownListComponents non-list text', () => {
   it('does not turn a number without a list marker into a list', () => {
     const html = renderMarkdown('4 is a really good point');
     expect(html).not.toContain('<ol');
@@ -68,7 +96,7 @@ describe('MarkdownRenderer non-list text', () => {
   });
 });
 
-describe('MarkdownRenderer unordered & task lists', () => {
+describe('markdownListComponents unordered & task lists', () => {
   const countListItems = (html: string) => countOccurrences(html, '<li');
 
   it('renders an unordered list with the disc class', () => {
@@ -96,7 +124,7 @@ describe('MarkdownRenderer unordered & task lists', () => {
   });
 });
 
-describe('MarkdownRenderer nested ordered lists', () => {
+describe('markdownListComponents nested ordered lists', () => {
   it('keeps an independent counter per nesting level', () => {
     const html = renderMarkdown('1. a\n   1. b\n2. c');
     // Two <ol>s (outer + nested), neither needs an explicit start (both at 1).
@@ -114,7 +142,7 @@ describe('MarkdownRenderer nested ordered lists', () => {
   });
 });
 
-describe('MarkdownRenderer inline formatting inside list items', () => {
+describe('markdownListComponents inline formatting inside list items', () => {
   it('renders emphasis, code, and links inside an ordered list item', () => {
     const html = renderMarkdown('1. **bold** `code` [link](https://x.com)');
     expect(html).not.toContain('start='); // list starts at 1, so omitted
@@ -122,87 +150,5 @@ describe('MarkdownRenderer inline formatting inside list items', () => {
     expect(html).toContain('<strong>');
     expect(html).toContain('<code');
     expect(html).toContain('href="https://x.com"');
-  });
-});
-
-/**
- * Broad spec coverage. These assert the structural + sanitization contract of
- * the pipeline (remark-gfm, remark-breaks, MEZA sanitize schema) so a future
- * change to list rendering — or the shared schema — can't silently regress
- * unrelated markdown features.
- */
-describe('MarkdownRenderer markdown spec', () => {
-  it('renders headings h1–h6', () => {
-    const html = renderMarkdown('# h1\n\n## h2\n\n###### h6');
-    expect(html).toContain('<h1>');
-    expect(html).toContain('<h2>');
-    expect(html).toContain('<h6>');
-  });
-
-  it('renders emphasis and strong', () => {
-    const html = renderMarkdown('*em* and **strong**');
-    expect(html).toContain('<em>');
-    expect(html).toContain('<strong>');
-  });
-
-  it('renders inline code and fenced code blocks', () => {
-    expect(renderMarkdown('`inline`')).toContain('<code');
-    const block = renderMarkdown('```\nblock\n```');
-    expect(block).toContain('<pre');
-    expect(block).toContain('<code');
-  });
-
-  it('renders blockquotes', () => {
-    expect(renderMarkdown('> quoted')).toContain('<blockquote');
-  });
-
-  it('renders horizontal rules', () => {
-    expect(renderMarkdown('a\n\n---\n\nb')).toContain('<hr');
-  });
-
-  it('renders GFM tables', () => {
-    const html = renderMarkdown('| a | b |\n| - | - |\n| 1 | 2 |');
-    expect(html).toContain('<table');
-    expect(html).toContain('<th');
-    expect(html).toContain('<td');
-  });
-
-  it('renders GFM strikethrough', () => {
-    expect(renderMarkdown('~~gone~~')).toContain('<del>');
-  });
-
-  it('converts a single newline to a line break (remark-breaks)', () => {
-    expect(renderMarkdown('line one\nline two')).toContain('<br');
-  });
-
-  it('renders links with their href preserved', () => {
-    expect(renderMarkdown('[text](https://example.com)')).toContain(
-      'href="https://example.com"',
-    );
-  });
-});
-
-/**
- * Sanitization is shared across every element via MEZA_SANITIZE_SCHEMA. A list
- * refactor shouldn't touch it, but these lock the security contract in place.
- */
-describe('MarkdownRenderer sanitization', () => {
-  it('never emits an executable <script> tag', () => {
-    // Raw HTML isn't parsed (no rehype-raw), so the tag is dropped entirely.
-    // The inner text may survive but only as inert, escaped text in a <p>.
-    const html = renderMarkdown('hi <script>alert(1)</script> there');
-    expect(html).not.toContain('<script');
-  });
-
-  it('drops dangerous link protocols', () => {
-    const html = renderMarkdown('[x](javascript:alert(1))');
-    expect(html).not.toContain('javascript:');
-  });
-
-  it('drops event-handler attributes from raw HTML', () => {
-    const html = renderMarkdown(
-      '<img src="https://x.com/a.png" onerror="x()">',
-    );
-    expect(html).not.toContain('onerror');
   });
 });

@@ -1,10 +1,15 @@
 import type { ComponentPropsWithoutRef } from 'react';
+import type { Components } from 'react-markdown';
 
 /**
  * react-markdown element handlers for lists.
  *
  * Kept in their own module (free of app/store dependencies) so the rendering
- * contract can be unit-tested in isolation. See MarkdownRenderer.test.tsx.
+ * contract can be unit-tested in isolation. See markdownListComponents.test.tsx.
+ *
+ * `satisfies Pick<Components, …>` pins each handler to the prop shape
+ * react-markdown actually passes, so a typo here is caught at the definition
+ * site instead of slipping through the untyped `components` spread.
  */
 export const markdownListComponents = {
   ul: ({ children }: ComponentPropsWithoutRef<'ul'>) => (
@@ -26,4 +31,4 @@ export const markdownListComponents = {
       </li>
     );
   },
-};
+} satisfies Pick<Components, 'ul' | 'ol' | 'li'>;
