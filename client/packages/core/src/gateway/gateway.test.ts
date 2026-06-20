@@ -1362,6 +1362,39 @@ describe('gateway', () => {
 
       expect(useGatewayStore.getState().reconnectCount).toBe(before);
     });
+
+    it('coalesces a burst of rapid reconnects into a single refetch bump', async () => {
+      useAuthStore.setState({ accessToken: 'tok' });
+
+      let sock = await connectAndOpen();
+      deliverReady(sock); // cold connect — sets the "connected before" flag
+      const before = useGatewayStore.getState().reconnectCount;
+
+      // First reconnect (1s after connect) bumps.
+      sock.onclose?.();
+      vi.advanceTimersByTime(1000);
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+      expect(useGatewayStore.getState().reconnectCount).toBe(before + 1);
+
+      // A second reconnect inside the cooldown window does NOT bump again —
+      // a flapping socket collapses into one refetch.
+      sock.onclose?.();
+      vi.advanceTimersByTime(1000); // < RECONNECT_REFETCH_COOLDOWN_MS since the bump
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+      expect(useGatewayStore.getState().reconnectCount).toBe(before + 1);
+
+      // Once the cooldown elapses, a later reconnect bumps again.
+      sock.onclose?.();
+      vi.advanceTimersByTime(3000); // now past the cooldown since the last bump
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+      expect(useGatewayStore.getState().reconnectCount).toBe(before + 2);
+    });
   });
 
   // -----------------------------------------------------------------------
