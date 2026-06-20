@@ -21,8 +21,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Meza';
   const options = {
     body: data.body || 'You have a new notification',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
     tag: data.tag || 'meza-default',
     data: {
       channelId: data.channel_id,

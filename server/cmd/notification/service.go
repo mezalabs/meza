@@ -316,18 +316,23 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 		// Resolve sender display name once per DM event for the notification Title.
 		// E2EE-respecting — display name is public and already returned by
 		// GetUserPublicProfile; Body stays generic.
-		title := dmTitle(ctx, s.userStore, senderID)
+		senderName := resolveSenderName(ctx, s.userStore, senderID)
+		title := "Direct message"
+		if senderName != "" {
+			title = senderName + " (DM)"
+		}
 		for _, uid := range participantIDs {
 			if uid == senderID {
 				continue
 			}
 			s.notifyOfflineDevices(ctx, uid, pushTrigger{
-				Kind:      "dm",
-				ChannelID: channelID,
-				SenderID:  senderID,
-				MessageID: mc.MessageCreate.Id,
-				Title:     title,
-				Body:      "New message",
+				Kind:              "dm",
+				ChannelID:         channelID,
+				SenderID:          senderID,
+				MessageID:         mc.MessageCreate.Id,
+				Title:             title,
+				Body:              "New message",
+				SenderDisplayName: senderName,
 			})
 		}
 		return
@@ -373,17 +378,33 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 		return
 	}
 
+	// Resolve sender / channel / server names once per event for richer
+	// notification context. All three are public routing metadata, not
+	// E2EE-protected content. Lookups are PK queries; failures degrade
+	// gracefully (Title/Body fall back to less-specific text).
+	senderName := resolveSenderName(ctx, s.userStore, senderID)
+	channelName := sanitizeNotificationTitle(channel.Name)
+	serverName := ""
+	if server, err := s.chatStore.GetServer(ctx, serverID); err != nil {
+		slog.Warn("push: server lookup failed", "err", err, "server", serverID)
+	} else if server != nil {
+		serverName = sanitizeNotificationTitle(server.Name)
+	}
+
 	// Build the trigger template for this server-channel event. The per-user
-	// IsMention flag and Body/Title stay constant — IsMention is overridden
+	// IsMention flag drives Body wording — IsMention and Body are overridden
 	// per target inside processServerNotifications based on mention status.
 	base := pushTrigger{
-		Kind:      "message",
-		ChannelID: channelID,
-		SenderID:  senderID,
-		MessageID: mc.MessageCreate.Id,
-		ServerID:  serverID,
-		Title:     "New message",
-		Body:      "You have a new message",
+		Kind:              "message",
+		ChannelID:         channelID,
+		SenderID:          senderID,
+		MessageID:         mc.MessageCreate.Id,
+		ServerID:          serverID,
+		Title:             channelPushTitle(channelName, serverName),
+		Body:              channelPushBody(senderName, false),
+		SenderDisplayName: senderName,
+		ChannelName:       channelName,
+		ServerName:        serverName,
 	}
 
 	// For @everyone mentions, dispatch asynchronously with bounded concurrency
@@ -544,6 +565,9 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 	for i, ot := range offlineTargets {
 		t := base
 		t.IsMention = ot.isMention
+		// Body wording depends on per-target mention status. Title (location)
+		// stays constant across targets in the same channel event.
+		t.Body = channelPushBody(base.SenderDisplayName, ot.isMention)
 		throttleTriggers[i] = t
 		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), ot.userID, channelID)
 		throttleCmds[i] = throttlePipe.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second)
@@ -624,28 +648,67 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID s
 	}
 }
 
-// dmTitle resolves the sender's display name (or username fallback) for use
-// as a DM push notification Title. E2EE-respecting — display name is public
-// and already returned by GetUserPublicProfile. Returns "Direct message" if
-// the lookup fails or no human-readable name is available, so the user still
-// gets a usable notification.
-func dmTitle(ctx context.Context, store userResolver, senderID string) string {
-	const fallback = "Direct message"
+// resolveSenderName looks up a sanitized human-readable name for the sender
+// (display name, with username fallback). Returns "" when no usable name is
+// available — callers compose the final Title/Body (e.g. add "(DM)" suffix
+// or a generic fallback string). E2EE-respecting: display name is public
+// and already returned by GetUserPublicProfile.
+func resolveSenderName(ctx context.Context, store userResolver, senderID string) string {
 	if store == nil {
-		return fallback
+		return ""
 	}
 	displayName, username, err := store.GetUserDisplayName(ctx, senderID)
 	if err != nil {
-		slog.Warn("dm push: sender lookup failed, using generic title", "err", err, "sender", senderID)
-		return fallback
+		slog.Warn("push: sender lookup failed", "err", err, "sender", senderID)
+		return ""
 	}
 	if name := sanitizeNotificationTitle(displayName); name != "" {
 		return name
 	}
-	if name := sanitizeNotificationTitle(username); name != "" {
-		return name
+	return sanitizeNotificationTitle(username)
+}
+
+// dmTitle formats a DM push notification Title as "{Sender} (DM)" when the
+// sender name resolves, falling back to "Direct message" so the recipient
+// still gets a usable banner.
+func dmTitle(ctx context.Context, store userResolver, senderID string) string {
+	if name := resolveSenderName(ctx, store, senderID); name != "" {
+		return name + " (DM)"
 	}
-	return fallback
+	return "Direct message"
+}
+
+// channelPushTitle formats a server-channel push Title as "#channel · Server".
+// Either side may be empty (lookup failed); the format degrades gracefully.
+// "New message" is the last-resort fallback so the recipient never sees an
+// empty banner.
+func channelPushTitle(channelName, serverName string) string {
+	switch {
+	case channelName != "" && serverName != "":
+		return "#" + channelName + " · " + serverName
+	case channelName != "":
+		return "#" + channelName
+	case serverName != "":
+		return serverName
+	default:
+		return "New message"
+	}
+}
+
+// channelPushBody formats a server-channel push Body with the sender's name
+// and mention status. Falls back to generic text when the sender name is
+// unavailable so the recipient still gets a meaningful banner.
+func channelPushBody(senderName string, isMention bool) string {
+	if isMention {
+		if senderName != "" {
+			return senderName + " mentioned you"
+		}
+		return "You were mentioned"
+	}
+	if senderName != "" {
+		return senderName + ": New message"
+	}
+	return "New message"
 }
 
 // sanitizeNotificationTitle strips characters that can be used to inject
@@ -710,14 +773,21 @@ type basePushPayload struct {
 //   - ServerID: populated for server-channel pushes only (empty for DMs).
 //   - IsMention: surfaced even for the "dm" Type so future mention styling
 //     does not need a value-space tweak.
+//   - SenderDisplayName / ChannelName / ServerName: human-readable routing
+//     metadata so the client can re-render the notification (e.g. group by
+//     server). Sanitized server-side; safe to display. Title/Body already
+//     embed the same values in their final form for the OS-rendered banner.
 type messagePushPayload struct {
 	basePushPayload
-	ChannelID string `json:"channel_id"`
-	SenderID  string `json:"sender_id,omitempty"`
-	MessageID string `json:"message_id,omitempty"`
-	ServerID  string `json:"server_id,omitempty"`
-	IsMention string `json:"is_mention,omitempty"` // "true" or empty (string for FCM data-map parity).
-	Tag       string `json:"tag"`                  // OS collapse key.
+	ChannelID         string `json:"channel_id"`
+	SenderID          string `json:"sender_id,omitempty"`
+	MessageID         string `json:"message_id,omitempty"`
+	ServerID          string `json:"server_id,omitempty"`
+	IsMention         string `json:"is_mention,omitempty"` // "true" or empty (string for FCM data-map parity).
+	Tag               string `json:"tag"`                  // OS collapse key.
+	SenderDisplayName string `json:"sender_display_name,omitempty"`
+	ChannelName       string `json:"channel_name,omitempty"`
+	ServerName        string `json:"server_name,omitempty"`
 }
 
 // recoveryPushPayload is the JSON shape for a device-recovery push. Distinct
@@ -740,6 +810,12 @@ type pushTrigger struct {
 	IsMention bool
 	Title     string
 	Body      string
+	// Sanitized, human-readable routing metadata. Forwarded to the client
+	// (FCM data + JSON payload) so it can re-render the notification or
+	// group by server. Title/Body are already pre-built from these.
+	SenderDisplayName string
+	ChannelName       string
+	ServerName        string
 }
 
 // throttleKeyType returns the prefix used for the per-conversation Redis
@@ -781,12 +857,15 @@ func buildPushPayload(device *models.Device, t pushTrigger) messagePushPayload {
 			Title:  t.Title,
 			Body:   t.Body,
 		},
-		ChannelID: t.ChannelID,
-		SenderID:  t.SenderID,
-		MessageID: t.MessageID,
-		ServerID:  t.ServerID,
-		IsMention: mention,
-		Tag:       t.tag(),
+		ChannelID:         t.ChannelID,
+		SenderID:          t.SenderID,
+		MessageID:         t.MessageID,
+		ServerID:          t.ServerID,
+		IsMention:         mention,
+		Tag:               t.tag(),
+		SenderDisplayName: t.SenderDisplayName,
+		ChannelName:       t.ChannelName,
+		ServerName:        t.ServerName,
 	}
 }
 
@@ -856,8 +935,9 @@ func buildFCMMessage(device *models.Device, t pushTrigger) *messaging.Message {
 	tag := t.tag()
 	// Capacity hint covers the worst case (server-channel mention with all
 	// optional fields populated): 5 always-on + sender_id, message_id,
-	// server_id, is_mention. Avoids a rehash on map grow.
-	data := make(map[string]string, 9)
+	// server_id, is_mention, sender_display_name, channel_name, server_name.
+	// Avoids a rehash on map grow.
+	data := make(map[string]string, 12)
 	data["v"] = pushSchemaVersion
 	data["type"] = t.Kind
 	data["channel_id"] = t.ChannelID
@@ -874,6 +954,15 @@ func buildFCMMessage(device *models.Device, t pushTrigger) *messaging.Message {
 	}
 	if t.IsMention {
 		data["is_mention"] = "true"
+	}
+	if t.SenderDisplayName != "" {
+		data["sender_display_name"] = t.SenderDisplayName
+	}
+	if t.ChannelName != "" {
+		data["channel_name"] = t.ChannelName
+	}
+	if t.ServerName != "" {
+		data["server_name"] = t.ServerName
 	}
 	return &messaging.Message{
 		Token: device.PushToken,

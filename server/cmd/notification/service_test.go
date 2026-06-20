@@ -175,14 +175,14 @@ func TestDMTitle(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "display name preferred when set",
+			name:  "display name preferred when set, formatted as DM",
 			store: &stubUserStore{user: &models.User{DisplayName: "Alice", Username: "alice42"}},
-			want:  "Alice",
+			want:  "Alice (DM)",
 		},
 		{
 			name:  "username fallback when display name empty",
 			store: &stubUserStore{user: &models.User{Username: "alice42"}},
-			want:  "alice42",
+			want:  "alice42 (DM)",
 		},
 		{
 			name:  "generic fallback when both empty",
@@ -202,17 +202,17 @@ func TestDMTitle(t *testing.T) {
 		{
 			name:  "control chars stripped from display name",
 			store: &stubUserStore{user: &models.User{DisplayName: "Alice\nNotification"}},
-			want:  "Alice Notification",
+			want:  "Alice Notification (DM)",
 		},
 		{
 			name:  "RTL override stripped",
 			store: &stubUserStore{user: &models.User{DisplayName: "Alice‮ecila"}},
-			want:  "Aliceecila",
+			want:  "Aliceecila (DM)",
 		},
 		{
 			name:  "all-bidi falls through to username",
 			store: &stubUserStore{user: &models.User{DisplayName: "‮‭", Username: "alice"}},
-			want:  "alice",
+			want:  "alice (DM)",
 		},
 		{
 			name:  "all-control falls through to fallback",
@@ -226,6 +226,155 @@ func TestDMTitle(t *testing.T) {
 				t.Errorf("dmTitle = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestChannelPushTitle(t *testing.T) {
+	cases := []struct {
+		name, channel, server, want string
+	}{
+		{"both populated", "general", "Meza Devs", "#general · Meza Devs"},
+		{"channel only", "general", "", "#general"},
+		{"server only", "", "Meza Devs", "Meza Devs"},
+		{"both empty falls back", "", "", "New message"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := channelPushTitle(tc.channel, tc.server); got != tc.want {
+				t.Errorf("channelPushTitle(%q, %q) = %q, want %q", tc.channel, tc.server, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestChannelPushBody(t *testing.T) {
+	cases := []struct {
+		name, sender string
+		isMention    bool
+		want         string
+	}{
+		{"non-mention with sender", "Bob", false, "Bob: New message"},
+		{"non-mention without sender", "", false, "New message"},
+		{"mention with sender", "Bob", true, "Bob mentioned you"},
+		{"mention without sender", "", true, "You were mentioned"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := channelPushBody(tc.sender, tc.isMention); got != tc.want {
+				t.Errorf("channelPushBody(%q, %v) = %q, want %q", tc.sender, tc.isMention, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestBuildFCMMessage_ChannelMetadataFields(t *testing.T) {
+	// Asserts the new SenderDisplayName / ChannelName / ServerName fields
+	// flow through buildFCMMessage as data-map entries and that omitempty
+	// holds (DM-only path leaves channel/server name out).
+	device := &models.Device{ID: "d1", UserID: "u_recipient", Platform: "android", PushToken: "tok"}
+	tr := pushTrigger{
+		Kind:              "message",
+		ChannelID:         "c1",
+		SenderID:          "u_sender",
+		MessageID:         "m42",
+		ServerID:          "s1",
+		Title:             "#general · Meza Devs",
+		Body:              "Bob: New message",
+		SenderDisplayName: "Bob",
+		ChannelName:       "general",
+		ServerName:        "Meza Devs",
+	}
+	msg := buildFCMMessage(device, tr)
+
+	wantData := map[string]string{
+		"sender_display_name": "Bob",
+		"channel_name":        "general",
+		"server_name":         "Meza Devs",
+	}
+	for k, v := range wantData {
+		if got := msg.Data[k]; got != v {
+			t.Errorf("Data[%q] = %q, want %q", k, got, v)
+		}
+	}
+	if msg.Android == nil || msg.Android.Notification == nil || msg.Android.Notification.Title != "#general · Meza Devs" {
+		t.Errorf("Android Title = %v, want #general · Meza Devs", msg.Android.Notification)
+	}
+	if msg.Android.Notification.Body != "Bob: New message" {
+		t.Errorf("Android Body = %q, want %q", msg.Android.Notification.Body, "Bob: New message")
+	}
+}
+
+func TestBuildFCMMessage_OmitsEmptyMetadataFields(t *testing.T) {
+	// DM path leaves channel/server name empty; assert the FCM data map
+	// omits those keys rather than emitting empty strings.
+	device := &models.Device{ID: "d1", UserID: "u_recipient", Platform: "android", PushToken: "tok"}
+	tr := pushTrigger{
+		Kind:              "dm",
+		ChannelID:         "c1",
+		SenderID:          "u_sender",
+		Title:             "Alice (DM)",
+		Body:              "New message",
+		SenderDisplayName: "Alice",
+	}
+	msg := buildFCMMessage(device, tr)
+	for _, banned := range []string{"channel_name", "server_name"} {
+		if _, ok := msg.Data[banned]; ok {
+			t.Errorf("Data[%q] should be absent for DM, got %q", banned, msg.Data[banned])
+		}
+	}
+	if msg.Data["sender_display_name"] != "Alice" {
+		t.Errorf("Data[sender_display_name] = %q, want Alice", msg.Data["sender_display_name"])
+	}
+}
+
+func TestBuildPushPayload_IncludesNewMetadata(t *testing.T) {
+	// Web-push JSON payload must propagate the new sender_display_name /
+	// channel_name / server_name fields and respect omitempty when they are
+	// blank.
+	device := &models.Device{ID: "d1", UserID: "u_recipient"}
+	full := pushTrigger{
+		Kind:              "message",
+		ChannelID:         "c1",
+		SenderID:          "u_sender",
+		ServerID:          "s1",
+		Title:             "#general · Meza Devs",
+		Body:              "Bob: New message",
+		SenderDisplayName: "Bob",
+		ChannelName:       "general",
+		ServerName:        "Meza Devs",
+	}
+	payload := buildPushPayload(device, full)
+	if payload.SenderDisplayName != "Bob" || payload.ChannelName != "general" || payload.ServerName != "Meza Devs" {
+		t.Errorf("metadata fields lost in payload: %+v", payload)
+	}
+	b, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	for _, want := range []string{
+		`"sender_display_name":"Bob"`,
+		`"channel_name":"general"`,
+		`"server_name":"Meza Devs"`,
+	} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("payload JSON missing %q in %s", want, b)
+		}
+	}
+
+	// Empty metadata must be omitted (omitempty).
+	empty := pushTrigger{Kind: "dm", ChannelID: "c1", Title: "Direct message", Body: "New message"}
+	b2, err := json.Marshal(buildPushPayload(device, empty))
+	if err != nil {
+		t.Fatalf("marshal empty: %v", err)
+	}
+	for _, banned := range []string{
+		`"sender_display_name":""`,
+		`"channel_name":""`,
+		`"server_name":""`,
+	} {
+		if strings.Contains(string(b2), banned) {
+			t.Errorf("empty metadata should be omitted, found %q in %s", banned, b2)
+		}
 	}
 }
 
