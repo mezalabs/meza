@@ -5,9 +5,9 @@ import './index.css';
 import {
   applyDeepLinkInvite,
   bootstrapSession,
-  ElectronBadgeAdapter,
   clearPendingPushNav,
   consumePendingPushNav,
+  ElectronBadgeAdapter,
   gatewayConnect,
   gatewayDisconnect,
   initEmojiCachePersistence,

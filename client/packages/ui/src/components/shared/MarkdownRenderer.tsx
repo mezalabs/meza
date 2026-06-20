@@ -16,6 +16,7 @@ import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { MentionBadge } from '../chat/MentionBadge.tsx';
 import { EMOJI_BASE_SIZE_PX } from './emojiConstants.ts';
+import { markdownListComponents } from './markdownListComponents.tsx';
 import { MEZA_SANITIZE_SCHEMA } from './markdownSanitizeSchema.ts';
 import { remarkMezaEmoji } from './remarkMezaEmoji.ts';
 import { remarkMezaMention } from './remarkMezaMention.ts';
@@ -207,29 +208,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         </blockquote>
       ),
 
-      // Lists
-      ul: ({ children }: ComponentPropsWithoutRef<'ul'>) => (
-        <ul className="my-1 ml-4 list-disc space-y-0.5">{children}</ul>
-      ),
-      ol: ({ children }: ComponentPropsWithoutRef<'ol'>) => (
-        <ol className="my-1 ml-4 list-decimal space-y-0.5">{children}</ol>
-      ),
-      li: ({
-        children,
-        className,
-        ...props
-      }: ComponentPropsWithoutRef<'li'>) => {
-        // Task list items get a special class from remark-gfm
-        const isTask = className?.includes('task-list-item');
-        return (
-          <li
-            className={isTask ? 'list-none -ml-4 flex items-start gap-1.5' : ''}
-            {...props}
-          >
-            {children}
-          </li>
-        );
-      },
+      // Lists (extracted so the numbering contract can be unit-tested)
+      ...markdownListComponents,
 
       // Horizontal rules
       hr: () => <hr className="my-2 border-border" />,
