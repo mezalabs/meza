@@ -378,33 +378,25 @@ func (s *notificationService) handleChannelEvent(ctx context.Context, msg *nats.
 		return
 	}
 
-	// Resolve sender / channel / server names once per event for richer
-	// notification context. All three are public routing metadata, not
-	// E2EE-protected content. Lookups are PK queries; failures degrade
-	// gracefully (Title/Body fall back to less-specific text).
-	senderName := resolveSenderName(ctx, s.userStore, senderID)
+	// Channel name is free — it's already on the GetChannel result fetched
+	// above. Sender and server names each require an extra lookup, so they're
+	// deferred to processServerNotifications and resolved only once we know at
+	// least one offline recipient will actually receive a push. message_create
+	// is the hottest event in the system; an active channel where everyone is
+	// online must not pay for names that are never delivered.
 	channelName := sanitizeNotificationTitle(channel.Name)
-	serverName := ""
-	if server, err := s.chatStore.GetServer(ctx, serverID); err != nil {
-		slog.Warn("push: server lookup failed", "err", err, "server", serverID)
-	} else if server != nil {
-		serverName = sanitizeNotificationTitle(server.Name)
-	}
 
-	// Build the trigger template for this server-channel event. The per-user
-	// IsMention flag drives Body wording — IsMention and Body are overridden
-	// per target inside processServerNotifications based on mention status.
+	// Build the trigger template for this server-channel event. Title/Body and
+	// the sender/server names are filled in per dispatch inside
+	// processServerNotifications, after offline recipients are known; the
+	// per-user IsMention flag drives Body wording there.
 	base := pushTrigger{
-		Kind:              "message",
-		ChannelID:         channelID,
-		SenderID:          senderID,
-		MessageID:         mc.MessageCreate.Id,
-		ServerID:          serverID,
-		Title:             channelPushTitle(channelName, serverName),
-		Body:              channelPushBody(senderName, false),
-		SenderDisplayName: senderName,
-		ChannelName:       channelName,
-		ServerName:        serverName,
+		Kind:        "message",
+		ChannelID:   channelID,
+		SenderID:    senderID,
+		MessageID:   mc.MessageCreate.Id,
+		ServerID:    serverID,
+		ChannelName: channelName,
 	}
 
 	// For @everyone mentions, dispatch asynchronously with bounded concurrency
@@ -557,6 +549,16 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 		return
 	}
 
+	// Resolve sender + server names now that at least one offline recipient is
+	// confirmed. Deferred from handleChannelEvent so active channels where
+	// everyone is online never pay for these lookups (message_create is the
+	// hottest event in the system). Resolved once and reused across all offline
+	// targets. For @everyone fan-out this runs once per batch, but @everyone is
+	// rate-limited to 1/60s/server so the duplication is negligible. Both names
+	// are best-effort — failures degrade to less-specific Title/Body.
+	senderName, serverName := s.resolveChannelEventContext(ctx, base.SenderID, base.ServerID)
+	title := channelPushTitle(base.ChannelName, serverName)
+
 	// Batch Redis pipeline: throttle checks for all offline targets at once.
 	// Throttle: 1 push per channel per user per type within the throttle window.
 	throttlePipe := s.rdb.Pipeline()
@@ -565,9 +567,12 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 	for i, ot := range offlineTargets {
 		t := base
 		t.IsMention = ot.isMention
-		// Body wording depends on per-target mention status. Title (location)
-		// stays constant across targets in the same channel event.
-		t.Body = channelPushBody(base.SenderDisplayName, ot.isMention)
+		// Title (location) is constant across targets; Body wording depends on
+		// per-target mention status.
+		t.Title = title
+		t.Body = channelPushBody(senderName, ot.isMention)
+		t.SenderDisplayName = senderName
+		t.ServerName = serverName
 		throttleTriggers[i] = t
 		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), ot.userID, channelID)
 		throttleCmds[i] = throttlePipe.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second)
@@ -666,6 +671,27 @@ func resolveSenderName(ctx context.Context, store userResolver, senderID string)
 		return name
 	}
 	return sanitizeNotificationTitle(username)
+}
+
+// resolveChannelEventContext resolves the sender display name and server name
+// for a server-channel push event. Both are best-effort routing metadata: a
+// failed lookup yields "" and the Title/Body fall back to less-specific text.
+// Callers should defer this until at least one offline recipient is known, so
+// active (all-online) channels don't pay for names that are never delivered.
+func (s *notificationService) resolveChannelEventContext(ctx context.Context, senderID, serverID string) (senderName, serverName string) {
+	senderName = resolveSenderName(ctx, s.userStore, senderID)
+	if serverID == "" {
+		return senderName, ""
+	}
+	server, err := s.chatStore.GetServer(ctx, serverID)
+	if err != nil {
+		slog.Warn("push: server lookup failed", "err", err, "server", serverID)
+		return senderName, ""
+	}
+	if server != nil {
+		serverName = sanitizeNotificationTitle(server.Name)
+	}
+	return senderName, serverName
 }
 
 // dmTitle formats a DM push notification Title as "{Sender} (DM)" when the
