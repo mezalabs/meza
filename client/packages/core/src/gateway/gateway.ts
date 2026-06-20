@@ -116,6 +116,14 @@ let lastHeartbeatAck = 0;
 let hasConnectedBefore = false;
 let lastRedistributeTime = 0;
 const REDISTRIBUTE_COOLDOWN_MS = 5_000; // debounce flapping connections; UPSERT makes dupes safe
+let lastReconnectRefetch = 0;
+// Coalesce the reconnect-driven refetch. A flaky network can connect → READY →
+// drop repeatedly, and onopen resets the backoff to 1s, so without this the full
+// refetch fan-out (ChannelView messages + every Sidebar list) would re-fire about
+// once a second. Reset only on a full teardown (logout), never on a preserve-
+// reconnect pause, since connect()'s own teardown preserves — resetting there
+// would defeat the cooldown for the flap case it exists to throttle.
+const RECONNECT_REFETCH_COOLDOWN_MS = 3_000;
 let isOnline =
   typeof navigator !== 'undefined' ? (navigator.onLine ?? true) : true;
 
@@ -366,7 +374,11 @@ function sendEnvelope(
 }
 
 export function connect(token: string) {
-  disconnect();
+  // Tear down any prior socket but preserve reconnect state: a connect() that
+  // follows an earlier successful session (network blip, app resume) is a
+  // reconnect, so the next READY should bump reconnectCount and refetch. Only
+  // an explicit external disconnect (logout) resets that flag.
+  disconnect({ preserveReconnect: true });
   const gen = ++generation;
 
   const gw = useGatewayStore.getState();
@@ -471,8 +483,14 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
             ),
           );
         }
-        if (hasConnectedBefore) {
-          // Reconnect: bump counter so UI re-fetches, reset ephemeral stores
+        if (
+          hasConnectedBefore &&
+          Date.now() - lastReconnectRefetch > RECONNECT_REFETCH_COOLDOWN_MS
+        ) {
+          // Reconnect: bump counter so UI re-fetches, reset ephemeral stores.
+          // Throttled (see RECONNECT_REFETCH_COOLDOWN_MS) so a flapping socket
+          // collapses into one refetch instead of one per reconnect.
+          lastReconnectRefetch = Date.now();
           useGatewayStore.getState().incrementReconnectCount();
           useTypingStore.getState().reset();
           usePresenceStore.getState().reset();
@@ -1175,7 +1193,18 @@ function scheduleReconnect() {
   reconnectDelay = Math.min(reconnectDelay * 2, 30_000);
 }
 
-export function disconnect() {
+/**
+ * Tear down the gateway connection.
+ *
+ * @param opts.preserveReconnect - When true, keep the internal
+ *   `hasConnectedBefore` flag set so the next successful connect is treated as a
+ *   reconnect (bumps `reconnectCount`, which makes the UI refetch messages).
+ *   Used when pausing on app background: messages can arrive via push while the
+ *   socket is closed, so on resume we want a refetch. Defaults to false
+ *   (logout/teardown), which resets the flag so the next login is a cold start
+ *   with no spurious refetch.
+ */
+export function disconnect(opts?: { preserveReconnect?: boolean }) {
   updatePresence(PresenceStatus.OFFLINE);
   usePresenceStore.getState().setMyStatus(PresenceStatus.OFFLINE);
   generation++;
@@ -1196,7 +1225,10 @@ export function disconnect() {
   keyRetryInFlight.clear();
   signingKeyCache.clear();
   lastHeartbeatAck = 0;
-  hasConnectedBefore = false;
+  if (!opts?.preserveReconnect) {
+    hasConnectedBefore = false;
+    lastReconnectRefetch = 0;
+  }
   useGatewayStore.getState().setStatus('disconnected');
 }
 

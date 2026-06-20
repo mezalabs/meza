@@ -76,7 +76,12 @@ function setupAppLifecycle(App: typeof import('@capacitor/app').App): void {
     if (!isAuthenticated || !accessToken) return;
 
     if (!isActive) {
-      gatewayDisconnect();
+      // Pause, don't fully reset: keep reconnect state so resuming treats the
+      // next connect as a reconnect and refetches the channel. New messages
+      // can arrive via push while the socket is closed (never over the closed
+      // websocket), so without this the open channel stays stale until the
+      // user manually re-selects it.
+      gatewayDisconnect({ preserveReconnect: true });
       return;
     }
 
