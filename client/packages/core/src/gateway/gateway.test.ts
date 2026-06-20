@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../store/auth.ts';
 import { useChannelStore } from '../store/channels.ts';
 import { useEmojiStore } from '../store/emojis.ts';
+import { useGatewayStore } from '../store/gateway.ts';
 import { useMemberStore } from '../store/members.ts';
 import { useMessageStore } from '../store/messages.ts';
 import { usePinStore } from '../store/pins.ts';
@@ -23,12 +24,15 @@ import { useVoiceStore } from '../store/voice.ts';
 // ---------------------------------------------------------------------------
 vi.mock('../api/presence.ts', () => ({
   updatePresence: vi.fn(),
+  getMyPresence: vi.fn().mockResolvedValue(null),
 }));
 
 const mockListChannels = vi.fn().mockResolvedValue([]);
 vi.mock('../api/chat.ts', () => ({
   listChannels: (...args: unknown[]) => mockListChannels(...args),
   listDMChannels: vi.fn().mockResolvedValue([]),
+  listEmojis: vi.fn().mockResolvedValue([]),
+  listUserEmojis: vi.fn().mockResolvedValue([]),
 }));
 
 // ---------------------------------------------------------------------------
@@ -1276,6 +1280,87 @@ describe('gateway', () => {
 
       // Nothing should have been sent or scheduled
       expect(stale.send).not.toHaveBeenCalled();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Reconnect refetch (warm resume / network blip)
+  //
+  // A READY bumps reconnectCount only when we've connected before, which is
+  // what drives ChannelView to refetch the open channel. The flag must survive
+  // a reconnect (connect() tears down the old socket) but reset on logout.
+  // -----------------------------------------------------------------------
+  describe('reconnect refetch', () => {
+    function deliverReady(sock: MockWebSocket) {
+      const payload = new TextEncoder().encode(
+        JSON.stringify({ user_id: 'me', channel_ids: [] }),
+      );
+      deliverEnvelope(sock, GatewayOpCode.GATEWAY_OP_READY, payload);
+    }
+
+    it('does not bump reconnectCount on the first (cold) connection', async () => {
+      const sock = await connectAndOpen();
+      const before = useGatewayStore.getState().reconnectCount;
+      deliverReady(sock);
+      expect(useGatewayStore.getState().reconnectCount).toBe(before);
+    });
+
+    it('bumps reconnectCount on a reconnect after a network blip', async () => {
+      useAuthStore.setState({ accessToken: 'tok' });
+
+      let sock = await connectAndOpen();
+      deliverReady(sock); // cold connect — sets the "connected before" flag
+      const before = useGatewayStore.getState().reconnectCount;
+
+      // Socket drops and the scheduled reconnect fires (connect() runs again).
+      sock.onclose?.();
+      vi.advanceTimersByTime(1000);
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+
+      expect(useGatewayStore.getState().reconnectCount).toBe(before + 1);
+    });
+
+    it('bumps reconnectCount on resume after a preserveReconnect (background) disconnect', async () => {
+      const { connect, disconnect } = await import('./gateway.ts');
+
+      connect('tok');
+      let sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock); // cold connect
+      const before = useGatewayStore.getState().reconnectCount;
+
+      // App backgrounded: pause without resetting reconnect state.
+      disconnect({ preserveReconnect: true });
+
+      // App resumed: the next READY is treated as a reconnect → refetch.
+      connect('tok');
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+
+      expect(useGatewayStore.getState().reconnectCount).toBe(before + 1);
+    });
+
+    it('does not bump reconnectCount after a full (logout) disconnect', async () => {
+      const { connect, disconnect } = await import('./gateway.ts');
+
+      connect('tok');
+      let sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock); // cold connect
+
+      disconnect(); // logout — full reset clears reconnect state
+      const before = useGatewayStore.getState().reconnectCount;
+
+      // Next login is a cold start, so no spurious refetch bump.
+      connect('tok');
+      sock = latestSocket();
+      openSocket(sock);
+      deliverReady(sock);
+
+      expect(useGatewayStore.getState().reconnectCount).toBe(before);
     });
   });
 
