@@ -16,6 +16,7 @@
     "build": "pnpm --filter @meza/web build && cap sync"
   },
   "dependencies": {
+    "@capawesome/capacitor-badge": "^7",
     "@capacitor/app": "^7",
     "@capacitor/core": "^7",
     "@capacitor/keyboard": "^7.0.4",

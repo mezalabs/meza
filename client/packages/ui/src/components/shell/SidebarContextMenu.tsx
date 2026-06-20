@@ -84,7 +84,12 @@ export function SidebarContextMenu({
     const messages = useMessageStore.getState().byChannel[channelId];
     const lastMsg = messages?.[messages.length - 1];
     if (lastMsg) {
-      ackMessage(channelId, lastMsg.id).catch(() => {});
+      // Optimistically clear the unread count locally before the RPC round-trip,
+      // matching the keybind mark-channel-read behavior.
+      useReadStateStore.getState().updateReadState(channelId, lastMsg.id, 0);
+      ackMessage(channelId, lastMsg.id).catch((err) =>
+        console.warn('[MarkAsRead] ack failed:', err),
+      );
     }
   };
 
