@@ -91,6 +91,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start the background reaper that deletes stale device rows.
+	svc.startDeviceReaper(ctx)
+
 	// Build interceptor options: user existence check, federation boundary,
 	// and optional Ed25519 dual validation.
 	interceptorOpts := []auth.InterceptorOption{

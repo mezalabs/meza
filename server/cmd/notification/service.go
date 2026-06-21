@@ -46,6 +46,17 @@ const (
 	// everyoneConcurrency is the max number of goroutines processing
 	// @everyone batches concurrently.
 	everyoneConcurrency = 8
+
+	// deviceReaperInterval is how often the stale-device reaper runs.
+	deviceReaperInterval = 24 * time.Hour
+
+	// staleDeviceThreshold is the age past which a stale web device row is reaped.
+	// last_seen_at is refreshed when a device opens a gateway WebSocket (see the
+	// TouchLastSeen call in the connect handler) or re-registers on login, so a web
+	// subscription whose tab/PWA is still used survives this window. One whose
+	// browser is permanently gone (closed/uninstalled) never refreshes and ages
+	// out, re-registering on the user's next login.
+	staleDeviceThreshold = 60 * 24 * time.Hour
 )
 
 // userResolver is the narrow slice of AuthStorer the notification service
@@ -213,6 +224,11 @@ func (s *notificationService) StartConsumers(ctx context.Context) error {
 		if err := s.rdb.Expire(ctx, key, connectedDevicesTTL).Err(); err != nil {
 			slog.Error("redis expire connected devices", "err", err, "user", userID)
 		}
+		// Bump last_seen_at so the stale-device reaper treats actively-connecting
+		// devices as live. Best-effort: a failed touch must not drop the connect event.
+		if err := s.deviceStore.TouchLastSeen(ctx, userID, deviceID); err != nil {
+			slog.Error("touch device last_seen on connect", "err", err, "user", userID, "device", deviceID)
+		}
 	}); err != nil {
 		return fmt.Errorf("subscribe device connected: %w", err)
 	}
@@ -266,6 +282,43 @@ func (s *notificationService) StartConsumers(ctx context.Context) error {
 
 	slog.Info("notification consumers started")
 	return nil
+}
+
+// startDeviceReaper periodically deletes stale web device rows whose last_seen_at
+// is older than staleDeviceThreshold (see that const for the liveness contract).
+// Reaped rows are recreated on the device's next registration.
+//
+// It prunes once at startup so that a frequently-redeployed service still sweeps
+// (time.NewTicker does not fire immediately, so a restart more often than once a
+// day would otherwise never reach a tick), then on the ticker. The prune is an
+// idempotent set-based DELETE, so it is safe to run unsynchronized across multiple
+// notification replicas. The goroutine exits when ctx is cancelled (service shutdown).
+func (s *notificationService) startDeviceReaper(ctx context.Context) {
+	go func() {
+		ticker := time.NewTicker(deviceReaperInterval)
+		defer ticker.Stop()
+		s.reapStaleDevices(ctx)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.reapStaleDevices(ctx)
+			}
+		}
+	}()
+}
+
+// reapStaleDevices runs a single prune pass and logs the outcome.
+func (s *notificationService) reapStaleDevices(ctx context.Context) {
+	n, err := s.deviceStore.PruneStaleWebDevices(ctx, staleDeviceThreshold)
+	if err != nil {
+		slog.Error("reap stale web devices", "err", err)
+		return
+	}
+	if n > 0 {
+		slog.Info("reaped stale web devices", "count", n, "older_than", staleDeviceThreshold.String())
+	}
 }
 
 // handleChannelEvent processes a channel delivery event and dispatches push

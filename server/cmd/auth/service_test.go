@@ -429,7 +429,7 @@ func (m *mockDeviceStore) DeleteAllOtherDevices(_ context.Context, userID, curre
 
 func (m *mockDeviceStore) TouchLastSeen(_ context.Context, _, _ string) error { return nil }
 
-func (m *mockDeviceStore) PruneStaleDevices(_ context.Context, _ time.Duration) (int64, error) {
+func (m *mockDeviceStore) PruneStaleWebDevices(_ context.Context, _ time.Duration) (int64, error) {
 	return 0, nil
 }
 
