@@ -142,13 +142,21 @@ export async function createContext(
       await page.goto('/favicon.ico', { waitUntil: 'commit' });
       await page.evaluate(async (kb: number[]) => {
         await new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('meza-crypto', 4);
+          // Mirror the app's schema (packages/core/src/crypto/storage.ts):
+          // open at DB_VERSION 5 and create every store so the app attaches to
+          // a consistent schema and skips its own upgrade. Keep in sync with
+          // storage.ts when the crypto DB version changes.
+          const req = indexedDB.open('meza-crypto', 5);
           req.onupgradeneeded = () => {
             const db = req.result;
             if (!db.objectStoreNames.contains('key-bundle'))
               db.createObjectStore('key-bundle', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('channel-keys'))
               db.createObjectStore('channel-keys', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('cached-keys'))
+              db.createObjectStore('cached-keys', { keyPath: 'userId' });
+            if (!db.objectStoreNames.contains('verification'))
+              db.createObjectStore('verification', { keyPath: 'userId' });
           };
           req.onsuccess = () => {
             const db = req.result;
@@ -190,9 +198,12 @@ export async function saveAuth(
         const sk = sessionStorage.getItem('meza-sk');
         if (!mk) return null;
 
-        // Read key bundle from IndexedDB
+        // Read key bundle from IndexedDB. Open WITHOUT a version so we attach
+        // to whatever version the app created (currently v5) rather than
+        // forcing a downgrade, which throws VersionError and silently loses
+        // the bundle (leaving replayed users unauthenticated).
         const kb = await new Promise<number[] | null>((resolve) => {
-          const req = indexedDB.open('meza-crypto', 4);
+          const req = indexedDB.open('meza-crypto');
           req.onerror = () => resolve(null);
           req.onsuccess = () => {
             const db = req.result;

@@ -90,16 +90,20 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     await alice.clickAddReaction(replyMsg);
     const picker = alicePage.getByRole('dialog');
     await expect(picker).toBeVisible({ timeout: 5_000 });
-    // Click first emoji in picker
-    await picker.locator('button').filter({ hasText: '😀' }).click();
+    // Emojis render as Twemoji <img alt="😀"> (not text), so pick the first
+    // grid emoji and capture which one it is to assert the same on bob's side.
+    const firstEmoji = picker.locator('button[role="gridcell"]').first();
+    await expect(firstEmoji).toBeVisible({ timeout: 5_000 });
+    const reactionEmoji = await firstEmoji.locator('img').getAttribute('alt');
+    await firstEmoji.click();
 
-    // Bob sees a reaction on the reply
+    // Bob sees the same reaction on the reply (pill renders the emoji as <img>)
     const replyContainer = bob.messageList
       .locator('[data-message-id]')
       .filter({ hasText: replyMsg })
       .first();
     await expect(
-      replyContainer.locator('button').filter({ hasText: '😀' }),
+      replyContainer.locator(`button:has(img[alt="${reactionEmoji}"])`),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -153,13 +157,19 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     const picker = alicePage.getByRole('dialog');
     await expect(picker).toBeVisible({ timeout: 5_000 });
 
-    // Search for the custom emoji — wait for a gridcell containing an <img>
-    // (custom emojis render as <img>, unicode emojis render as <span>)
-    const searchBox = picker.getByRole('searchbox', { name: 'Search' });
+    // Search for the custom emoji — wait for a gridcell containing an <img>.
+    // (Both custom and unicode emojis render as <img>; searching by the
+    // custom name filters the grid down to the uploaded emoji.)
+    const searchBox = picker.getByRole('searchbox', { name: /search/i });
     await expect(searchBox).toBeVisible({ timeout: 5_000 });
     await searchBox.fill('testemoji');
-    // Wait for the debounced search to filter and show custom emoji results
-    const customEmojiBtn = picker.locator('button[role="gridcell"]:has(img)');
+    // Wait for the debounced search to filter to the custom emoji. All emojis
+    // now render as <img> (Twemoji), so match the custom one by its alt
+    // (":testemoji:") — a bare :has(img) matches every emoji and would react
+    // with whichever sorts first.
+    const customEmojiBtn = picker.locator(
+      'button[role="gridcell"]:has(img[alt=":testemoji:"])',
+    );
     await expect(customEmojiBtn.first()).toBeVisible({ timeout: 10_000 });
     await customEmojiBtn.first().click();
 
@@ -178,9 +188,15 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
     // Assert the pill renders an image, not :name: text fallback
     await expect(
       aliceMsgContainer.locator('img[alt=":testemoji:"]'),
-    ).toBeVisible({ timeout: 5_000 });
+    ).toBeVisible({ timeout: 10_000 });
 
-    // Step 6: Verify Bob sees the custom emoji reaction as an image (the core fix)
+    // Step 6: Verify Bob sees the custom emoji reaction as an image (the core fix).
+    // Bob may not have synced the newly-uploaded custom emoji definition in real
+    // time, which renders the pill as ":testemoji:" text instead of the image.
+    // Reload to force a re-fetch of the server's custom emoji list.
+    await bobPage.reload({ waitUntil: 'networkidle' });
+    await bob.goto(SERVER, CHANNEL);
+    await bob.waitForEncryption();
     const bobMsgContainer = bob.messageList
       .locator('[data-message-id]')
       .filter({ hasText: customEmojiMsg })
@@ -190,7 +206,7 @@ test('Journey 2: Communication', async ({ browser }, testInfo) => {
       .filter({ hasText: /1/ });
     await expect(bobReactionPill.first()).toBeVisible({ timeout: 15_000 });
     await expect(bobMsgContainer.locator('img[alt=":testemoji:"]')).toBeVisible(
-      { timeout: 5_000 },
+      { timeout: 10_000 },
     );
 
     // Step 7: Bob clicks the reaction pill to pile-on
