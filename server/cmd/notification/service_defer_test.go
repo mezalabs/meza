@@ -59,6 +59,10 @@ func (f *fakeDeviceStore) GetPushEnabledDevicesForUsers(_ context.Context, _ []s
 	return f.devices, nil
 }
 
+func (f *fakeDeviceStore) GetPushEnabledDevices(_ context.Context, userID string) ([]*models.Device, error) {
+	return f.devices[userID], nil
+}
+
 type fakePrefStore struct {
 	store.NotificationPreferenceStorer
 	levels map[string]string
@@ -138,6 +142,72 @@ func TestProcessServerNotifications_DefersNameLookups(t *testing.T) {
 		}
 		if cs.getServerCalls != 1 {
 			t.Errorf("GetServer ran %d times for one offline recipient, want 1", cs.getServerCalls)
+		}
+	})
+}
+
+// TestNotifyOfflineDevices_FanOutAndThrottle guards the DM push delivery fix:
+// a single notification must reach every offline device (not just the first),
+// while still debouncing repeat messages and skipping online devices. The
+// device order here mirrors the production bug — an old web subscription sorts
+// ahead of the user's phone, 2xx's silently against a closed browser, and under
+// the previous per-device throttle break starved the iOS device of any push.
+func TestNotifyOfflineDevices_FanOutAndThrottle(t *testing.T) {
+	const userID = "u_dm"
+	newDevices := func() []*models.Device {
+		return []*models.Device{
+			{ID: "d_web", UserID: userID, Platform: "web", PushEndpoint: "https://push.example/x"},
+			{ID: "d_ios", UserID: userID, Platform: "ios", PushToken: "tok"},
+		}
+	}
+	trigger := pushTrigger{Kind: "dm", ChannelID: "c_dm"}
+
+	record := func(s *notificationService, got *[]string) {
+		s.pushSender = func(_ context.Context, d *models.Device, _ pushTrigger) error {
+			*got = append(*got, d.ID)
+			return nil
+		}
+	}
+
+	t.Run("fans out to every offline device, not just the first", func(t *testing.T) {
+		ds := &fakeDeviceStore{devices: map[string][]*models.Device{userID: newDevices()}}
+		s, _ := newDeferTestService(t, nil, nil, ds, nil)
+		var got []string
+		record(s, &got)
+
+		s.notifyOfflineDevices(context.Background(), userID, trigger)
+
+		if len(got) != 2 || got[0] != "d_web" || got[1] != "d_ios" {
+			t.Fatalf("dispatched to %v, want [d_web d_ios]; a dormant first device must not starve the rest", got)
+		}
+	})
+
+	t.Run("debounces repeat messages for the same conversation", func(t *testing.T) {
+		ds := &fakeDeviceStore{devices: map[string][]*models.Device{userID: newDevices()}}
+		s, _ := newDeferTestService(t, nil, nil, ds, nil)
+		var got []string
+		record(s, &got)
+
+		s.notifyOfflineDevices(context.Background(), userID, trigger)
+		got = nil
+		s.notifyOfflineDevices(context.Background(), userID, trigger)
+
+		if len(got) != 0 {
+			t.Fatalf("second call within the throttle window dispatched to %v, want none", got)
+		}
+	})
+
+	t.Run("skips devices connected over websocket", func(t *testing.T) {
+		ds := &fakeDeviceStore{devices: map[string][]*models.Device{userID: newDevices()}}
+		s, mr := newDeferTestService(t, nil, nil, ds, nil)
+		mr.SetAdd(connectedDevicesPrefix+userID, "d_web") // web is online
+		var got []string
+		record(s, &got)
+
+		s.notifyOfflineDevices(context.Background(), userID, trigger)
+
+		if len(got) != 1 || got[0] != "d_ios" {
+			t.Fatalf("dispatched to %v, want only [d_ios] (web is online)", got)
 		}
 	})
 }
