@@ -197,17 +197,27 @@ func (s *DeviceStore) TouchLastSeen(ctx context.Context, userID, deviceID string
 	return nil
 }
 
-func (s *DeviceStore) PruneStaleDevices(ctx context.Context, olderThan time.Duration) (int64, error) {
-	ctx, cancel := context.WithTimeout(ctx, defaultQueryTimeout)
+// maintenanceQueryTimeout bounds background maintenance queries (the device
+// reaper's bulk DELETE) which have no request-latency SLA and can legitimately
+// run longer than defaultQueryTimeout — a large first sweep under the 5s request
+// timeout would otherwise cancel, roll back, and reap nothing every run.
+const maintenanceQueryTimeout = 2 * time.Minute
+
+// PruneStaleWebDevices deletes web device rows whose last_seen_at is older than
+// olderThan. Scoped to platform='web': web push subscriptions never return
+// 404/410 while dormant-but-valid, so they linger forever; iOS/Android rows
+// self-clean via FCM unregister, so they are intentionally left untouched.
+func (s *DeviceStore) PruneStaleWebDevices(ctx context.Context, olderThan time.Duration) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, maintenanceQueryTimeout)
 	defer cancel()
 
 	cutoff := time.Now().Add(-olderThan)
 	tag, err := s.pool.Exec(ctx,
-		`DELETE FROM devices WHERE last_seen_at < $1`,
+		`DELETE FROM devices WHERE platform = 'web' AND last_seen_at < $1`,
 		cutoff,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("prune stale devices: %w", err)
+		return 0, fmt.Errorf("prune stale web devices: %w", err)
 	}
 	return tag.RowsAffected(), nil
 }

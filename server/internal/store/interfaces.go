@@ -363,7 +363,7 @@ type DeviceStorer interface {
 	DeleteDevice(ctx context.Context, userID, deviceID string) error
 	DeleteAllOtherDevices(ctx context.Context, userID, currentDeviceID string) ([]string, error)
 	TouchLastSeen(ctx context.Context, userID, deviceID string) error
-	PruneStaleDevices(ctx context.Context, olderThan time.Duration) (int64, error)
+	PruneStaleWebDevices(ctx context.Context, olderThan time.Duration) (int64, error)
 }
 
 // NotificationPreferenceStorer provides access to notification preference data in Postgres.
