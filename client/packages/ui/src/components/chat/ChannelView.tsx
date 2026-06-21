@@ -269,6 +269,10 @@ export function ChannelView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const wasNearBottomRef = useRef(true);
   const lastAckedIdRef = useRef<string | null>(null);
+  // Ref to the "New Activity" divider, used to detect when all unread
+  // messages are visible on screen so the floating indicator can auto-dismiss.
+  const unreadDividerRef = useRef<HTMLDivElement>(null);
+  const autoDismissTimerRef = useRef<number | null>(null);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const reconnectCount = useGatewayStore((s) => s.reconnectCount);
   const needsEncryption = true; // Universal E2EE: all channels encrypted
@@ -587,6 +591,61 @@ export function ChannelView({
     }
   }, [messages.length, ackLatest]);
 
+  const clearAutoDismissTimer = useCallback(() => {
+    if (autoDismissTimerRef.current !== null) {
+      clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = null;
+    }
+  }, []);
+
+  // True when the "New Activity" divider is within the scroll viewport. The
+  // list opens pinned to the bottom, so the newest unread are already on screen
+  // and the divider only comes into view once the user has caught up to where
+  // they left off — either because every new message fit at once, or because
+  // they scrolled up through a longer run to reach it. Either way, by this point
+  // they've seen all the new messages.
+  const unreadDividerVisible = useCallback(() => {
+    const el = scrollRef.current;
+    const divider = unreadDividerRef.current;
+    if (!el || !divider) return false;
+    const containerRect = el.getBoundingClientRect();
+    const dividerRect = divider.getBoundingClientRect();
+    return (
+      dividerRect.bottom > containerRect.top &&
+      dividerRect.top < containerRect.bottom
+    );
+  }, []);
+
+  // Auto-dismiss the floating unread indicator once the user has seen all the
+  // new messages (i.e. reached the unread divider). We require the condition to
+  // hold for 500ms so a quick scroll past doesn't dismiss it prematurely.
+  const maybeAutoDismissUnread = useCallback(() => {
+    if (!unreadSnapshot) {
+      clearAutoDismissTimer();
+      return;
+    }
+    if (unreadDividerVisible()) {
+      if (autoDismissTimerRef.current === null) {
+        autoDismissTimerRef.current = window.setTimeout(() => {
+          autoDismissTimerRef.current = null;
+          // Re-check in case the view scrolled during the delay.
+          if (unreadDividerVisible()) setUnreadSnapshot(null);
+        }, 500);
+      }
+    } else {
+      clearAutoDismissTimer();
+    }
+  }, [unreadSnapshot, unreadDividerVisible, clearAutoDismissTimer]);
+
+  // Re-evaluate auto-dismiss after the list renders / scroll settles (initial
+  // load, new messages, snapshot changes). Cleanup cancels any pending timer so
+  // it never fires for a stale channel or after the snapshot is gone.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages is an intentional trigger to re-check visibility once the updated list has rendered
+  useEffect(() => {
+    maybeAutoDismissUnread();
+    return clearAutoDismissTimer;
+  }, [messages, maybeAutoDismissUnread, clearAutoDismissTimer]);
+
   // Batch-fetch missing parent messages for reply previews
   const fetchedParentsRef = useRef(new Set<string>());
   useEffect(() => {
@@ -707,6 +766,7 @@ export function ChannelView({
       el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
     wasNearBottomRef.current = nearBottom;
     if (nearBottom) ackLatest();
+    maybeAutoDismissUnread();
   }
 
   // Channel-level content warning gate
@@ -789,7 +849,10 @@ export function ChannelView({
                   {unreadSnapshot &&
                     idx > 0 &&
                     messages[idx - 1]?.id === unreadSnapshot.anchor && (
-                      <div className="my-2 flex items-center gap-3">
+                      <div
+                        ref={unreadDividerRef}
+                        className="my-2 flex items-center gap-3"
+                      >
                         <div className="h-px flex-1 bg-accent" />
                         <span className="text-xs font-semibold text-accent">
                           New Activity
