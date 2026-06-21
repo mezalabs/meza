@@ -34,6 +34,7 @@ import {
 import { decryptAndUpdateMessage } from '../crypto/decrypt-store.ts';
 import { cachePublicKey, clearVerification } from '../crypto/key-monitor.ts';
 import { isSessionReady, onSessionReady } from '../crypto/session.ts';
+import { maybeShowDesktopNotification } from '../notify/desktop-notifier.ts';
 import { indexIncomingMessage } from '../search/indexer.ts';
 import {
   removeSearchMessage,
@@ -614,11 +615,11 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
         // the channel is not currently being viewed and the message wasn't
         // already processed (guards against duplicate gateway delivery).
         if (!alreadySeen && msg.authorId !== currentUserId) {
+          const isMention =
+            msg.mentionedUserIds.includes(currentUserId ?? '') ||
+            msg.mentionEveryone;
           const viewed = useGatewayStore.getState().viewedChannelIds;
           if (!viewed[msg.channelId]) {
-            const isMention =
-              msg.mentionedUserIds.includes(currentUserId ?? '') ||
-              msg.mentionEveryone;
             // Atomic increment — avoids firing subscribers twice per message
             if (isMention || likelyDM) {
               useReadStateStore
@@ -636,6 +637,18 @@ function dispatch(op: GatewayOpCode, payload: Uint8Array) {
             }
             maybePlaySound(soundType, msg.authorId);
           }
+          // Native OS notification for desktop (Electron). Kept outside the
+          // `!viewed` gate so a tray-minimized window still notifies for the
+          // channel that was last open; the notifier's own window-focus gate
+          // suppresses it while the app is actually in front of the user.
+          maybeShowDesktopNotification({
+            channelId: msg.channelId,
+            authorId: msg.authorId,
+            isMention,
+            isDM: likelyDM,
+            reconnectGraceUntil,
+            currentUserId,
+          });
         }
         // Bump the DM channel to the top of the list so the sidebar and
         // DMs home page reflect the most-recently-active conversation.
