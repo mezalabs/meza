@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { filesFromClipboard } from '../../../utils/attachmentFiles.ts';
 import { ChannelLinkNodeView } from './nodeviews/ChannelLinkNodeView.tsx';
 import { CustomEmojiNodeView } from './nodeviews/CustomEmojiNodeView.tsx';
 import { MentionNodeView } from './nodeviews/MentionNodeView.tsx';
@@ -94,6 +95,8 @@ interface ComposerEditorProps {
   onSend: (wireText: string) => void | Promise<void>;
   onCancel?: () => void;
   onTyping?: () => void;
+  /** Called when files (e.g. a pasted screenshot) are pasted into the editor. */
+  onFilesPasted?: (files: File[]) => void;
   placeholder?: string;
   channelId: string;
   autoFocus?: boolean;
@@ -127,6 +130,7 @@ export const ComposerEditor = forwardRef<
     onSend,
     onCancel,
     onTyping,
+    onFilesPasted,
     placeholder = 'Type a message\u2026',
     channelId,
     autoFocus,
@@ -157,6 +161,8 @@ export const ComposerEditor = forwardRef<
   onAutocompleteArrowRef.current = onAutocompleteArrow;
   const onAutocompleteSelectRef = useRef(onAutocompleteSelect);
   onAutocompleteSelectRef.current = onAutocompleteSelect;
+  const onFilesPastedRef = useRef(onFilesPasted);
+  onFilesPastedRef.current = onFilesPasted;
   const [autocomplete, setAutocomplete] = useState<AutocompleteState>({
     trigger: null,
     query: '',
@@ -380,6 +386,17 @@ export const ComposerEditor = forwardRef<
         }
       },
       handlePaste(view, event) {
+        // Pasted files (e.g. a screenshot) → route to the attachment handler,
+        // the same funnel as drag-and-drop. Only real File items are considered;
+        // text/HTML is never read here, so the plain-text-only path below (which
+        // blocks fake-mention HTML injection) still governs text pastes.
+        const files = filesFromClipboard(event.clipboardData);
+        if (files.length > 0) {
+          event.preventDefault();
+          onFilesPastedRef.current?.(files);
+          return true;
+        }
+
         // Always extract plain text — never allow HTML parseDOM path
         // SECURITY: prevents HTML paste injection of fake mention nodes
         const text = event.clipboardData?.getData('text/plain');

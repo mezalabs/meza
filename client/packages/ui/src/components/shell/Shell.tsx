@@ -104,6 +104,28 @@ function DesktopShell() {
     }
   }, [isAuthenticated]);
 
+  // Swallow file/URL drops that land outside a registered drop zone, so the
+  // browser (or Electron) never navigates the window to the dropped file. The
+  // composer's own drop zone calls stopPropagation, so its drops never reach here.
+  useEffect(() => {
+    const preventStrayDrop = (e: DragEvent) => {
+      const types = e.dataTransfer?.types;
+      if (
+        types &&
+        (Array.from(types).includes('Files') ||
+          Array.from(types).includes('text/uri-list'))
+      ) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('dragover', preventStrayDrop);
+    window.addEventListener('drop', preventStrayDrop);
+    return () => {
+      window.removeEventListener('dragover', preventStrayDrop);
+      window.removeEventListener('drop', preventStrayDrop);
+    };
+  }, []);
+
   useEffect(() => {
     // Only trigger for authenticated users
     if (!isAuthenticated) return;
