@@ -65,6 +65,11 @@ type notificationService struct {
 	nc          *nats.Conn
 	cfg         *config.Config
 	fcmClient   *messaging.Client
+
+	// pushSender dispatches a single push to a single device. Nil in
+	// production, where dispatchPush falls through to sendPush; tests set it to
+	// record per-device dispatch without a real push transport.
+	pushSender func(ctx context.Context, device *models.Device, t pushTrigger) error
 }
 
 func newNotificationService(
@@ -594,7 +599,7 @@ func (s *notificationService) processServerNotifications(ctx context.Context, us
 
 		t := throttleTriggers[i]
 		for _, device := range ot.devices {
-			if err := s.sendPush(ctx, device, t); err != nil {
+			if err := s.dispatchPush(ctx, device, t); err != nil {
 				slog.Error("send push", "err", err, "user", ot.userID, "device", device.ID, "platform", device.Platform)
 			}
 		}
@@ -627,27 +632,31 @@ func (s *notificationService) notifyOfflineDevices(ctx context.Context, userID s
 		connectedSet[id] = true
 	}
 
+	// Throttle once per (user, channel, kind): at most one notification per
+	// conversation within the window, so a burst of messages does not spam the
+	// user. The separate key per kind keeps DM and mention pushes from
+	// suppressing one another. Gating here — rather than per device — is
+	// deliberate: a single dormant subscription (e.g. an expired web push that
+	// still returns 2xx against a closed browser) must not consume the slot and
+	// starve the user's other devices. This mirrors the server-channel path,
+	// which throttles per recipient then fans out to every offline device.
+	throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), userID, t.ChannelID)
+	set, err := s.rdb.SetNX(ctx, throttleKey, "1", time.Duration(defaultThrottleSeconds)*time.Second).Result()
+	if err != nil {
+		slog.Error("redis setnx throttle", "err", err, "user", userID)
+		return
+	}
+	if !set {
+		return // Already sent a push for this conversation recently.
+	}
+
+	// Fan out to every offline device. Online devices already receive the
+	// message over their live WebSocket, so a push to them would be redundant.
 	for _, device := range devices {
 		if connectedSet[device.ID] {
-			continue // Device is online via WebSocket, skip push.
-		}
-
-		// Throttle: 1 push per channel per user per type within the throttle window.
-		// Separate key per kind so DM and mention pushes are not suppressed by
-		// regular server-channel pushes.
-		throttleKey := fmt.Sprintf("push_throttle:%s:%s:%s", t.throttleKeyType(), userID, t.ChannelID)
-		throttleSec := defaultThrottleSeconds
-		set, err := s.rdb.SetNX(ctx, throttleKey, "1", time.Duration(throttleSec)*time.Second).Result()
-		if err != nil {
-			slog.Error("redis setnx throttle", "err", err, "user", userID)
 			continue
 		}
-		if !set {
-			break // Already sent a push for this channel recently.
-		}
-
-		// Dispatch push notification.
-		if err := s.sendPush(ctx, device, t); err != nil {
+		if err := s.dispatchPush(ctx, device, t); err != nil {
 			slog.Error("send push", "err", err, "user", userID, "device", device.ID, "platform", device.Platform)
 		}
 	}
@@ -893,6 +902,16 @@ func buildPushPayload(device *models.Device, t pushTrigger) messagePushPayload {
 		ChannelName:       t.ChannelName,
 		ServerName:        t.ServerName,
 	}
+}
+
+// dispatchPush sends one push to one device. The pushSender indirection lets
+// tests observe per-device dispatch without a real push transport; in
+// production pushSender is nil and this falls through to sendPush.
+func (s *notificationService) dispatchPush(ctx context.Context, device *models.Device, t pushTrigger) error {
+	if s.pushSender != nil {
+		return s.pushSender(ctx, device, t)
+	}
+	return s.sendPush(ctx, device, t)
 }
 
 // sendPush dispatches a push notification to a single device.
