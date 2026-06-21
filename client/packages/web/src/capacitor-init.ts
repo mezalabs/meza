@@ -70,8 +70,23 @@ async function setupStatusBar(): Promise<void> {
   }
 }
 
-function setupAppLifecycle(App: typeof import('@capacitor/app').App): void {
+// Monotonic counter bumped on every appStateChange. The resume branch awaits
+// bootstrapSession() — a yield point — and a later state change (e.g. the user
+// backgrounding again) must be able to supersede the parked invocation. Without
+// this, a resume that started while a fresh disconnect ran to completion would
+// still call gatewayConnect() on wake, opening a live socket on a backgrounded
+// app. The gateway's own `generation` guard does not cover this: it discards
+// stale *socket callbacks*, not a deliberate fresh connect() from stale
+// lifecycle logic.
+let lifecycleGen = 0;
+
+// Exported for unit testing the resume/background race; not part of the public
+// module surface (initCapacitor wires this up internally).
+export function setupAppLifecycle(
+  App: typeof import('@capacitor/app').App,
+): void {
   App.addListener('appStateChange', async ({ isActive }) => {
+    const myGen = ++lifecycleGen;
     const { isAuthenticated, accessToken } = useAuthStore.getState();
     if (!isAuthenticated || !accessToken) return;
 
@@ -89,6 +104,11 @@ function setupAppLifecycle(App: typeof import('@capacitor/app').App): void {
     // Android may clear storage under memory pressure while backgrounded.
     if (!isSessionReady()) {
       const ok = await bootstrapSession().catch(() => false as const);
+      // A newer appStateChange superseded this resume while bootstrap was in
+      // flight (the user backgrounded again, or logged out). Bail so we don't
+      // connect a socket — or clear auth — on behalf of a stale lifecycle
+      // event; the newer invocation already handled the current state.
+      if (myGen !== lifecycleGen) return;
       if (!ok) {
         useAuthStore.getState().clearAuth();
         return;
