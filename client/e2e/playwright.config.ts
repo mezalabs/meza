@@ -16,6 +16,11 @@ export default defineConfig({
     trace: 'on',
     screenshot: 'on',
     video: 'retain-on-failure',
+    // Fail fast on a missing/stale locator instead of hanging until the
+    // per-test timeout. Explicit `expect(...).toBeVisible({ timeout })` calls
+    // override this for known-slow waits (encryption, voice connect).
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
 
   projects: [
