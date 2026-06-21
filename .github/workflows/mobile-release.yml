@@ -129,10 +129,22 @@ jobs:
   build-ios:
     name: Build iOS
     needs: validate
-    runs-on: macos-latest
+    # macos-26 ships Xcode 26 (iOS 26 SDK). Apple requires apps be built with
+    # the iOS 26 SDK or later for App Store Connect / TestFlight uploads.
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::No Xcode 26 found on runner"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
