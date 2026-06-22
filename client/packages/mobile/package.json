@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^7",
-    "@capacitor/cli": "^7",
+    "@capacitor/cli": "^8",
     "@capacitor/ios": "^7"
   }
 }
