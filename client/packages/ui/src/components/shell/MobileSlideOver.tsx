@@ -19,7 +19,7 @@ export function MobileSlideOver({
 }: MobileSlideOverProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stableOnClose = useCallback(() => onClose(), [onClose]);
-  useSwipeBack(containerRef, stableOnClose);
+  useSwipeBack(containerRef, stableOnClose, { open });
 
   return (
     <div

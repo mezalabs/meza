@@ -19,6 +19,7 @@
     "@capawesome/capacitor-badge": "^7",
     "@capacitor/app": "^7",
     "@capacitor/core": "^7",
+    "@capacitor/haptics": "^7",
     "@capacitor/keyboard": "^7.0.4",
     "@capacitor/push-notifications": "^7",
     "@capacitor/splash-screen": "^7",

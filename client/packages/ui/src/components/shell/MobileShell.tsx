@@ -52,8 +52,6 @@ export function MobileShell() {
     (s) => s.mobileVoiceFullscreen,
   );
   const openMobileChannel = useNavigationStore((s) => s.openMobileChannel);
-  const closeMobileChannel = useNavigationStore((s) => s.closeMobileChannel);
-  const closeMobileOverlay = useNavigationStore((s) => s.closeMobileOverlay);
   const openMobileOverlay = useNavigationStore((s) => s.openMobileOverlay);
   const openMobileVoice = useNavigationStore((s) => s.openMobileVoice);
   const closeMobileVoice = useNavigationStore((s) => s.closeMobileVoice);
@@ -119,10 +117,17 @@ export function MobileShell() {
     return unsub;
   }, [openMobileOverlay, openMobileChannel]);
 
+  // Dismiss via history so useMobileHistory stays the single source of truth for
+  // the back stack: these affordances and the Android/system back button pop the
+  // same synthetic entries, and the popstate handler performs the actual close.
+  const mobileBack = useCallback(() => {
+    history.back();
+  }, []);
+
   const handleBack = useCallback(() => {
-    closeMobileChannel();
     setShowPins(false);
-  }, [closeMobileChannel]);
+    history.back();
+  }, []);
 
   return (
     <IconContext.Provider value={{ weight: 'fill' }}>
@@ -148,11 +153,8 @@ export function MobileShell() {
             </MobileSlideOver>
 
             {/* Voice fullscreen */}
-            <MobileSlideOver
-              open={mobileVoiceFullscreen}
-              onClose={closeMobileVoice}
-            >
-              <MobileVoiceFullscreen onClose={closeMobileVoice} />
+            <MobileSlideOver open={mobileVoiceFullscreen} onClose={mobileBack}>
+              <MobileVoiceFullscreen onClose={mobileBack} />
             </MobileSlideOver>
           </div>
         </PersistentVoiceConnection>
@@ -160,7 +162,7 @@ export function MobileShell() {
         {/* Full-screen overlays */}
         <MobileOverlay
           open={mobileOverlay === 'members'}
-          onClose={closeMobileOverlay}
+          onClose={mobileBack}
           title="Members"
         >
           {mobileActiveChannel && resolveServerId(mobileActiveChannel) ? (
@@ -174,7 +176,7 @@ export function MobileShell() {
 
         <MobileOverlay
           open={mobileOverlay === 'pins'}
-          onClose={closeMobileOverlay}
+          onClose={mobileBack}
           title="Pinned Messages"
         >
           <MobileOverlayPlaceholder label="Pinned Messages" />
@@ -182,7 +184,7 @@ export function MobileShell() {
 
         <MobileOverlay
           open={mobileOverlay === 'search'}
-          onClose={closeMobileOverlay}
+          onClose={mobileBack}
           title="Search"
         >
           {mobileActiveChannel?.type === 'channel' ? (
@@ -194,7 +196,7 @@ export function MobileShell() {
 
         <MobileOverlay
           open={mobileOverlay === 'settings'}
-          onClose={closeMobileOverlay}
+          onClose={mobileBack}
           title="Settings"
         >
           <SettingsView />
