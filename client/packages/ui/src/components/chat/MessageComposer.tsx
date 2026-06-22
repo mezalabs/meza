@@ -7,6 +7,7 @@ import {
   uploadEncryptedFile,
   useChannelStore,
   useMessageStore,
+  useToastStore,
 } from '@meza/core';
 import {
   EyeIcon,
@@ -30,6 +31,7 @@ import { getCommand } from '../../commands/index.ts';
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
+import { partitionFiles } from '../../utils/attachmentFiles.ts';
 import { stripMarkdown } from '../shared/stripMarkdown.ts';
 import { ChannelAutocomplete } from './ChannelAutocomplete.tsx';
 import type { AutocompleteState } from './composer/ComposerEditor.tsx';
@@ -73,6 +75,39 @@ interface PendingFile {
   isSpoiler: boolean;
 }
 
+export interface AddFilesResult {
+  /** Number of files actually staged. */
+  added: number;
+  /** Names of files skipped for exceeding MAX_FILE_SIZE. */
+  rejectedTooLarge: string[];
+  /** Count of files skipped because MAX_FILES was reached. */
+  rejectedOverCount: number;
+  /** True if the drop/paste was refused because a send is in progress. */
+  blockedSending: boolean;
+}
+
+/** Surface attachment-validation feedback through the global toast store. */
+function reportAddFilesResult(result: AddFilesResult) {
+  const { addToast } = useToastStore.getState();
+  if (result.blockedSending) {
+    addToast('Wait for the current message to finish sending', 'info');
+    return;
+  }
+  const tooLarge = result.rejectedTooLarge.length;
+  if (tooLarge > 0) {
+    addToast(
+      `${tooLarge} file${tooLarge > 1 ? 's' : ''} skipped (over 50 MB)`,
+      'warning',
+    );
+  }
+  if (result.rejectedOverCount > 0) {
+    addToast(
+      `Only ${MAX_FILES} files per message — ${result.rejectedOverCount} not added`,
+      'warning',
+    );
+  }
+}
+
 interface MessageComposerProps {
   channelId: string;
   serverId?: string;
@@ -87,6 +122,8 @@ interface MessageComposerProps {
   onMobileEmojiClose?: () => void;
   /** Ref that ChannelView uses to call insertEmoji from the mobile panel. */
   insertEmojiRef?: React.MutableRefObject<((text: string) => void) | null>;
+  /** Ref that ChannelView's pane drop zone uses to stage dragged/dropped files. */
+  addFilesRef?: React.MutableRefObject<((files: File[]) => void) | null>;
 }
 
 export function MessageComposer({
@@ -98,6 +135,7 @@ export function MessageComposer({
   onMobileEmojiToggle,
   onMobileEmojiClose,
   insertEmojiRef,
+  addFilesRef,
 }: MessageComposerProps) {
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
@@ -149,43 +187,80 @@ export function MessageComposer({
     };
   }, [insertEmojiRef]);
 
-  // Revoke outstanding object URLs on unmount
   const pendingFilesRef = useRef(pendingFiles);
   pendingFilesRef.current = pendingFiles;
+
+  // Discard pending files (and revoke their previews) on unmount AND when the
+  // channel changes — so files staged in one channel can never be sent to
+  // another, and object URLs never leak.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pendingFilesRef is a ref; reset is keyed on channelId
   useEffect(() => {
     return () => {
       for (const pf of pendingFilesRef.current) {
         if (pf.preview) URL.revokeObjectURL(pf.preview);
       }
+      setPendingFiles([]);
     };
-  }, []);
+  }, [channelId]);
 
-  function addFiles(files: FileList) {
-    const currentCount = pendingFiles.length;
-    const toAdd: PendingFile[] = [];
-    for (
-      let i = 0;
-      i < files.length && currentCount + toAdd.length < MAX_FILES;
-      i++
-    ) {
-      const file = files[i];
-      if (file.size > MAX_FILE_SIZE) continue;
-      const preview = file.type.startsWith('image/')
-        ? URL.createObjectURL(file)
-        : null;
-      toAdd.push({
-        id: crypto.randomUUID(),
-        file,
-        preview,
-        progress: 0,
-        error: null,
-        isSpoiler: false,
-      });
+  // Stage files from any source (picker, drag-drop, paste). Reads the live count
+  // from the ref (not a captured render value) so rapid successive calls can't
+  // exceed MAX_FILES, and creates object URLs OUTSIDE the state updater (which
+  // StrictMode double-invokes, which would leak one URL per image).
+  const addFiles = useCallback((files: File[]): AddFilesResult => {
+    if (sendingRef.current) {
+      const blocked: AddFilesResult = {
+        added: 0,
+        rejectedTooLarge: [],
+        rejectedOverCount: 0,
+        blockedSending: true,
+      };
+      reportAddFilesResult(blocked);
+      return blocked;
     }
+
+    const remaining = MAX_FILES - pendingFilesRef.current.length;
+    const { accepted, rejectedTooLarge, rejectedOverCount } = partitionFiles(
+      files,
+      remaining,
+      MAX_FILE_SIZE,
+    );
+
+    const toAdd: PendingFile[] = accepted.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      preview: file.type.startsWith('image/')
+        ? URL.createObjectURL(file)
+        : null,
+      progress: 0,
+      error: null,
+      isSpoiler: false,
+    }));
     if (toAdd.length > 0) {
       setPendingFiles((prev) => [...prev, ...toAdd]);
     }
-  }
+
+    const result: AddFilesResult = {
+      added: toAdd.length,
+      rejectedTooLarge,
+      rejectedOverCount,
+      blockedSending: false,
+    };
+    reportAddFilesResult(result);
+    return result;
+  }, []);
+
+  // Expose addFiles to ChannelView's pane-level drop zone.
+  useEffect(() => {
+    if (addFilesRef) {
+      addFilesRef.current = (files: File[]) => {
+        addFiles(files);
+      };
+    }
+    return () => {
+      if (addFilesRef) addFilesRef.current = null;
+    };
+  }, [addFilesRef, addFiles]);
 
   function removeFile(id: string) {
     setPendingFiles((prev) => {
@@ -203,7 +278,7 @@ export function MessageComposer({
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
+      addFiles(Array.from(e.target.files));
     }
     e.target.value = '';
   }
@@ -671,6 +746,7 @@ export function MessageComposer({
                   onSend={handleEditorSend}
                   onCancel={handleCancel}
                   onTyping={handleTyping}
+                  onFilesPasted={addFiles}
                   placeholder={placeholderText}
                   autoFocus={!isMobile}
                   hasFiles={pendingFiles.length > 0}

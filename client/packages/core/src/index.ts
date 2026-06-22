@@ -528,6 +528,7 @@ export {
   parseDeepLink,
 } from './utils/deep-link.ts';
 export { getDMDisplayName, isGroupDM, isSelfDM } from './utils/dm.ts';
+export { sanitizeFilename } from './utils/filenames.ts';
 export { canRunGiga, supportsAudioWorklet } from './utils/hardware.ts';
 export {
   hideKeyboard,

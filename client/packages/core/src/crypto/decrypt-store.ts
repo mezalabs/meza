@@ -16,6 +16,7 @@ import {
   indexIncomingMessages,
 } from '../search/indexer.ts';
 import { useMessageStore } from '../store/messages.ts';
+import { sanitizeFilename } from '../utils/filenames.ts';
 import { decryptMessage, parseMessageContent } from './messages.ts';
 
 /**
@@ -140,7 +141,9 @@ async function decryptMessageInPlace(
       if (!meta) return att;
       return {
         ...att,
-        filename: meta.fn || att.filename,
+        // Strip bidi/control chars: filenames come from the E2EE payload and are
+        // never sanitized server-side, so a sender could spoof the extension.
+        filename: sanitizeFilename(meta.fn || att.filename),
         contentType: meta.ct || att.contentType,
       };
     });

@@ -81,6 +81,9 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Never navigate the window when a file/link is dropped on it (modern
+      // default, set explicitly). A stray file drop must not load file://.
+      navigateOnDragDrop: false,
     },
   });
 
@@ -94,13 +97,42 @@ function createWindow(): BrowserWindow {
   const serverUrl =
     process.env.MEZA_SERVER_URL ||
     (prodMode ? store.get('settings').serverUrl : '');
-  if (!prodMode) {
-    win.loadURL(serverUrl || 'http://localhost:4080');
-  } else if (serverUrl) {
-    win.loadURL(serverUrl);
-  } else {
-    win.loadURL('meza://app/index.html');
+  const loadedUrl = !prodMode
+    ? serverUrl || 'http://localhost:4080'
+    : serverUrl || 'meza://app/index.html';
+  win.loadURL(loadedUrl);
+
+  // Lock down navigation: the renderer should only ever live at the origin it
+  // was loaded from (plus the bundled meza:// app). This is defense-in-depth for
+  // stray file/link drops (which would otherwise navigate to file://) and the
+  // Electron security checklist's will-navigate hardening. Exact-origin match via
+  // a real URL parser — never a startsWith check. External links are opened with
+  // shell.openExternal, and OAuth returns via the meza:// deep link, so no
+  // legitimate in-window navigation to other origins exists.
+  const allowedOrigins = new Set<string>(['meza://app']);
+  try {
+    allowedOrigins.add(new URL(loadedUrl).origin);
+  } catch {
+    // loadedUrl is always well-formed; ignore defensively.
   }
+  const blockDisallowedNavigation = (
+    e: Electron.Event,
+    targetUrl: string,
+  ): void => {
+    let origin: string;
+    try {
+      origin = new URL(targetUrl).origin;
+    } catch {
+      e.preventDefault();
+      return;
+    }
+    if (!allowedOrigins.has(origin)) e.preventDefault();
+  };
+  win.webContents.on('will-navigate', blockDisallowedNavigation);
+  win.webContents.on('will-redirect', blockDisallowedNavigation);
+  // The renderer never legitimately opens new windows; external links go through
+  // shell.openExternal via IPC.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
   // Show window once content is loaded to avoid white flash
   win.once('ready-to-show', () => {

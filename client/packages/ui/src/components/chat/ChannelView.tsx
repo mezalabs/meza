@@ -39,12 +39,14 @@ import {
   useReadStateStore,
   useRoleStore,
   useServerStore,
+  useToastStore,
   useUsersStore,
 } from '@meza/core';
 import {
   ArrowBendUpLeftIcon,
   CopyIcon,
   LockKeyIcon,
+  PaperclipIcon,
   PencilSimpleIcon,
   PushPinIcon,
   SmileyIcon,
@@ -68,6 +70,7 @@ import {
 import { useChannelEncryption } from '../../hooks/useChannelEncryption.ts';
 import { useDisplayColor } from '../../hooks/useDisplayColor.ts';
 import { useDisplayName } from '../../hooks/useDisplayName.ts';
+import { useFileDropZone } from '../../hooks/useFileDropZone.ts';
 import { useKeyboardHeight } from '../../hooks/useKeyboardHeight.ts';
 import { useLongPress } from '../../hooks/useLongPress.ts';
 import { useMobile } from '../../hooks/useMobile.ts';
@@ -315,6 +318,17 @@ export function ChannelView({
 
   // Ref to the composer's insertEmoji callback (set by MessageComposer)
   const insertEmojiRef = useRef<((text: string) => void) | null>(null);
+
+  // Pane-level file drop zone — forwards dropped files to the composer's addFiles.
+  // Disabled in historical view or while encryption keys are unavailable (the
+  // composer isn't even mounted in the latter case, so the ref is a safe no-op).
+  const addFilesRef = useRef<((files: File[]) => void) | null>(null);
+  const { isDragging, dropHandlers } = useFileDropZone({
+    onFiles: (files) => addFilesRef.current?.(files),
+    onFolderRejected: () =>
+      useToastStore.getState().addToast("Folders can't be attached", 'warning'),
+    disabled: viewMode === 'historical' || (needsEncryption && !keysAvailable),
+  });
 
   const handleMobileEmojiToggle = useCallback(() => {
     setMobileEmojiOpen((prev) => {
@@ -792,7 +806,30 @@ export function ChannelView({
 
   return (
     <div className="flex flex-1 min-h-0 min-w-0">
-      <div className="relative flex flex-1 flex-col min-h-0 min-w-0">
+      <div
+        className="relative flex flex-1 flex-col min-h-0 min-w-0"
+        {...dropHandlers}
+      >
+        {/* File drag-and-drop overlay (decorative; the paperclip is the a11y path).
+            Tint is full-bleed; the dashed border is inset + rounded so it floats
+            clear of the pane's rounded corners instead of being clipped there. */}
+        {isDragging && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-30 bg-bg-surface/80 backdrop-blur-sm"
+          >
+            <div className="absolute inset-2 flex items-center justify-center rounded-xl border-2 border-dashed border-accent">
+              <div className="flex flex-col items-center gap-2 text-accent">
+                <PaperclipIcon size={32} aria-hidden="true" />
+                <span className="text-sm font-medium">
+                  Drop files to attach
+                  {channel?.name ? ` to #${channel.name}` : ''}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Floating unread indicator */}
         <div aria-live="polite">
           {unreadSnapshot && (
@@ -946,6 +983,7 @@ export function ChannelView({
             onMobileEmojiToggle={handleMobileEmojiToggle}
             onMobileEmojiClose={handleMobileEmojiClose}
             insertEmojiRef={insertEmojiRef}
+            addFilesRef={addFilesRef}
           />
         )}
 
