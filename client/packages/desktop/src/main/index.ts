@@ -81,6 +81,11 @@ function createWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Keep the renderer fully active when the window is hidden/minimized to
+      // tray. Chromium throttles background renderers by default, which would
+      // stall the gateway heartbeat and drop the WebSocket — so the app would
+      // stop receiving (and notifying about) messages while in the tray.
+      backgroundThrottling: false,
     },
   });
 
