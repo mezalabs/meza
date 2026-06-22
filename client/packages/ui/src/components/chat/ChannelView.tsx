@@ -810,18 +810,22 @@ export function ChannelView({
         className="relative flex flex-1 flex-col min-h-0 min-w-0"
         {...dropHandlers}
       >
-        {/* File drag-and-drop overlay (decorative; the paperclip is the a11y path) */}
+        {/* File drag-and-drop overlay (decorative; the paperclip is the a11y path).
+            Tint is full-bleed; the dashed border is inset + rounded so it floats
+            clear of the pane's rounded corners instead of being clipped there. */}
         {isDragging && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center border-2 border-dashed border-accent bg-bg-surface/80 backdrop-blur-sm"
+            className="pointer-events-none absolute inset-0 z-30 bg-bg-surface/80 backdrop-blur-sm"
           >
-            <div className="flex flex-col items-center gap-2 text-accent">
-              <PaperclipIcon size={32} aria-hidden="true" />
-              <span className="text-sm font-medium">
-                Drop files to attach
-                {channel?.name ? ` to #${channel.name}` : ''}
-              </span>
+            <div className="absolute inset-2 flex items-center justify-center rounded-xl border-2 border-dashed border-accent">
+              <div className="flex flex-col items-center gap-2 text-accent">
+                <PaperclipIcon size={32} aria-hidden="true" />
+                <span className="text-sm font-medium">
+                  Drop files to attach
+                  {channel?.name ? ` to #${channel.name}` : ''}
+                </span>
+              </div>
             </div>
           </div>
         )}
