@@ -25,7 +25,7 @@ export function MobileOverlay({
 }: MobileOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stableOnClose = useCallback(() => onClose(), [onClose]);
-  useSwipeBack(containerRef, stableOnClose, { edgeOffset: 20 });
+  useSwipeBack(containerRef, stableOnClose, { open });
 
   return (
     <div
