@@ -14,10 +14,10 @@
     "@scure/bip39": "^1.5.0",
     "cassandra-driver": "^4.7.2",
     "hash-wasm": "^4.12.0",
-    "pg": "^8.13.0"
+    "pg": "^8.22.0"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.0",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
