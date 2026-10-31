@@ -2,8 +2,10 @@
   "name": "meza-seed",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.29.3",
   "scripts": {
-    "seed": "tsx src/index.ts"
+    "seed": "tsx src/index.ts",
+    "test:db": "tsx --test src/lib/db.integration.test.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.0.0",

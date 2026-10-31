@@ -296,6 +296,7 @@ tasks:
     env:
       BASE_URL: '{{.BASE_URL | default "http://localhost:4080"}}'
     cmds:
+      - cd ../../scripts/seed && pnpm install --frozen-lockfile --silent && pnpm test:db
       - pnpm exec tsx helpers/nuke.ts
       - pnpm exec playwright test --project=setup --project=chromium --project=teardown
 
