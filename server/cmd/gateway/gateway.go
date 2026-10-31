@@ -25,14 +25,14 @@ import (
 )
 
 const (
-	sendBufSize           = 256
-	maxMessageSize        = 64 * 1024 // 64KB
-	pingInterval          = 30 * time.Second
-	heartbeatFlush        = 5 * time.Second
-	writeTimeout          = 10 * time.Second
-	authTimeout           = 5 * time.Second
-	tokenCacheTTL         = 1 * time.Minute
-	refreshDebounceDelay  = 150 * time.Millisecond
+	sendBufSize            = 256
+	maxMessageSize         = 64 * 1024 // 64KB
+	pingInterval           = 30 * time.Second
+	heartbeatFlush         = 5 * time.Second
+	writeTimeout           = 10 * time.Second
+	authTimeout            = 5 * time.Second
+	tokenCacheTTL          = 1 * time.Minute
+	refreshDebounceDelay   = 150 * time.Millisecond
 	unreadCountConcurrency = 10 // max parallel ScyllaDB queries for unread counts
 )
 
@@ -45,8 +45,8 @@ type Client struct {
 	Send     chan []byte
 
 	cancel      context.CancelFunc
-	closeOnce   sync.Once      // guards close(Send)
-	rateLimiter *rate.Limiter  // per-connection message rate limiter
+	closeOnce   sync.Once     // guards close(Send)
+	rateLimiter *rate.Limiter // per-connection message rate limiter
 
 	// Per-user NATS subscription for dynamic channel updates.
 	userSub *nats.Subscription
@@ -76,22 +76,29 @@ type Gateway struct {
 	ed25519Keys       *auth.Ed25519Keys       // Ed25519 keys for JWT signing/verification
 	instanceURL       string                  // This instance's URL for iss claim
 	verificationCache *auth.VerificationCache // Caches validated JWT claims to avoid repeated Ed25519 verification
-	tokenBlocklist    *auth.TokenBlocklist     // Redis-backed blocklist for revoked devices
+	tokenBlocklist    *auth.TokenBlocklist    // Redis-backed blocklist for revoked devices
 	originPatterns    []string
-	chatStore      store.ChatStorer
-	readStateStore store.ReadStateStorer
-	messageStore   store.MessageStorer
-	chatClient     mezav1connect.ChatServiceClient
-	nc             *nats.Conn
+	chatStore         store.ChatStorer
+	readStateStore    store.ReadStateStorer
+	messageStore      store.MessageStorer
+	chatClient        mezav1connect.ChatServiceClient
+	nc                *nats.Conn
 
 	mu             sync.RWMutex
 	clients        map[string]*Client              // userID:deviceID -> *Client
-	userClients    map[string][]*Client             // userID -> slice of clients
+	userClients    map[string][]*Client            // userID -> slice of clients
 	channelClients map[string]map[*Client]struct{} // channelID -> set of clients
 	serverClients  map[string]map[*Client]struct{} // serverID -> set of clients
 
 	heartbeatMu    sync.Mutex
 	heartbeatBatch map[string]struct{} // userIDs to flush
+
+	// Test-only hooks for deterministic synchronization around the per-user
+	// callback's lifecycle admission and WebSocket writes. They are nil in
+	// production.
+	testBeforeUserEventEnqueue func(*Client)
+	testAfterUserEventEnqueue  func(*Client)
+	testBeforeClientWrite      func(*Client)
 }
 
 // NewGatewayWithOrigins creates a Gateway with pre-parsed origin patterns.
@@ -410,6 +417,33 @@ func (gw *Gateway) subscribeServerBroadcast(subject string) error {
 	return nil
 }
 
+type enqueueResult uint8
+
+const (
+	enqueueInactive enqueueResult = iota
+	enqueueQueued
+	enqueueFull
+)
+
+// enqueueActiveClient serializes per-user callback delivery with terminal
+// deregistration. The exact client instance must still own its registration;
+// a stale callback for a replaced or disconnected client is dropped.
+func (gw *Gateway) enqueueActiveClient(client *Client, payload []byte) enqueueResult {
+	gw.mu.RLock()
+	defer gw.mu.RUnlock()
+
+	if gw.clients[client.key()] != client {
+		return enqueueInactive
+	}
+
+	select {
+	case client.Send <- payload:
+		return enqueueQueued
+	default:
+		return enqueueFull
+	}
+}
+
 func (gw *Gateway) closeSlowConsumer(client *Client) {
 	slog.Warn("slow consumer, closing", "user", client.UserID, "device", client.DeviceID)
 	client.Conn.Close(websocket.StatusPolicyViolation, "send buffer full")
@@ -508,10 +542,8 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	client.Servers = serverIDs
 
-	// Register client
-	gw.addClient(client)
-
-	// Subscribe to per-user subscription signals.
+	// Subscribe before transferring keyed ownership so the previous connection
+	// remains eligible to deliver events until its replacement is ready.
 	// Empty payload = refresh signal (channel membership changed) — debounce and refresh.
 	// Non-empty payload = forward-to-client event (block/friend/DM) — just forward, no refresh.
 	sub, err := gw.nc.Subscribe(subjects.UserSubscription(claims.UserID), func(msg *nats.Msg) {
@@ -521,10 +553,14 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				slog.Error("marshaling user subscription event envelope", "err", err)
 			} else {
-				select {
-				case client.Send <- envelope:
-				default:
+				if gw.testBeforeUserEventEnqueue != nil {
+					gw.testBeforeUserEventEnqueue(client)
+				}
+				if gw.enqueueActiveClient(client, envelope) == enqueueFull {
 					go gw.closeSlowConsumer(client)
+				}
+				if gw.testAfterUserEventEnqueue != nil {
+					gw.testAfterUserEventEnqueue(client)
 				}
 			}
 			return
@@ -534,9 +570,22 @@ func (gw *Gateway) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		slog.Error("subscribe user subscription", "err", err, "user", claims.UserID)
-	} else {
-		client.userSub = sub
+		conn.Close(websocket.StatusInternalError, "failed to subscribe")
+		cancel()
+		return
 	}
+	client.userSub = sub
+	if err := gw.nc.FlushTimeout(writeTimeout); err != nil {
+		sub.Unsubscribe()
+		slog.Error("confirm user subscription", "err", err, "user", claims.UserID)
+		conn.Close(websocket.StatusInternalError, "failed to subscribe")
+		cancel()
+		return
+	}
+
+	// Transfer keyed ownership only after the NATS server confirms this client's
+	// subscription is ready.
+	gw.addClient(client)
 
 	// Compute read states with unread counts for the READY payload.
 	// Parallelized with bounded concurrency to avoid N+1 ScyllaDB queries.
@@ -685,8 +734,7 @@ func (gw *Gateway) authenticateFirstMessage(conn *websocket.Conn) (*auth.Claims,
 
 func (gw *Gateway) addClient(client *Client) {
 	gw.mu.Lock()
-	defer gw.mu.Unlock()
-
+	previous := gw.clients[client.key()]
 	gw.clients[client.key()] = client
 	// Maintain userClients index.
 	gw.userClients[client.UserID] = append(gw.userClients[client.UserID], client)
@@ -701,6 +749,14 @@ func (gw *Gateway) addClient(client *Client) {
 			gw.serverClients[srvID] = make(map[*Client]struct{})
 		}
 		gw.serverClients[srvID][client] = struct{}{}
+	}
+
+	gw.mu.Unlock()
+
+	// A user/device key has one active owner. Terminate the superseded socket so
+	// it cannot remain connected but permanently ineligible for keyed events.
+	if previous != nil && previous != client {
+		go previous.Conn.Close(websocket.StatusNormalClosure, "connection replaced")
 	}
 
 	// Publish device-connected event for the notification service.
@@ -752,12 +808,18 @@ func (gw *Gateway) removeClient(client *Client) {
 	}
 	// Fix 1: use sync.Once to prevent double-close panic on Send channel.
 	client.closeSend()
-	delete(gw.clients, client.key())
+	ownsRegistration := gw.clients[client.key()] == client
+	if ownsRegistration {
+		delete(gw.clients, client.key())
+	}
 	client.Conn.Close(websocket.StatusNormalClosure, "")
 	client.cancel()
 
-	// Publish device-disconnected event for the notification service.
-	gw.nc.Publish(subjects.DeviceDisconnected(client.UserID), []byte(client.DeviceID))
+	// A superseded socket does not make the shared device offline while its
+	// replacement remains registered under the same user/device key.
+	if ownsRegistration {
+		gw.nc.Publish(subjects.DeviceDisconnected(client.UserID), []byte(client.DeviceID))
+	}
 }
 
 // debouncedRefreshClientChannels coalesces rapid refresh signals using a
@@ -810,6 +872,12 @@ func (gw *Gateway) refreshClientChannels(ctx context.Context, client *Client) {
 
 	gw.mu.Lock()
 	defer gw.mu.Unlock()
+
+	// Store I/O may finish after disconnect. Only the exact client instance
+	// that still owns this registration may update the routing indexes.
+	if gw.clients[client.key()] != client {
+		return
+	}
 
 	// Build old sets inside the lock to prevent races.
 	oldChSet := make(map[string]bool, len(client.Channels))
@@ -965,6 +1033,9 @@ func (gw *Gateway) writePump(ctx context.Context, client *Client) {
 		case msg, ok := <-client.Send:
 			if !ok {
 				return
+			}
+			if gw.testBeforeClientWrite != nil {
+				gw.testBeforeClientWrite(client)
 			}
 			writeCtx, cancel := context.WithTimeout(ctx, writeTimeout)
 			err := client.Conn.Write(writeCtx, websocket.MessageBinary, msg)
