@@ -44,6 +44,21 @@ task test:e2e:smoke
 task test:e2e
 ```
 
+The seed tool has a focused PostgreSQL client smoke test. It requires a reachable
+PostgreSQL instance but does not require migrations or other Meza services:
+
+```bash
+cd scripts/seed
+corepack pnpm install --frozen-lockfile
+corepack pnpm test:db
+```
+
+It uses `MEZA_POSTGRES_URL` when set and otherwise connects to the default local
+Meza database
+(`postgres://meza:meza@localhost:5432/meza?sslmode=disable`). The full
+`task test:e2e` command runs this check before the Playwright journeys. It is
+intentionally not part of the fast `task test` or pre-push checks.
+
 To run a single Go test:
 
 ```bash
